@@ -51,6 +51,7 @@ class TransportStreamType : public StreamType {
   template<typename DerivedT>
   ObjectMsgPtr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const;
+  bool SharingVirtualMachineThread() const override { return false; }
 };
 
 class TransportSenderStreamType : public TransportStreamType {

@@ -17,11 +17,11 @@ limitations under the License.
 #include "oneflow/extension/python/py_compute.h"
 
 namespace oneflow {
-void PyKernel::Compute(user_op::KernelComputeContext* ctx) const {
+void PyForwardKernel::Compute(user_op::KernelComputeContext* ctx) const {
   ::oneflow::pyext::PyCompute(ctx, "forward");
 }
 
-void PyGradKernel::Compute(user_op::KernelComputeContext* ctx) const {
+void PyBackwardKernel::Compute(user_op::KernelComputeContext* ctx) const {
   ::oneflow::pyext::PyCompute(ctx, "backward");
 }
 

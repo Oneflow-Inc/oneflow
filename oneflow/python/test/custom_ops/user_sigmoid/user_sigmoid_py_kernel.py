@@ -23,17 +23,6 @@ def forward(args):
     return y
 
 
-# import torch
-# def forward(args):
-#     print("user sigmoid forward args", args)
-#     print("compute with pytorch")
-#     x, = args
-#     b = torch.from_numpy(x)
-#     print(b)
-#     y = torch.sigmoid(b).numpy()
-#     return y
-
-
 def backward(args):
     print("user sigmoid backward args", args)
     y, dy = args

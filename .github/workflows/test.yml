@@ -3,203 +3,573 @@ on:
   pull_request:
     types: [review_requested]
     branches:
-      - '*'
+      - "*"
   workflow_dispatch:
     inputs:
       placeholder:
-        description: 'placeholder, no effect'
+        description: "placeholder, no effect"
         required: false
 jobs:
-
-  check_license_and_format:
-    name: License and format
-    runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Check license and format (please run 'make of_format' if failed)
-      uses: ./.github/actions/fmt
+      - name: Cancel previous runs of outdated commit
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+          all_but_latest: true
 
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-    - uses: actions/checkout@v2
-    - name: Mirror dependencies to aliyun
-      env:
-        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      run: |
-        if [ -z "$OSS_ACCESS_KEY_ID" ]
-        then
-          exit 0
-        fi
-        python3 -m pip install setuptools wheel
-        python3 -m pip install oss2
-        python3 tools/package_mirror.py -i cmake
+      - uses: actions/checkout@v2
+      - name: Mirror dependencies to aliyun
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          set -x
+          if [ -z "$OSS_ACCESS_KEY_ID" ]
+          then
+            exit 0
+          fi
+          python3 -m pip install -U pip setuptools wheel
+          python3 -m pip install oss2
+          python3 tools/package_mirror.py -i cmake
 
-  build_and_test_all:
-    needs: [check_license_and_format, mirror_third_party]
-    name: CUDA, XLA, CPU
-    runs-on: [self-hosted, linux, gpu]
+  check_license_and_format:
+    name: License and format
+    runs-on: ubuntu-18.04
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Check license
+        id: license_check
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow -c
+      - name: Add license
+        id: license_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow --fix
+      - name: Check C++/CUDA format
+        id: cpp_check
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+      - name: Run C++/CUDA format
+        id: cpp_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
+      - name: Check Python format
+        id: py_check
+        run: |
+          python3 -m pip install black==19.10b0
+          python3 ci/check/run_py_format.py --source_dir $PWD
+      - name: Run Python Format
+        id: py_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 -m pip install black==19.10b0
+          python3 ci/check/run_py_format.py --source_dir $PWD --fix
+      - name: Git push
+        id: git_push
+        if: ${{ failure() }}
+        run: |
+          git config --global user.email "ci-bot@oneflow.org"
+          git config --global user.name "oneflow-ci-bot"
+          git add -u
+          git commit -m "auto format by CI"
+          git push
+      - name: Please request CI again
+        if: ${{ failure() }}
+        run: |
+          exit 1
+
+  static_analysis_with_clang_plug_in:
+    name: Static analysis with Clang plug-in
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Install dependencies
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
+          sudo apt-get update
+          sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev \
+            libopenblas-dev nasm python3-pip ninja-build
+      - name: Set environment variables
+        run: |
+          set -x
+          echo "CC=clang-12" >> $GITHUB_ENV
+          echo "CXX=clang++-12" >> $GITHUB_ENV
+          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
+          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp" >> $GITHUB_ENV
+      - name: Build Clang plug-in
+        run: |
+          cd tools/clang-plugin
+          mkdir build
+          cd build
+          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          make -j$(nproc)
+          clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
+          ldd ${clang_plugin_path}
+          echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
+      - name: Build (CMake configure)
+        run: |
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
+      - name: Build (third party)
+        run: |
+          cd build
+          cmake --build . -j$(nproc) --target oneflow_deps
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+        run: |
+          cd build
+          cmake --build . -j$(nproc)
+
+  wait_for_gpu_slot:
+    name: Wait for GPU slots
+    runs-on: [self-hosted, scheduler]
+    needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - name: Check if secrets accessible
+        env:
+          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+        run: |
+          set -x
+          if [ -z "$CI_PERSONAL_ACCESS_TOKEN" ]
+          then
+            exit 0
+          fi
+          echo "is_secrets_accessible=1" >> $GITHUB_ENV
+      - uses: Oneflow-Inc/github-workflow-schedule@0e42bf5171f37d1b91825b9b6f6040e3372ae049
+        name: Wait for GPU slot
+        if: env.is_secrets_accessible == '1'
+        env:
+          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
-# CUDA
-    - name: (CUDA) Set environment variables
-      run: |
-        echo "ci_tmp_dir=$HOME/ci-tmp" >> $GITHUB_ENV
-        echo "wheelhouse_dir=$HOME/ci-tmp/wheelhouse" >> $GITHUB_ENV
-        echo "bin_dir=$HOME/ci-tmp/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
-    - name: Fix permissions
-      run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-    - uses: actions/checkout@v2
-    - name: (CUDA) Build OneFlow
-      uses: ./.github/actions/whl
-      with:
-        tmp_dir: ${ci_tmp_dir}
-        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
-    - name: Upload wheel
-      uses: ./.github/actions/upload_oss
-      with:
-        src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cuda
-        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-    - name: Build docker image for testing
-      run: |
-        bash docker/ci/test/build.sh
-    - name: (CUDA) Exe test
-      run: |
-        set -x
-        docker run --shm-size=8g --rm \
-          -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          -v ${bin_dir}:${bin_dir} \
-          -w ${bin_dir} \
-          oneflow-test:$USER \
-          ./oneflow_testexe
-    - name: (CUDA) Op test (distributed)
-      run: |
-        python3 ci/test/distributed_run.py --make_dotssh
-        python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
-          --build_docker_img \
-          --oneflow_wheel_path=${wheelhouse_dir} \
-          --oneflow_worker_bin=${bin_dir}/oneflow_worker
-    - name: (CUDA) Op test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: Custom Op test (run by oneflow build docker)
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow:manylinux2014-cuda10.2 \
-          bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
-    - name: (CUDA) Op test (eager)
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          --env ONEFLOW_TEST_ENABLE_EAGER=1 \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
-    - name: (CUDA) Model test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: (CUDA) Benchmark
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
-    - name: (CUDA) Benchmark FP16
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
-    - name: ONNX export test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
-    - name: Build documentation
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+  build:
+    name: Build
+    needs: [check_license_and_format, mirror_third_party, cancel_previous]
+    continue-on-error: ${{ matrix.allow_fail }}
+    runs-on: ${{ matrix.os }}
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
+    strategy:
+      max-parallel: 5
+      matrix:
+        test_suite: ["cuda", "cpu", "xla", "xla_cpu"]
+        include:
+          - test_suite: cuda
+            cuda_version: 10.2
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
+            allow_fail: false
+          - test_suite: cpu
+            cuda_version: 10.2
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
+            os: [self-hosted, linux, build]
+            allow_fail: false
+          - test_suite: xla
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
+            allow_fail: true
+          - test_suite: xla_cpu
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
+            allow_fail: true
+    steps:
+      - name: Set environments from secrets
+        if: contains(${{ github.repository }}, "Oneflow-Inc")
+        run: |
+          echo "CI_STATIC_HOST=${{ secrets.CI_STATIC_HOST }}" >> $GITHUB_ENV
+          echo "CI_STATIC_PATH=${{ secrets.CI_STATIC_PATH }}" >> $GITHUB_ENV
+      - name: Set environments for forks
+        run: |
+          CI_STATIC_HOST=${CI_STATIC_HOST:-"192.168.1.13"}
+          CI_STATIC_PATH=${CI_STATIC_PATH:-"/tank/ci-static"}
+          echo "CI_STATIC_HOST=${CI_STATIC_HOST}" >> $GITHUB_ENV
+          echo "CI_STATIC_PATH=${CI_STATIC_PATH}" >> $GITHUB_ENV
+      - name: Set environment variables
+        env:
+          test_suite: ${{ matrix.test_suite }}
+        run: |
+          set -x
+          echo "test_suite=${test_suite}" >> $GITHUB_ENV
+          export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
+          mkdir -p $ci_tmp_dir
+          echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
+          echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
+          sha_dir="${CI_STATIC_PATH}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
+          echo "sha_dir=${sha_dir}" >> $GITHUB_ENV
+          if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
+              echo "is_built=1" >> $GITHUB_ENV
+          fi
+          if [ "$test_suite" == "cuda" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          elif [ "$test_suite" == "cpu" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
+          fi
+          extra_docker_args=""
+          extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
-# XLA
-    - name: (XLA) Set environment variables
-      run: |
-        echo "ci_tmp_dir=$HOME/ci-tmp-xla" >> $GITHUB_ENV
-        echo "wheelhouse_dir=$HOME/ci-tmp-xla/wheelhouse" >> $GITHUB_ENV
-    - name: Fix permissions
-      run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-    - uses: actions/checkout@v2
-    - name: (XLA) Build OneFlow
-      uses: ./.github/actions/whl
-      with:
-        cuda_version: 10.1
-        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
-        tmp_dir: ${ci_tmp_dir}
-    - name: Upload wheel
-      uses: ./.github/actions/upload_oss
-      with:
-        src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-xla
-        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-    - name: Build docker image for testing
-      run: |
-        bash docker/ci/test/build.sh
-    - name: (XLA) Test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+          extra_docker_args+=" --name ${container_name}"
+          if [ "$test_suite" == "cpu" ]; then
+            extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
+          fi
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+      - name: Fix permissions
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: env.is_built != '1'
+      - name: Build OneFlow
+        if: env.is_built != '1'
+        uses: ./.github/actions/whl
+        timeout-minutes: 45
+        with:
+          tmp_dir: ${ci_tmp_dir}
+          extra_flags: ${{ matrix.extra_flags }}
+          cuda_version: ${{ matrix.cuda_version }}
+          extra_docker_args: $extra_docker_args
+      - name: Custom Op test (run by oneflow build docker)
+        if: matrix.test_suite == 'cpu' && env.is_built != '1'
+        run: |
+          set -x
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+            $extra_docker_args \
+            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+            oneflow-manylinux2014-cuda10.2:0.1 \
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+      - name: Remove cache
+        if: ${{ failure() }}
+        run: |
+          set -x
+          cache_parent_dir=$(dirname ${ci_tmp_dir})
+          if [ "$cache_parent_dir" == "/" ] || [ -z "$cache_parent_dir" ]; then
+            exit 1
+          fi
+          docker run --rm -v $cache_parent_dir:$cache_parent_dir busybox rm -rf ${ci_tmp_dir}
+      - name: Upload wheel via SSH
+        if: env.is_built != '1'
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${wheelhouse_dir}
+          dst_host: ${{ env.CI_STATIC_HOST }}
+          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+      - name: Upload bin via SSH
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) && env.is_built != '1'
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${bin_dir}
+          dst_host: ${{ env.CI_STATIC_HOST }}
+          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
+      - name: Upload wheel to cloud, enable by adding label 'upload-wheel'
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel')
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: ${wheelhouse_dir}
+          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Remove container
+        if: always()
+        run: |
+          set -x
+          docker rm -f ${container_name} || true
+      - name: Save shared env
+        run: |
+          set -x
+          echo "builder_host=${CI_STATIC_HOST}" >> build.${{ matrix.test_suite }}.env
+          echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
+          echo "remote_whl_dir=${CI_STATIC_HOST}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
+            echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
+          fi
+      - name: Upload shared env
+        uses: actions/upload-artifact@v2
+        with:
+          name: build.${{ matrix.test_suite }}.env
+          path: build.${{ matrix.test_suite }}.env
 
-# CPU
-    - name: (CPU) Set environment variables
-      run: |
-        echo "ci_tmp_dir=$HOME/ci-tmp-cpu" >> $GITHUB_ENV
-        echo "wheelhouse_dir=$HOME/ci-tmp-cpu/wheelhouse" >> $GITHUB_ENV
-    - name: Fix permissions
-      run: |
-        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-    - uses: actions/checkout@v2
-    - name: (CPU) Build OneFlow
-      uses: ./.github/actions/whl
-      with:
-        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
-        tmp_dir: ${ci_tmp_dir}
-    - name: Upload wheel
-      uses: ./.github/actions/upload_oss
-      with:
-        src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cpu
-        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-    - name: Build docker image for testing
-      run: |
-        bash docker/ci/test/build.sh
-    - name: (CPU) Op test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          --env ONEFLOW_TEST_CPU_ONLY=1 \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: (CPU) Op test (eager)
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          --env ONEFLOW_TEST_CPU_ONLY=1 \
-          --env ONEFLOW_TEST_ENABLE_EAGER=1 \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
-    - name: (CPU) Model test
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          --env ONEFLOW_TEST_CPU_ONLY=1 \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+  test:
+    name: Test suite
+    needs: [build, wait_for_gpu_slot]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_fail }}
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    strategy:
+      max-parallel: 5
+      matrix:
+        test_suite:
+          [
+            "cuda",
+            "cuda_op",
+            "cuda_new_interface",
+            "cpu",
+            "xla",
+            "cuda_op_eager",
+            "cpu_op_eager",
+            "xla_cpu",
+          ]
+        include:
+          - test_suite: "cuda"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
+            build_env: build.cuda.env
+          - test_suite: "cuda_op"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
+            build_env: build.cuda.env
+          - test_suite: "cuda_new_interface"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
+            build_env: build.cuda.env
+          - test_suite: "cuda_op_eager"
+            os: [self-hosted, linux, gpu]
+            allow_fail: true
+            build_env: build.cuda.env
+          - test_suite: "cpu"
+            os: [self-hosted, linux, cpu]
+            allow_fail: false
+            build_env: build.cpu.env
+          - test_suite: "cpu_op_eager"
+            os: [self-hosted, linux, cpu]
+            allow_fail: true
+            build_env: build.cpu.env
+          - test_suite: "xla"
+            os: [self-hosted, linux, gpu]
+            allow_fail: true
+            build_env: build.xla.env
+          - test_suite: "xla_cpu"
+            os: [self-hosted, linux, cpu]
+            allow_fail: true
+            build_env: build.xla_cpu.env
+    steps:
+      - name: Fix permissions
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Download shared env
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.build_env }}
+      - name: Set environment variables
+        env:
+          test_suite: ${{matrix.test_suite }}
+        run: |
+          set -x
+          extra_docker_args=""
+          extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
+          extra_docker_args+=" --env ONEFLOW_CI=1"
+
+          # load shared environment variables
+          cat ${{ matrix.build_env }} >> $GITHUB_ENV
+          source ${{ matrix.build_env }}
+          # check directory sha_dir exists
+          ssh -o StrictHostKeyChecking=no ${builder_host} "[ -d ${sha_dir} ]"
+
+          # dowload whl and bin
+          scp -r $remote_whl_dir wheel_tmp
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
+            scp -r $remote_bin_dir bin_tmp
+          fi
+
+          # set wheelpath
+          wheelhouse_dir="${PWD}/wheel_tmp"
+          extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir}"
+          echo "wheelhouse_dir=${wheelhouse_dir}" >> $GITHUB_ENV
+
+          # set matrix environment variables
+          echo "test_suite=${test_suite}" >> $GITHUB_ENV
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
+            echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
+          fi
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "xla_cpu" ]; then
+            extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
+          fi
+          if [ "$test_suite" == "cuda_op_eager" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "cuda_new_interface" ]; then
+            extra_docker_args+=" --env ONEFLOW_TEST_ENABLE_EAGER=1"
+          fi
+          # set container_name
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
+          extra_docker_args+=" --name ${container_name}"
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+
+          extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
+          extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+          echo "image_name=oneflow-test:0.1" >> $GITHUB_ENV
+      - name: Build docker image for testing
+        run: |
+          bash docker/ci/test/build.sh
+      - name: Exe test
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            ${image_name} \
+            ${bin_dir}/oneflow_testexe
+      - name: Build documentation
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+      - name: Op test (distributed, 1st try)
+        if: matrix.test_suite == 'cuda'
+        continue-on-error: true
+        id: distributed_try_1
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 2nd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+        continue-on-error: true
+        id: distributed_try_2
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 3rd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+        continue-on-error: false
+        id: distributed_try_3
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Upload log (distributed test)
+        if: failure() && matrix.test_suite == 'cuda'
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
+      - name: Print backtrace (distributed test)
+        if: always() && matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+      - name: Doctest
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/doctest.sh"
+      - name: Dry run test (run without runtime)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
+      - name: Module API test
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Tensor API test
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Op test
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+      - name: Model test
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run \
+            $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+      - name: Model serve test
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            --env ONEFLOW_TEST_TMP_DIR=$PWD/serving-tmp \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
+      - name: Print backtrace (serving test)
+        if: always() && matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
+      - name: Benchmark (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
+      - name: Benchmark FP16 (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
+      - name: XLA Test
+        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
+        run: |
+          set -x
+          docker run $extra_docker_args \
+            ${image_name} \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+      - name: Query system status
+        if: ${{ failure() }}
+        run: |
+          nvidia-smi
+          docker ps
+      - name: Remove container
+        if: always()
+        run: |
+          docker rm -f ${container_name} || true

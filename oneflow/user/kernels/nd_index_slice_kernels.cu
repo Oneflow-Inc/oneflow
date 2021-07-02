@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/nd_index_slice_kernels.h"
-#include "oneflow/core/kernel/util/cuda_kernel_util.h"
+#include "oneflow/core/cuda/atomic.cuh"
 
 namespace oneflow {
 
@@ -71,7 +71,7 @@ struct ZeroByNdIndexFunctor<DeviceType::kGPU, T, I> final {
 
 template<typename T>
 struct DeviceAdd<DeviceType::kGPU, T> {
-  __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
+  __device__ __forceinline__ static void Invoke(const T* x, T* y) { cuda::atomic::Add(y, *x); }
 };
 
 #define GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ \
@@ -107,7 +107,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceT
 template<>
 struct DeviceAdd<DeviceType::kGPU, float16> {
   __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
-    gpu_atomic_add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
+    cuda::atomic::Add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
   }
 };
 

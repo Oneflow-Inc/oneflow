@@ -34,6 +34,9 @@ class TestWatch(flow.unittest.TestCase):
 
         ReluJob(data)
 
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(), "Doesn't work in eager mode",
+    )
     def test_two_device(test_case):
         flow.config.gpu_device_num(2)
         data = np.ones((10,), dtype=np.float32)

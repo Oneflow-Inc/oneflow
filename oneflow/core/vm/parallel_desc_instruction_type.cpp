@@ -32,6 +32,8 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   NewParallelDescSymbolInstructionType() = default;
   ~NewParallelDescSymbolInstructionType() override = default;
 
+  bool ResettingIdToObjectMap() const override { return true; }
+
   using stream_type = ControlStreamType;
 
   // clang-format off
@@ -64,7 +66,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
           ObjectMsgPtr<MirroredObject>::NewFrom(vm->mut_allocator(), logical_object.Mutable(), 0);
       {
         const auto& parallel_desc =
-            Global<SymbolStorage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));
+            Global<symbol::Storage<ParallelDesc>>::Get()->GetPtr(view->logical_object_id(i));
         auto* rw_mutexed_object = mirrored_object->mut_rw_mutexed_object();
         rw_mutexed_object->Init<ObjectWrapper<ParallelDesc>>(parallel_desc);
       }
@@ -72,7 +74,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
     }
   }
 };
-COMMAND(Global<SymbolStorage<ParallelDesc>>::SetAllocated(new SymbolStorage<ParallelDesc>()));
+COMMAND(Global<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
 COMMAND(RegisterInstructionType<NewParallelDescSymbolInstructionType>("NewParallelDescSymbol"));
 
 }  // namespace vm

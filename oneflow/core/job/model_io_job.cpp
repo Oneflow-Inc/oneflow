@@ -31,6 +31,8 @@ bool CompareVariableOpConf(const VariableOpConf& lhs, const VariableOpConf& rhs)
   var_conf_b.clear_tick();
   var_conf_a.clear_out();
   var_conf_b.clear_out();
+  var_conf_a.clear_trainable();
+  var_conf_b.clear_trainable();
   return PbMd::Equals(var_conf_a, var_conf_b);
 }
 
@@ -44,15 +46,12 @@ OperatorConf GenForeignInputOpConf(const std::string& job_name, const int64_t in
   *blob_conf->mutable_shape()->mutable_dim()->Add() = input_size;
   blob_conf->set_data_type(DataType::kInt8);
   blob_conf->set_is_dynamic(true);
-  blob_conf->mutable_split_axis()->clear_value();
-  blob_conf->mutable_batch_axis()->Clear();
   return foreign_input_op_conf;
 }
 
 void SetModelIoDefaultJobConf(JobConfigProto* job_conf, const std::string& job_name) {
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
 }
 
 OperatorConf GenOutputOpConf(const std::string& op_name, const std::string& in,
@@ -62,7 +61,7 @@ OperatorConf GenOutputOpConf(const std::string& op_name, const std::string& in,
   auto* output_conf = output_op_conf.mutable_output_conf();
   output_conf->set_in(in);
   output_conf->set_out(out);
-  InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+  CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
   return output_op_conf;
 }
 
@@ -72,7 +71,7 @@ OperatorConf GenInputOpConf(const std::string& op_name, const std::string& out,
   input_op_conf.set_name(op_name);
   auto* input_conf = input_op_conf.mutable_input_conf();
   input_conf->set_out(out);
-  InterfaceOpUtil::InitBlobConf(input_conf->mutable_blob_conf(), parallel_blob_conf);
+  CHECK_JUST(InterfaceOpUtil::InitBlobConf(input_conf->mutable_blob_conf(), parallel_blob_conf));
   return input_op_conf;
 }
 

@@ -151,6 +151,8 @@ class TestPool(flow.unittest.TestCase):
             strides = pool_conf["strides"]
             padding = pool_conf["padding"]
             data_format = pool_conf["data_format"]
+            if os.getenv("ONEFLOW_TEST_CPU_ONLY") and data_format != "NHWC":
+                continue
             flow.clear_default_session()
 
             # Random inputs

@@ -54,8 +54,6 @@ def compare_with_tensorflow(device_type, x_shape, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SqueezeJob().get().numpy()
     # TensorFlow
     tf_out = tf.squeeze(np.ones(x_shape, dtype=np.float32), axis).numpy()

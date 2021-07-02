@@ -24,18 +24,25 @@ namespace oneflow {
 
 struct InterfaceOpUtil final {
   static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                                      const ParallelContext* parallel_ctx);
-  static Maybe<void> InferBatchAxis(const InterfaceBlobConf& blob_conf, OptInt64* batch_axis);
+                                      const ParallelContext* parallel_ctx,
+                                      const ParallelDesc& parallel_desc);
+  static Maybe<void> InferLogicalOutBlobDesc(const InterfaceBlobConf& blob_conf,
+                                             BlobDesc* out_blob_desc,
+                                             const ParallelDesc& parallel_desc);
   static Maybe<void> GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                 const PbRpf<std::string>& input_bns,
                                                 const PbRpf<std::string>& output_bns,
-                                                SbpSignature* sbp_signature);
+                                                cfg::SbpSignature* sbp_signature);
   static Maybe<void> GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                  const PbRpf<std::string>& input_bns,
                                                  const PbRpf<std::string>& output_bns,
-                                                 SbpSignature* sbp_signature);
+                                                 cfg::SbpSignature* sbp_signature);
   static Maybe<void> InitBlobConf(InterfaceBlobConf* blob_conf,
                                   const ParallelBlobConf& parallel_blob_conf);
+
+  static Maybe<void> ParseParallelDistributionFromBlobConf(
+      const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
+      cfg::ParallelDistribution* parallel_distribution);
 };
 
 }  // namespace oneflow

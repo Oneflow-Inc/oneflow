@@ -16,34 +16,33 @@ limitations under the License.
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
+import oneflow._oneflow_internal
 
-def import_secondary_module(name, path):
-    import importlib.machinery
-    import importlib.util
+oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 
-    loader = importlib.machinery.ExtensionFileLoader(name, path)
-    spec = importlib.util.spec_from_loader(name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
+Size = oneflow._oneflow_internal.Size
+device = oneflow._oneflow_internal.device
+placement = oneflow._oneflow_internal.PlacementSymbol
+no_grad = oneflow._oneflow_internal.autograd.no_grad
 
+# define dtype at the begining of oneflow init
 
-def import_oneflow_internal2():
-    import oneflow
-    import os
-    from os.path import dirname
-    import imp
-
-    fp, pathname, description = imp.find_module(
-        "_oneflow_internal", [dirname(__file__)]
-    )
-    assert os.path.isfile(pathname)
-    return import_secondary_module("oneflow_api", pathname)
-
-
-oneflow_api = import_oneflow_internal2()
-del import_secondary_module
-del import_oneflow_internal2
+locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["char"] = oneflow._oneflow_internal.char
+locals()["float16"] = oneflow._oneflow_internal.float16
+locals()["half"] = oneflow._oneflow_internal.float16
+locals()["float32"] = oneflow._oneflow_internal.float32
+locals()["float"] = oneflow._oneflow_internal.float
+locals()["double"] = oneflow._oneflow_internal.double
+locals()["float64"] = oneflow._oneflow_internal.float64
+locals()["int8"] = oneflow._oneflow_internal.int8
+locals()["int"] = oneflow._oneflow_internal.int32
+locals()["int32"] = oneflow._oneflow_internal.int32
+locals()["int64"] = oneflow._oneflow_internal.int64
+locals()["long"] = oneflow._oneflow_internal.int64
+locals()["uint8"] = oneflow._oneflow_internal.uint8
+locals()["record"] = oneflow._oneflow_internal.record
+locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
 from oneflow.python.version import __version__
 
@@ -59,11 +58,40 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
-import oneflow.python.framework.python_interpreter_util
+import oneflow.python.framework.register_class_method_util as register_class_method_util
 
-atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
+INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
+
+register_class_method_util.RegisterMethod4Class()
+oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+
+import oneflow.python.framework.env_util as env_util
+
+env_util.init_default_physical_env()
+del env_util
+
+
+# capture oneflow methods so that they can be still accessed after `del oneflow`
+def _SyncOnMasterFn(get_rank, sync):
+    def SyncOnMaster():
+        if get_rank() == 0:
+            sync()
+
+    return SyncOnMaster
+
+
+atexit.register(oneflow._oneflow_internal.SetShuttingDown)
+atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
+# Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
+# will be set to nullptr by TryCloseDefaultSession,
+# so sync vm in advance to avoid data race
+atexit.register(
+    _SyncOnMasterFn(
+        oneflow.python.framework.distribute.get_rank,
+        oneflow._oneflow_internal.eager.single_client.Sync,
+    )
+)
 del atexit
 
 import sys
@@ -73,7 +101,9 @@ __original_exit__ = sys.exit
 
 def custom_exit(returncode):
     if returncode != 0:
-        oneflow_api.MasterSendAbort()
+        import oneflow
+
+        oneflow._oneflow_internal.MasterSendAbort()
     __original_exit__(returncode)
 
 
@@ -83,5 +113,3 @@ del custom_exit
 del sys
 del absolute_import
 del oneflow
-del python
-del python_gen

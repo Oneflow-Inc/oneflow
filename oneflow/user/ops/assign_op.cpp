@@ -24,11 +24,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
   CHECK_OR_RETURN(ref_desc->shape() == value_desc->shape());
-  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
-  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
-  if (ctx->user_op_conf().has_input("condition", 0)) {
+  if (ctx->has_input("condition", 0)) {
     const user_op::TensorDesc* condition = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
-    CHECK_OR_RETURN(IsIndexDataType(condition->data_type()));
     CHECK_OR_RETURN(condition->shape().NumAxes() == 1);
     CHECK_OR_RETURN(condition->shape().At(0) == 1);
   }
@@ -66,32 +63,43 @@ void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierF
   }
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
+  const user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
+  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
+  if (ctx->has_input("condition", 0)) {
+    const user_op::TensorDesc* condition = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
+    CHECK_OR_RETURN(IsIndexDataType(condition->data_type()));
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
-REGISTER_USER_OP("assign")
+REGISTER_NO_GRAD_USER_OP("assign")
     .Input("ref")
     .Input("value")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn);
+    .SetInputArgModifyFn(InputArgModifierFn)
+    .SetDataTypeInferFn(InferDataType);
 
-REGISTER_USER_OP("assign_if")
+REGISTER_NO_GRAD_USER_OP("assign_if")
     .Input("ref")
     .Input("value")
     .Input("condition")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn);
+    .SetInputArgModifyFn(InputArgModifierFn)
+    .SetDataTypeInferFn(InferDataType);
 
-REGISTER_USER_OP("assign_if_not")
+REGISTER_NO_GRAD_USER_OP("assign_if_not")
     .Input("ref")
     .Input("value")
     .Input("condition")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn);
+    .SetInputArgModifyFn(InputArgModifierFn)
+    .SetDataTypeInferFn(InferDataType);
 
 }  // namespace oneflow

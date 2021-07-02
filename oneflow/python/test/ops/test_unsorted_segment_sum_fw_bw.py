@@ -125,9 +125,6 @@ def _compare_unsorted_segment_sum_with_tf(
         data, segment_ids, axis, num_segments, device_type, mirrored, compare_dy
     )
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     if mirrored:
         of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().numpy_list()[0]
     else:

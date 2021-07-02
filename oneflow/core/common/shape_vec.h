@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 //#define DISABLE_FIXED_SHAPE_VEC
+#define SHAPE_MAX_AXIS_SIZE 20
 
 #if defined(DISABLE_FIXED_SHAPE_VEC)
 
@@ -29,7 +30,6 @@ typedef std::vector<int64_t> AxisVector;
 
 #else
 
-#define SHAPE_MAX_AXIS_SIZE 20
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
 

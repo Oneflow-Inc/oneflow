@@ -18,34 +18,42 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
+
+namespace {
+
+constexpr int kMaxSendWr = 4096;
+
+}
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd;
   // qp_
-  ibv_device_attr device_attr;
-  CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
+  ibv_device_attr device_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
   uint32_t max_recv_wr =
       Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
-  ibv_qp_init_attr qp_init_attr;
+  ibv_qp_init_attr qp_init_attr{};
   qp_init_attr.qp_context = nullptr;
   qp_init_attr.send_cq = send_cq;
   qp_init_attr.recv_cq = recv_cq;
   qp_init_attr.srq = nullptr;
-  qp_init_attr.cap.max_send_wr = device_attr.max_qp_wr;
+  qp_init_attr.cap.max_send_wr = std::min(device_attr.max_qp_wr, kMaxSendWr);
   qp_init_attr.cap.max_recv_wr = max_recv_wr;
   qp_init_attr.cap.max_send_sge = 1;
   qp_init_attr.cap.max_recv_sge = 1;
   qp_init_attr.cap.max_inline_data = 0;
   qp_init_attr.qp_type = IBV_QPT_RC;
   qp_init_attr.sq_sig_all = 1;
-  qp_ = ibv_create_qp(pd, &qp_init_attr);
+  qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
   CHECK(qp_);
   // recv_msg_buf_
   recv_msg_buf_.assign(max_recv_wr, nullptr);
@@ -55,7 +63,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
 }
 
 IBVerbsQP::~IBVerbsQP() {
-  CHECK_EQ(ibv_destroy_qp(qp_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
   while (send_msg_buf_.empty() == false) {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
@@ -64,9 +72,9 @@ IBVerbsQP::~IBVerbsQP() {
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
-  ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(ctx_, 1, &port_attr), 0);
-  ibv_qp_attr qp_attr;
+  ibv_port_attr port_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(ctx_, 1, &port_attr), 0);
+  ibv_qp_attr qp_attr{};
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_INIT;
@@ -74,8 +82,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.port_num = 1;
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(
+               qp_, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
            0);
   // IBV_QPS_RTR
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -96,9 +104,10 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.rq_psn = 0;
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
-                             | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
+                                      IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
+                                          | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC
+                                          | IBV_QP_MIN_RNR_TIMER),
            0);
   // IBV_QPS_RTS
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -108,9 +117,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;
   qp_attr.timeout = 14;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
-                             | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
+                                      IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC
+                                          | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
 
            0);
 }
@@ -119,23 +128,29 @@ void IBVerbsQP::PostAllRecvRequest() {
   for (ActorMsgMR* msg_mr : recv_msg_buf_) { PostRecvRequest(msg_mr); }
 }
 
-void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto& remote_mem,
+void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
                                 const IBVerbsMemDesc& local_mem, void* read_id) {
-  CHECK_EQ(remote_mem.mem_ptr_size(), local_mem.sge_vec().size());
+  CHECK_EQ(remote_mem.mem_size, local_mem.mem_size());
   WorkRequestId* wr_id = NewWorkRequestId();
-  wr_id->outstanding_sge_cnt = local_mem.sge_vec().size();
+  const size_t block_size = Global<ResourceDesc, ForSession>::Get()->rdma_mem_block_byte();
+  const size_t block_num = RoundUp(remote_mem.mem_size, block_size) / block_size;
+  wr_id->outstanding_sge_cnt = static_cast<int32_t>(block_num);
   wr_id->read_id = read_id;
-  FOR_RANGE(size_t, i, 0, local_mem.sge_vec().size()) {
-    ibv_send_wr wr;
+  FOR_RANGE(size_t, i, 0, block_num) {
+    ibv_send_wr wr{};
+    ibv_sge sge{};
+    sge.addr = reinterpret_cast<uint64_t>(local_mem.mem_ptr()) + i * block_size;
+    sge.length = std::min(block_size, local_mem.mem_size() - i * block_size);
+    sge.lkey = local_mem.mr()->lkey;
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
     wr.next = nullptr;
-    wr.sg_list = const_cast<ibv_sge*>(&(local_mem.sge_vec().at(i)));
+    wr.sg_list = &sge;
     wr.num_sge = 1;
     wr.opcode = IBV_WR_RDMA_READ;
     wr.send_flags = 0;
     wr.imm_data = 0;
-    wr.wr.rdma.remote_addr = remote_mem.mem_ptr(i);
-    wr.wr.rdma.rkey = remote_mem.mr_rkey(i);
+    wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
+    wr.wr.rdma.rkey = remote_mem.mr_rkey;
     ibv_send_wr* bad_wr = nullptr;
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   }
@@ -146,10 +161,14 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
-  ibv_send_wr wr;
+  ibv_send_wr wr{};
+  ibv_sge sge{};
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
+  sge.length = msg_mr->mem_desc().mem_size();
+  sge.lkey = msg_mr->mem_desc().mr()->lkey;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
-  wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
+  wr.sg_list = &sge;
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = 0;
@@ -177,7 +196,9 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(wr_id->msg_mr->msg());
+  auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
+  CHECK(ibv_comm_net != nullptr);
+  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
@@ -185,10 +206,14 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
-  ibv_recv_wr wr;
+  ibv_recv_wr wr{};
+  ibv_sge sge{};
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
+  sge.length = msg_mr->mem_desc().mem_size();
+  sge.lkey = msg_mr->mem_desc().mr()->lkey;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
-  wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
+  wr.sg_list = &sge;
   wr.num_sge = 1;
   ibv_recv_wr* bad_wr = nullptr;
   CHECK_EQ(ibv_post_recv(qp_, &wr, &bad_wr), 0);

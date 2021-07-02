@@ -31,15 +31,15 @@ template<DeviceType device_type>
 class BlobDescGetter {
  public:
   BlobDescGetter() = default;
-  BlobDescGetter(const KernelIf<device_type> *kernel,
-                 std::function<Blob *(const std::string &)> get_blob_fn)
+  BlobDescGetter(const KernelIf<device_type>* kernel,
+                 std::function<Blob*(const std::string&)> get_blob_fn)
       : kernel_(kernel), get_blob_fn_(get_blob_fn) {}
 
-  void DumpEntryBlobDescTo(std::unordered_map<std::string, BlobDesc> *entry_blob_desc) const;
+  void DumpEntryBlobDescTo(std::unordered_map<std::string, BlobDesc>* entry_blob_desc) const;
 
  private:
-  const KernelIf<device_type> *kernel_;
-  std::function<Blob *(const std::string &)> get_blob_fn_;
+  const KernelIf<device_type>* kernel_;
+  std::function<Blob*(const std::string&)> get_blob_fn_;
 };
 
 template<DeviceType device_type>
@@ -49,21 +49,21 @@ class XrtLaunchKernel : public KernelIf<device_type> {
   virtual ~XrtLaunchKernel() {}
 
  private:
-  void ForwardDataContent(const KernelCtx &ctx,
-                          std::function<Blob *(const std::string &)> BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  xrt::Executable *BuildExecutable(const std::vector<xrt::Parameter> &entry_params,
-                                   const std::vector<xrt::Parameter> &return_params,
-                                   const std::vector<xrt::InputOutputAlias> &aliases,
+  xrt::Executable* BuildExecutable(const std::vector<xrt::Parameter>& entry_params,
+                                   const std::vector<xrt::Parameter>& return_params,
+                                   const std::vector<xrt::InputOutputAlias>& aliases,
                                    const int device_ordinal) const;
 
   void MakeInputOutputAlias(                            // NOLINT
-      const std::vector<xrt::Parameter> &entry_params,  // NOLINT
-      std::vector<xrt::Parameter> *return_params,
-      std::vector<xrt::InputOutputAlias> *aliases) const;
+      const std::vector<xrt::Parameter>& entry_params,  // NOLINT
+      std::vector<xrt::Parameter>* return_params,
+      std::vector<xrt::InputOutputAlias>* aliases) const;
 
-  void MappingParamsToFunctionNames(std::vector<xrt::Parameter> *entry_params,
-                                    std::vector<xrt::Parameter> *return_params) const;
+  void MappingParamsToFunctionNames(std::vector<xrt::Parameter>* entry_params,
+                                    std::vector<xrt::Parameter>* return_params) const;
 
   bool IsStateless() const override { return false; }
 

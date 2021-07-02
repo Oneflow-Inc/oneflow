@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -25,6 +26,13 @@ const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_d
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement);
+
+namespace cfg {
+class SbpParallel;
+class SbpSignature;
+class ParallelDistribution;
+class ParallelDistributionSignature;
+}  // namespace cfg
 
 class SbpParallel;
 class LogicalBlobId;
@@ -45,7 +53,9 @@ class JobBuilder final {
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   OperatorConf* MutableOpConf4OpName(const std::string& op_name);
 
+  Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
+  Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
@@ -57,25 +67,26 @@ class JobBuilder final {
   void DelOps(const std::vector<OperatorConf>& op_confs);
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
-
+  void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
+  void SetParallelDistribution4Oba(const OpBlobArg& oba,
+                                   const cfg::ParallelDistribution& parallel_distribution);
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
-  void AddParallelConf4OpName(const std::string& op_name, const ParallelConf& parallel_conf);
 
-  const SbpSignature& SbpSignature4OpName(const std::string& op_name) const;
-  void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
+  const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
+  void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);
 
-  const OpTimeShape& TimeShape4OpName(const std::string& op_name) const;
-  void AddTimeShape4OpName(const std::string& op_name, const OpTimeShape& time_shape);
-
-  const OptInt64& BatchAxis4Lbn(const std::string& lbn) const;
-  void AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis);
+  const ParallelDistributionSignature& ParallelDistributionSignature4OpName(
+      const std::string& op_name) const;
+  void AddParallelDistributionSignature4OpName(
+      const std::string& op_name,
+      const cfg::ParallelDistributionSignature& parallel_distribution_signature);
 
  private:
-  PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
+  void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
+                                  const ParallelConf& parallel_conf);
 
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
@@ -84,9 +95,9 @@ class JobBuilder final {
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 
-  HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
-  HashMap<std::string, OpTimeShape*> op_name2time_shapes_;
-  HashMap<std::string, OptInt64*> lbn2batch_axis_;
+  HashMap<std::string, ParallelDistributionSignature*>
+      op_name2parallel_distribution_signature_conf_;
+  HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
 };
 
 }  // namespace oneflow

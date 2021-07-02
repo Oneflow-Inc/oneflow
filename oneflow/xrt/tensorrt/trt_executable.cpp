@@ -27,9 +27,9 @@ namespace xrt {
 
 namespace tensorrt {
 
-nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
-    const ExecutableRunOptions &run_options, const int batch_size /*= 1*/,
-    TRTInt8Calibrator *calibrator /*= nullptr*/) {
+nvinfer1::ICudaEngine* TrtExecutable::CreateExecutableEngine(
+    const ExecutableRunOptions& run_options, const int batch_size /*= 1*/,
+    TRTInt8Calibrator* calibrator /*= nullptr*/) {
   CHECK(builder_ && network_) << "Builder and network should be setup before.";
 
   auto build_config =  // NOLINT
@@ -76,7 +76,7 @@ nvinfer1::ICudaEngine *TrtExecutable::CreateExecutableEngine(
   return builder_->buildEngineWithConfig(*network_, *build_config);
 }
 
-bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
+bool TrtExecutable::ExecuteEngine(int batch_size, void** buffers, void* stream,
                                   bool block_until_done) {
   if (!execution_context_) {  // NOLINT
     execution_context_.reset(engine_->createExecutionContext());
@@ -92,7 +92,7 @@ bool TrtExecutable::ExecuteEngine(int batch_size, void **buffers, void *stream,
 }
 
 std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
-    const std::string &calibration_path) {
+    const std::string& calibration_path) {
   std::string calib_restore_path(absl::StrCat(calibration_path, "/", this->name()));
   std::ifstream infile(calib_restore_path, std::ios::in);
   CHECK(infile.good()) << "Could not open calibration file: "  // NOLINT
@@ -102,8 +102,8 @@ std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
   return std::move(buffer.str());
 }
 
-bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
-                        const ExecutableRunOptions &run_options,  // NOLINT
+bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
+                        const ExecutableRunOptions& run_options,  // NOLINT
                         bool block_until_done) {
   // TODO(hjchen2): Refactor
   if (run_options.tensorrt_int8 && !calibrator_ &&  // NOLINT
@@ -123,19 +123,19 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
   this->results_ = run_options.return_params;
 
   // TODO(hjchen2): Cache the parameters raw address.
-  util::Map<std::string, const Parameter *> all_params;
-  for (const Parameter &input : inputs) {      // NOLINT
+  util::Map<std::string, const Parameter*> all_params;
+  for (const Parameter& input : inputs) {      // NOLINT
     all_params.emplace(input.name(), &input);  // NOLINT
   }
-  for (const Parameter &output : this->results_) {  // NOLINT
+  for (const Parameter& output : this->results_) {  // NOLINT
     all_params.emplace(output.name(), &output);     // NOLINT
   }
 
   const int num_bindings = engine_->getNbBindings();
-  std::vector<const Parameter *> binding_params(num_bindings);
-  std::vector<void *> buffers(num_bindings);
+  std::vector<const Parameter*> binding_params(num_bindings);
+  std::vector<void*> buffers(num_bindings);
   for (int i = 0; i < num_bindings; ++i) {
-    const char *binding_name = engine_->getBindingName(i);
+    const char* binding_name = engine_->getBindingName(i);
     CHECK_GT(all_params.count(binding_name), 0);
     binding_params[i] = all_params.at(binding_name);
     buffers[i] = binding_params[i]->data();
@@ -153,7 +153,7 @@ bool TrtExecutable::Run(const std::vector<Parameter> &inputs,
   }
 
   if (run_options.tensorrt_int8 && !calibrator_) {
-    auto *res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
+    auto* res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
     {
       std::lock_guard<std::mutex> lock(res->mutex_);
       if (!res->calibrator_) {

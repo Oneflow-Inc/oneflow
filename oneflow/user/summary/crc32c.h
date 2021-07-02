@@ -56,8 +56,8 @@ static const uint32_t table[256] = {
     0xf36e6f75, 0x0105ec76, 0x12551f82, 0xe03e9c81, 0x34f4f86a, 0xc69f7b69, 0xd5cf889d, 0x27a40b9e,
     0x79b737ba, 0x8bdcb4b9, 0x988c474d, 0x6ae7c44e, 0xbe2da0a5, 0x4c4623a6, 0x5f16d052, 0xad7d5351};
 
-inline uint32_t GetCrc32(const char *buf, size_t size) {
-  const uint8_t *uchar_buf = reinterpret_cast<const uint8_t *>(buf);
+inline uint32_t GetCrc32(const char* buf, size_t size) {
+  const uint8_t* uchar_buf = reinterpret_cast<const uint8_t*>(buf);
   uint32_t crc = 0 ^ 0xffffffffu;
   for (int i = 0; i < size; ++i) { crc = table[(crc & 0xff) ^ uchar_buf[i]] ^ (crc >> 8); }
   return crc ^ 0xffffffffu;

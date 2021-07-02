@@ -22,10 +22,19 @@ namespace {
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
-  CHECK_EQ_OR_RETURN(x->data_type(), scalar->data_type());
   CHECK_EQ_OR_RETURN(scalar->shape().elem_cnt(), 1);
-  user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  *y = *x;
+  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  *y->mut_shape() = x->shape();
+  *y->mut_is_dynamic() = x->is_dynamic();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
+  CHECK_EQ_OR_RETURN(x->data_type(), scalar->data_type());
+  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  *y->mut_data_type() = x->data_type();
   return Maybe<void>::Ok();
 }
 
@@ -45,14 +54,9 @@ using GetSbpFn = std::function<Maybe<void>(user_op::SbpContext*)>;
 GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
   return [extra](user_op::SbpContext* ctx) -> Maybe<void> {
     JUST(extra(ctx));
-    GetBasicSbpSignature(ctx);
+    JUST(GetBasicSbpSignature(ctx));
     return Maybe<void>::Ok();
   };
-}
-
-Maybe<void> BatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -62,7 +66,7 @@ REGISTER_USER_OP("scalar_add_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetDataTypeInferFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -98,7 +102,7 @@ REGISTER_USER_OP("scalar_sub_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetDataTypeInferFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -145,7 +149,7 @@ REGISTER_USER_OP("scalar_mul_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetDataTypeInferFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -203,7 +207,7 @@ REGISTER_USER_OP("scalar_div_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetBatchAxisInferFn(BatchAxisInferFn)
+    .SetDataTypeInferFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))

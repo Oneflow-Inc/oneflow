@@ -25,14 +25,14 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
 
 namespace {
@@ -68,6 +68,7 @@ struct ReceiveRequest {
 HashMap<uint64_t, SendRequest> token2send_request;
 HashMap<uint64_t, ReceiveRequest> token2recv_request;
 
+#ifdef __linux__
 class TestSendBlobInstructionType : public SendBlobInstructionType {
  public:
   TestSendBlobInstructionType() = default;
@@ -125,20 +126,21 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   }
 };
 COMMAND(vm::RegisterInstructionType<TestReceiveBlobInstructionType>("TestReceiveBlob"));
+#endif  // __linux__
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<JobDesc>>::Get()->Add(job_desc_id, *job_conf);
+  CHECK_JUST(Global<symbol::Storage<JobDesc>>::Get()->Add(job_desc_id, *job_conf));
   list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf);
+  CHECK_JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->Add(op_conf_id, *op_conf));
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
@@ -168,8 +170,8 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
     SetFakeLogicalBlobDesc(obns[i]);
   }
   int64_t op_node_signature_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
-                                                             op_node_signature);
+  CHECK_JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
+                                                                      op_node_signature));
   list->EmplaceBack(vm::NewInstruction("InitOpNodeSignatureDescSymbol")
                         ->add_init_symbol_operand(op_node_signature_id));
   return op_node_signature_id;
@@ -249,10 +251,23 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
 }  // namespace
 
+#ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
+#else
+  vm::TestResourceDescScope scope(0, 1, 2);
+#endif
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
   {
@@ -292,8 +307,10 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
+  DestroyNumProcessPerNode();
 }
+#endif  // __linux__
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

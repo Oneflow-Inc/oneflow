@@ -71,8 +71,6 @@ def compare_with_tensorflow(
     )
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SparseSoftmaxCrossEntropyWithLogitsJob(labels).get()
 
     # TensorFlow

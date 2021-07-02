@@ -23,29 +23,29 @@ limitations under the License.
 
 namespace oneflow {
 
-void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                        const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
+void AddOptimizerOp(JobPassCtx* ctx, const OpNode& var_op_node, const std::string& model_diff_lbn,
+                    const OptimizerConf& optimizer_conf, JobBuilder* job_builder);
 
-float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
-                                  const VariableOp& op);
+float GetOptimizerWeightDecayRate(const OptimizerConf& optimizer_conf, const VariableOp& op);
 
 void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder);
 
 class GenerateOptimizerOpConfWrapperStruct final {
  public:
-  using Func = std::function<void(JobPassCtx*, const VariableOp&, const ParallelConf&, JobBuilder*,
-                                  const LogicalBlobId&)>;
+  using Func = std::function<void(JobPassCtx*, const OpNode&, const std::string&,
+                                  const OptimizerConf&, JobBuilder*)>;
   GenerateOptimizerOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(JobPassCtx* ctx, const VariableOp& op, const ParallelConf& parallel_conf,
-            JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) const;
+  void Call(JobPassCtx* ctx, const OpNode& var_op_node, const std::string& model_diff_lbn,
+            const OptimizerConf& optimizer_conf, JobBuilder* job_builder) const;
 
  private:
   const std::unique_ptr<const Func> func_;
 };
 
-#define REGISTER_OPTIMIZER(model_update_case, gen_grad_func)                               \
-  REGISTER_CLASS_CREATOR(int32_t, model_update_case, GenerateOptimizerOpConfWrapperStruct, \
-                         ([] { return new GenerateOptimizerOpConfWrapperStruct(gen_grad_func); }))
+#define REGISTER_OPTIMIZER(model_update_case, gen_optimizer_conf_func)  \
+  REGISTER_CLASS_CREATOR(                                               \
+      int32_t, model_update_case, GenerateOptimizerOpConfWrapperStruct, \
+      ([] { return new GenerateOptimizerOpConfWrapperStruct(gen_optimizer_conf_func); }))
 
 }  // namespace oneflow
 

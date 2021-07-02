@@ -48,7 +48,6 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.cudnn_conv_heuristic_search_algo(False)
     if data_format == "NCDHW":
@@ -113,8 +112,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ConvJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -200,6 +197,7 @@ class TestNnConv3d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_padding_same(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

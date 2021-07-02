@@ -21,7 +21,7 @@ namespace mola {
 
 class AdamOptimizerOp : public OptimizerOp {
  private:
-  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
+  void ApplyUpdate(XlaOpContext* ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
     xla::XlaOp weight = ctx->Input("model_0");
     xla::XlaOp m = ctx->Input("m_0");
     xla::XlaOp v = ctx->Input("v_0");
@@ -45,9 +45,7 @@ class AdamOptimizerOp : public OptimizerOp {
     } else {
       lr = learning_rate;
     }
-    if (ctx->HasInput("scale_by_tensor_0")) {
-        scale_by_tensor = ctx->Input("scale_by_tensor_0");
-    }
+    if (ctx->HasInput("scale_by_tensor_0")) { scale_by_tensor = ctx->Input("scale_by_tensor_0"); }
     Shape gradient_shape = ctx->InputShape("model_diff_0");
     if (gradient_shape.NumAxes() > 1) {
       std::vector<long long> bcast_sizes;
@@ -66,10 +64,8 @@ class AdamOptimizerOp : public OptimizerOp {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(model_dtype);
       gradient = xla::ConvertElementType(gradient, data_type);
     }
-    if (ctx->HasInput("scale_by_tensor_0")) {
-      gradient = gradient * scale_by_tensor;
-    }
-    if(scale_val != 1) {
+    if (ctx->HasInput("scale_by_tensor_0")) { gradient = gradient * scale_by_tensor; }
+    if (scale_val != 1) {
       xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);
       gradient = gradient * scale;
     }
@@ -88,7 +84,7 @@ class AdamOptimizerOp : public OptimizerOp {
     v = beta2 * v + (one - beta2) * gradient * gradient;
     xla::XlaOp epsilon = xla::ScalarLike(v, epsilon_val);
     xla::XlaOp weight_decay = xla::ScalarLike(weight, weight_decay_val);
-    
+
     ctx->SetOutput("m_0", m);
     ctx->SetOutput("v_0", v);
     ctx->SetOutput("model_0", weight - lr * (m / (xla::Sqrt(v) + epsilon) + weight_decay * weight));

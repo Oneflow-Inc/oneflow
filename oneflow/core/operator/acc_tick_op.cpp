@@ -17,6 +17,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) {
+  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
+  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void AccTickOp::InitFromOpConf() {
   CHECK(op_conf().has_acc_tick_conf());
 
@@ -24,26 +34,42 @@ void AccTickOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-Maybe<void> AccTickOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> AccTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
+Maybe<void> AccTickOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
-  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> AccTickOp::InferOutputBlobTimeShape(
-    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-    const ParallelContext* parallel_ctx, Shape* time_shape) const {
+Maybe<void> AccTickOp::InferOpTimeShape(
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
-  CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
-  *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
+  std::shared_ptr<const Shape> in_shape = JUST(GetTimeShape4BnInOp("one"));
+  CHECK_EQ_OR_RETURN(in_shape->elem_cnt() % max_acc_num, 0);
+  DimVector in_dim_vec = in_shape->dim_vec();
+  std::shared_ptr<Shape> op_time_shape;
+  if (in_dim_vec.back() == max_acc_num) {
+    in_dim_vec.pop_back();
+    op_time_shape.reset(new Shape(in_dim_vec));
+  } else if (in_dim_vec.back() % max_acc_num == 0) {
+    in_dim_vec.back() /= max_acc_num;
+    op_time_shape.reset(new Shape(in_dim_vec));
+  } else {
+    op_time_shape.reset(new Shape({in_shape->elem_cnt() / max_acc_num}));
+  }
+  *time_shape = op_time_shape;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AccTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("acc")->clear_value();
+Maybe<void> AccTickOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

@@ -16,18 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow._oneflow_internal
 
 
 @oneflow_export("util.unique_str")
 def UniqueStr(prefix):
-    return "%s%d" % (prefix, UniqueId())
-
-
-def UniqueId():
-    global _unique_id
-    ret = _unique_id
-    _unique_id += 1
-    return ret
-
-
-_unique_id = 0
+    return oneflow._oneflow_internal.UniqueStr(prefix)

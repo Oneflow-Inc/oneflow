@@ -30,11 +30,6 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
-
-  // only support data parallel
-  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
-
   {
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
@@ -43,7 +38,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, padding_before.size());
 
-    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in->shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -52,7 +47,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
       CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                   strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i));
     }
-    *out = *in;
+    *out->mut_is_dynamic() = in->is_dynamic();
     *out->mut_shape() = Shape(out_shape);
   }
 
@@ -78,16 +73,11 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
     const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight->shape(), Shape(weight_shape));
   }
 
   const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
   if (bias != nullptr) { CHECK_EQ_OR_RETURN(bias->shape(), Shape({filters})); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferBatchAxis4Conv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -249,8 +239,11 @@ REGISTER_USER_OP("conv1d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("conv2d")
     .Input("in")
@@ -267,8 +260,11 @@ REGISTER_USER_OP("conv2d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("conv3d")
     .Input("in")
@@ -285,8 +281,11 @@ REGISTER_USER_OP("conv3d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("conv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
 REGISTER_USER_OP_GRAD("conv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
@@ -306,12 +305,6 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .Attr<int32_t>("groups")
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
-      CHECK_NOTNULL(x_like);
-      x_like->set_use_header_only(true);
-    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
@@ -320,24 +313,13 @@ REGISTER_USER_OP("conv_data_grad")
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
-      CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const user_op::TensorDesc* add_to_output =
             ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-        CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());
         CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
       }
-      user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      *dx = *x_like;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
-      CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
-      *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -349,6 +331,18 @@ REGISTER_USER_OP("conv_data_grad")
         split_args.emplace_back("_add_to_output", 0);
       }
       ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
+      CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
+      if (ctx->has_input("_add_to_output", 0)) {
+        const user_op::TensorDesc* add_to_output =
+            ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());
+      }
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
       return Maybe<void>::Ok();
     });
 
@@ -377,7 +371,6 @@ REGISTER_USER_OP("conv_filter_grad")
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x->shape().NumAxes(), num_spatial_dims + 2);
-      CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
       CHECK_GT_OR_RETURN(groups, 0);
 
       DimVector filter_diff_dim_vec;
@@ -399,19 +392,10 @@ REGISTER_USER_OP("conv_filter_grad")
         filter_diff_dim_vec.push_back(x->shape().dim_vec().back() / groups);
       }
 
-      user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+      user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
       *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
-      *filter_diff->mut_data_type() = x->data_type();
       filter_diff->set_is_dynamic(false);
 
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
-      BatchAxis4BnInOp("filter_diff")->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -420,6 +404,14 @@ REGISTER_USER_OP("conv_filter_grad")
           .Split(user_op::OpArg("x", 0), 0)
           .PartialSum(user_op::OpArg("filter_diff", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
+      user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
+      *filter_diff->mut_data_type() = x->data_type();
       return Maybe<void>::Ok();
     });
 
@@ -448,7 +440,6 @@ REGISTER_USER_OP("conv_bias_grad")
       CHECK_GE_OR_RETURN(num_spatial_dims, 1);
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
-      *bias_diff->mut_data_type() = dy->data_type();
       if (data_format == "channels_first") {
         *bias_diff->mut_shape() = Shape({dy->shape().At(1)});
       } else if (data_format == "channels_last") {
@@ -458,15 +449,17 @@ REGISTER_USER_OP("conv_bias_grad")
       }
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("bias_diff", 0)->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("dy", 0), 0)
           .PartialSum(user_op::OpArg("bias_diff", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+      *bias_diff->mut_data_type() = dy->data_type();
       return Maybe<void>::Ok();
     });
 

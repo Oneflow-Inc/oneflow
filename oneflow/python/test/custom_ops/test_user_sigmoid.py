@@ -25,12 +25,12 @@ import oneflow.typing as oft
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
-lib_path = os.path.dirname(os.path.abspath(__file__))
-print("lib_path:", lib_path)
+module_path = os.path.dirname(os.path.abspath(__file__))
+print("module_path:", module_path)
 print("pwd_path:", os.getcwd())
 
-user_sigmoid_lib = flow.experimental.op_lib("user_sigmoid", lib_path)
-user_sigmoid_lib.py_api().cpp_def().py_kernel().build_load()
+user_sigmoid_op = flow.experimental.custom_op_module("user_sigmoid", module_path)
+user_sigmoid_op.py_api().cpp_def().py_kernel().build_load()
 
 
 def numpy_sigmoid(x):
@@ -69,7 +69,7 @@ class TestUserSigmoid(flow.unittest.TestCase):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
                 with flow.scope.placement("cpu", "0:0"):
-                    return user_sigmoid_lib.api.user_sigmoid(x, "py")
+                    return user_sigmoid_op.api.user_sigmoid_forward(x)
 
             return sigmoid_py_job
 
@@ -95,7 +95,7 @@ class TestUserSigmoid(flow.unittest.TestCase):
                 dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype),
             ):
                 with flow.scope.placement("cpu", "0:0"):
-                    return user_sigmoid_lib.api.user_sigmoid_grad(y, dy, "py")
+                    return user_sigmoid_op.api.user_sigmoid_backward(y, dy)
 
             return sigmoid_py_grad_job
 

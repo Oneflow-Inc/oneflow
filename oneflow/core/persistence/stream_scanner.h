@@ -26,6 +26,7 @@ namespace oneflow {
 class StreamScanner {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StreamScanner);
+  virtual ~StreamScanner() {}
 
   StreamScanner(fs::FileSystem* fs, const std::vector<std::shared_ptr<BinaryInStream>>& streams,
                 uint64_t offset);

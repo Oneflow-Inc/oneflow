@@ -500,6 +500,14 @@ class TestSliceV2(flow.unittest.TestCase):
         outputs = [input[:, 2:]]
         _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
 
+    def test_slice_dynamic_empty_blob(test_case):
+        input = np.random.rand(5, 0, 5)
+        slice_args = [[(None, None, None), (None, None, None), (2, 3, None)]]
+        outputs = [input[:, :, 2:3]]
+        _test_slice_dynamic(
+            test_case, input, slice_args, outputs, static_shape=(8, 2, 10)
+        )
+
     """This test case will raise fatal error, error infomation is like below:
     F0808 00:20:19.768465 23960 user_kernel.cpp:451] Check failed: shape_view.elem_cnt() <= static_shape.elem_cnt() (12 vs. 9)
     InferShape of OpKernel (op_type_name: slice, op_name: SliceDynamic_0) raise error,

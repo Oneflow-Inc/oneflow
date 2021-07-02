@@ -18,22 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("generate_random_batch_permutation_indices")
+REGISTER_NO_GRAD_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->Shape4ArgNameAndIndex("x", 0)->At(0)});
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt32;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->has_value()
-          && ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() == 0) {
-        ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
-      }
+      *ctx->OutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -50,9 +40,9 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      GetInputArgModifierFn("x", 0)->set_use_header_only(true);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("y", 0) = DataType::kInt32;
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

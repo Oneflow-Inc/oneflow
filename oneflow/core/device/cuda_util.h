@@ -98,8 +98,8 @@ void CudaCheck(T error);
   for (type i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
        i += step)
 
-const int32_t kCudaThreadsNumPerBlock = 1024;
-const int32_t kCudaMaxBlocksNum = 4096;
+const int32_t kCudaThreadsNumPerBlock = 512;
+const int32_t kCudaMaxBlocksNum = 8192;
 const int32_t kCudaWarpSize = 32;
 
 // 48KB, max byte size of shared memroy per thread block
@@ -178,6 +178,10 @@ class CudaCurrentDeviceGuard final {
  private:
   int32_t saved_dev_id_ = -1;
 };
+
+int GetCudaSmVersion();
+
+int GetCudaPtxVersion();
 
 }  // namespace oneflow
 

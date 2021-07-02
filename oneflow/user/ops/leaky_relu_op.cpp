@@ -22,13 +22,9 @@ REGISTER_USER_OP("leaky_relu")
     .Output("y")
     .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      *y_shape = *x_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
+      *y_shape = x_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -36,6 +32,10 @@ REGISTER_USER_OP("leaky_relu")
       FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
         ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -45,15 +45,11 @@ REGISTER_USER_OP("leaky_relu_grad")
     .Output("dx")
     .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *x_shape);
-      *dx_shape = *dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK(dy_shape == x_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -70,6 +66,11 @@ REGISTER_USER_OP("leaky_relu_grad")
           .PartialSum(user_op::OpArg("dy", 0))
           .PartialSum(user_op::OpArg("dx", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     });
 

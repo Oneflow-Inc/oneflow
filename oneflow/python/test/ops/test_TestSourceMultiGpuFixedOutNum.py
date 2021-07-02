@@ -41,8 +41,6 @@ class Test_TestSourceMultiGpuFixedOutNum(flow.unittest.TestCase):
         def TestSourceJob():
             with flow.scope.placement("cpu", "0:0-1"):
                 ret = my_test_source("my_cc_test_source_op", 10)
-            # print("cons_test_source_batch_axis", ret.batch_axis)
-            test_case.assertTrue(ret.batch_axis is not None and ret.batch_axis == 0)
             return ret
 
         y = TestSourceJob().get().numpy()

@@ -24,11 +24,8 @@ REGISTER_USER_OP("repeat")
     .Output("out")
     .Attr<int32_t>("repeat_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -45,13 +42,17 @@ REGISTER_USER_OP("repeat")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferOutputBlobTimeShapeFn(
+    .SetOutputBlobTimeShapeInferFn(
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
           dim_vec.push_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
           *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
           return Maybe<void>::Ok();
-        });
+        })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";

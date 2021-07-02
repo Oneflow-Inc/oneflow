@@ -1,0 +1,9 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/placement.proto";
+
+message ParallelConfSignature {
+  optional ParallelConf op_parallel_conf = 1;
+  map<string, ParallelConf> bn_in_op2parallel_conf = 2;
+}

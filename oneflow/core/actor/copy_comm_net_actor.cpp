@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
@@ -70,8 +69,7 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
-  regst_ctx.has_sole_empty_tensor_in_sole_tensor_list =
-      msg.has_sole_empty_tensor_in_sole_tensor_list();
+  regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
   CHECK(piece_id2regst_ctx_.emplace(msg.piece_id(), regst_ctx).second);
   return true;
 }
@@ -84,15 +82,12 @@ void CopyCommNetActor::Act() {
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Regst* writeable_regst = GetNaiveCurWriteable("copy_out");
-  if (readable_it->second.has_sole_empty_tensor_in_sole_tensor_list) {
+  if (readable_it->second.has_sole_empty_blob) {
     // pass if regst dynamic body is emtpy
     Blob* data_blob = writeable_regst->GetMutSoleBlob();
-    TensorBackInserter back_inserter(data_blob);
-    back_inserter.ReserveOneEmptyTensorList();
-    FullyMutTensorView* tensor_view = back_inserter.add_tensor();
     Shape empty_shape = data_blob->static_shape();
     for (int i = 0; i < empty_shape.NumAxes(); ++i) { empty_shape.Set(i, 0); }
-    tensor_view->set_shape(empty_shape);
+    data_blob->mut_shape_view()->set_shape(empty_shape);
   } else {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async

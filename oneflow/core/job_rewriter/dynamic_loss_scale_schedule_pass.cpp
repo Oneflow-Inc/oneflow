@@ -46,8 +46,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
         std::make_shared<cfg::JobConfigProto>(job->job_conf());
     const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
         std::make_shared<cfg::ParallelConf>(parallel_conf);
-    scope_symbol_id =
-        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                          ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
   }
   OperatorConf loss_scale_var_op_conf{};
   const std::string op_name_prefix = "System-Train-DynamicLossScale-";
@@ -57,7 +57,6 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     variable_conf->set_out("out");
     *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
     variable_conf->set_data_type(DataType::kFloat);
-    variable_conf->mutable_split_axis()->clear_value();
     variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(
         policy.initial_loss_scale());
     loss_scale_var_op_conf.set_scope_symbol_id(scope_symbol_id);
@@ -70,7 +69,6 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     variable_conf->set_out("out");
     *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
     variable_conf->set_data_type(DataType::kInt64);
-    variable_conf->mutable_split_axis()->clear_value();
     variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
     good_step_counter_var_conf.set_scope_symbol_id(scope_symbol_id);
   }
@@ -115,7 +113,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
                      {loss_scale_var_op_conf, loss_scale_val_op_conf, good_step_counter_var_conf,
                       count_not_finite_stub_op.op_conf(), schedule.op_conf()});
   if (!JUST(ctx->HasState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))) {
-    ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
+    JUST(ctx->ResetState("dynamic_loss_scale_state",
+                         std::make_unique<DynamicLossScaleJobPassState>()));
   }
   auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
   state->set_loss_scale_val_lbn(loss_scale_val_lbn);

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("reduce_sum_like")
+REGISTER_NO_GRAD_USER_OP("reduce_sum_like")
     .Input("x")
     .Input("like")
     .Output("y")
@@ -28,13 +28,9 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
       if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
-      CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
-      user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y_tensor = *like_tensor;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
+      user_op::TensorDesc* y_tensor = ctx->OutputTensorDesc("y", 0);
+      *y_tensor->mut_shape() = like_tensor->shape();
+      *y_tensor->mut_is_dynamic() = like_tensor->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -44,9 +40,14 @@ REGISTER_USER_OP("reduce_sum_like")
         const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
         num_axes = in_tensor.shape().NumAxes();
         const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-        conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+        ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
       }
+      const auto& like_num_axes =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
+      const bool keep_dims = (num_axes == like_num_axes);
+      if (!keep_dims) { CHECK_EQ_OR_RETURN(conf_axes.size(), num_axes - like_num_axes); }
       auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
+      int64_t num_reduced_axes = 0;
       FOR_RANGE(int64_t, i, 0, num_axes) {
         if (IsReducedAxis(i)) {
           ctx->NewBuilder()
@@ -59,22 +60,34 @@ REGISTER_USER_OP("reduce_sum_like")
               .PartialSum(user_op::OpArg("like", 0))
               .PartialSum(user_op::OpArg("y", 0))
               .Build();
+          num_reduced_axes += 1;
         } else {
-          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+          const int64_t out_split_axis = keep_dims ? i : i - num_reduced_axes;
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("x", 0), i)
+              .Split(user_op::OpArg("like", 0), out_split_axis)
+              .Split(user_op::OpArg("y", 0), out_split_axis)
+              .Build();
         }
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("x", 0))
-            .PartialSum(user_op::OpArg("like", 0))
-            .Broadcast(user_op::OpArg("y", 0))
-            .Build();
       }
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("y", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
+      *ctx->OutputDType("y", 0) = like_tensor->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
       like_arg_modifier->set_requires_grad(false);
     });
 

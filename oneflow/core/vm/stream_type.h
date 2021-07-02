@@ -57,19 +57,19 @@ class StreamType {
                                        InstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
+  virtual void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
+    // Do nothing.
+  }
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   virtual ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                   int64_t this_machine_id) const = 0;
 
-  virtual bool SharingVirtualMachineThread() const { return false; }
-  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const {
-    LOG(FATAL) << "UNIMPLEMENTED";
-  }
-  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const {
-    LOG(FATAL) << "UNIMPLEMENTED";
-  }
+  virtual bool SharingVirtualMachineThread() const = 0;
+  virtual bool IsControlStreamType() const { return false; }
+  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const { Infer(instruction); }
+  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const { Compute(instruction); }
   virtual void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }

@@ -23,7 +23,8 @@ namespace {
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axis = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -67,13 +68,17 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
   CHECK_OR_RETURN(!broadcast_axes.empty());
-  const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-  Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-  CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
-  *out_shape = *like_shape;
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape));
+  *out_shape = like_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -89,14 +94,10 @@ REGISTER_USER_OP("broadcast_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_modifier != nullptr);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetSbpSignatures);
+    .SetGetSbpFn(GetSbpSignatures)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {

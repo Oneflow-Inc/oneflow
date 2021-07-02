@@ -24,14 +24,25 @@ namespace {
 
 struct PoolOpKernelState final : public user_op::OpKernelState {
   Params3D params_3d;
-  bool is_dynamic;
-  PoolOpKernelState(Params3D params_3d, bool is_dynamic)
-      : params_3d(params_3d), is_dynamic(is_dynamic) {}
+  PoolOpKernelState(Params3D params_3d) : params_3d(params_3d) {}
   const Params3D& GetParams3D() { return params_3d; }
-  void Update(const ShapeView& x_shape) {
-    if (is_dynamic) { params_3d.Reset(x_shape); }
-  }
 };
+
+std::shared_ptr<PoolOpKernelState> DoCreatePoolOpKernelState(user_op::KernelComputeContext* ctx,
+                                                             const int32_t& dim) {
+  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  const std::string& padding = ctx->Attr<std::string>("padding");
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+  const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
+  const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+  Params3D params_3d = Params3D(dim, x_shape, data_format, padding, padding_before, padding_after,
+                                pool_size, strides, ceil_mode);
+  std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d));
+  return std::move(state);
+}
 
 template<typename T>
 struct PoolCpuKernelUtil {
@@ -238,37 +249,34 @@ struct PoolCpuKernelUtil {
     }
   }
 
-  static void AvgFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void AvgFWCompute(user_op::KernelComputeContext* ctx, PoolOpKernelState* pool_state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
+    CHECK_NOTNULL(pool_state);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
-                    [](const T& lhs, T& rhs) { rhs += lhs; },
-                    [](const int64_t size, T& out) { out /= size; });
+      CFirstForward(
+          pool_state->GetParams3D(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
+          [](const int64_t size, T& out) { out /= size; });
     } else if (data_format == "channels_last") {
-      CLastForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
-                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-                      EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
-                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
-                     out_mat.col(col) /= size;
-                   });
+      CLastForward(
+          pool_state->GetParams3D(), x, y, GetZeroVal<T>,
+          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+             EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
+          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
+            out_mat.col(col) /= size;
+          });
     } else {
       UNIMPLEMENTED();
     }
   }
 
-  static void AvgBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void AvgBWCompute(user_op::KernelComputeContext* ctx, PoolOpKernelState* pool_state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
+    CHECK_NOTNULL(pool_state);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(pool_state->GetParams3D(), dy, y, x, dx,
@@ -286,39 +294,37 @@ struct PoolCpuKernelUtil {
     }
   }
 
-  static void MaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void MaxFWCompute(user_op::KernelComputeContext* ctx, PoolOpKernelState* pool_state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
+    CHECK_NOTNULL(pool_state);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
-                    [](const T& lhs, T& rhs) {
-                      if (lhs > rhs) { rhs = lhs; }
-                    },
-                    [](const int64_t size, T& out) {});
+      CFirstForward(
+          pool_state->GetParams3D(), x, y, GetMinVal<T>,
+          [](const T& lhs, T& rhs) {
+            if (lhs > rhs) { rhs = lhs; }
+          },
+          [](const int64_t size, T& out) {});
     } else if (data_format == "channels_last") {
-      CLastForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
-                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-                      EigenMatrixMap<T>& out_mat) {
-                     out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
-                   },
-                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
+      CLastForward(
+          pool_state->GetParams3D(), x, y, GetMinVal<T>,
+          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+             EigenMatrixMap<T>& out_mat) {
+            out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
+          },
+          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
     } else {
       UNIMPLEMENTED();
     }
   }
 
-  static void MaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  static void MaxBWCompute(user_op::KernelComputeContext* ctx, PoolOpKernelState* pool_state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto* pool_state = dynamic_cast<PoolOpKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
+    CHECK_NOTNULL(pool_state);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       CFirstBackward(
@@ -342,23 +348,6 @@ struct PoolCpuKernelUtil {
   }
 };
 
-std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelInitContext* ctx,
-                                                              const int32_t& dim) {
-  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-  const std::string& data_format = ctx->Attr<std::string>("data_format");
-  const std::string& padding = ctx->Attr<std::string>("padding");
-  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-  const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
-  const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
-  const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-  bool is_dynamic = ctx->TensorDesc4ArgNameAndIndex("x", 0)->is_dynamic();
-  Params3D params_3d = Params3D(dim, x_shape, data_format, padding, padding_before, padding_after,
-                                pool_size, strides, ceil_mode);
-  std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d, is_dynamic));
-  return std::move(state);
-}
-
 }  // namespace
 
 template<typename T>
@@ -367,15 +356,11 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
   AvgPool1DCpuKernel() = default;
   ~AvgPool1DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 1);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -385,15 +370,11 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
   AvgPool1DGradCpuKernel() = default;
   ~AvgPool1DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 1);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
 
@@ -403,15 +384,11 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
   AvgPool2DCpuKernel() = default;
   ~AvgPool2DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -421,15 +398,11 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
   AvgPool2DGradCpuKernel() = default;
   ~AvgPool2DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
 
@@ -439,15 +412,11 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
   AvgPool3DCpuKernel() = default;
   ~AvgPool3DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -457,15 +426,11 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
   AvgPool3DGradCpuKernel() = default;
   ~AvgPool3DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
 
@@ -475,15 +440,11 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
   MaxPool1DCpuKernel() = default;
   ~MaxPool1DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 1);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -493,15 +454,11 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
   MaxPool1DGradCpuKernel() = default;
   ~MaxPool1DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 1);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };
 
@@ -511,15 +468,11 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
   MaxPool2DCpuKernel() = default;
   ~MaxPool2DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -529,15 +482,11 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
   MaxPool2DGradCpuKernel() = default;
   ~MaxPool2DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };
 
@@ -547,15 +496,11 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
   MaxPool3DCpuKernel() = default;
   ~MaxPool3DCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
 
@@ -565,15 +510,11 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
   MaxPool3DGradCpuKernel() = default;
   ~MaxPool3DGradCpuKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };
 

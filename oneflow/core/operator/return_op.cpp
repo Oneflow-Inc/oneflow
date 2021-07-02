@@ -25,22 +25,30 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_is_mutable(true);
 }
 
-Maybe<void> ReturnOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReturnOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-  return Maybe<void>::Ok();
+}  // namespace
+
+Maybe<void> ReturnOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
+Maybe<void> ReturnOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> ReturnOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   const auto& in_sbp_infer_hint = *JUST(SbpInferHint4Ibn("in"));
