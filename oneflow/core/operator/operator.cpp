@@ -1073,6 +1073,12 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
   return GetFieldNameAndIndex4StrVal(bn);
 }
 
+bool IsCpuOnly(const std::string& user_op_type_name) {
+  auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_type_name);
+  CHECK_NOTNULL(registration_val);
+  return registration_val->cpu_only_supported;
+}
+
 bool IsCpuOnly(const OperatorConf& op_conf) {
   OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
   using CpuOnly = OnlyCpuSupportPredicator;
@@ -1080,10 +1086,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }
-  auto* registration_val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
-  CHECK_NOTNULL(registration_val);
-  return registration_val->cpu_only_supported;
+  return IsCpuOnly(op_conf.user_conf().op_type_name());
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
@@ -1205,17 +1208,17 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           const auto parallel_conf =
               std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
-          const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
+          const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
             int64_t symbol_id;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
               return Maybe<void>::Ok();
             };
-            LogicalRun(BuildInstruction);
+            JUST(LogicalRun(BuildInstruction));
             return symbol_id;
           };
-          (*symbol_map)[pair.first] = MakeParallelDescSymbol();
+          (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }
@@ -1399,11 +1402,12 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
   // infer is_mirrored
-  JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
+  JUST(InferMirroredSignature(op.get(), cfg::OpNodeSignature(upstream_signature), is_mirrored,
+                              parallel_desc));
   cfg::SbpSignature sbp_sig_conf;
   // iner sbp
-  JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
-                             parallel_desc));
+  JUST(InferOpOutSbpParallel(op.get(), cfg::OpNodeSignature(upstream_signature), ConstBlobDesc4Ibn,
+                             sbp_sig_conf, parallel_desc));
   // infer logical blob_desc
   JUST(op->InferLogicalOutBlobDescsIf());
   return op;

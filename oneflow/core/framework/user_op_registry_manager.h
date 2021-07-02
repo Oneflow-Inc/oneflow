@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_grad_registry.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/core/common/registry_error.h"
 
 namespace oneflow {
 
@@ -36,15 +37,15 @@ class UserOpRegistryMgr final {
 
  public:
   OpRegistry CheckAndGetOpRegistry(const std::string& op_type_name);
-  void Register(OpRegistryResult result);
+  Maybe<void> Register(OpRegistryResult result);
   const OpRegistryResult* GetOpRegistryResult(const std::string& op_type_name);
 
   OpGradRegistry CheckAndGetOpGradRegistry(const std::string& op_type_name);
-  void Register(OpGradRegistryResult result);
+  Maybe<void> Register(OpGradRegistryResult result);
   const OpGradRegistryResult* GetOpGradRegistryResult(const std::string& op_type_name);
 
   OpKernelRegistry CheckAndGetOpKernelRegistry(const std::string& op_type_name);
-  void Register(OpKernelRegistryResult result);
+  Maybe<void> Register(OpKernelRegistryResult result);
   Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
                                                                  const KernelRegContext& ctx);
 
@@ -57,7 +58,9 @@ class UserOpRegistryMgr final {
 template<typename RegistryT>
 struct UserOpRegisterTrigger final {
   UserOpRegisterTrigger(RegistryT& registry) {
-    UserOpRegistryMgr::Get().Register(registry.Finish().GetResult());
+    CatchRegistryError([&]() -> Maybe<void> {
+      return UserOpRegistryMgr::Get().Register(JUST(registry.Finish()).GetResult());
+    });
   }
 };
 
@@ -71,6 +74,10 @@ struct UserOpRegisterTrigger final {
       ::oneflow::user_op::UserOpRegistryMgr::Get().CheckAndGetOpRegistry(name)
 
 #define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
+
+#define REGISTER_NO_GRAD_USER_OP(name) REGISTER_USER_OP(name).NoGrad()
+
+#define REGISTER_NO_GRAD_CPU_ONLY_USER_OP(name) REGISTER_NO_GRAD_USER_OP(name).SupportCpuOnly()
 
 #define REGISTER_USER_OP_GRAD(name)                                                               \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpGradRegistry> OF_PP_CAT( \

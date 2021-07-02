@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("ones_like")
+REGISTER_NO_GRAD_USER_OP("ones_like")
     .Input("like")
     .Output("out")
     .SetOutputBufferNum(1)

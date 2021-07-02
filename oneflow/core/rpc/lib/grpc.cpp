@@ -40,7 +40,8 @@ Maybe<void> GrpcRpcManager::Bootstrap() {
   } else {
     ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
   }
-  ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get());
+  JUST(
+      ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   return Maybe<void>::Ok();
 }
 
