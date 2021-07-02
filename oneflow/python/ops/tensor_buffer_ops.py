@@ -149,6 +149,7 @@ def tensor_to_tensor_buffer(
 
 
 @oneflow_export("gen_tensor_buffer")
+@stable_api
 def gen_tensor_buffer(
     shape: Sequence[int],
     shape_list: Sequence[Sequence[int]],

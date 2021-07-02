@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_NODE_DEVICE_DESCRIPTOR_H_
 
 #include "oneflow/core/device/device_descriptor_list.h"
+#include "oneflow/core/device/topology_descriptor.h"
 
 namespace oneflow {
 
@@ -29,7 +30,10 @@ class NodeDeviceDescriptor {
   bool HasDeviceClass(const std::string& class_name) const;
   std::shared_ptr<const DeviceDescriptorList> GetDeviceDescriptorList(
       const std::string& class_name) const;
+  std::shared_ptr<const DeviceDescriptor> GetDevice(const std::string& class_name,
+                                                    size_t ordinal) const;
   size_t HostMemorySizeBytes() const;
+  std::shared_ptr<const TopologyDescriptor> Topology() const;
   void Serialize(std::string* serialized) const;
   void DumpSummary(const std::string& path) const;
 
