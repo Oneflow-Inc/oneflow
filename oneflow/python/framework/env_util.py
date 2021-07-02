@@ -253,24 +253,6 @@ def CompleteEnvProto(env_proto):
             )
 
 
-def is_multi_devices():
-    return os.getenv("MASTER_ADDR") is not None
-
-
-@oneflow_export("local_rank")
-def get_local_rank():
-    if is_multi_devices():
-        return int(os.getenv("LOCAL_RANK"))
-    return 0
-
-
-@oneflow_export("world_size")
-def get_world_size():
-    if is_multi_devices():
-        return int(os.getenv("WORLD_SIZE"))
-    return 1
-
-
 def _MakeMachine(machines):
     if isinstance(machines, str):
         machines = [machines]

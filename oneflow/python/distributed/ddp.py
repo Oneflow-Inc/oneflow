@@ -60,9 +60,7 @@ def DDP(module: Module, world_size=None):
     )
     module._reversed_param_list = reversed_param_list
     for _, param in module.named_parameters():
-        param.register_hook(
-            allreducefn(reversed_param_list, param, nccl_allreduce_op)
-        )
+        param.register_hook(allreducefn(reversed_param_list, param, nccl_allreduce_op))
 
     def hook(module, input, output):
         reversed_param_list = module._reversed_param_list
