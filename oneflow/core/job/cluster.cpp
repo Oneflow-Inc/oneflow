@@ -84,8 +84,8 @@ Maybe<void> Cluster::WorkerLoop() {
           wait_session_init_list.front()->WaitUntilCntEqualZero();
           wait_session_init_list.pop_front();
         }
-        Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
-            std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
+        JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
+            std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction)));
       } else {
         OF_UNIMPLEMENTED();
       }

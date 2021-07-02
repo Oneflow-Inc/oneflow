@@ -4,6 +4,12 @@
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 
+## Latest News
+- Version 0.4.0 is out!
+  - New Pytorch flavored APIs (`import oneflow.experimental as flow`)
+  - New [models and examples](https://github.com/Oneflow-Inc/models)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.4.0)
+
 ## Install OneFlow
 
   ### System Requirements
@@ -215,8 +221,19 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
-- [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues): any install, bug, feature issues.
+- [www.oneflow.org](http://www.oneflow.org): brand related information.
+
+- ### 中文
+  - QQ 群: 331883
+  - 微信号（加好友入交流群）: OneFlowXZS
+  - [知乎](https://www.zhihu.com/org/oneflow-17)
+
+- ### International
+  - [Discord](https://discord.gg/4kpjGA5bZY)
+  - [Twitter](https://twitter.com/OneFlowNews)
+  - [LinkedIn](https://www.linkedin.com/company/oneflow-inc)
+  - [Medium](https://oneflow2020.medium.com)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).

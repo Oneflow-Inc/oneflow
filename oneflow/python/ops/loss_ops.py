@@ -20,7 +20,7 @@ import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @oneflow_export("smooth_l1_loss")
@@ -208,3 +208,75 @@ def ctc_loss(
         return flow.math.reduce_sum(loss, name=name + "_reduce_sum")
     else:
         return loss
+
+
+@oneflow_export("nn.ctc_greedy_decoder")
+def ctc_greedy_decoder(
+    log_probs: oneflow._oneflow_internal.BlobDesc,
+    input_lengths: oneflow._oneflow_internal.BlobDesc,
+    merge_repeated: bool = True,
+    name: Optional[str] = None,
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
+    r"""Performs greedy decoding on the logits given in input (best path).
+
+    Args:
+        log_probs (oneflow._oneflow_internal.BlobDesc): A Blob of shape [input_length, batch_size, num_labels]. The logarithmized probabilities of the outputs (e.g. obtained with flow.nn.logsoftmax()).
+        input_lengths (oneflow._oneflow_internal.BlobDesc): A Blob of shape [batch_size]. It represent the lengths of the inputs. And the lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
+        merge_repeated (bool, optional): If merge_repeated is True, merge repeated classes in output. This means that if consecutive logits' maximum indices are the same, only the first of these is emitted. Defaults to True.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        decoded(oneflow._oneflow_internal.BlobDesc): A Blob of shape [batch_size, input_length], The decoded outputs.
+        neg_sum_logits(oneflow._oneflow_internal.BlobDesc): A float matrix (batch_size x 1) containing, for the sequence found, the negative of the sum of the greatest logit at each timeframe.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+        from typing import Tuple
+
+
+        @flow.global_function()
+        def ctc_greedy_decoder_job(
+            log_probs: tp.Numpy.Placeholder(shape=(4, 2, 5)),
+            input_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int64),
+        ) -> Tuple[tp.Numpy, tp.Numpy]:
+            decoded, neg_sum_logits = flow.nn.ctc_greedy_decoder(
+                log_probs, input_lengths, merge_repeated=True
+            )
+            return decoded, neg_sum_logits
+
+
+        log_probs = np.array(
+            [
+                [[-1.54, -1.20, -1.95, -1.65, -1.81], [-1.84, -1.74, -1.58, -1.55, -1.12]],
+                [[-1.68, -1.48, -1.89, -1.30, -2.07], [-1.13, -1.45, -1.24, -1.61, -1.66]],
+                [[-1.56, -1.40, -2.83, -1.67, -1.48], [-1.20, -2.01, -2.05, -1.95, -1.24]],
+                [[-2.09, -1.76, -1.36, -1.67, -1.45], [-1.85, -1.48, -1.34, -2.16, -1.55]],
+            ]
+        ).astype(np.float32)
+        input_lengths = np.array([4, 4])
+        decoded, neg_sum_logits = ctc_greedy_decoder_job(log_probs, input_lengths)
+
+        # decoded [[1 3 1 2] [0 2 0 0]]
+        # neg_sum_logits [[5.26] [4.79]]
+
+
+    """
+    name = name if name is not None else id_util.UniqueStr("CTCGreedyDecode_")
+    decoded, neg_sum_logits = (
+        flow.user_op_builder(name)
+        .Op("ctc_greedy_decoder")
+        .Input("log_probs", [log_probs])
+        .Input("input_lengths", [input_lengths])
+        .Output("decoded")
+        .Output("neg_sum_logits")
+        .Attr("merge_repeated", merge_repeated)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return decoded, neg_sum_logits

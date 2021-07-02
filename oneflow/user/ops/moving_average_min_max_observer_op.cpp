@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("moving_average_min_max_observer")
+REGISTER_NO_GRAD_USER_OP("moving_average_min_max_observer")
     .Input("in")
     .Input("current_train_step")
     .Input("moving_max")  // NOTE(Liang Depeng): needs to be initialized as 0

@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("cast_like")
+REGISTER_NO_GRAD_USER_OP("cast_like")
     .Input("in")
     .Input("dtype_like")
     .Output("out")

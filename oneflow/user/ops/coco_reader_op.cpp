@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("COCOReader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
     .Output("image")
     .Output("image_id")
     .Output("image_size")
