@@ -109,12 +109,100 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PoolNdGradFunctor {
+ public:
+  PoolNdGradFunctor() {
+    for (const auto& mode : {"max", "avg"}) {
+      for (int ndims = 1; ndims <= 3; ++ndims) {
+        const auto& op_type_name = GetOpTypeName(mode, ndims);
+        op_expr_map_[op_type_name] = CHECK_JUST(
+            one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
+      }
+    }
+  }
+  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
+    return mode + "_pool_" + std::to_string(ndims) + "d_grad";
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& pool_size,
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::string>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", pool_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    const auto& op_type_name = GetOpTypeName(mode, ndims);
+    const auto& it = op_expr_map_.find(op_type_name);
+    CHECK_OR_RETURN(it != op_expr_map_.end())
+        << "Encounter unsupported op " << op_type_name << " in PoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
+  }
+
+ protected:
+  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
+class PadGradFunctor {
+ public:
+  PadGradFunctor() {
+    constant_pad_grad_ =
+        CHECK_JUST(one::OpBuilder("constant_pad2d_grad").Input("dy").Output("dx").Build());
+    reflect_pad_grad_ =
+        CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
+    replicate_pad_grad_ =
+        CHECK_JUST(one::OpBuilder("replication_pad2d_grad").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& pad,
+                           const std::string& mode, const Scalar& value) const {
+    size_t padding_size = 2 * dy->shape()->NumAxes();
+    CHECK_LE_OR_RETURN(pad.size(), padding_size)
+        << "Pad size should less than or equal to input axes * 2.";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    if (mode == "constant") {
+      if (IsFloatingDataType(dy->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_value", 0));
+      } else if (IsIntegralDataType(dy->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*constant_pad_grad_, {dy}, attrs);
+    } else if (mode == "reflect") {
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
+    } else if (mode == "replicate") {
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, attrs);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
+                                  << ", but only constant, reflect and replicate are valid.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> constant_pad_grad_;
+  std::shared_ptr<OpExpr> reflect_pad_grad_;
+  std::shared_ptr<OpExpr> replicate_pad_grad_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvBiasGradFunctor>("ConvBiasGrad");
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
+  m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+  m.add_functor<impl::PadGradFunctor>("PadGrad");
 };
 
 }  // namespace functional
