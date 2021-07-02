@@ -24,6 +24,9 @@ class TestGenerator(flow.unittest.TestCase):
         cpu_gen = flow.Generator(device="cpu")
         test_case.assertTrue(auto_gen.initial_seed(), cuda_gen.initial_seed())
         test_case.assertTrue(auto_gen.initial_seed(), cpu_gen.initial_seed())
+        with test_case.assertRaises(Exception) as context:
+            flow.Generator(device="invalid")
+        test_case.assertTrue("unimplemented" in str(context.exception))
 
     def test_global_manual_seed(test_case):
         flow.manual_seed(10)

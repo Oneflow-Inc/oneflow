@@ -55,7 +55,6 @@ void DeviceGeneratorImpl<DeviceType::kGPU>::CudaRandInit(uint64_t seed) {
 DeviceGeneratorImpl<DeviceType::kGPU>::DeviceGeneratorImpl(uint64_t seed)
     : GeneratorImpl(seed, "cuda") {
   cudaDeviceProp prop;
-  // FIXME: will this cause issue by always using cuda:0's property?
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   block_num_ = prop.multiProcessorCount;
   thread_num_ = GetThreadNum(prop);

@@ -24,9 +24,9 @@ def MakeGenerator(device=None, seed=None):
     if device is None:
         device = "auto"
     if seed is None:
-        return oneflow._oneflow_internal.Generator(device)
+        return oneflow._oneflow_internal.create_generator(device)
     else:
-        return oneflow._oneflow_internal.Generator(device, seed)
+        return oneflow._oneflow_internal.create_generator(device, seed)
 
 
 @oneflow_export("manual_seed")

@@ -24,9 +24,12 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("manual_seed", [](uint64_t seed) { return one::manual_seed(seed); });
+  m.def("create_generator",
+        [](const std::string& device) { return one::Generator::New(device).GetPtrOrThrow(); });
+  m.def("create_generator", [](const std::string& device, uint64_t seed) {
+    return one::Generator::New(device, seed).GetPtrOrThrow();
+  });
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
-      .def(py::init<std::string>())
-      .def(py::init<std::string, const int64_t>())
       .def("manual_seed", &one::Generator::set_seed)
       .def("initial_seed", &one::Generator::get_seed);
 }
