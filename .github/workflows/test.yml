@@ -114,6 +114,8 @@ jobs:
           set -x
           echo "CC=clang-12" >> $GITHUB_ENV
           echo "CXX=clang++-12" >> $GITHUB_ENV
+          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
+          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp" >> $GITHUB_ENV
       - name: Build Clang plug-in
         run: |
           cd tools/clang-plugin
@@ -138,7 +140,6 @@ jobs:
           cmake --build . -j$(nproc) --target oneflow_deps
       - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
-          export ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/ ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp
           cd build
           cmake --build . -j$(nproc)
 
