@@ -36,12 +36,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
   // split_axs should NOT equals dim when in consistent view
-  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-  auto is_split = in_sbp.has_split_parallel();
-  if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
-    int64_t split_axis = in_sbp.split_parallel().axis();
-    CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-  }
+  // const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  // auto is_split = in_sbp.has_split_parallel();
+  // if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
+  //   int64_t split_axis = in_sbp.split_parallel().axis();
+  //   CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+  // }
 
   CHECK_OR_RETURN(!in->is_dynamic());
   CHECK_OR_RETURN(!index->is_dynamic());
