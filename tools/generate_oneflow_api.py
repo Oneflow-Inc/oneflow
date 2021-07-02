@@ -38,14 +38,18 @@ def dtype_related_symbols():
 
 def customized_symbols():
     return [
-        # noted that the imported module name shouldn't be same with existing module, use import ... as ... if there is same module with same name
+        # Note that the imported module name shouldn't be same with existing module, use import ... as ... if there is same module with same name
+        # oneflow.device
         """from oneflow._oneflow_internal import device""",
         """device.__module__ = \"oneflow\"""",
+        # oneflow.Size
         """from oneflow._oneflow_internal import Size""",
         """Size.__module__ = \"oneflow\"""",
+        # oneflow.sbp.sbp
         """from oneflow._oneflow_internal.sbp import sbp""",
         """sbp.__module__ = \"oneflow.sbp\"""",
-        """del sbp""",  # don't add del scrip if want keep the symbol under oneflow namespace
+        """del sbp""",  # Note that del is used here carefully to avoid deleting the class that was originally exported under the oneflow namespace
+        # oneflow.Tensor
         """from oneflow.python.framework.tensor import Tensor""",
         """Tensor.__module__ = \"oneflow\"""",
     ]
