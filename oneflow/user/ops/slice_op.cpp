@@ -140,10 +140,10 @@ Maybe<void> GetSliceGradOpSbpSignature(user_op::SbpContext* ctx) {
 Maybe<void> InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
                                     const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-  CHECK_NOTNULL(dy_modifier);
+  CHECK_NOTNULL_OR_RETURN(dy_modifier);
   dy_modifier->set_requires_grad(false);
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-  CHECK_NOTNULL(like_modifier);
+  CHECK_NOTNULL_OR_RETURN(like_modifier);
   like_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }

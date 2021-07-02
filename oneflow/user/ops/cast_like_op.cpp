@@ -29,7 +29,7 @@ REGISTER_USER_OP("cast_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
-      CHECK_NOTNULL(dtype_like_modifier);
+      CHECK_NOTNULL_OR_RETURN(dtype_like_modifier);
       dtype_like_modifier->set_requires_grad(false);
       Maybe<void>::Ok();
     })

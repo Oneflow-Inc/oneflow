@@ -71,7 +71,7 @@ Maybe<void> SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierF
                         const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
-    CHECK_NOTNULL(like_modifier);
+    CHECK_NOTNULL_OR_RETURN(like_modifier);
     like_modifier->set_requires_grad(false);
   }
   return Maybe<void>::Ok();

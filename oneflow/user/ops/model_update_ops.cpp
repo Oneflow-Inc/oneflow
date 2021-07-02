@@ -269,11 +269,12 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
-void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
-  CHECK_NOTNULL(arg_modifier);
+  CHECK_NOTNULL_OR_RETURN(arg_modifier);
   arg_modifier->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,

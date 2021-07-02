@@ -52,7 +52,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
