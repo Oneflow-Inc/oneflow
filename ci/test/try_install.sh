@@ -10,6 +10,7 @@ if [ -n "$index" ]; then
     python3 -m pip install --find-links ${index} ${pkg_name}
 elif [ -d "$wheel_path" ]; then
     ls -la $wheel_path
+    python3 -m pip install piprepo --user
     piprepo build $wheel_path
     python3 -m pip install -U --user --extra-index-url file://${wheel_path}/simple ${pkg_name}
 elif [ -e "$wheel_path" ]; then
