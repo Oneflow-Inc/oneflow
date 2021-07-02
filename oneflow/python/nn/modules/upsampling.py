@@ -318,15 +318,15 @@ class Interpolate(Upsample):
                   [3., 3., 4., 4.]]]], device='cuda:0', dtype=oneflow.float32)
 
     """
+
     def __init__(
-            self,
-            size: Optional[Tuple[int, int]] = None,
-            scale_factor: Optional[Tuple[float, float]] = None,
-            mode: str = "nearest",
-            align_corners: Optional[bool] = None,
+        self,
+        size: Optional[Tuple[int, int]] = None,
+        scale_factor: Optional[Tuple[float, float]] = None,
+        mode: str = "nearest",
+        align_corners: Optional[bool] = None,
     ) -> None:
         super(Interpolate, self).__init__(size, scale_factor, mode, align_corners)
-
 
 
 if __name__ == "__main__":
