@@ -104,7 +104,7 @@ def _conv2d_layer(
     weight = flow.identity(weight)
     weight = flow.repeat(weight, args.num_piece_in_batch)
     output = flow.nn.conv2d(
-        input, weight, strides, padding, data_format, dilation_rate, name=name
+        input, weight, strides, padding, None, data_format, dilation_rate, name=name
     )
     if use_bias:
         bias = flow.get_variable(
