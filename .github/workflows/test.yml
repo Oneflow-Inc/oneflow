@@ -109,13 +109,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev \
             libopenblas-dev nasm python3-pip ninja-build
-      - name: Set environment variables
-        run: |
-          all_exports="CC=clang-12 CXX=clang++-12 ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/ ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp"
-          echo "all_exports=\"${all_exports}\"" >> $GITHUB_EN
       - name: Build Clang plug-in
         run: |
-          export ${{ env.all_exports }}
+          export CC=clang-12 CXX=clang++-12
           cd tools/clang-plugin
           mkdir build
           cd build
@@ -126,7 +122,7 @@ jobs:
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
       - name: Build (CMake configure)
         run: |
-          export ${{ env.all_exports }}
+          export CC=clang-12 CXX=clang++-12
           mkdir build
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
@@ -135,12 +131,12 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
       - name: Build (third party)
         run: |
-          export ${{ env.all_exports }}
+          export CC=clang-12 CXX=clang++-12
           cd build
           cmake --build . -j$(nproc) --target oneflow_deps
       - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
-          export ${{ env.all_exports }}
+          export ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/ ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp
           cd build
           cmake --build . -j$(nproc)
 
