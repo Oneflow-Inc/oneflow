@@ -274,9 +274,10 @@ class Tensor:
 
     @staticmethod
     def check_grad(grad, new_grad):
-        print(grad.dtype, new_grad.dtype)
+        print(grad.shape, new_grad.shape)
         print(grad.device, new_grad.device)
         print(grad.dtype, new_grad.dtype)
+        print(type(grad), type(new_grad))
 
 
 

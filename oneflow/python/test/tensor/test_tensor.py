@@ -1064,6 +1064,22 @@ class TestTensor(flow.unittest.TestCase):
                 np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5)
             )
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_grad(test_case):
+        np_input = np.random.randn(2, 4, 6)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_output = 2 * of_input
+        of_output = of_output.sum()
+        of_output.backward()
+        print(of_input.grad)
+        new_grad = flow.Tensor(np.full((2, 4, 6), 1),  dtype=flow.float32)
+        of_input.grad = new_grad
+        print(of_input.grad)
+
+
 
 if __name__ == "__main__":
     unittest.main()
