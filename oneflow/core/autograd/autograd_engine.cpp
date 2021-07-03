@@ -110,7 +110,9 @@ void StackFunctionNode::ReleaseData() {
 
 Maybe<bool> FunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
-      << "This FunctionNode with name `" << GetOpTypeName() << "` has been released.";
+      << "This FunctionNode with name `" << GetOpTypeName() << "` has been released.\n"
+      << "Maybe you try to backward through the node a second time. Specify retain_graph=True when "
+         "calling .backward() or autograd.grad() the first time.";
   if (!IsReadyToRun(output_meta_datas_)) { return false; }
   TensorTuple input_grads(input_meta_datas_.size());
   TensorTuple output_grads(output_meta_datas_.size());
