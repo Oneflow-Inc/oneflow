@@ -18,6 +18,8 @@ from __future__ import absolute_import
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.CheckAndClearRegistryFlag()
+
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.PlacementSymbol
