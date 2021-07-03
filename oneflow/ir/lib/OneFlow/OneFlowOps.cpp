@@ -18,6 +18,7 @@ limitations under the License.
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -36,7 +37,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::Operat
   return success();
 }
 
-static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
+static mlir::LogicalResult verify(oneflow::ConstantOp op) { return mlir::success(); }
 
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
@@ -234,23 +235,34 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
                                                 /* operands */ operands,
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
-      cast_op.erase();
 
       // create a function to be lowered
-      auto func_type =
-          rewriter.getFunctionType(created->getOperandTypes(), created.getResultTypes());
+      SmallVector<Type, 3> types(created->getOperandTypes());
+      types.push_back(created->getResultTypes().front());
+      auto func_type = rewriter.getFunctionType(types, llvm::None);
       auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
-      OpBuilder b(rewriter);
       // TODO: is it a good idea to insert the sub-graph at entry block?
-      b.setInsertionPointToStart(function.addEntryBlock());
+      // TODO: add dedicated op definition for this kind of function
+      OpBuilder builder(rewriter);
+      auto entry_block = function.addEntryBlock();
+
+      builder.setInsertionPointToStart(entry_block);
+      // TODO: make this transformation generic, using a value => arg mapping
       auto cast_op_ =
-          b.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
-                           /* operands */ function->getOperands().take_front(1),
-                           /* attributes */ attributes);
-      b.create<ScalarMulByTensorOp>(mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
-                                    /* operands */ function.getArguments().take_front(),
-                                    /* attributes */ attributes);
-      rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
+          builder.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
+                                 /* operands */ entry_block->getArguments().take_front(),
+                                 /* attributes */ cast_op->getAttrs());
+      builder.create<ScalarMulByTensorOp>(
+          mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
+          /* operands */
+          SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block->getArgument(1)}),
+          /* attributes */ mul_op->getAttrs());
+      builder.create<ReturnOp>(mul_op->getLoc());
+      // TODO: decare terminator
+      // TODO: skip outline functions when translating beck to job
+      // rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
+      function.dump();
+      cast_op.erase();
       return created->getResults();
     }
   }
