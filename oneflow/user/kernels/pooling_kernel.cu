@@ -23,6 +23,10 @@ limitations under the License.
 
 namespace oneflow {
 
+const int32_t GetMinThreadNum(int32_t elem_num) {
+  return std::min(elem_num, kCudaThreadsNumPerBlock);
+}
+
 template<typename T>
 __global__ void DoCUDAMaxPool2dForward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                        int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
@@ -82,7 +86,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
                                const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     DoCUDAMaxPool2dForward<T>
-        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[1],
             params_3d.padding_before_3d()[2], params_3d.num_batch(), params_3d.num_channel(),
             params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
@@ -96,7 +100,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
     DoCUDAMaxPool2dBackward<T>
-        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
             params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
             params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
@@ -106,7 +110,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     DoCUDAMaxPool3dForward<T>
-        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[0],
             params_3d.padding_before_3d()[1], params_3d.padding_before_3d()[2],
             params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(2),
@@ -122,7 +126,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
     DoCUDAMaxPool3dBackward<T>
-        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
             params_3d.num_channel(), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
             params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
