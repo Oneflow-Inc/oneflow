@@ -16,18 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
 
 namespace {
-
-static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
-                                    const int64_t in_dim_size) {
-  int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
-  index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
-  index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
-  return index;
-}
 
 template<typename T>
 static void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
@@ -57,62 +50,6 @@ static void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr,
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
     *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w)) += dy_dptr[index];
   }
-}
-
-template<typename T>
-T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool align_corners,
-                    const T scale) {
-  if (align_corners) {
-    if (output_size > 1) {
-      return static_cast<T>(input_size - 1) / (output_size - 1);
-    } else {
-      return 0;
-    }
-  } else {
-    return (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
-  }
-}
-
-template<typename T>
-struct BilinearParam {
-  int64_t top_h_index;
-  int64_t bottom_h_index;
-  int64_t left_w_index;
-  int64_t right_w_index;
-  T w_lerp;
-  T h_lerp;
-};
-
-template<typename T>
-void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
-                      const int64_t in_height, const int64_t in_width, const T scale_h,
-                      const T scale_w, BilinearParam<T>* params) {
-  T h1r;
-  if (align_corners) {
-    h1r = scale_h * static_cast<T>(h);
-  } else {
-    h1r = (static_cast<T>(h) + 0.5f) * scale_h - 0.5f;
-    h1r = h1r < 0 ? 0 : h1r;
-  }
-  const int64_t h1 = h1r;
-  const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-
-  T w1r;
-  if (align_corners) {
-    w1r = scale_w * static_cast<T>(w);
-  } else {
-    w1r = (static_cast<T>(w) + 0.5f) * scale_w - 0.5f;
-    w1r = w1r < 0 ? 0 : w1r;
-  }
-  const int64_t w1 = w1r;
-  const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
-
-  params->top_h_index = h1;
-  params->bottom_h_index = h1 + h1p;
-  params->h_lerp = h1r - h1;
-  params->left_w_index = w1;
-  params->right_w_index = w1 + w1p;
-  params->w_lerp = w1r - w1;
 }
 
 template<typename T>
