@@ -113,7 +113,7 @@
   - Install dependencies
     - on Ubuntu 20.04, run:
       ```
-      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake
+      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
       ```
     - on macOS, run:
       ```

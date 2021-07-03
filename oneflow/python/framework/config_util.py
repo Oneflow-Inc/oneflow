@@ -157,14 +157,9 @@ def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_numa_aware_cuda_malloc_host, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_numa_aware_cuda_malloc_host(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_numa_aware_cuda_malloc_host = val
+    print(
+        "'enable_numa_aware_cuda_malloc_host' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_export("config.compute_thread_pool_size")
