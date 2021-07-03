@@ -85,7 +85,13 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    std::cout << "elem_num:" << elem_num << " thread_num:" <<  GetMinThreadNum(elem_num) << " BlocksNum4ThreadsNum(elem_num):"<< BlocksNum4ThreadsNum(elem_num) << " kCudaThreadsNumPerBlock:" << kCudaThreadsNumPerBlock << " num_batch():" << params_3d.num_batch() << " num_channel:" << params_3d.num_channel() << " h:"<< params_3d.GetXShape5D().At(3) << " w:" << params_3d.GetXShape5D().At(4) << std::endl;
+    std::cout << "elem_num:" << elem_num << " thread_num:" << GetMinThreadNum(elem_num)
+              << " BlocksNum4ThreadsNum(elem_num):" << BlocksNum4ThreadsNum(elem_num)
+              << " kCudaThreadsNumPerBlock:" << kCudaThreadsNumPerBlock
+              << " num_batch():" << params_3d.num_batch()
+              << " num_channel:" << params_3d.num_channel()
+              << " h:" << params_3d.GetXShape5D().At(3) << " w:" << params_3d.GetXShape5D().At(4)
+              << std::endl;
     DoCUDAMaxPool2dForward<T>
         <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[1],
@@ -100,7 +106,13 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    std::cout << "elem_num:" << elem_num << " thread_num:" <<  GetMinThreadNum(elem_num) << " BlocksNum4ThreadsNum(elem_num):"<< BlocksNum4ThreadsNum(elem_num) << " kCudaThreadsNumPerBlock:" << kCudaThreadsNumPerBlock << " num_batch():" << params_3d.num_batch() << " num_channel:" << params_3d.num_channel() << " h:"<< params_3d.GetXShape5D().At(3) << " w:" << params_3d.GetXShape5D().At(4) << std::endl;
+    std::cout << "elem_num:" << elem_num << " thread_num:" << GetMinThreadNum(elem_num)
+              << " BlocksNum4ThreadsNum(elem_num):" << BlocksNum4ThreadsNum(elem_num)
+              << " kCudaThreadsNumPerBlock:" << kCudaThreadsNumPerBlock
+              << " num_batch():" << params_3d.num_batch()
+              << " num_channel:" << params_3d.num_channel()
+              << " h:" << params_3d.GetXShape5D().At(3) << " w:" << params_3d.GetXShape5D().At(4)
+              << std::endl;
     DoCUDAMaxPool2dBackward<T>
         <<<BlocksNum4ThreadsNum(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
