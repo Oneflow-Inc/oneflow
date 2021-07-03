@@ -31,7 +31,11 @@ BasicDeviceDescriptorList::~BasicDeviceDescriptorList() = default;
 size_t BasicDeviceDescriptorList::DeviceCount() const { return device_descriptor_list_.size(); }
 
 std::shared_ptr<const DeviceDescriptor> BasicDeviceDescriptorList::GetDevice(size_t ordinal) const {
-  return device_descriptor_list_.at(ordinal);
+  if (ordinal < device_descriptor_list_.size()) {
+    return device_descriptor_list_.at(ordinal);
+  } else {
+    return nullptr;
+  }
 }
 
 }  // namespace device

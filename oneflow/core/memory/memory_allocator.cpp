@@ -29,11 +29,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
-      if (Global<ResourceDesc, ForSession>::Get()->enable_numa_aware_cuda_malloc_host()) {
-        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
-      } else {
-        OF_CUDA_CHECK(cudaMallocHost(&ptr, size));
-      }
+      NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
 #else
       UNIMPLEMENTED();
 #endif

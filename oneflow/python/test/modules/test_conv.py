@@ -1539,7 +1539,6 @@ def _test_conv2d_large_out_channel(test_case, device):
     m.weight = flow.nn.Parameter(flow.Tensor(weight), requires_grad=True)
     m = m.to(device)
     output = m(input)
-    print(output)
     np_out = np.array(
         [
             [
