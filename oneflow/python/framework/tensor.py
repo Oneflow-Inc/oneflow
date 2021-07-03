@@ -440,8 +440,6 @@ class Tensor:
             res = res.squeeze(dim=squeeze_dims)
         return res
 
-
-
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):

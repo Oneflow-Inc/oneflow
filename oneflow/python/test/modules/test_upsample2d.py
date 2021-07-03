@@ -22,15 +22,11 @@ import torch
 import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
-import cv2
-import PIL
-import PIL.Image as Image
 
 
 def _test_upsample_and_interpolate_nearest(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -57,13 +53,11 @@ def _test_upsample_and_interpolate_nearest(
     torch_out = torch.nn.functional.interpolate(
         torch_in, size=out_size, scale_factor=scale_factor
     )
-    print("torch_out", torch_out)
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
 
     for of_out in of_outs:
-        print("of_out", of_out)
         test_case.assertTrue(
             np.allclose(of_out.numpy(), torch_out.cpu().numpy(), 1e-5, 1e-5)
         )
@@ -72,7 +66,6 @@ def _test_upsample_and_interpolate_nearest(
 def _test_upsample_and_interpolate_bilinear(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -97,12 +90,10 @@ def _test_upsample_and_interpolate_bilinear(
     torch_out = torch.nn.functional.interpolate(
         torch_in, size=out_size, scale_factor=scale_factor, mode="bilinear"
     )
-    print("torch_out", torch_out)
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
     for of_out in of_outs:
-        print("of_out", of_out)
         # bypass bug implementation made by pytorch
         if in_size != (1, 1, 2, 3) and scale_factor != 0.5:
             test_case.assertTrue(
@@ -113,7 +104,6 @@ def _test_upsample_and_interpolate_bilinear(
 def _test_upsample_and_interpolate_bilinear_align_corners(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -124,8 +114,6 @@ def _test_upsample_and_interpolate_bilinear_align_corners(
     np_in = np.arange(*in_range).reshape(in_size)
     of_in = flow.Tensor(np_in, device=flow.device(device), dtype=flow.float32,)
     torch_in = torch.tensor(np_in, device=torch.device(device), dtype=torch.float32)
-    pil_in = Image.fromarray(np_in[0, 0].astype(np.uint8), "L")
-    cv_in = np.asarray(pil_in)
 
     m = []
     if out_size is not None:
@@ -146,20 +134,9 @@ def _test_upsample_and_interpolate_bilinear_align_corners(
             )
         )
         m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor))
-        # cv_out_size = tuple(np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2))
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    #
-    # if out_size is None:
-    #     pil_out = pil_in.resize(cv_out_size, resample=PIL.Image.BILINEAR)
-    #     cv_out = cv2.resize(cv_in, cv_out_size, interpolation=cv2.INTER_LINEAR)
-    # else:
-    #     print(cv_in.shape)
-    #     pil_out = pil_in.resize(out_size, resample=PIL.Image.BILINEAR)
-    #     cv_out = cv2.resize(cv_in, out_size, interpolation=cv2.INTER_LINEAR)
-    # print("pil_out", np.array(pil_out))
-    # print("cv_out", cv_out)
     torch_out = torch.nn.functional.interpolate(
         torch_in,
         size=out_size,
@@ -167,12 +144,10 @@ def _test_upsample_and_interpolate_bilinear_align_corners(
         mode="bilinear",
         align_corners=True,
     )
-    print("torch_out", torch_out)
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
     for of_out in of_outs:
-        print("of_out", of_out)
         test_case.assertTrue(
             np.allclose(of_out.numpy(), torch_out.cpu().numpy(), 1e-5, 1e-5)
         )
@@ -181,7 +156,6 @@ def _test_upsample_and_interpolate_bilinear_align_corners(
 def _test_upsample_and_interpolate_nearest_backward(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -214,7 +188,6 @@ def _test_upsample_and_interpolate_nearest_backward(
     )
     torch_out = torch_out.sum()
     torch_out.backward()
-    print("torch_out_grad", torch_in.grad)
 
     of_outs = []
     for it in m:
@@ -224,7 +197,6 @@ def _test_upsample_and_interpolate_nearest_backward(
         of_out = of_out.sum()
         of_out.backward()
 
-        print("of_out_grad", of_in.grad)
         test_case.assertTrue(
             np.allclose(of_in.grad.numpy(), torch_in.grad.cpu().numpy(), 1e-5, 1e-5)
         )
@@ -234,7 +206,6 @@ def _test_upsample_and_interpolate_nearest_backward(
 def _test_upsample_and_interpolate_bilinear_backward(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -265,7 +236,6 @@ def _test_upsample_and_interpolate_bilinear_backward(
     )
     torch_out = torch_out.sum()
     torch_out.backward()
-    print("torch_out_grad", torch_in.grad)
 
     of_outs = []
     for it in m:
@@ -275,7 +245,6 @@ def _test_upsample_and_interpolate_bilinear_backward(
         of_out = of_out.sum()
         of_out.backward()
 
-        print("of_out_grad", of_in.grad)
         # bypass bug implementation made by pytorch
         if in_size != (1, 1, 2, 3) and out_size_or_scale != 0.5:
             test_case.assertTrue(
@@ -287,7 +256,6 @@ def _test_upsample_and_interpolate_bilinear_backward(
 def _test_upsample_and_interpolate_bilinear_align_corners_backward(
     test_case, device, in_size, out_size_or_scale
 ):
-    print("in_size", in_size, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -302,8 +270,6 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(
     torch_in = torch.tensor(
         np_in, device=torch.device(device), dtype=torch.float32, requires_grad=True
     )
-    pil_in = Image.fromarray(np_in[0, 0].astype(np.uint8), "L")
-    cv_in = np.asarray(pil_in)
 
     m = []
     if out_size is not None:
@@ -336,157 +302,19 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(
     )
     torch_out = torch_out.sum()
     torch_out.backward()
-    print("torch_out_grad", torch_in.grad)
 
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
 
-<<<<<<< HEAD
     for of_out in of_outs:
         of_out = of_out.sum()
         of_out.backward()
 
-        print("of_out_grad", of_in.grad)
         test_case.assertTrue(
             np.allclose(of_in.grad.numpy(), torch_in.grad.cpu().numpy(), 1e-5, 1e-5)
         )
         of_in.grad = None
-=======
-def _test_upsample2d_backward(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 5).reshape((1, 1, 2, 2)),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
-def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 5).reshape((1, 1, 2, 2)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
-    of_out = m(input)
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = [[[[3.999999523162842, 4.000000476837158], [3.999999761581421, 4.0]]]]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
-def _test_interpolate_nearest_float_scale(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 10).reshape((1, 1, 3, 3)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=1.5)
-    of_out = m(input)
-    np_out = np.array(
-        [
-            [
-                [
-                    [1.0, 1.0, 2.0, 3.0],
-                    [1.0, 1.0, 2.0, 3.0],
-                    [4.0, 4.0, 5.0, 6.0],
-                    [7.0, 7.0, 8.0, 9.0],
-                ]
-            ]
-        ]
-    )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array([[[[4.0, 2.0, 2.0], [2.0, 1.0, 1.0], [2.0, 1.0, 1.0]]]])
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
-def _test_interpolate_bilinear_float_scale(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
-    of_out = m(input)
-    np_out = np.array([[[[2.5]]]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array([[[[0.25, 0.25], [0.25, 0.25]]]])
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-    input = flow.Tensor(
-        np.arange(1, 10, dtype=np.int32).reshape((1, 1, 3, 3)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
-    of_out = m(input)
-    np_out = np.array([[[[3.0]]]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array([[[[0.25, 0.25, 0.0], [0.25, 0.25, 0.0], [0.0, 0.0, 0.0]]]])
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-    input = flow.Tensor(
-        np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
-    of_out = m(input)
-    np_out = np.array(
-        [
-            [
-                [
-                    [1.25, 1.5, 2.0, 2.25],
-                    [3.75, 4.0, 4.5, 4.75],
-                    [6.25, 6.5, 7.0, 7.25],
-                    [8.75, 9.0, 9.5, 9.75],
-                ]
-            ]
-        ]
-    )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array(
-        [[[[1.75, 1.75], [1.5, 1.5], [1.5, 1.5], [1.5, 1.5], [1.75, 1.75]]]]
-    )
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
-def _test_upsample_bilinear_align_corners(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=True)
-    of_out = m(input)
-    np_out = np.array([[[[1.0]]]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
->>>>>>> eb095de17638ae972916d2f83a2162e34212666e
 
 
 @unittest.skipIf(
