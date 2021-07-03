@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include <fcntl.h>
 #include <unistd.h>
+#include <unordered_map>
 
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -117,7 +118,7 @@ class AutoGeneratorImpl : public GeneratorImpl {
   }
 
  private:
-  std::map<DeviceType, std::shared_ptr<GeneratorImpl>> generators_;
+  std::unordered_map<DeviceType, std::shared_ptr<GeneratorImpl>, std::hash<int>> generators_;
 };
 
 class Generator final {
