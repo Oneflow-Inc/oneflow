@@ -21,7 +21,6 @@ namespace oneflow {
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
   if (dst == src) { return; }
-  std::cout << "\n cudaMemcpyAsync >>>>>>>>>>>>>>>> sz: " << sz << std::endl;
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault, ctx->cuda_stream()));
 }
 
