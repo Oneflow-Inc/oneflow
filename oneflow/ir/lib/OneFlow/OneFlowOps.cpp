@@ -191,7 +191,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
       NamedAttrList attributes;
       attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-      // TODO: extract a function to strip attrs from a op to be replace
+      // TODO: extract a function to strip attrs from an op to be replace
       attributes.set("device_tag", mul_op.device_tagAttr());
       attributes.set("device_name", mul_op.device_nameAttr());
       attributes.set("hierarchy", mul_op.hierarchyAttr());
@@ -240,6 +240,16 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       auto func_type =
           rewriter.getFunctionType(created->getOperandTypes(), created.getResultTypes());
       auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
+      OpBuilder b(rewriter);
+      // TODO: is it a good idea to insert the sub-graph at entry block?
+      b.setInsertionPointToStart(function.addEntryBlock());
+      auto cast_op_ =
+          b.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
+                           /* operands */ function->getOperands().take_front(1),
+                           /* attributes */ attributes);
+      b.create<ScalarMulByTensorOp>(mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
+                                    /* operands */ function.getArguments().take_front(),
+                                    /* attributes */ attributes);
       rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
       return created->getResults();
     }
