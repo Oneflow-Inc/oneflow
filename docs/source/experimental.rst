@@ -69,6 +69,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ParameterDict
 .. autofunction:: oneflow.experimental.nn.ModuleList
 .. autofunction:: oneflow.experimental.nn.ModuleDict
+.. autofunction:: oneflow.experimental.nn.Conv1d
 .. autofunction:: oneflow.experimental.nn.Conv2d
 .. autofunction:: oneflow.experimental.nn.ConstantPad2d
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d

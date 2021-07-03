@@ -342,6 +342,7 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(
     for it in m:
         of_outs.append(it(of_in))
 
+<<<<<<< HEAD
     for of_out in of_outs:
         of_out = of_out.sum()
         of_out.backward()
@@ -351,6 +352,141 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(
             np.allclose(of_in.grad.numpy(), torch_in.grad.cpu().numpy(), 1e-5, 1e-5)
         )
         of_in.grad = None
+=======
+def _test_upsample2d_backward(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5).reshape((1, 1, 2, 2)),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+    of_out = m(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5).reshape((1, 1, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
+    of_out = m(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[3.999999523162842, 4.000000476837158], [3.999999761581421, 4.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_interpolate_nearest_float_scale(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 10).reshape((1, 1, 3, 3)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=1.5)
+    of_out = m(input)
+    np_out = np.array(
+        [
+            [
+                [
+                    [1.0, 1.0, 2.0, 3.0],
+                    [1.0, 1.0, 2.0, 3.0],
+                    [4.0, 4.0, 5.0, 6.0],
+                    [7.0, 7.0, 8.0, 9.0],
+                ]
+            ]
+        ]
+    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[4.0, 2.0, 2.0], [2.0, 1.0, 1.0], [2.0, 1.0, 1.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_interpolate_bilinear_float_scale(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+    of_out = m(input)
+    np_out = np.array([[[[2.5]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[0.25, 0.25], [0.25, 0.25]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    input = flow.Tensor(
+        np.arange(1, 10, dtype=np.int32).reshape((1, 1, 3, 3)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+    of_out = m(input)
+    np_out = np.array([[[[3.0]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[0.25, 0.25, 0.0], [0.25, 0.25, 0.0], [0.0, 0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    input = flow.Tensor(
+        np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
+    of_out = m(input)
+    np_out = np.array(
+        [
+            [
+                [
+                    [1.25, 1.5, 2.0, 2.25],
+                    [3.75, 4.0, 4.5, 4.75],
+                    [6.25, 6.5, 7.0, 7.25],
+                    [8.75, 9.0, 9.5, 9.75],
+                ]
+            ]
+        ]
+    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array(
+        [[[[1.75, 1.75], [1.5, 1.5], [1.5, 1.5], [1.5, 1.5], [1.75, 1.75]]]]
+    )
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_upsample_bilinear_align_corners(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=True)
+    of_out = m(input)
+    np_out = np.array([[[[1.0]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+>>>>>>> eb095de17638ae972916d2f83a2162e34212666e
 
 
 @unittest.skipIf(
