@@ -54,10 +54,7 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
   }
 
-  const std::string& Name() const override {
-    static const std::string name = kCudaDeviceDescriptorClassName;
-    return name;
-  }
+  std::string Name() const override { return kCudaDeviceDescriptorClassName; }
 
   void SerializeDeviceDescriptorList(const std::shared_ptr<const DeviceDescriptorList>& list,
                                      std::string* serialized) const override {
