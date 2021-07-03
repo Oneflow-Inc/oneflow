@@ -32,7 +32,6 @@ class GatherNd : public OpExprGradFunction<GatherNdInterpState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    std::cout << ctx->requires_grad << std::endl;
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // params
       ctx->SaveTensorForBackward(inputs.at(1));  // indices
@@ -43,11 +42,10 @@ class GatherNd : public OpExprGradFunction<GatherNdInterpState> {
   Maybe<void> Apply(const GatherNdInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
+    in_grads->resize(2);
     if (ctx->requires_grad) {
       const auto& params = ctx->SavedTensors().at(0);
       const auto& indices = ctx->SavedTensors().at(1);
-      std::cout << "here" << std::endl;
       in_grads->at(0) = JUST(functional::ScatterNdLike(params, out_grads.at(0), indices));
     }
     return Maybe<void>::Ok();
