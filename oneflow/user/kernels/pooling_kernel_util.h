@@ -114,12 +114,8 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t coords[4] = {0};
-    index_helper.OffsetToNdIndex(num, coords);
-    const int64_t n = coords[0];
-    const int64_t c = coords[1];
-    const int64_t h = coords[2];
-    const int64_t w = coords[3];
+    int64_t n, c, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, h, w);
 
     const int64_t start_idx = (n * n_channel + c) * x_width * x_height;
     int64_t hstart = h * stride_h - padding_h;
@@ -164,12 +160,8 @@ OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
                                              const int64_t src_width, const int64_t dst_height,
                                              const int64_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t coord_dx[4] = {0};
-    index_helper.OffsetToNdIndex(num, coord_dx);
-    const int64_t n = coord_dx[0];
-    const int64_t c = coord_dx[1];
-    const int64_t h = coord_dx[2];
-    const int64_t w = coord_dx[3];
+    int64_t n, c, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, h, w);
 
     const int64_t src_start = (n * n_channel + c) * src_height * src_width;
     const int64_t dst_start = (n * n_channel + c) * dst_height * dst_width;
@@ -192,13 +184,8 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     const int32_t stride_t, const int32_t stride_h, const int32_t stride_w,
     const int32_t dilation_t, const int32_t dilation_h, const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t coords[5] = {0};
-    index_helper.OffsetToNdIndex(num, coords);
-    const int64_t n = coords[0];
-    const int64_t c = coords[1];
-    const int64_t t = coords[2];
-    const int64_t h = coords[3];
-    const int64_t w = coords[4];
+    int64_t n, c, t, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, t, h, w);
 
     int64_t xstart = n * n_channel * x_time * x_width * x_height;
     int64_t start_idx = xstart + c * x_time * x_width * x_height;
@@ -250,13 +237,8 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
                                              const int64_t dst_time, const int64_t dst_height,
                                              const int64_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t coords[5] = {0};
-    index_helper.OffsetToNdIndex(num, coords);
-    const int64_t n = coords[0];
-    const int64_t c = coords[1];
-    const int64_t t = coords[2];
-    const int64_t h = coords[3];
-    const int64_t w = coords[4];
+    int64_t n, c, t, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, t, h, w);
 
     const int64_t src_start = (n * n_channel + c) * src_time * src_height * src_width;
     const int64_t dst_start = (n * n_channel + c) * dst_time * dst_height * dst_width;

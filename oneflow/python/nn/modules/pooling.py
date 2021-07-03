@@ -336,7 +336,7 @@ class MaxPool1d(Module):
         self.padding_after = [pad[1] for pad in pads_list]
 
     def forward(self, x):
-        expand_x = x.unsqueeze(dim=2)
+        expand_x = x.unsqueeze(dim=-1)
         expand_y, expand_indice = flow.F.maxpool_2d(
             expand_x,
             data_format=self.channel_pos,
@@ -350,8 +350,8 @@ class MaxPool1d(Module):
             ceil_mode=self.ceil_mode,
         )
 
-        y = expand_y.squeeze(dim=2)
-        indice = expand_indice.squeeze(dim=2)
+        y = expand_y.squeeze(dim=-1)
+        indice = expand_indice.squeeze(dim=-1)
         if self.return_indices:
             return y, indice
         else:
