@@ -64,7 +64,7 @@ Maybe<void> AdaptivePool::Apply(const AdaptivePoolInterpState* ctx, const Tensor
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}, {}));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}));
   return Maybe<void>::Ok();
 }
 

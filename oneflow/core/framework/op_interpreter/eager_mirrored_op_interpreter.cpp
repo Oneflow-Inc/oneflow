@@ -53,7 +53,8 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
-                           const AttrMap& attrs) {
+                           const OpExprInterpContext& ctx) {
+  const auto& attrs = ctx.attrs;
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
@@ -131,7 +132,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      attrs, op_parallel_desc, instr_type_name);
+                                      ctx, op_parallel_desc, instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
@@ -144,12 +145,13 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   const auto& device = tensor_impl->device();
   const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
-  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs, AttrMap{}));
+  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs,
+                      OpExprInterpContext{AttrMap{}, nullptr}));
   return Maybe<void>::Ok();
 }
 
 static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const AttrMap& attrs) {
+                                  TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   Symbol<Device> default_device;
   if (inputs.empty()) {
@@ -157,18 +159,18 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   } else {
     default_device = JUST(inputs.at(0)->device());
   }
-  return NaiveInterpret(user_op_expr, inputs, default_device, outputs, attrs);
+  return NaiveInterpret(user_op_expr, inputs, default_device, outputs, ctx);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
-  return NaiveInterpret(op_expr, inputs, outputs, attrs);
+                                                const OpExprInterpContext& ctx) const {
+  return NaiveInterpret(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
@@ -181,13 +183,13 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
@@ -200,13 +202,13 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
@@ -219,13 +221,13 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrMap& attrs) const {
+                                                const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 

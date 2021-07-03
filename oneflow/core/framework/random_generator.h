@@ -162,6 +162,8 @@ class Generator final {
     return seed;
   }
 
+  const std::shared_ptr<GeneratorImpl>& get_impl() { return gen_impl_; }
+
  private:
   std::shared_ptr<GeneratorImpl> gen_impl_;
 };
@@ -171,14 +173,23 @@ std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
 const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
 
 template<DeviceType device_type>
-std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed);
+inline std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
+  return std::make_shared<DeviceGeneratorImpl<device_type>>(seed);
+}
 
 template<DeviceType device_type>
-const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator();
+inline const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator() {
+  static auto generator = CreateDeviceGenerator<device_type>(getNonDeterministicRandom());
+  return generator;
+}
 
 template<DeviceType device_type>
 const Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
     const std::shared_ptr<GeneratorImpl>& generator);
+
+template<DeviceType device_type>
+const Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator);
 
 }  // namespace one
 }  // namespace oneflow

@@ -61,28 +61,35 @@ const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator() {
 }
 
 template<DeviceType device_type>
-std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
-  return std::make_shared<DeviceGeneratorImpl<device_type>>(seed);
-}
-
-template<DeviceType device_type>
-const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator() {
-  static auto generator = CreateDeviceGenerator<device_type>(getNonDeterministicRandom());
-  return generator;
-}
-
-template<DeviceType device_type>
 const Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
     const std::shared_ptr<GeneratorImpl>& generator) {
+  CHECK_NOTNULL_OR_RETURN(generator);
   if (generator->device_type() == "auto") {
-    const auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator);
+    const auto& auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator);
     CHECK_NOTNULL_OR_RETURN(auto_gen);
     return auto_gen->template GetDeviceGenerator<device_type>();
   }
-  const auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
+  const auto& device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
   CHECK_NOTNULL_OR_RETURN(device_gen);
   return device_gen;
 }
+
+template const Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<GeneratorImpl>& generator);
+template const Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<GeneratorImpl>& generator);
+
+template<DeviceType device_type>
+const Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator) {
+  CHECK_NOTNULL_OR_RETURN(generator);
+  return TryGetDeviceGenerator<device_type>(generator->get_impl());
+}
+
+template const Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator);
+template const Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator);
 
 }  // namespace one
 }  // namespace oneflow

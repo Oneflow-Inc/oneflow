@@ -134,8 +134,7 @@ class BroadcastSub : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
     if (y->requires_grad()) {
-      const auto& grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0)}, /*attrs=*/{}));
+      const auto& grad = JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0)}));
       in_grads->at(1) = JUST(y_grad_op_->forward(grad, y));
     }
     return Maybe<void>::Ok();
@@ -169,12 +168,12 @@ class BroadcastMul : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_mul_op_, {out_grads.at(0), y}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_mul_op_, {out_grads.at(0), y}));
       in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
     }
     if (y->requires_grad()) {
       const auto& y_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0), x}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0), x}));
       in_grads->at(1) = JUST(y_grad_op_->forward(y_grad, y));
     }
     return Maybe<void>::Ok();
@@ -208,12 +207,11 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_div_op_, {out_grads.at(0), y}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_div_op_, {out_grads.at(0), y}));
       in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
     }
     if (y->requires_grad()) {
-      in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), z, y}, /*attrs=*/{}));
+      in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), z, y}));
     }
     return Maybe<void>::Ok();
   }
