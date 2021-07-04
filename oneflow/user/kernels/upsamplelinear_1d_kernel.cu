@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
@@ -23,11 +24,11 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-static void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
-                                    NdIndexOffsetHelper<int64_t, 3> in_helper,
-                                    NdIndexOffsetHelper<int64_t, 3> out_helper,
-                                    const float scale_factor, bool align_corners, T* out_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
+__global__ void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
+                                        NdIndexOffsetHelper<int64_t, 3> in_helper,
+                                        NdIndexOffsetHelper<int64_t, 3> out_helper,
+                                        const float scale_factor, bool align_corners, T* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
     out_helper.OffsetToNdIndex(index, n, c, h);
     const int64_t in_h = GetLinearInputIndex(h, scale_factor, align_corners);
@@ -36,25 +37,25 @@ static void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
 }
 
 template<typename T>
-static void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
-                                     NdIndexOffsetHelper<int64_t, 3> dy_helper,
-                                     NdIndexOffsetHelper<int64_t, 3> dx_helper,
-                                     const float scale_factor, bool align_corners, T* dx_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
+__global__ void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
+                                         NdIndexOffsetHelper<int64_t, 3> dy_helper,
+                                         NdIndexOffsetHelper<int64_t, 3> dx_helper,
+                                         const float scale_factor, bool align_corners, T* dx_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
     const int64_t dx_h = GetLinearInputIndex(h, scale_factor, align_corners);
-    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h)) += dy_dptr[index];
+    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h), dy_dptr[index]);
   }
 }
 
 }  // namespace
 
 template<typename T>
-class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
+class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleLinear1DCPUKernel() = default;
-  ~UpsampleLinear1DCPUKernel() = default;
+  UpsampleLinear1DGPUKernel() = default;
+  ~UpsampleLinear1DGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -70,17 +71,18 @@ class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_blob->shape().At(2);
     const int64_t out_height = y_blob->shape().At(2);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, scale_height,
-                               align_corners, y_blob->mut_dptr<T>());
+    RUN_CUDA_KERNEL((UpsampleLinear1DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    x_blob->dptr<T>(), in_helper, out_helper, scale_height, align_corners,
+                    y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
+class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleLinearGrad1DCPUKernel() = default;
-  ~UpsampleLinearGrad1DCPUKernel() = default;
+  UpsampleLinearGrad1DGPUKernel() = default;
+  ~UpsampleLinearGrad1DGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -100,23 +102,24 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t in_height = dx_blob->shape().At(2);
     const int64_t out_height = dy_blob->shape().At(2);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, scale_height,
-                                align_corners, dx_blob->mut_dptr<T>());
+    RUN_CUDA_KERNEL((UpsampleLinear1DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    dy_blob->dptr<T>(), dy_helper, dx_helper, scale_height, align_corners,
+                    dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(dtype)                                    \
+#define REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("upsample_linear_1d")                                           \
-      .SetCreateFn<UpsampleLinear1DCPUKernel<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetCreateFn<UpsampleLinear1DGPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                      \
-      .SetCreateFn<UpsampleLinearGrad1DCPUKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetCreateFn<UpsampleLinearGrad1DGPUKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(float)
-REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(double)
+REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(float)
+REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(double)
 
 }  // namespace oneflow
