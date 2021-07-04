@@ -82,7 +82,7 @@ class Graph(object):
     def train(self, mode: bool = True):
         self.config._train(mode)
         for name, block in self._blocks.items():
-            assert block.type == "module"
+            assert block.type == BlockType.MODULE
             block.origin.train(mode)
 
     
@@ -100,7 +100,7 @@ class Graph(object):
         print("try to compile")
         assert not self._is_compiled, "nn.Graph " + self_name + " has already been compiled."
         print(self.resource_config)
-        c_api_util.InitLazyGlobalSession(self.resource_config)
+        #c_api_util.InitLazyGlobalSession(self.resource_config)
         # for job_name, func_desc in self.job_name2function_desc_.items():
         #     compiler.Compile(self, func_desc, self.config_proto)
         # oneflow._oneflow_internal.StartLazyGlobalSession()
@@ -163,7 +163,7 @@ class Graph(object):
                 child_lines.append(mod_str)
             lines = child_lines
 
-        main_str = "(" + self._name + ":" + self.__class__.__name__ + ":graph): ("
+        main_str = "(" + self._name + ":" + self.__class__.__name__ + ":GRAPH): ("
         if lines is not None:
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
@@ -183,6 +183,11 @@ class Graph(object):
         config_proto.session_id = -1
         return config_proto
 
+class BlockType:
+    NONE = "NONE"
+    MODULE = "MODULE"
+    PARAMETER = "PARAMETER"
+    BUFFER = "BUFFER"
 
 @oneflow_export("nn.graph.Block")
 @experimental_api
@@ -191,12 +196,12 @@ class Block(object):
         assert not isinstance(value, Block)
         self._name = name
         self._name_prefix = prefix
-        self._type = ""
+        self._type = BlockType.NONE
         self._origin = value
         self._config = BlockConfig()
 
         if isinstance(value, Module):
-            self._type = "module"
+            self._type = BlockType.MODULE
             self._modules = OrderedDict()
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
@@ -207,9 +212,9 @@ class Block(object):
             for n, b in list(value.named_buffers("", False)):
                 self.__setattr__(n, Block(self._name_prefix + self._name + "." , n, b))
         elif isinstance(value, Parameter):
-            self._type = "parameter"
+            self._type = BlockType.PARAMETER
         elif isinstance(value, Tensor):
-            self._type = "buffer"
+            self._type = BlockType.BUFFER
         else:
             raise NotImplementedError()
 
@@ -237,12 +242,12 @@ class Block(object):
         return self._origin
 
     def __call__(self, *args):
-        assert self._type == "module"
+        assert self._type == BlockType.MODULE
         # TODO(): with oneflow_c_api.set_scope(self.config_):
         return self._origin.__class__.__call__(self, *args)
 
     def forward(self, *args):
-        assert self._type == "module"
+        assert self._type == BlockType.MODULE
         return self._origin.__class__.forward(self, *args)
 
     def __setattr__(self, name: str, value=None) -> None:
@@ -262,11 +267,11 @@ class Block(object):
                             self._name, name
                         )
                     )
-            if value.type == "module":
+            if value.type == BlockType.MODULE:
                 self._modules[name] = value
-            elif value.type == "parameter":
+            elif value.type == BlockType.PARAMETER:
                 self._parameters[name] = value
-            elif value.type == "buffer":
+            elif value.type == BlockType.BUFFER:
                 self._buffers[name] = value
             else:
                 raise AttributeError(
@@ -279,7 +284,7 @@ class Block(object):
         if name in self.__dict__:
             return self.__dict__[name]
 
-        if self._type == "module":
+        if self._type == BlockType.MODULE:
             if "_modules" in self.__dict__:
                 modules = self.__dict__["_modules"]
                 if name in modules:
@@ -305,7 +310,7 @@ class Block(object):
 
     def __repr__(self):
         lines = None
-        if self._type == "module":
+        if self._type == BlockType.MODULE:
             child_lines = []
 
             def _append_child(d):

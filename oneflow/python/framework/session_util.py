@@ -50,6 +50,7 @@ import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
 
+_is_multi_client_mode = True
 
 class Session(object):
     def __init__(self, sess_id):
@@ -483,7 +484,11 @@ def api_clear_default_session() -> None:
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+    if _is_multi_client_mode:
+        new_session = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+    else:
+        new_session = Session(oneflow._oneflow_internal.NewSessionId())
+    session_ctx.OpenDefaultSession(new_session)
 
 
 @oneflow_export("sync_default_session")
@@ -542,8 +547,20 @@ def _GetDefaultConfigProto():
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
+class MultiClientSession(Session):
+    def __init__(self, sess_id):
+        self.status_ = SessionStatus.OPEN
+        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
+        self.config_proto_ = None
+        self.resource_ = None
+        self.job_name2function_desc_ = {}
+        print("create multi client session id:", sess_id)
 
-session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+if _is_multi_client_mode:
+    new_session = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+else:
+    new_session = Session(oneflow._oneflow_internal.NewSessionId())
+session_ctx.OpenDefaultSession(new_session)
 
 
 @oneflow_export("InitEagerGlobalSession")
