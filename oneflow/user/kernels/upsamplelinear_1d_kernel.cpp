@@ -55,17 +55,17 @@ class UpsampleLinearGrad1DKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(dtype)                      \
+#define REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("upsample_linear_1d")                                            \
       .SetCreateFn<UpsampleLinear1DKernel<dtype>>()                                     \
       .SetIsMatchedHob(                                                                 \
           (user_op::HobDeviceTag() == "cpu")                                            \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value);                 \
+          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                 \
   REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                        \
       .SetCreateFn<UpsampleLinearGrad1DKernel<dtype>>()                                 \
       .SetIsMatchedHob(                                                                 \
           (user_op::HobDeviceTag() == "cpu")                                            \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value);
+          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(float)
 REGISTER_UPSAMPLELINEAR1D_CPU_KERNEL(double)
