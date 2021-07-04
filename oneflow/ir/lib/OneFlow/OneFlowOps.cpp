@@ -252,7 +252,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       auto entry_block = function.addEntryBlock();
 
       builder.setInsertionPointToStart(entry_block);
-      // TODO: make this transformation generic, using a value => arg mapping
+      // TODO: make this transformation generic, using a value => arg mapping and work the graph
       auto cast_op_ =
           builder.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
                                  /* operands */ entry_block->getArguments().take_front(),
