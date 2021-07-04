@@ -510,14 +510,14 @@ def conv2d(
             model_name="weight",
             reuse=False,
         )
-
     output = flow.nn.conv2d(
         inputs,
         weight,
-        strides,
-        padding,
-        data_format,
-        dilation_rate,
+        strides=strides,
+        padding=padding,
+        bias=None,
+        data_format=data_format,
+        dilations=dilation_rate,
         groups=groups,
         name=name,
     )
