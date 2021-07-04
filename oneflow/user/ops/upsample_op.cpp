@@ -21,6 +21,7 @@ REGISTER_USER_OP("upsample_linear_1d")
     .Input("x")
     .Output("y")
     .Attr<float>("scale_factor")
+    .Attr<bool>("align_corners")
     .Attr<std::string>("data_format")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -79,6 +80,7 @@ REGISTER_USER_OP("upsample_linear_1d_grad")
     .Input("x")
     .Output("dx")
     .Attr<float>("scale_factor")
+    .Attr<bool>("align_corners")
     .Attr<std::string>("data_format")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
@@ -137,6 +139,7 @@ REGISTER_USER_OP_GRAD("upsample_linear_1d")
                 .Input("x", op.input("x", 0))
                 .Output("dx")
                 .Attr("scale_factor", op.attr<float>("scale_factor"))
+                .Attr("align_corners", op.attr<bool>("align_corners"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
