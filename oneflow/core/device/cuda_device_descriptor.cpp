@@ -35,6 +35,7 @@ constexpr char kJsonKeyComputeCapabilityMajor[] = "compute_capability_major";
 constexpr char kJsonKeyComputeCapabilityMinor[] = "compute_capability_minor";
 constexpr char kJsonKeyMemoryClockRate[] = "memory_clock_rate_khz";
 constexpr char kJsonKeyMemoryBusWidth[] = "memory_bus_width_bit";
+constexpr char kJsonKeyPCIBusID[] = "pci_bus_id";
 
 }  // namespace
 
@@ -47,6 +48,7 @@ struct CudaDeviceDescriptor::Impl {
   int32_t compute_capability_minor{};
   int32_t memory_clock_rate_khz{};
   int32_t memory_bus_width_bit{};
+  std::string pci_bus_id;
 };
 
 CudaDeviceDescriptor::CudaDeviceDescriptor() { impl_.reset(new Impl()); }
@@ -75,6 +77,8 @@ int32_t CudaDeviceDescriptor::MemoryClockRateKHz() const { return impl_->memory_
 
 int32_t CudaDeviceDescriptor::MemoryBusWidthBit() const { return impl_->memory_bus_width_bit; }
 
+const std::string& CudaDeviceDescriptor::PCIBusID() const { return impl_->pci_bus_id; }
+
 std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Query(int32_t ordinal) {
   cudaDeviceProp prop{};
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, ordinal));
@@ -87,6 +91,15 @@ std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Query(int32_t 
   desc->impl_->compute_capability_minor = prop.minor;
   desc->impl_->memory_clock_rate_khz = prop.memoryClockRate;
   desc->impl_->memory_bus_width_bit = prop.memoryBusWidth;
+  char pci_bus_id_buf[sizeof("00000000:00:00.0")];
+  if (cudaDeviceGetPCIBusId(pci_bus_id_buf, sizeof(pci_bus_id_buf), ordinal) == cudaSuccess) {
+    for (int i = 0; i < sizeof(pci_bus_id_buf) - 1; ++i) {
+      pci_bus_id_buf[i] = static_cast<char>(std::tolower(pci_bus_id_buf[i]));
+    }
+    desc->impl_->pci_bus_id = pci_bus_id_buf;
+  } else {
+    desc->impl_->pci_bus_id = "";
+  }
   return std::shared_ptr<const CudaDeviceDescriptor>(desc);
 }
 
@@ -100,6 +113,7 @@ void CudaDeviceDescriptor::Serialize(std::string* serialized) const {
   json_object[kJsonKeyComputeCapabilityMinor] = impl_->compute_capability_minor;
   json_object[kJsonKeyMemoryClockRate] = impl_->memory_clock_rate_khz;
   json_object[kJsonKeyMemoryBusWidth] = impl_->memory_bus_width_bit;
+  json_object[kJsonKeyPCIBusID] = impl_->pci_bus_id;
   *serialized = json_object.dump(2);
 }
 
@@ -115,6 +129,7 @@ std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Deserialize(
   desc->impl_->compute_capability_minor = json_object[kJsonKeyComputeCapabilityMinor];
   desc->impl_->memory_clock_rate_khz = json_object[kJsonKeyMemoryClockRate];
   desc->impl_->memory_bus_width_bit = json_object[kJsonKeyMemoryBusWidth];
+  desc->impl_->pci_bus_id = json_object[kJsonKeyPCIBusID];
   return std::shared_ptr<const CudaDeviceDescriptor>(desc);
 }
 
