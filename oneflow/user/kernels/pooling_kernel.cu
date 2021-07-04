@@ -28,7 +28,7 @@ const int32_t GetMinThreadNum(int32_t elem_num) {
 }
 
 template<typename T>
-__launch_bounds__(1024) __global__
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
     void DoCUDAMaxPool2dForward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                 int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_h, int32_t padding_w, int64_t n_batch,
@@ -43,7 +43,7 @@ __launch_bounds__(1024) __global__
 };
 
 template<typename T>
-__launch_bounds__(1024) __global__
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
     void DoCUDAMaxPool3dForward(const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                 int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_t, int32_t padding_h, int32_t padding_w,
@@ -60,7 +60,7 @@ __launch_bounds__(1024) __global__
 };
 
 template<typename T>
-__launch_bounds__(1024) __global__
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
     void DoCUDAMaxPool2dBackward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                  const int64_t elem_num, const T* src, T* dest,
                                  const int64_t* indice_ptr, const int64_t n_batch,
@@ -72,7 +72,7 @@ __launch_bounds__(1024) __global__
 };
 
 template<typename T>
-__launch_bounds__(1024) __global__
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
     void DoCUDAMaxPool3dBackward(const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                  const int64_t elem_num, const T* src, T* dest,
                                  const int64_t* indice_ptr, const int64_t n_batch,
