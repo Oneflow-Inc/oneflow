@@ -173,10 +173,11 @@ std::tuple<std::vector<Shape>, std::vector<const DType*>> GetTensorBufferShapesA
   std::vector<const DType*> dtypes;
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
-        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const");
-  });
+  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
+        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const"));
+    return Maybe<void>::Ok();
+  }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
     while (!synced) {}

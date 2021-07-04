@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("image_decode")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_decode")
     .Input("in")
     .Output("out")
     .Attr<std::string>("color_space", "BGR")

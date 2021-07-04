@@ -32,7 +32,7 @@ class OpExpr;
 class TensorArg final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorArg);
-  TensorArg();
+  TensorArg() = default;
   ~TensorArg() = default;
 
   bool Empty() const;
@@ -42,7 +42,6 @@ class TensorArg final {
 
  private:
   std::shared_ptr<Tensor> acc_tensor_;
-  std::shared_ptr<OpExpr> add2_op_;
 };
 
 }  // namespace one

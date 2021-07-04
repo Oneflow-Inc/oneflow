@@ -75,12 +75,24 @@
   signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_not_equal"
+  signature: "Tensor BroadcastNotEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_greater"
   signature: "Tensor BroadcastGreater(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_greater_equal"
+  signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_less"
   signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_less_equal"
+  signature: "Tensor BroadcastLessEqual(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "pow"
@@ -254,12 +266,18 @@
   signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
   bind_python: True
 
-- name: "conv2d"
+- name: "conv1d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv1d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
+- name: "conv2d"
+  signature:
+    "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
+  
 - name: "conv_data_grad"
   signature:
     "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
@@ -276,7 +294,9 @@
   bind_python: False
 
 - name: "conv_bias_grad"
-  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  signature:
+    "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims,
+                         String data_format=\"channels_first\")"
   bind_python: False
 
 - name: "expand"
@@ -297,6 +317,14 @@
 
 - name: "dim_gather"
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
+  bind_python: True
+
+- name: "gather_nd"
+  signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
+  bind_python: True
+
+- name: "scatterndlike"
+  signature: "Tensor ScatterNdLike(Tensor like, Tensor updates, Tensor indices)"
   bind_python: True
 
 - name: "matmul"
@@ -374,7 +402,9 @@
   bind_python: True
 
 - name: "slice_update"
-  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
+                        Int64List step)"
   bind_python: True
 
 - name: "logical_slice"
@@ -382,7 +412,9 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop,
+                             Int64List step)"
   bind_python: True
 
 - name: "squeeze"
@@ -480,6 +512,10 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "triu"
+  signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
+  bind_python: True
+  
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
   bind_python: True
@@ -508,3 +544,11 @@
   signature:
     "Tensor Dropout(Tensor x, *, Float p, Generator generator=None)"
   bind_python: True
+
+- name: "pad"
+  signature: "Tensor Pad(Tensor x, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: True
+
+- name: "pad_grad"
+  signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: False
