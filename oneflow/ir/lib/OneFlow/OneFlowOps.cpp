@@ -243,7 +243,12 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
       // TODO: is it a good idea to insert the sub-graph at entry block?
       // TODO: add dedicated op definition for this kind of function
-      OpBuilder builder(rewriter);
+      mlir::MLIRContext context;
+      context.getOrLoadDialect<oneflow::OneFlowDialect>();
+      context.loadDialect<StandardOpsDialect>();
+      OwningModuleRef jit_module(
+          ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+      OpBuilder builder(jit_module->getContext());
       auto entry_block = function.addEntryBlock();
 
       builder.setInsertionPointToStart(entry_block);
