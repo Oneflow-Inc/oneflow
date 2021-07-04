@@ -18,35 +18,15 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Sequence
-from functools import reduce
-import operator
-
-
-def infer_shape(x, shape):
-    dim_index_need_infer = shape.index(-1) if shape.count(-1) == 1 else None
-    in_elem_cnt = reduce(operator.mul, x.shape, 1)
-    out_elem_cnt = reduce(operator.mul, shape, 1)
-    if dim_index_need_infer is not None:
-        assert (in_elem_cnt % out_elem_cnt) == 0
-        shape[dim_index_need_infer] = int(abs(in_elem_cnt / out_elem_cnt))
-    else:
-        assert in_elem_cnt == out_elem_cnt
-    return shape
 
 
 class Reshape(Module):
     def __init__(self, shape: Sequence[int]) -> None:
         super().__init__()
-
-        assert isinstance(shape, tuple) or isinstance(shape, list)
-        shape = list(shape)
-        assert all(dim == -1 or dim > 0 for dim in shape)
-        assert shape.count(-1) <= 1
         self.shape = shape
 
     def forward(self, x):
-        new_shape = infer_shape(x, self.shape)
-        return flow.F.reshape(x, shape=new_shape)
+        return flow.F.reshape(x, shape=self.shape)
 
 
 @oneflow_export("reshape")
