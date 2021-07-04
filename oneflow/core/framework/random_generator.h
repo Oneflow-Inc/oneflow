@@ -125,6 +125,7 @@ class Generator final {
   static constexpr uint64_t default_rng_seed_val = 67280421310721;
 
  public:
+  OF_DISALLOW_COPY_AND_MOVE(Generator);
   Generator() = default;
 
   Maybe<void> Init(const std::string& device, uint64_t seed);
