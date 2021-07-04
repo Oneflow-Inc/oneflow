@@ -229,6 +229,41 @@ class DimGatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GatherNdFunctor {
+ public:
+  GatherNdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("gather_nd").Input("params").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
+                           const std::shared_ptr<one::Tensor>& indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScatterNdLikeFunctor {
+ public:
+  ScatterNdLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scatter_nd_like")
+                         .Input("like")
+                         .Input("updates")
+                         .Input("indices")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like,
+                           const std::shared_ptr<one::Tensor>& updates,
+                           const std::shared_ptr<one::Tensor>& indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, updates, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
@@ -415,6 +450,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
+  m.add_functor<impl::GatherNdFunctor>("GatherNd");
+  m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
