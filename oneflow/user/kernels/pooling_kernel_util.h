@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 #define POOLING_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 #define POOLING_DATA_TYPE_GPU_SEQ POOLING_DATA_TYPE_CPU_SEQ
