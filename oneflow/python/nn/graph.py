@@ -21,6 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -40,7 +41,7 @@ class Graph(object):
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
-        self._resource_config_proto = None
+        self._state_tensortuple = None
         self.train(True)
 
     @property
@@ -50,19 +51,6 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
-
-    @property
-    def resource_config(self):
-        if not oneflow._oneflow_internal.IsEnvInited():
-            oneflow.env.init()
-        if self._resource_config_proto is None:
-            self._resource_config_proto = self._get_default_resource_config()
-            _TryCompleteConfigProto(self._resource_config_proto)
-        return self._resource_config_proto
-
-    @property
-    def state_tensortuple(self):
-        return tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
 
     def build(self, *args):
         raise NotImplementedError()
@@ -99,11 +87,11 @@ class Graph(object):
     def _compile(self):
         print("try to compile")
         assert not self._is_compiled, "nn.Graph " + self_name + " has already been compiled."
-        print(self.resource_config)
-        #c_api_util.InitLazyGlobalSession(self.resource_config)
-        # for job_name, func_desc in self.job_name2function_desc_.items():
-        #     compiler.Compile(self, func_desc, self.config_proto)
-        # oneflow._oneflow_internal.StartLazyGlobalSession()
+        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
+        sess = session_ctx.GetDefaultSession()
+        sess.TryInit()
+        # do job compile
+        
         self._is_compiled = True
 
     def __call__(self, *args):
@@ -169,19 +157,6 @@ class Graph(object):
         main_str += ")"
         return main_str
     
-    @staticmethod
-    def _get_default_resource_config():
-        config_proto = job_set_util.ConfigProto()
-        config_proto.resource.machine_num = 0
-        if oneflow._oneflow_internal.flags.with_cuda():
-            config_proto.resource.gpu_device_num = 1
-        else:
-            config_proto.resource.cpu_device_num = 1
-            config_proto.resource.gpu_device_num = 0
-        config_proto.io_conf.SetInParent()
-        # TODO(): rm fake session id
-        config_proto.session_id = -1
-        return config_proto
 
 class BlockType:
     NONE = "NONE"

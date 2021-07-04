@@ -105,7 +105,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def test_graph_config(test_case):
+    def _test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -146,7 +146,7 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
-    def _test_graph_compile(test_case):
+    def test_graph_compile(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
