@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -55,37 +56,37 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 
-void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t this_machine_id = GlobalProcessCtx::Rank();
-  IBVerbsTokensMsg this_tokens_msg;
-  for (IBVerbsMemDesc* mem_desc : mem_descs()) {
-    this_tokens_msg.mutable_token2mem_desc()->insert(
-        {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
-  }
-  // TODO(chengcheng): Use Global<Transport> to sync session tokens.
-  Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
-  for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsTokensMsg peer_tokens_msg;
-    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_id), &peer_tokens_msg);
-    for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(token2mem_desc_.at(peer_id)
-                .emplace(reinterpret_cast<void*>(pair.first), pair.second)
-                .second);
-    }
-  }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
-  Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
-}
-
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
+  ActorMsg new_msg = msg;
+  if (msg.IsDataRegstMsgToConsumer()) {
+    CHECK_EQ(msg.user_data_size(), 0);
+    auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
+    CHECK(mem_desc != nullptr);
+    IBVerbsCommNetRMADesc rma_desc{};
+    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+    rma_desc.mem_size = mem_desc->mem_size();
+    rma_desc.mr_rkey = mem_desc->mr()->rkey;
+    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
+    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
+  }
+  qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet()
-    : CommNetIf(),
-      token2mem_desc_(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size()),
-      poll_exit_flag_(ATOMIC_FLAG_INIT) {
+void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
+  ActorMsg new_msg = msg;
+  if (msg.IsDataRegstMsgToConsumer()) {
+    std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
+    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
+                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
+    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
+    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+    new_msg.set_comm_net_token(desc.get());
+  }
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
+}
+
+IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv::wrapper.ibv_get_device_list(nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
@@ -135,7 +136,7 @@ IBVerbsCommNet::IBVerbsCommNet()
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
                             void* dst_token) {
   qp_vec_.at(src_machine_id)
-      ->PostReadRequest(token2mem_desc_.at(src_machine_id).at(src_token),
+      ->PostReadRequest(*reinterpret_cast<IBVerbsCommNetRMADesc*>(src_token),
                         *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
 }
 

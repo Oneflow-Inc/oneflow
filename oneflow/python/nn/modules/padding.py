@@ -93,13 +93,6 @@ class ReplicationPad2d(Module):
             raise ValueError("padding must be int or list or tuple!")
 
         self.padding = boundary
-        self._op = (
-            flow.builtin_op("replication_pad2d")
-            .Input("x")
-            .Output("y")
-            .Attr("padding", self.padding)
-            .Build()
-        )
 
     def forward(self, x):
         _, _, h, w = x.shape
@@ -109,8 +102,7 @@ class ReplicationPad2d(Module):
             and self.padding[0] < w
             and self.padding[1] < w
         ):
-            res = self._op(x)[0]
-            return res
+            return flow.F.pad(x, pad=self.padding, mode="replicate")
         else:
             raise AssertionError(
                 "Padding size should be less than the corresponding input dimension. Please check."
@@ -176,13 +168,6 @@ class ReflectionPad2d(Module):
         else:
             raise ValueError("padding must be in or list or tuple!")
         self.padding = boundary
-        self._op = (
-            flow.builtin_op("reflection_pad2d")
-            .Input("x")
-            .Output("y")
-            .Attr("padding", boundary)
-            .Build()
-        )
 
     def forward(self, x):
         H, W = x.shape[2], x.shape[3]
@@ -192,8 +177,7 @@ class ReflectionPad2d(Module):
             and self.padding[0] < W
             and self.padding[1] < W
         ):
-            res = self._op(x)[0]
-            return res
+            return flow.F.pad(x, pad=self.padding, mode="reflect")
         else:
             raise ValueError(
                 "padding size should be less than the corresponding input dimension!"

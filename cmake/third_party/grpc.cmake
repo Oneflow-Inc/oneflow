@@ -42,6 +42,7 @@ ExternalProject_Add(grpc
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
+    BUILD_BYPRODUCTS ${GRPC_STATIC_LIBRARIES}
     BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc_unsecure && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc++_unsecure
     CMAKE_CACHE_ARGS
         -DCMAKE_POLICY_DEFAULT_CMP0074:STRING=NEW

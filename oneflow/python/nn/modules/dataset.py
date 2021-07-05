@@ -454,3 +454,21 @@ def get_ofrecord_handle(
         shuffle_after_epoch,
         name,
     )()
+
+
+@oneflow_export("nn.image.decode")
+@experimental_api
+class ImageDecode(Module):
+    def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_decode")
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("data_type", dtype)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]

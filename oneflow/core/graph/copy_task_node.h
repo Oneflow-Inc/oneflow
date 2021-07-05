@@ -77,8 +77,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   void Init(int64_t machine_id, const LogicalBlobId& lbi);
 
  private:
-  void InitProducedRegstMemCase(MemoryCase*) override;
-  void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 };
 

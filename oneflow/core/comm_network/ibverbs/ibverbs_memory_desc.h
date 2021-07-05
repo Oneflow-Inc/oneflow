@@ -33,13 +33,16 @@ class IBVerbsMemDesc final {
   IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size);
   ~IBVerbsMemDesc();
 
-  const std::vector<ibv_sge>& sge_vec() const { return sge_vec_; }
+  void* mem_ptr() const { return mem_ptr_; }
 
-  IBVerbsMemDescProto ToProto();
+  size_t mem_size() const { return mem_size_; }
+
+  const ibv_mr* mr() const { return mr_; }
 
  private:
-  std::vector<ibv_sge> sge_vec_;
-  std::vector<ibv_mr*> mr_vec_;
+  ibv_mr* mr_;
+  void* mem_ptr_;
+  uint64_t mem_size_;
 };
 
 }  // namespace oneflow
