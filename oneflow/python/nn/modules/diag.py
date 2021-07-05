@@ -18,22 +18,15 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from typing import Optional
 
 
 class Diag(Module):
-    def __init__(self, diagonal):
+    def __init__(self, diagonal = 0):
         super().__init__()
-        self._op = (
-            flow.builtin_op("diag")
-            .Input("in")
-            .Output("out")
-            .Attr("diagonal", diagonal)
-            .Build()
-        )
+        self.diagonal = diagonal
 
     def forward(self, input):
-        return self._op(input)[0]
+        return flow.F.diag(input, self.diagonal)
 
 
 @oneflow_export("diag")

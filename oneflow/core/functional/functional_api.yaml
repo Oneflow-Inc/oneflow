@@ -547,3 +547,7 @@
 - name: "pad_grad"
   signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
   bind_python: False
+
+- name: "diag"
+  signature: "Tensor Diag(Tensor x, *, Int64 diagonal=0)"
+  bind_python: True

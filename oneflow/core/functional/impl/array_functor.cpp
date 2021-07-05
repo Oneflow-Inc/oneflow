@@ -457,6 +457,22 @@ class TriuFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DiagFunctor{
+ public:
+  DiagFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("diag").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -484,6 +500,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleFunctor>("Upsample");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::TriuFunctor>("Triu");
+  m.add_functor<impl::DiagFunctor>("Diag");
 };
 
 }  // namespace functional
