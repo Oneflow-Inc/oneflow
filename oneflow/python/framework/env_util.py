@@ -55,19 +55,20 @@ def api_env_init() -> bool:
     Returns:
         bool: [description]
     """
-    return enable_if.unique([env_init, do_nothing])()
+    return enable_if.unique([_env_init_single_client, do_nothing])()
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def env_init():
+def _env_init_single_client():
+    return env_init(False)
+
+
+def env_init(is_multi_client):
     global default_env_proto
     assert len(default_env_proto.machine) > 0
-    is_multi_client = _DetectIsMultiClientByEnvVarsAndUpdateEnvProto()
-    CompleteEnvProto(default_env_proto)
+    CompleteEnvProto(default_env_proto, is_multi_client)
     c_api_util.InitEnv(default_env_proto, is_multi_client)
-    if is_multi_client:
-        pass
-    else:
+    if not is_multi_client:
         if oneflow._oneflow_internal.CurrentMachineId() == 0:
             scope_util.InitScopeStack()
         else:
@@ -81,7 +82,7 @@ def init_default_physical_env():
     if log_dir:
         default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
     default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto)
+    CompleteEnvProto(default_physical_env_proto, False)
     c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
@@ -243,7 +244,9 @@ def do_nothing(*args, **kwargs):
     return False
 
 
-def CompleteEnvProto(env_proto):
+def CompleteEnvProto(env_proto, is_multi_client):
+    if is_multi_client:
+        _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto)
     if env_proto.HasField("ctrl_port") == False:
         if len(env_proto.machine) == 1:
             env_proto.ctrl_port = _FindFreePort()
@@ -381,31 +384,31 @@ def GetEnvDefaultParallelConf(device_tag):
     return device_tag2default_parallel_conf[device_tag]
 
 
-def _DetectIsMultiClientByEnvVarsAndUpdateEnvProto():
-    if (
+def HasAllMultiClientEnvVars():
+    return (
         os.getenv("MASTER_ADDR")
         and os.getenv("MASTER_PORT")
         and os.getenv("WORLD_SIZE")
         and os.getenv("RANK")
         and os.getenv("LOCAL_RANK")
-    ):
+    )
 
-        def str2int(env_config):
-            assert env_config.isdigit()
-            return int(env_config)
 
-        bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
-        master_addr = ctrl_bootstrap_pb.Address()
-        master_addr.host = os.getenv("MASTER_ADDR")
-        master_addr.port = str2int(os.getenv("MASTER_PORT"))
-        bootstrap_conf.master_addr.CopyFrom(master_addr)
-        bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
-        bootstrap_conf.rank = str2int(os.getenv("RANK"))
-        global default_env_proto
-        default_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
-        return True
-    else:
-        return False
+def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
+    assert HasAllMultiClientEnvVars()
+
+    def str2int(env_config):
+        assert env_config.isdigit()
+        return int(env_config)
+
+    bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
+    master_addr = ctrl_bootstrap_pb.Address()
+    master_addr.host = os.getenv("MASTER_ADDR")
+    master_addr.port = str2int(os.getenv("MASTER_PORT"))
+    bootstrap_conf.master_addr.CopyFrom(master_addr)
+    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
+    bootstrap_conf.rank = str2int(os.getenv("RANK"))
+    env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
 
 
 device_tag2default_parallel_conf = {}
