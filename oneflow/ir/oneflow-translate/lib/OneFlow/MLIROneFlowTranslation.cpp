@@ -608,7 +608,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
 
 LogicalResult Importer::ProcessJob() {
   auto func_type = builder_.getFunctionType(llvm::None, llvm::None);
-  // Add a OneFlow_JobOp with FunctionLike trait
+  // TODO: Add a OneFlow_JobOp with FunctionLike trait
   auto function = mlir::FuncOp::create(unknown_loc_, job_->job_conf().job_name(), func_type);
   auto& entryBlock = *function.addEntryBlock();
   builder_.setInsertionPointToStart(&entryBlock);
