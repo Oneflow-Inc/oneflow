@@ -13,13 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.python.test.modules.automated_test_util import test_flow_tensor_xxx_against_pytorch, test_flow_xxx_against_pytorch
 import unittest
 from collections import OrderedDict
 
+import random
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+
 
 
 def _test_squeeze(test_case, device):
@@ -100,6 +103,24 @@ class TestSqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    def test_flow_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_xxx_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_generators={"dim": int, },
+                device=device,
+            )
+    
+    def test_flow_tensor_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_tensor_xxx_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_generators={"dim": int, },
+                device=device,
+            )
 
 
 if __name__ == "__main__":

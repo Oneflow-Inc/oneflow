@@ -23,7 +23,6 @@ import oneflow.experimental as flow
 
 
 from test_util import GenArgList
-from automated_test_util import *
 
 
 def _test_abs_forward(test_case, device):
