@@ -1089,7 +1089,7 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.detach().numpy(), new_grad.numpy(), 1e-5, 1e-5)
         )
         of_input.grad = None
-        test_case.assertTrue(of_input.grad == None)
+        test_case.assertTrue(of_input.grad is None)
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
