@@ -121,7 +121,7 @@ jobs:
           cd tools/clang-plugin
           mkdir build
           cd build
-          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
           make -j$(nproc)
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
@@ -142,6 +142,18 @@ jobs:
         run: |
           cd build
           cmake --build . -j$(nproc)
+      - name: Tar core
+        if: always()
+        run: |
+          set -ex
+          tar -cvf build_core.tar ${PWD}/build/core.*
+      - name: Upload core
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: core-build-oneflow-with-clang-plugin
+          path: |
+            build.tar
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
