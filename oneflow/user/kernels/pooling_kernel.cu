@@ -92,7 +92,6 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
     DoCUDAMaxPool2dForward<T>
         <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[1],
@@ -102,27 +101,21 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
             params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2],
             params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[1],
             params_3d.dilation_3d()[2]);
-    cudaError_t err = cudaGetLastError();
-    printf("Kernel >> DoCUDAMaxPool2dForward executing >> %s\n", cudaGetErrorString(err));
   }
 
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
     DoCUDAMaxPool2dBackward<T>
         <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
             params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
             params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
-    cudaError_t err = cudaGetLastError();
-    printf("Kernel >> DoCUDAMaxPool2dBackward executing >> %s\n", cudaGetErrorString(err));
   }
 
   static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
     DoCUDAMaxPool3dForward<T>
         <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[0],
@@ -134,22 +127,17 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
             params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2],
             params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
             params_3d.dilation_3d()[0], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
-    cudaError_t err = cudaGetLastError();
-    printf("Kernel >> DoCUDAMaxPool3dForward executing >> %s\n", cudaGetErrorString(err));
   }
 
   static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
     DoCUDAMaxPool3dBackward<T>
         <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
             params_3d.num_channel(), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
             params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
             params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
-    cudaError_t err = cudaGetLastError();
-    printf("Kernel >> DoCUDAMaxPool3dBackward executing >> %s\n", cudaGetErrorString(err));
   }
 };
 
