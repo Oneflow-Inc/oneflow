@@ -13,20 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
-#include "oneflow/core/job/job_instance.h"
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
 
-RuntimeBufferManagersScope::RuntimeBufferManagersScope() {
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
-}
+namespace {
+#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
+  REGISTER_USER_KERNEL("random_mask_like")         \
+      .SetCreateFn<RandomMaskLikeKernel<device>>() \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
-RuntimeBufferManagersScope::~RuntimeBufferManagersScope() {
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
-}
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+#endif
+}  // namespace
 
 }  // namespace oneflow
