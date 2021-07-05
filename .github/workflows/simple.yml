@@ -141,6 +141,9 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
@@ -149,6 +152,9 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
