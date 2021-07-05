@@ -77,32 +77,57 @@ class PixelShuffle(Module):
 
     def __init__(self, upscale_factor: int) -> None:
         super().__init__()
-        assert upscale_factor > 0, "The scale factor must larger than zero"
-        self.upscale_factor = upscale_factor
+        self._pixel_shuffle_v2_op = PixelShufflev2(upscale_factor, upscale_factor)
+
+    def forward(self, input: Tensor) -> Tensor:
+        return self._pixel_shuffle_v2_op(input)
+
+
+class PixelShufflev2(Module):
+    def __init__(self, h_upscale_factor: int, w_upscale_factor: int) -> None:
+        super().__init__()
+        assert (
+            h_upscale_factor > 0 and w_upscale_factor > 0
+        ), "The scale factor of height and width must larger than zero"
+        self.h_upscale_factor = h_upscale_factor
+        self.w_upscale_factor = w_upscale_factor
 
     def forward(self, input: Tensor) -> Tensor:
         assert len(input.shape) == 4, "Only Accept 4D Tensor"
 
         _batch, _channel, _height, _width = input.shape
         assert (
-            _channel % (self.upscale_factor ** 2) == 0
-        ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor)"
+            _channel % (self.h_upscale_factor * self.w_upscale_factor) == 0
+        ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
 
-        _new_c = int(_channel / (self.upscale_factor ** 2))
+        _new_c = int(_channel / (self.h_upscale_factor * self.w_upscale_factor))
 
         out = input.reshape(
-            [_batch, _new_c, self.upscale_factor ** 2, _height, _width,]
+            [
+                _batch,
+                _new_c,
+                self.h_upscale_factor * self.w_upscale_factor,
+                _height,
+                _width,
+            ]
         )
         out = out.reshape(
-            [_batch, _new_c, self.upscale_factor, self.upscale_factor, _height, _width,]
+            [
+                _batch,
+                _new_c,
+                self.h_upscale_factor,
+                self.w_upscale_factor,
+                _height,
+                _width,
+            ]
         )
         out = out.permute(0, 1, 4, 2, 5, 3)
         out = out.reshape(
             [
                 _batch,
                 _new_c,
-                _height * self.upscale_factor,
-                _width * self.upscale_factor,
+                _height * self.h_upscale_factor,
+                _width * self.w_upscale_factor,
             ]
         )
 
