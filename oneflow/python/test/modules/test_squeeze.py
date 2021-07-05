@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.test.modules.automated_test_util import test_flow_tensor_xxx_against_pytorch, test_flow_xxx_against_pytorch
 import unittest
 from collections import OrderedDict
 
@@ -106,23 +105,26 @@ class TestSqueeze(flow.unittest.TestCase):
     
     def test_flow_squeeze_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_xxx_against_pytorch(
+            test_module_against_pytorch(
                 test_case,
                 "squeeze",
                 extra_annotations={"dim": int, },
                 extra_generators={"dim": random(0, 6)},
                 device=device,
+                api_flag=1,
             )
     
     def test_flow_tensor_squeeze_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_tensor_xxx_against_pytorch(
+            test_module_against_pytorch(
                 test_case,
                 "squeeze",
                 extra_annotations={"dim": int},
                 extra_generators={"dim": random(0, 6)},
                 device=device,
+                api_flag=2,
             )
+
 
 
 if __name__ == "__main__":

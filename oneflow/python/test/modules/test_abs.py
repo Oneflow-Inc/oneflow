@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.test.modules.automated_test_util import test_flow_tensor_xxx_against_pytorch, test_flow_xxx_against_pytorch
 import unittest
 from collections import OrderedDict
 
@@ -23,6 +22,7 @@ import oneflow.experimental as flow
 
 
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_abs_forward(test_case, device):
@@ -78,18 +78,20 @@ class TestAbs(flow.unittest.TestCase):
 
     def test_flow_abs_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_xxx_against_pytorch(
+            test_module_against_pytorch(
                 test_case,
                 "abs",
                 device=device,
+                api_flag=1,
             )
     
     def test_flow_tensor_abs_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_tensor_xxx_against_pytorch(
+            test_module_against_pytorch(
                 test_case,
                 "abs",
                 device=device,
+                api_flag=2,
             )
 
     
