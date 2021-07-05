@@ -319,6 +319,14 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "gather_nd"
+  signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
+  bind_python: True
+
+- name: "scatterndlike"
+  signature: "Tensor ScatterNdLike(Tensor like, Tensor updates, Tensor indices)"
+  bind_python: True
+
 - name: "matmul"
   signature:
     "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,

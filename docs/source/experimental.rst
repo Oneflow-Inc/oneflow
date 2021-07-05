@@ -116,6 +116,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
+.. autofunction:: oneflow.experimental.masked_select
+.. autofunction:: oneflow.experimental.Tensor.masked_select
 .. autofunction:: oneflow.experimental.sum
 .. autofunction:: oneflow.experimental.Tensor.sum
 .. autofunction:: oneflow.experimental.min
@@ -178,6 +180,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.repeat
 .. autofunction:: oneflow.experimental.tile
 .. autofunction:: oneflow.experimental.Tensor.tile
+.. autofunction:: oneflow.experimental.view
+.. autofunction:: oneflow.experimental.Tensor.view
 .. autofunction:: oneflow.experimental.reshape
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze
