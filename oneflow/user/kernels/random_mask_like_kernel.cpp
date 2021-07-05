@@ -13,25 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_H_
-#define ONEFLOW_CORE_VM_H_
-
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
-namespace vm {
 
-class InstructionMsg;
+namespace {
+#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
+  REGISTER_USER_KERNEL("random_mask_like")         \
+      .SetCreateFn<RandomMaskLikeKernel<device>>() \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
-ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+#endif
+}  // namespace
 
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
-Maybe<void> SingleClientSync();
-Maybe<void> MultiClientSync();
-
-}  // namespace vm
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_VM_H_
