@@ -57,7 +57,7 @@ def clip_grad_norm(
         norms = [p.grad.detach().abs().max().to(device) for p in parameters]
         total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
     else:
-        total_norm = flow.norm(flow.stack([flow.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
+        total_norm = flow.linalg.norm(flow.stack([flow.linalg.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
     if total_norm.isnan() or total_norm.isinf():
         if error_if_nonfinite:
             raise RuntimeError(
