@@ -368,7 +368,7 @@ class DropoutFunctor {
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
-      gen = JUST(one::GetDefaultGenerator("auto"));
+      gen = JUST(one::GetDefaultAutoGenerator());
     } else {
       gen = JUST(generator.value());
     }
