@@ -79,7 +79,7 @@ class AutogradEngine {
                                                                   bool create_graph) = 0;
   virtual void ClearEngine() = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
-  virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+  virtual Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
@@ -124,7 +124,7 @@ class StackAutogradEngine final : public AutogradEngine {
                                                           bool retain_graph,
                                                           bool create_graph) override;
   void ClearEngine() override;
-  std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+  Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
@@ -185,7 +185,7 @@ class GraphAutogradEngine final : public AutogradEngine {
                                                           bool retain_graph,
                                                           bool create_graph) override;
   void ClearEngine() override{};
-  std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+  Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,

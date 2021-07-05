@@ -41,7 +41,7 @@ class OpGradRegistry final {
   // new
   OpGradRegistry& SetBackwardOpConfGenFn(BackwardOpConfGenFn fn);
 
-  OpGradRegistry& Finish();
+  Maybe<OpGradRegistry&> Finish();
   OpGradRegistryResult GetResult() { return result_; }
 
  private:

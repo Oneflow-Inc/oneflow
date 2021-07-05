@@ -29,7 +29,7 @@ Maybe<void> EventsWriter::Init(const std::string& logdir) {
   file_system_ = std::make_unique<fs::PosixFileSystem>();
   log_dir_ = logdir + "/event";
   file_system_->RecursivelyCreateDirIfNotExist(log_dir_);
-  TryToInit();
+  JUST(TryToInit());
   is_inited_ = true;
   last_flush_time_ = CurrentMircoTime();
   return Maybe<void>::Ok();
