@@ -150,8 +150,8 @@ class TestDiag(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_diag_one_dim_backward,
             _test_diag_other_dim_backward,
-            _test_diag_other_dim_non_square_backward,
-        ]
+            _test_diag_other_dim_non_square_backward,    
+        ]       
         arg_dict["diagonal"] = [1, 0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
