@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from typing import Union
 
+import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 import oneflow._oneflow_internal as oneflow_api
+from torch._C import device
 
 
 class _NormBase(Module):
@@ -30,6 +32,8 @@ class _NormBase(Module):
         momentum: float = 0.1,
         affine: bool = True,
         track_running_stats: bool = True,
+        device: Union[str, flow.device] = None,
+        dtype: flow.dtype = None,
     ) -> None:
         super().__init__()
         self.num_features = num_features
@@ -37,18 +41,23 @@ class _NormBase(Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
+        self.device = device
+        self.dtype = dtype
+
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_features, device=self.device)
+            )
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features, device=self.device))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features),
+                "running_mean", flow.Tensor(num_features, device=self.device),
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features),
+                "running_var", flow.Tensor(num_features, device=self.device),
             )
         else:
             self.register_parameter("running_mean", None)
@@ -99,40 +108,48 @@ class _BatchNorm(_NormBase):
         momentum=0.1,
         affine=True,
         track_running_stats=True,
+        device=None,
+        dtype=None,
     ):
-        super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        super().__init__(
+            num_features, eps, momentum, affine, track_running_stats, device, dtype
+        )
 
     def forward(self, x):
+        if self.dtype is None:
+            self.dtype = x.dtype
+        if self.device is None:
+            self.device = x.device
+
         self._check_input_dim(x)
+        reduce_axis = []
+        for dim in range(len(x.shape)):
+            if dim != 1:
+                reduce_axis.append(dim)
+        mean = x.mean(dim=reduce_axis, keepdim=False)
+        variance = x.var(dim=reduce_axis, keepdim=False)
 
         if x.device == flow.device("cpu"):
-            if self.training:
-                reduce_axis = []
-                for dim in range(len(x.shape)):
-                    if dim != 1:
-                        reduce_axis.append(dim)
-                mean = x.mean(dim=reduce_axis, keepdim=False)
-                variance = x.var(dim=reduce_axis, keepdim=False)
-
+            if self.training and self.track_running_stats:
                 running_mean = (
                     self.momentum * self.running_mean + (1 - self.momentum) * mean
                 )
                 running_var = (
                     self.momentum * self.running_var + (1 - self.momentum) * variance
                 )
-
-                # update training parameters/buffers
+                # update training buffers
                 self.__setattr__("running_mean", flow.Tensor(running_mean))
                 self.__setattr__("running_var", flow.Tensor(running_var))
 
             else:
-                mean = self.running_mean
-                variance = self.running_var
+                mean = mean if self.running_mean is None else self.running_mean
+                variance = variance if self.running_var is None else self.running_var
 
             axis = 1
             params_shape = [x.shape[axis]]
             weight = self.weight
             bias = self.bias
+
             if len(mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
                 nd_params_shape[axis] = params_shape[0]
@@ -158,13 +175,13 @@ class _BatchNorm(_NormBase):
                 affined = affined * weight
             if self.bias:
                 affined = affined + bias
-            return affined
+            return affined.to(dtype=self.dtype)
 
         else:
-            return flow.F.normalization(
+            res = flow.F.normalization(
                 x,
-                self.running_mean,
-                self.running_var,
+                self.running_mean if self.track_running_stats else mean,
+                self.running_var if self.track_running_stats else variance,
                 self.weight,
                 self.bias,
                 axis=1,
@@ -172,6 +189,7 @@ class _BatchNorm(_NormBase):
                 momentum=self.momentum,
                 is_training=self.training,
             )
+            return res.to(dtype=self.dtype, device=self.device)
 
 
 @oneflow_export("nn.BatchNorm1d")
