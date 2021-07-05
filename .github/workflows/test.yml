@@ -115,7 +115,7 @@ jobs:
           echo "CC=clang-12" >> $GITHUB_ENV
           echo "CXX=clang++-12" >> $GITHUB_ENV
           echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp" >> $GITHUB_ENV
+          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp;oneflow/core/kernel/kernel_util;oneflow/core/kernel/new_kernel_util" >> $GITHUB_ENV
       - name: Build Clang plug-in
         run: |
           cd tools/clang-plugin
@@ -159,7 +159,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/github-workflow-schedule@0e42bf5171f37d1b91825b9b6f6040e3372ae049
+      - uses: Oneflow-Inc/gh-action-scheduler-v2@849c5f271f5a3673ea33ce6d75ce5ebc0b288b3d
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
@@ -181,21 +181,25 @@ jobs:
             extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: false
+            python_version: 3.6,3.7
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
             os: [self-hosted, linux, build]
             allow_fail: false
+            python_version: 3.6
           - test_suite: xla
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
+            python_version: 3.6
           - test_suite: xla_cpu
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
+            python_version: 3.6
     steps:
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
@@ -239,7 +243,12 @@ jobs:
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
           fi
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
+
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-manylinux2014-cuda10.2/0.1"
+          pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
+          echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
+
+          echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
@@ -256,15 +265,16 @@ jobs:
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
+          python_version: ${{ matrix.python_version }}
       - name: Custom Op test (run by oneflow build docker)
         if: matrix.test_suite == 'cpu' && env.is_built != '1'
         run: |
           set -x
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Remove cache
         if: ${{ failure() }}
         run: |
@@ -426,7 +436,12 @@ jobs:
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
           extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-          echo "image_name=oneflow-test:0.1" >> $GITHUB_ENV
+          echo "image_name=oneflow-test:0.2" >> $GITHUB_ENV
+          echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
+
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-test/0.1"
+          pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
+          echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
       - name: Build docker image for testing
         run: |
           bash docker/ci/test/build.sh
@@ -435,34 +450,34 @@ jobs:
         run: |
           set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             ${bin_dir}/oneflow_testexe
       - name: Build documentation
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed, 1st try)
         if: matrix.test_suite == 'cuda'
         continue-on-error: true
         id: distributed_try_1
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 2nd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 3rd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
         if: failure() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
@@ -473,97 +488,117 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Doctest
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/doctest.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/doctest.sh"
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
+      - name: Set environment variables (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          set -x
+          echo "image_tag=oneflow-test-v2:0.1" >> $GITHUB_ENV
+          echo "image_url=https://oneflow-static.oss-cn-beijing.aliyuncs.com/docker_images/oneflow-test-v2.0.1.tar.gz" >> $GITHUB_ENV
+
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/pytorch/pytorch/1.9.0-cuda10.2-cudnn7-runtime"
+          pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
+          echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
+      - name: Check image (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          if [[ "$(docker images -q ${{ env.image_tag }} 2> /dev/null)" == "" ]]; then
+            echo "should_load_img=1" >> $GITHUB_ENV
+          fi
+      - name: Load image (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface' && env.should_load_img == '1'
+        run: |
+          wget ${{ env.image_url }}
+          docker load -i $(basename "${{ env.image_url }}")
       - name: Module API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
-          set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
-            ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
-          set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
-            ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
         run: |
           set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Model test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
       - name: Model serve test
+        id: model_serve_test
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             --env ONEFLOW_TEST_TMP_DIR=$PWD/serving-tmp \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
       - name: Print backtrace (serving test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && steps.model_serve_test.outcome=='failure'  && matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Benchmark (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
       - name: Benchmark FP16 (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
         if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
         run: |
           set -x
-          docker run $extra_docker_args \
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: Query system status
         if: ${{ failure() }}
         run: |
