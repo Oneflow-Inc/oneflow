@@ -127,7 +127,8 @@ REGISTER_USER_OP("same_padding_grad")
     });
 
 REGISTER_USER_OP_GRAD("same_padding")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         const std::string& padding = op.attr<std::string>("padding");
         const std::string& data_format = op.attr<std::string>("data_format");
@@ -149,6 +150,7 @@ REGISTER_USER_OP_GRAD("same_padding")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace user_op

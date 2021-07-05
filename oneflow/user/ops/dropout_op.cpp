@@ -93,7 +93,7 @@ REGISTER_USER_OP("dropout_grad")
     });
 
 REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) {
+                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper dropout_grad_op =
@@ -106,6 +106,7 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
     AddOp(dropout_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("random_mask_like")

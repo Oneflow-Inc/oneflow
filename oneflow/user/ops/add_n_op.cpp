@@ -55,13 +55,14 @@ REGISTER_USER_OP("add_n")
     });
 
 REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
+                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   int32_t in_size = op.input_size("in");
   for (int i = 0; i < in_size; ++i) {
     if (op.NeedGenGradTensor4OpInput("in", i)) {
       op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
     }
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

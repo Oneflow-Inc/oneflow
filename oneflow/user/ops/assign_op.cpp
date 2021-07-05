@@ -49,7 +49,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+                               const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK_OR_RETURN(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);

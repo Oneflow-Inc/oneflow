@@ -74,6 +74,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
     AddOp(ccrelu_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("TestReshape")
@@ -220,7 +221,8 @@ REGISTER_USER_OP("TestMultiInputGrad")
     });
 
 REGISTER_USER_OP_GRAD("TestMultiInput")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x1", 0) || op.NeedGenGradTensor4OpInput("x2", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper test_multi_input_grad_op =
@@ -235,6 +237,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
         op.BindGradTensorWithOpInput(test_multi_input_grad_op.output("x2_diff", 0), "x2", 0);
         AddOp(test_multi_input_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("TestDynamicSource")

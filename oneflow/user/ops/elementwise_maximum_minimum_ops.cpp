@@ -89,7 +89,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
         return ctx->GetOp(grad_op_name).output("dx", 0);
       });
     }
-  
+
     if (y_need_grad) {
       ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&]() -> const std::string& {
         // bug !!!!!!!

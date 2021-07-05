@@ -283,7 +283,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
     });
 
 REGISTER_USER_OP_GRAD("layer_norm")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       const bool center = op.attr<bool>("center");
       const bool scale = op.attr<bool>("scale");
       const bool has_beta = center;
@@ -337,6 +338,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

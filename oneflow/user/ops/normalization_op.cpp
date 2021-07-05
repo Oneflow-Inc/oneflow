@@ -71,7 +71,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
 }
 
 Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+                               const user_op::UserOpConfWrapper& conf) {
   bool training;
   if (conf.op_type_name() == "normalization") {
     training = conf.attr<bool>("training");

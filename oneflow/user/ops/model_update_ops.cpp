@@ -270,7 +270,7 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const std::string& arg_name, int32_t arg_index) {
+                                       const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
   CHECK_NOTNULL_OR_RETURN(arg_modifier);
   arg_modifier->set_is_mutable(true);
@@ -278,7 +278,7 @@ Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetIn
 }
 
 Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                          const user_op::UserOpConfWrapper& conf) {
+                                 const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
@@ -286,7 +286,7 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 }
 
 Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                          const user_op::UserOpConfWrapper& conf) {
+                                 const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
@@ -497,7 +497,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-      return  Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 

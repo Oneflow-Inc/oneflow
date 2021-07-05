@@ -67,6 +67,7 @@ REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("fused_scale_tril")
@@ -111,7 +112,8 @@ REGISTER_USER_OP("fused_scale_tril")
     });
 
 REGISTER_USER_OP_GRAD("fused_scale_tril")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -126,6 +128,7 @@ REGISTER_USER_OP_GRAD("fused_scale_tril")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

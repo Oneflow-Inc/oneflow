@@ -136,7 +136,8 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   }
 }
 
-void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
+                                          user_op::AddOpFn AddOp) {
   const std::string& data_format = op.attr<std::string>("data_format");
   const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
   const auto& kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
@@ -186,6 +187,7 @@ void GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op, user_op::Ad
     op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "in", 0);
     AddOp(data_grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
