@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import experimental_api
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
@@ -86,6 +86,18 @@ def long_op(input):
 
     """
     return Long()(input)
+
+
+@oneflow_export("return_first_input")
+@experimental_api
+def return_first_input(*args):
+    op = (
+        flow.builtin_op("return_first_input")
+        .Input("in", len(args))
+        .Output("out")
+        .Build()
+    )
+    return op(*args)[0]
 
 
 if __name__ == "__main__":

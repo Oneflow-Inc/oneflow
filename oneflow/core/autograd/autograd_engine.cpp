@@ -61,8 +61,7 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple
                                                                bool retain_graph,
                                                                bool create_graph) {
   DevVmDepObjectConsumeModeGuard(DevVmDepObjectConsumeMode::NONE);
-  return RunBackwardAndSaveGrads4LeafTensorIf(outputs, inputs, out_grads, retain_graph,
-                                              create_graph);
+  return RunBackwardAndSaveGrads4LeafTensorIf(outputs, out_grads, retain_graph, create_graph);
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGrad(
