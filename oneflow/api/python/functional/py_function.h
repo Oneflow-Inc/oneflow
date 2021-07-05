@@ -48,7 +48,7 @@ inline py::object PyFunction(py::args args, py::kwargs kwargs) {
   }
   using FType = typename SchemaT::FType;
   using R = typename SchemaT::R;
-  return py::cast(detail::unpack_call<FType, R, PythonArg>::apply(*SchemaT::func, _args));
+  return py::cast(detail::unpack_call<FType, R>::apply(*SchemaT::func, _args));
 }
 
 }  // namespace functional
