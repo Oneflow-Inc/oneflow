@@ -147,7 +147,7 @@ jobs:
         continue-on-error: true
         run: |
           set -ex
-          tar -cvf build_core.tar ${PWD}/build/**/core*
+          tar -cvf build_core.tar ${PWD}/build/**/core.* ${PWD}/build/**/core
       - name: Upload core
         if: always()
         uses: actions/upload-artifact@v2
