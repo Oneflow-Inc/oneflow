@@ -45,6 +45,9 @@ jobs:
           - test_suite: ubuntu
             os: "ubuntu-20.04"
             make_concurrency: 2
+        exclude:
+          - test_suite: conda
+            cmake_generator: "Ninja"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -72,17 +75,18 @@ jobs:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies (pip)
+        if: matrix.test_suite != 'conda'
         run: |
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
         shell: bash
-      - name: Install dependencies (pip)
+      - name: Download conda environment.yml
         if: matrix.test_suite == 'conda'
         run: |
           wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/5b985c863ef73fc3f3b597289fdcf740d52cf71c/dev/gcc7/environment.yml
         shell: bash
       - uses: conda-incubator/setup-miniconda@v2
-        if: matrix.test_suite == 'ubuntu'
+        if: matrix.test_suite == 'conda'
         name: Setup conda
         with:
           activate-environment: oneflow-dev-gcc7
