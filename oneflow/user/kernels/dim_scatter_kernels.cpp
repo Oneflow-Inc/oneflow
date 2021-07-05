@@ -28,12 +28,12 @@ namespace user_op {
     ~DimScatter##binop##Kernel() override = default;                                              \
                                                                                                   \
    private:                                                                                       \
-    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,               \
+    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,  \
-                  int32_t dim, const IDX_T* index, const IN_T* input,                             \
+                  int32_t dim, const IDX_T* index, const IN_T* src,                             \
                   IN_T* output) const override {                                                  \
       DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                     \
-          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);     \
+          ctx, src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src, output);     \
     }                                                                                             \
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      \
   }
@@ -70,9 +70,10 @@ namespace user_op {
   REGISTER_DIM_SCATTER_OUTPLACE_GPUKERNELS(optypename, binop);
 
 // ---- REGISTER INPLACE OPS ----
+// todo(zzk): maybe error here
 Maybe<void> SetInplace(const user_op::InferContext&,
                        user_op::AddInplaceArgPair AddInplaceArgPairFn) {
-  OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "src", 0, true));
+  OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, true));
   return Maybe<void>::Ok();
 }
 
@@ -113,9 +114,9 @@ class DimScatterBaseKernel : public user_op::OpKernel {
  public:
   DimScatterBaseKernel() = default;
   ~DimScatterBaseKernel() override = default;
-  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                         const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* input,
+                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* src,
                         IN_T* output) const = 0;
 
  private:
@@ -123,23 +124,32 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
+    const Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
+    printf("1 \n");
     const int32_t dim = ctx->Attr<int32_t>("dim");
+    printf("2 \n");
 
     const IN_T* input = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
+    printf("3 \n");
 
     Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
-    Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
-    if (src_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, src_tensor->dptr<IN_T>(), out_bytes_size);
+    const IN_T* src = src_tensor->dptr<IN_T>();
+
+    printf("4 \n");
+
+    // fix bug here!
+    if (input_tensor) {
+      Memcpy<device_type>(ctx->device_ctx(), output, input, out_bytes_size);
     } else if (like_tensor) {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
     } else {
       Error::Unimplemented();
     }
+    printf("5 \n");
 
     int ndim = input_tensor->shape().NumAxes();
     fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
@@ -147,13 +157,22 @@ class DimScatterBaseKernel : public user_op::OpKernel {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
                      [](int64_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
     };
-    shape2dims(input_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
+    printf("6 \n");
+    
+    shape2dims(src_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> src_nd_helper(shape_vec.data(), ndim);
+    printf("7 \n");
+
+    shape2dims(index_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> idx_nd_helper(shape_vec.data(), ndim);
+    printf("8 \n");
+
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
+    printf("9 \n");
 
-    BinaryOp(ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
-             input_tensor->shape().elem_cnt(), dim, index, input, output);
+    BinaryOp(ctx->device_ctx(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
+             index_tensor->shape().elem_cnt(), dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

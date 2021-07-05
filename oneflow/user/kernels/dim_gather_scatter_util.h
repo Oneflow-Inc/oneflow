@@ -56,7 +56,7 @@ struct DeviceBinOp {
 #define DECLARE_DIMSCATTER_FUNCTOR(binop)                                                          \
   template<DeviceType device_type, typename IN_T, typename IDX_T>                                  \
   struct DimScatter##binop##Functor final {                                                        \
-    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,              \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                     const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
                     int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);               \
   }
@@ -64,41 +64,42 @@ struct DeviceBinOp {
 #define IMPLEMENT_DIMSCATTER_CPUFUNCTOR(binop)                                                     \
   template<typename IN_T, typename IDX_T>                                                          \
   struct DimScatter##binop##Functor<DeviceType::kCPU, IN_T, IDX_T> final {                         \
-    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,              \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                     const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {            \
-      DoDimScatterBinOp<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim,       \
-                                     index, input, output, DeviceBinOp<IN_T>::binop);              \
+                    int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) {            \
+      DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,       \
+                                     index, src, output, DeviceBinOp<IN_T>::binop);              \
     }                                                                                              \
   }
 
 #define IMPLEMENT_DIMSCATTER_GPUFUNCTOR(binop)                                                     \
   template<typename IN_T, typename IDX_T>                                                          \
-  __global__ void DoCUDADimScatter##binop(const DimOpIndexNdHelper<IDX_T> input_nd_helper,         \
+  __global__ void DoCUDADimScatter##binop(const DimOpIndexNdHelper<IDX_T> src_nd_helper,         \
+                                          const DimOpIndexNdHelper<IDX_T> idx_nd_helper, \
                                           const DimOpIndexNdHelper<IDX_T> output_nd_helper,        \
                                           int ndim, int64_t elem_cnt, int32_t dim,                 \
-                                          const IDX_T* index, const IN_T* input, IN_T* output) {   \
-    DoDimScatterBinOp<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,  \
-                                   input, output, DeviceBinOp<IN_T>::binop);                       \
+                                          const IDX_T* index, const IN_T* src, IN_T* output) {   \
+    DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,  \
+                                   src, output, DeviceBinOp<IN_T>::binop);                       \
   }                                                                                                \
   template<typename IN_T, typename IDX_T>                                                          \
   struct DimScatter##binop##Functor<DeviceType::kGPU, IN_T, IDX_T> final {                         \
-    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,              \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                     const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {            \
+                    int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) {            \
       RUN_CUDA_KERNEL((DoCUDADimScatter##binop<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
-                      input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input,        \
+                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src,        \
                       output);                                                                     \
     }                                                                                              \
   };                                                                                               \
   template<typename IDX_T>                                                                         \
   struct DimScatter##binop##Functor<DeviceType::kGPU, float16, IDX_T> final {                      \
-    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,              \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                     const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const float16* input, float16* output) {      \
+                    int32_t dim, const IDX_T* index, const float16* src, float16* output) {      \
       RUN_CUDA_KERNEL((DoCUDADimScatter##binop<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
-                      input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,               \
-                      reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));      \
+                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,               \
+                      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(output));      \
     }                                                                                              \
   }
 

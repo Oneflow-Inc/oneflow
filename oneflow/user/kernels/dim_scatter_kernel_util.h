@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
 #include "oneflow/user/kernels/dim_gather_scatter_util.h"
-
 // Steps for adding a binary operation on scatter are as follows:
 // 1. implment binop in DeviceBinOp, for example "Mul":
 //    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
@@ -46,18 +45,54 @@ namespace user_op {
 DECLARE_DIMSCATTER_FUNCTOR(Add);
 DECLARE_DIMSCATTER_FUNCTOR(Update);
 
+// template<typename IN_T, typename IDX_T>
+// OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+//                                       const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+//                                       int64_t elem_cnt, int32_t dim, const IDX_T* index,
+//                                       const IN_T* src, IN_T* output, BinaryOpFn<IN_T> bin_op) {
+//   XPU_1D_KERNEL_LOOP(src_offset, elem_cnt) {
+//     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
+//     src_nd_helper.OffsetToNdIndex(src_offset, coordinate, ndim);
+//     coordinate[dim] = index[src_offset];
+
+//     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
+//     bin_op(src + src_offset, output + output_offset);
+//   }
+// }
+
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& src_nd_helper, 
+                                      const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                                       const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
                                       int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                      const IN_T* input, IN_T* output, BinaryOpFn<IN_T> bin_op) {
-  XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
+                                      const IN_T* src, IN_T* output, BinaryOpFn<IN_T> bin_op) {
+  XPU_1D_KERNEL_LOOP(idx_offset, elem_cnt) {
+    // 感觉需要从index_offset算src_offset
+    // 是不是还需要一个idx_nd_helper?
+    
+    // an example 
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
-    coordinate[dim] = index[input_offset];
+    idx_nd_helper.OffsetToNdIndex(idx_offset, coordinate, ndim);
+    printf("idx offset is: %d \n", idx_offset);
+    IDX_T src_offset = src_nd_helper.NdIndexToOffset(coordinate, ndim);
+    printf("src offset is: %d \n", src_offset);
 
+    coordinate[dim] = index[idx_offset];
     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    bin_op(input + input_offset, output + output_offset);
+    printf("output offset is: %d \n", output_offset);
+
+    printf("src is: %f \n", *(src+src_offset));
+    printf("output is: %f \n", *(output+output_offset));
+
+    bin_op(src + src_offset, output + output_offset);
+    // ======= finish ========
+
+    // IDX_T coordinate[kDimGatherMaxDimCount] = {0};
+    // src_nd_helper.OffsetToNdIndex(src_offset, coordinate, ndim);
+    // coordinate[dim] = index[idx_offset];
+
+    // IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
+    // bin_op(src + src_offset, output + output_offset);
   }
 }
 

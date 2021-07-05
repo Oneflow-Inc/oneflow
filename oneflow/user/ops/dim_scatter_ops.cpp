@@ -61,9 +61,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   // }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  *out->mut_shape() = src ? src->shape() : like->shape();
-  *out->mut_data_type() = input->data_type();
-
+  // *out->mut_shape() = src ? src->shape() : like->shape();
+  *out->mut_shape() = input ? input->shape() : like->shape();
   return Maybe<void>::Ok();
 }
 
@@ -114,9 +113,7 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
-  const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
-  *out->mut_data_type() = in->data_type();
+  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 }  // namespace
@@ -133,6 +130,18 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .SetDataTypeInferFn(InferDtype) \
       .SetGetSbpFn(SetSbpLike)
 
+// #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
+//   REGISTER_USER_OP(optypename)                        \
+//       .OptionalInput("src")                           \
+//       .Input("input")                                 \
+//       .Input("index")                                 \
+//       .Output("output")                               \
+//       .Attr<int32_t>("dim")                           \
+//       .SetTensorDescInferFn(InferTensorDesc)          \
+//       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
+//       .SetDataTypeInferFn(InferDtype) \
+//       .SetGetSbpFn(SetSbpInplace)
+
 #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
       .OptionalInput("src")                           \
@@ -141,7 +150,6 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .Output("output")                               \
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
-      .SetInputArgModifyFn(InplaceInputArgModifierFn) \
       .SetDataTypeInferFn(InferDtype) \
       .SetGetSbpFn(SetSbpInplace)
 
