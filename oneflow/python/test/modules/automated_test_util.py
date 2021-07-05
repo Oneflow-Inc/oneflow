@@ -81,7 +81,6 @@ def choose(x):
 
 def random(low, high):
     def generator(annotation):
-        print(annotation)
         if hasattr(annotation, "__origin__"):
             # PyTorch _size_2_t and similar types are defined by type variables,
             # leading to unexpected __args__ and __origin__
