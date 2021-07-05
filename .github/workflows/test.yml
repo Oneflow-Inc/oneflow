@@ -144,6 +144,7 @@ jobs:
           cmake --build . -j$(nproc)
       - name: Tar core
         if: always()
+        continue-on-error: true
         run: |
           set -ex
           tar -cvf build_core.tar ${PWD}/build/core.*
