@@ -239,6 +239,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       // create a function to be lowered
       SmallVector<Type, 3> types(created->getOperandTypes());
       types.push_back(created->getResultTypes().front());
+      // TODO: handle input output alias info
       auto func_type = rewriter.getFunctionType(types, llvm::None);
       auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
       // TODO: is it a good idea to insert the sub-graph at entry block?
