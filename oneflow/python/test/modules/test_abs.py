@@ -78,20 +78,18 @@ class TestAbs(flow.unittest.TestCase):
 
     def test_flow_abs_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
+            test_flow_against_pytorch(
                 test_case,
                 "abs",
                 device=device,
-                api_flag=1,
             )
     
     def test_flow_tensor_abs_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
+            test_tensor_against_pytorch(
                 test_case,
                 "abs",
                 device=device,
-                api_flag=2,
             )
 
     

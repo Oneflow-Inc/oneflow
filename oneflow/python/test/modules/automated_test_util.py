@@ -127,7 +127,7 @@ def constant(val):
     return generator
 
 
-def test_module_against_pytorch(
+def test_against_pytorch(
     test_case,
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
@@ -153,8 +153,7 @@ def test_module_against_pytorch(
 
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    if api_flag == 0:
-
+    try:
         torch_module_class = eval(f"torch.{pytorch_module_class_name}")
         spec = inspect.getfullargspec(torch_module_class)
         annotations = spec.annotations
@@ -175,18 +174,12 @@ def test_module_against_pytorch(
                 return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
                     spec.kwonlydefaults
                 )
-
-    elif api_flag == 1:
+    except Exception as e:
         annotations = extra_annotations
         args = annotations.keys()
         annotations.update({"input": torch.Tensor})
-    elif api_flag == 2:
-        annotations = extra_annotations
-        args = annotations.keys()
-        annotations.update({"input": torch.Tensor})
-    else:
-        raise NotImplementedError("api_flag set wrong, please check!")
 
+    
     def generate(name):
         annotation = annotations[name]
         if name in extra_generators:
@@ -285,7 +278,57 @@ def test_module_against_pytorch(
         n -= 1
 
 
+def test_module_against_pytorch(
+    test_case,
+    module_class_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=1e-4,
+    atol=1e-5,
+    n=20,
+    pytorch_module_class_name=None,
+):
+    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
+            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
+            pytorch_module_class_name=pytorch_module_class_name, api_flag=0)
 
+
+def test_flow_against_pytorch(
+    test_case,
+    module_class_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=1e-4,
+    atol=1e-5,
+    n=20,
+    pytorch_module_class_name=None,
+):
+    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
+            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
+            pytorch_module_class_name=pytorch_module_class_name, api_flag=1)
+
+def test_tensor_against_pytorch(
+    test_case,
+    module_class_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=1e-4,
+    atol=1e-5,
+    n=20,
+    pytorch_module_class_name=None,
+):
+    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
+            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
+            pytorch_module_class_name=pytorch_module_class_name, api_flag=2)
 
 __all__ = [
     "random_tensor",
@@ -293,4 +336,6 @@ __all__ = [
     "choose",
     "constant",
     "test_module_against_pytorch",
+    "test_flow_against_pytorch",
+    "test_tensor_against_pytorch",
 ]
