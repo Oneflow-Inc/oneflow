@@ -1,114 +1,124 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/random_generator.h"
 
 namespace oneflow {
 namespace one {
 
-uint64_t getNonDeterministicRandom() {
+Maybe<void> ManualSeed(uint64_t seed) {
+  JUST(GetDefaultAutoGenerator())->set_current_seed(seed);
+  return Maybe<void>::Ok();
+}
+
+namespace detail {
+
+uint64_t GetNonDeterministicRandom() {
   std::random_device rd;
   // limit to 53 bits to ensure unique representation in double
   auto s = ((((uint64_t)rd()) << 32) + rd()) & 0x1FFFFFFFFFFFFF;
   return s;
 }
 
-/*static*/ Maybe<Generator> Generator::New(const std::string& device, uint64_t seed) {
-  std::shared_ptr<Generator> generator(new Generator);
-  JUST(generator->Init(device, seed));
-  return generator;
+}  // namespace detail
+
+Generator::Generator(const std::shared_ptr<AutoGeneratorImpl>& impl) : impl_(impl) {}
+
+Generator::Generator(const std::shared_ptr<GeneratorImpl>& impl) {
+  impl_ = std::make_shared<AutoGeneratorImpl>(impl);
 }
 
-Maybe<void> Generator::Init(const std::string& device, uint64_t seed) {
-  if (device == "cpu") {
-    gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kCPU>>(seed);
-  }
-#ifdef WITH_CUDA
-  else if (device == "cuda") {
-    gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kGPU>>(seed);
-  }
-#endif  // WITH_CUDA
-  else if (device == "auto") {
-    gen_impl_ = std::make_shared<AutoGeneratorImpl>(seed);
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << " device unimplemented, device name: " << device;
-  }
-  return Maybe<void>::Ok();
-}
+uint64_t Generator::current_seed() const { return impl_->current_seed(); }
+
+void Generator::set_current_seed(uint64_t seed) { impl_->set_current_seed(seed); }
 
 uint64_t Generator::seed() {
-  uint64_t seed = getNonDeterministicRandom();
+  uint64_t seed = detail::GetNonDeterministicRandom();
   set_current_seed(seed);
   return seed;
 }
 
-void ManualSeed(uint64_t seed) {
+Maybe<Generator> GetDefaultAutoGenerator() {
+  static auto default_auto_generator = std::make_shared<Generator>(
+      std::make_shared<AutoGeneratorImpl>(detail::GetNonDeterministicRandom()));
+  return default_auto_generator;
+}
+
+Maybe<Generator> GetDefaultCPUGenerator() {
+  static auto default_cpu_generator =
+      std::make_shared<Generator>(JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kCPU>()));
+  return default_cpu_generator;
+}
+
 #ifdef WITH_CUDA
-  const auto& cuda_gen = GetDefaultDeviceGenerator<DeviceType::kGPU>();
-  cuda_gen->set_current_seed(seed);
+Maybe<Generator> GetDefaultCUDAGenerator() {
+  static auto default_cuda_generator =
+      std::make_shared<Generator>(JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kGPU>()));
+  return default_cuda_generator;
+}
 #endif  // WITH_CUDA
-  const auto& cpu_gen = GetDefaultDeviceGenerator<DeviceType::kCPU>();
-  cpu_gen->set_current_seed(seed);
-  const auto& auto_gen = GetDefaultAutoGenerator();
-  auto_gen->set_current_seed(seed);
+
+template<>
+Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kCPU>() {
+  return GetDefaultCPUGenerator();
 }
 
-std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
-  return std::make_shared<AutoGeneratorImpl>(seed);
+#ifdef WITH_CUDA
+template<>
+Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kGPU>() {
+  return GetDefaultCUDAGenerator();
+}
+#endif  // WITH_CUDA
+
+Maybe<Generator> MakeAutoGenerator(uint64_t seed) {
+  return std::make_shared<Generator>(std::make_shared<AutoGeneratorImpl>(seed));
 }
 
-template<DeviceType device_type>
-std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
-  return std::make_shared<DeviceGeneratorImpl<device_type>>(seed);
+template<>
+Maybe<Generator> MakeDeviceGenerator<DeviceType::kCPU>(uint64_t seed) {
+  return std::make_shared<Generator>(std::make_shared<CPUGeneratorImpl>(seed));
 }
 
-const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator() {
-  static auto generator = CreateAutoGenerator(getNonDeterministicRandom());
-  return generator;
+#ifdef WITH_CUDA
+template<>
+Maybe<Generator> MakeDeviceGenerator<DeviceType::kGPU>(uint64_t seed) {
+  return std::make_shared<Generator>(std::make_shared<CUDAGeneratorImpl>(seed));
 }
+#endif  // WITH_CUDA
 
-template<DeviceType device_type>
-const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator() {
-  static auto generator = CreateDeviceGenerator<device_type>(getNonDeterministicRandom());
-  return generator;
+Maybe<Generator> MakeGenerator(const std::string& device) {
+  return MakeGenerator(device, detail::GetNonDeterministicRandom());
 }
-
-template<DeviceType device_type>
-Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator) {
-  if (auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator)) {
-    return auto_gen->template GetDeviceGenerator<device_type>();
+Maybe<Generator> MakeGenerator(const std::string& device, uint64_t seed) {
+  if (device == "cpu") {
+    return MakeDeviceGenerator<DeviceType::kCPU>(seed);
   }
-  auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
-  CHECK_NOTNULL_OR_RETURN(device_gen);
-  return device_gen;
+#ifdef WITH_CUDA
+  else if (device == "cuda" || device == "gpu") {
+    return MakeDeviceGenerator<DeviceType::kGPU>(seed);
+  }
+#endif  // WITH_CUDA
+  else if (device == "auto") {
+    return MakeAutoGenerator(seed);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
+                                << " for making generator, please make sure the device is one of "
+                                   "\"cpu\", \"gpu\" and \"auto\".";
+  }
 }
-
-template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator);
-template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator);
-
-template<DeviceType device_type>
-Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<Generator>& generator) {
-  CHECK_NOTNULL_OR_RETURN(generator);
-  return TryGetDeviceGenerator<device_type>(generator->get_impl());
-}
-
-template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
-    const std::shared_ptr<Generator>& generator);
-template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
-    const std::shared_ptr<Generator>& generator);
 
 }  // namespace one
 }  // namespace oneflow

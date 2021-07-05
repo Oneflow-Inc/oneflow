@@ -378,7 +378,7 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
     }
   }
 
-  return std::move(state);
+  return state;
 }
 
 template<typename T>

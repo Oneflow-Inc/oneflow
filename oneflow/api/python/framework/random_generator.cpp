@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,11 +27,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("manual_seed", &one::Generator::set_current_seed)
       .def("initial_seed", &one::Generator::current_seed);
 
-  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed); });
+  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
   m.def("create_generator",
-        [](const std::string& device) { return one::Generator::New(device).GetPtrOrThrow(); });
+        [](const std::string& device) { return one::MakeGenerator(device).GetPtrOrThrow(); });
   m.def("create_generator", [](const std::string& device, uint64_t seed) {
-    return one::Generator::New(device, seed).GetPtrOrThrow();
+    return one::MakeGenerator(device, seed).GetPtrOrThrow();
   });
 }
 

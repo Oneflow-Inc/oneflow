@@ -1,0 +1,82 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#include "oneflow/core/framework/random_generator_impl.h"
+
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#endif  // WITH_CUDA
+
+namespace oneflow {
+namespace one {
+
+#ifdef WITH_CUDA
+namespace {
+
+int GetThreadNum(const cudaDeviceProp& prop) {
+  switch (prop.major) {
+    case 3:  // Kepler
+      return 2 * 192;
+    case 5:  // Maxwell
+      return 2 * 128;
+    case 6:  // Pascal
+      if ((prop.minor == 1) || (prop.minor == 2)) {
+        return 2 * 128;
+      } else {
+        return 2 * 64;
+      }
+    case 7:  // Volta and Turing
+      return 2 * 64;
+    default: return 2 * 64;
+  }
+}
+
+}  // namespace
+
+CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, DeviceType::kGPU) {
+  cudaDeviceProp prop;
+  OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
+  max_block_num_ = prop.multiProcessorCount;
+  max_thread_num_ = GetThreadNum(prop);
+  OF_CUDA_CHECK(
+      cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandState)));
+  InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
+}
+
+CUDAGeneratorImpl::~CUDAGeneratorImpl() { OF_CUDA_CHECK(cudaFree(curand_states_)); }
+
+void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
+  seed_ = seed;
+  InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
+}
+#endif  // WITH_CUDA
+
+template<>
+Maybe<GeneratorImpl> AutoGeneratorImpl::MakeGeneratorImpl<DeviceType::kCPU>(uint64_t seed) {
+  return std::shared_ptr<GeneratorImpl>(new CPUGeneratorImpl(seed));
+}
+
+#ifdef WITH_CUDA
+template<>
+Maybe<GeneratorImpl> AutoGeneratorImpl::MakeGeneratorImpl<DeviceType::kGPU>(uint64_t seed) {
+  return std::shared_ptr<GeneratorImpl>(new CUDAGeneratorImpl(seed));
+}
+#endif  // WITH_CUDA
+
+}  // namespace one
+}  // namespace oneflow

@@ -13,20 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/random_mask_like_kernel.h"
+
+#include "oneflow/core/framework/random_generator_impl.h"
 
 namespace oneflow {
+namespace one {
 
 namespace {
-#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
-  REGISTER_USER_KERNEL("random_mask_like")         \
-      .SetCreateFn<RandomMaskLikeKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
-#endif
+__global__ void InitCurandStatesKernel(uint64_t seed, curandState* states) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
+                       + (static_cast<size_t>(id) >> 2U));
+  curand_init(local_seed, 0, 0, &states[id]);
+}
+
 }  // namespace
 
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num,
+                      curandState* curand_states) {
+  InitCurandStatesKernel<<<block_num, thread_num>>>(seed, curand_states);
+}
+
+}  // namespace one
 }  // namespace oneflow
