@@ -28,6 +28,12 @@ namespace oneflow {
 
 namespace {
 
+Maybe<Shape> MakeShape(const py::tuple& py_shape) {
+  DimVector shape_dims;
+  for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+  return std::make_shared<Shape>(shape_dims);
+}
+
 struct PlacementSymbolExportUtil {
   static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
@@ -55,6 +61,70 @@ struct PlacementSymbolExportUtil {
     return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
+  static Maybe<ParallelDesc> CreatePlacementSymbol(
+      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+      const py::tuple& hierarchy) {
+    std::shared_ptr<Shape> shape = CHECK_JUST(MakeShape(hierarchy));
+    return CreatePlacementSymbol(device_tag, machine_device_ids, shape);
+  }
+
+  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
+      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+      const py::tuple& hierarchy) {
+    return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
+  }
+
+  static Maybe<ParallelDesc> CreatePlacementSymbol(const std::string& device_type,
+                                                   const py::dict& machine_device_ids,
+                                                   const std::shared_ptr<Shape>& hierarchy) {
+    static const HashMap<std::string, std::string> type2device_tag{
+        {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
+    CHECK_OR_RETURN(type2device_tag.find(device_type) != type2device_tag.end())
+        << "Invalid device_type: " << device_type
+        << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
+    std::string device_tag = type2device_tag.at(device_type);
+    std::vector<std::string> formated_machine_device_ids;
+    for (const auto& pair : machine_device_ids) {
+      CHECK_OR_RETURN(py::isinstance<py::int_>(pair.first))
+          << "Key of machine_device_ids must be int.";
+      std::string device_name = "";
+      std::string machine_id = std::to_string(pair.first.cast<int64_t>());
+      if (py::isinstance<py::int_>(pair.second)) {
+        device_name = machine_id + ":" + std::to_string(pair.second.cast<int64_t>());
+        formated_machine_device_ids.emplace_back(device_name);
+      } else {
+        CHECK_OR_RETURN(py::isinstance<py::iterable>(pair.second))
+            << "Value of machine_device_ids must be int, list or range";
+        for (const auto& device_id : pair.second) {
+          CHECK_OR_RETURN(py::isinstance<py::int_>(device_id))
+              << "Value of machine_device_ids must be int, list or range of int.";
+          device_name = machine_id + ":" + std::to_string(device_id.cast<int64_t>());
+          formated_machine_device_ids.emplace_back(device_name);
+        }
+      }
+    }
+    return CreatePlacementSymbol(device_tag, formated_machine_device_ids, hierarchy);
+  }
+
+  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
+      const std::string& device_type, const py::dict& machine_device_ids,
+      const std::shared_ptr<Shape>& hierarchy) {
+    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetPtrOrThrow();
+  }
+
+  static Maybe<ParallelDesc> CreatePlacementSymbol(const std::string& device_tag,
+                                                   const py::dict& machine_device_ids,
+                                                   const py::tuple& hierarchy) {
+    std::shared_ptr<Shape> shape = CHECK_JUST(MakeShape(hierarchy));
+    return CreatePlacementSymbol(device_tag, machine_device_ids, shape);
+  }
+
+  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(const std::string& device_type,
+                                                                const py::dict& machine_device_ids,
+                                                                const py::tuple& hierarchy) {
+    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetPtrOrThrow();
+  }
+
   static HashMap<int64_t, std::vector<int64_t>> MachineId2DeviceIdList(const ParallelDesc& x) {
     const auto map_with_shared_ptr = x.machine_id2sorted_dev_phy_ids();
     // pybind11 fails to compile if we return a
@@ -79,6 +149,26 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
                                                                    hierarchy);
       }))
+      .def(py::init([](const std::string& device_tag,
+                       const std::vector<std::string>& machine_device_ids,
+                       const py::tuple& hierarchy) {
+        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
+                                                                   hierarchy);
+      }))
+      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
+                       const std::shared_ptr<Shape>& hierarchy) {
+             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+                 device_type, machine_device_ids, hierarchy);
+           }),
+           py::arg("device_type"), py::arg("machine_device_ids"),
+           py::arg("hierarchy") = std::shared_ptr<Shape>())
+      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
+                       const py::tuple& hierarchy) {
+             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+                 device_type, machine_device_ids, hierarchy);
+           }),
+           py::arg("device_type"), py::arg("machine_device_ids"),
+           py::arg("hierarchy") = py::tuple())
       .def_property_readonly("symbol_id",
                              [](const ParallelDesc& x) { return x.symbol_id().GetOrThrow(); })
       .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
