@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("identity_buffer")
+REGISTER_NO_GRAD_USER_OP("identity_buffer")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("buffer_size")

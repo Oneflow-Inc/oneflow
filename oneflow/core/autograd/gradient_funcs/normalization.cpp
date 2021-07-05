@@ -129,7 +129,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
       }
     }
     MutableAttrMap shape_attr;
-    shape_attr.SetAttr<Shape>("shape", Shape(dim_vec));
+    JUST(shape_attr.SetAttr<Shape>("shape", Shape(dim_vec)));
     const auto& reshaped_gamma =
         JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_gamma_op_, {gamma}, shape_attr));
     const auto& reshaped_inv_variance =

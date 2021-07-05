@@ -90,7 +90,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const auto& sbp_signatures = launch_conf.sbp_signatures();
     xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
     for (const auto& pair : sbp_signatures) {
-      cfg_sbp_signatures.insert({pair.first, pair.second});
+      cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
     }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));

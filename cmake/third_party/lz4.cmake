@@ -39,6 +39,7 @@ ExternalProject_Add(lz4
     BUILD_IN_SOURCE 1
     BUILD_COMMAND make -j ${PROC_NUM} lib CFLAGS=${LZ4_CFLAGS}
     INSTALL_COMMAND ""
+    BUILD_BYPRODUCTS ${LZ4_STATIC_LIBRARIES}
 )
 
 add_custom_target(lz4_create_header_dir

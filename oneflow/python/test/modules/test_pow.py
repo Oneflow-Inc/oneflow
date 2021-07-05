@@ -41,15 +41,13 @@ def _test_pow_elementwise_impl(test_case, shape, scalar, device):
 
 
 def _test_pow_backward_impl(test_case, device):
-    # elementwise-pow backward test
-    np_input_x = np.array(
-        [[0.86895168, 0.51427012, 0.8693118], [0.27302601, 0.68126282, 0.85506865]]
-    )
-    np_input_y = np.array(
-        [[0.42736459, 0.0727016, 0.90737411], [0.7220017, 0.32741095, 0.49669031]]
-    )
-    np_x_grad = np.array([[0.4632, 0.1347, 0.9192], [1.0358, 0.4238, 0.5374]])
-    np_y_grad = np.array([[-0.1323, -0.6336, -0.1233], [-0.5085, -0.3385, -0.1449]])
+    shape = (2, 3)
+    np_input_x = 10 * np.random.rand(*shape)
+    np_input_y = np.random.randint(1, 3, shape) + np.random.randn(*shape)
+    np_input_y_scalar = (np.random.randint(1, 3, (1,)) + np.random.randn(1))[0]
+    np_x_grad = np_input_y * (np.power(np_input_x, np_input_y - 1))
+    np_y_grad = np.power(np_input_x, np_input_y) * np.log(np_input_x)
+    np_x_grad_scalar = np_input_y_scalar * (np.power(np_input_x, np_input_y_scalar - 1))
 
     def test_x_y_grad():
         of_input_x = flow.Tensor(
@@ -74,46 +72,22 @@ def _test_pow_backward_impl(test_case, device):
             np.allclose(of_input_y.grad.numpy(), np_y_grad, 1e-4, 1e-4)
         )
 
-    def test_x_grad():
+    def test_x_grad_scalar():
         of_input_x = flow.Tensor(
             np_input_x,
             dtype=flow.float32,
             device=flow.device(device),
             requires_grad=True,
         )
-        of_input_y = flow.Tensor(
-            np_input_y, dtype=flow.float32, device=flow.device(device)
-        )
-        of_out = flow.pow(of_input_x, of_input_y)
+        of_out = flow.pow(of_input_x, np_input_y_scalar)
         of_out_sum = of_out.sum()
         of_out_sum.backward()
         test_case.assertTrue(
-            np.allclose(of_input_x.grad.numpy(), np_x_grad, 1e-4, 1e-4)
-        )
-
-    def test_y_grad():
-        of_input_x = flow.Tensor(
-            np_input_x, dtype=flow.float32, device=flow.device(device)
-        )
-        of_input_y = flow.Tensor(
-            np_input_y,
-            dtype=flow.float32,
-            device=flow.device(device),
-            requires_grad=True,
-        )
-        of_out = flow.pow(of_input_x, of_input_y)
-        of_out_sum = of_out.sum()
-        of_out_sum.backward()
-        test_case.assertTrue(
-            np.allclose(of_input_y.grad.numpy(), np_y_grad, 1e-4, 1e-4)
+            np.allclose(of_input_x.grad.numpy(), np_x_grad_scalar, 1e-4, 1e-4)
         )
 
     test_x_y_grad()
-    test_x_grad()
-    test_y_grad()
-
-    # TODO(liupeihong): scalar-pow backward test
-    # ...
+    test_x_grad_scalar()
 
 
 @unittest.skipIf(

@@ -16,7 +16,7 @@ limitations under the License.
 
 import warnings
 from typing import Dict, Callable, Union, Any, Iterator
-from types import GeneratorType
+import collections
 
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
@@ -29,7 +29,7 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
-        if isinstance(parameters, GeneratorType):
+        if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
             self._options = default_options
         else:  # Dict
