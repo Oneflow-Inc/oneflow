@@ -17,10 +17,13 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace py = pybind11;
 
@@ -136,6 +139,33 @@ struct PlacementSymbolExportUtil {
     return map_without_shared_ptr;
   }
 };
+
+std::shared_ptr<ParallelDesc> AllDevicePlacement(const std::string& device_type) {
+  CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+  static const HashMap<std::string, std::string> type2device_tag{
+      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
+  CHECK(type2device_tag.find(device_type) != type2device_tag.end())
+      << "Invalid device_type: " << device_type
+      << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
+  std::string device_tag = type2device_tag.at(device_type);
+  int64_t world_size = GlobalProcessCtx::WorldSize();
+  int64_t device_num = 0;
+  {
+    if (device_tag == "gpu") {
+      device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
+    } else {
+      device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+    }
+  }
+  std::vector<std::string> machine_device_ids;
+  for (int64_t rank = 0; rank < world_size; ++rank) {
+    std::string device_name = std::to_string(rank) + ":0-" + std::to_string(device_num - 1);
+    machine_device_ids.emplace_back(device_name);
+  }
+  return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
+                                                             std::shared_ptr<Shape>());
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -180,6 +210,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
+  m.def("AllDevicePlacement", &AllDevicePlacement);
 }
 
 }  // namespace oneflow
