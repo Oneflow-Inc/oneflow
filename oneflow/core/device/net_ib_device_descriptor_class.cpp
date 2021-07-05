@@ -65,10 +65,7 @@ class NetIBDeviceDescriptorClass : public DeviceDescriptorClass {
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
   }
 
-  const std::string& Name() const override {
-    static const std::string name = kNetIBDeviceDescriptorClassName;
-    return name;
-  }
+  std::string Name() const override { return kNetIBDeviceDescriptorClassName; }
 
   void SerializeDeviceDescriptorList(const std::shared_ptr<const DeviceDescriptorList>& list,
                                      std::string* serialized) const override {
