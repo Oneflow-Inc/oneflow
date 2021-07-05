@@ -55,10 +55,14 @@ def api_env_init() -> bool:
     Returns:
         bool: [description]
     """
-    return enable_if.unique([lambda: env_init(False), do_nothing])()
+    return enable_if.unique([_env_init_single_client, do_nothing])()
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def _env_init_single_client():
+    return env_init(False)
+
+
 def env_init(is_multi_client):
     global default_env_proto
     assert len(default_env_proto.machine) > 0
