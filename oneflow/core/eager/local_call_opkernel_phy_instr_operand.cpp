@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 
 namespace oneflow {
 namespace vm {
@@ -34,11 +35,15 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+  auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
   // Sequantialize nccl instructions by consuming `compute_local_dep_object` of the
   // same device.
   if (opkernel().device()->type() == "nccl") {
-    auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
     DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+  } else {
+    if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
+      DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+    }
   }
 
   const auto& input_list = inputs();
