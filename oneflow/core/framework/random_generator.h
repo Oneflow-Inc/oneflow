@@ -130,6 +130,7 @@ class Generator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Generator);
   Generator() = default;
+  Generator(std::shared_ptr<GeneratorImpl> gen_impl) : gen_impl_(gen_impl) {}
 
   Maybe<void> Init(const std::string& device, uint64_t seed);
 
@@ -153,9 +154,13 @@ class Generator final {
 
 void ManualSeed(uint64_t seed);
 
-const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
+std::shared_ptr<Generator> CreateGenerator(const std::string& device, uint64_t seed);
+
+Maybe<Generator> GetDefaultGenerator(const std::string& device);
 
 std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
+
+const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
 
 template<DeviceType device_type>
 std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed);

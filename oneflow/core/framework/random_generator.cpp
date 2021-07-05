@@ -65,6 +65,24 @@ void ManualSeed(uint64_t seed) {
   auto_gen->set_current_seed(seed);
 }
 
+Maybe<Generator> GetDefaultGenerator(const std::string& device) {
+  std::shared_ptr<GeneratorImpl> gen_impl;
+  if (device == "cpu") {
+    gen_impl = GetDefaultDeviceGenerator<DeviceType::kCPU>();
+  }
+#ifdef WITH_CUDA
+  else if (device == "cuda") {
+    gen_impl = GetDefaultDeviceGenerator<DeviceType::kGPU>();
+  }
+#endif  // WITH_CUDA
+  else if (device == "auto") {
+    gen_impl = GetDefaultAutoGenerator();
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << " device unimplemented, device name: " << device;
+  }
+  return std::make_shared<Generator>(gen_impl);
+}
+
 std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
   return std::make_shared<AutoGeneratorImpl>(seed);
 }

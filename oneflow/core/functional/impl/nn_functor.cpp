@@ -368,7 +368,7 @@ class DropoutFunctor {
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
-      gen = JUST(one::Generator::New("auto"));
+      gen = JUST(one::GetDefaultGenerator("auto"));
     } else {
       gen = JUST(generator.value());
     }
@@ -377,7 +377,8 @@ class DropoutFunctor {
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x}, OpExprInterpContext{.attrs=random_mask_like_attrs, .state=random_mask_like_state}));
+        *random_mask_like_op_, {x},
+        OpExprInterpContext{.attrs = random_mask_like_attrs, .state = random_mask_like_state}));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap dropout_attrs;
