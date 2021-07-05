@@ -16,18 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
 
 namespace {
-
-static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
-                                    const int64_t in_dim_size) {
-  int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
-  index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
-  index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
-  return index;
-}
 
 template<typename T>
 static void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
@@ -57,55 +50,6 @@ static void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr,
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
     *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w)) += dy_dptr[index];
   }
-}
-
-template<typename T>
-T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool align_corners,
-                    const T scale) {
-  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1)
-                       : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
-}
-
-template<typename T>
-T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
-                          bool align_corners) {
-  T src_index;
-  if (align_corners) {
-    src_index = scale * static_cast<T>(dst_index);
-  } else {
-    src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-  }
-  int64_t sx = static_cast<int64_t>(floorf(src_index));
-
-  src_index = (sx < 0) ? 0 : src_index;
-  if (scale > static_cast<T>(1.0)) {
-    src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
-  }
-  return src_index;
-}
-
-template<typename T>
-struct BilinearParam {
-  int64_t top_h_index;
-  int64_t bottom_h_index;
-  int64_t left_w_index;
-  int64_t right_w_index;
-  T w_lerp;
-  T h_lerp;
-};
-
-template<typename T>
-void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
-                      const int64_t in_height, const int64_t in_width, const T scale_h,
-                      const T scale_w, BilinearParam<T>* params) {
-  const T in_h = GetAreaPixelSourceIndex(scale_h, h, in_height, align_corners);
-  const T in_w = GetAreaPixelSourceIndex(scale_w, w, in_width, align_corners);
-  params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
-  params->bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
-  params->h_lerp = in_h - floorf(in_h);
-  params->left_w_index = in_w > 0.0 ? floorf(in_w) : 0;
-  params->right_w_index = (in_w < in_width - 1) ? ceilf(in_w) : in_width - 1;
-  params->w_lerp = in_w - floorf(in_w);
 }
 
 template<typename T>
