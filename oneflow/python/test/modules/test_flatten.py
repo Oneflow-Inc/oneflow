@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_flatten(test_case, device):
@@ -68,6 +69,13 @@ class TestFlattenModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_with_random_data(test_case):
+        test_module_against_pytorch(
+            test_case,
+            "nn.Flatten",
+            extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
+        )
 
 
 if __name__ == "__main__":
