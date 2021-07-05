@@ -95,7 +95,7 @@ template<>
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                                               const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
-  op_expr.BuildOpConf(op_conf.get(), attrs);
+  JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
   return op_conf;
 }
 

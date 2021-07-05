@@ -26,28 +26,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class Blob;
-
-namespace cfg {
-
-class LogicalBlobId;
-class ParallelConf;
-
-}  // namespace cfg
-
-class Tensor {
- public:
-  virtual ~Tensor() = default;
-
-  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const = 0;
-  virtual std::string logical_blob_name() const = 0;
-  virtual std::string op_name() const = 0;
-  virtual std::string blob_name() const = 0;
-  virtual std::shared_ptr<Shape> shape() const = 0;
-  virtual DataType dtype() const = 0;
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
-};
-
 namespace cfg {
 class ParallelDistribution;
 }
@@ -56,6 +34,9 @@ class Device;
 namespace one {
 
 class FunctionNode;
+
+class ConsistentTensor;
+class MirroredTensor;
 
 class Tensor {
  public:
@@ -70,18 +51,25 @@ class Tensor {
   virtual Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution()
-      const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
+  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
+  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
-  virtual Maybe<TensorStorage> tensor_storage() const = 0;
+  virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
 
-  // Setters
-  virtual Maybe<void> set_consumer_forced_parallel_distribution(
-      Symbol<cfg::ParallelDistribution> val) = 0;
+  // Getters/Setters valid only for EagerConsistentTensor
+  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
+      const {
+    OF_UNIMPLEMENTED();
+  }
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<void> set_consumer_parallel_distribution_constraint(
+      Symbol<cfg::ParallelDistribution> val) {
+    OF_UNIMPLEMENTED();
+  }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -107,9 +95,6 @@ class Tensor {
  protected:
   Tensor() = default;
 };
-
-class ConsistentTensor;
-class MirroredTensor;
 
 template<typename DerivedT>
 class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<DerivedT>> {
@@ -177,9 +162,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
-    OF_UNIMPLEMENTED();
-  }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
@@ -195,16 +177,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->compute_local_dep_object();
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
-
-  // Setters
-  Maybe<void> set_consumer_forced_parallel_distribution(
-      Symbol<cfg::ParallelDistribution> val) override {
-    OF_UNIMPLEMENTED();
-  }
-
-  Maybe<void> set_tensor_storage(const std::shared_ptr<TensorStorage>& tensor_storage) {
-    return impl_->set_tensor_storage(tensor_storage);
-  }
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -227,11 +199,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const Symbol<Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
-
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
+    return impl_->mut_eager_mirrored_tensor_impl();
+  }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  static std::shared_ptr<MirroredTensor> MakeEagerTensor(
+  Maybe<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
       const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
 
@@ -256,9 +230,11 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Symbol<Device>> device() const override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
-    return impl_->consumer_forced_parallel_distribution();
+  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
+      const override {
+    return impl_->consumer_parallel_distribution_constraint();
   }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { return impl_->cur_rank_phy_tensor(); }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
@@ -273,12 +249,11 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->compute_local_dep_object();
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
-  Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
 
   // Setters
-  Maybe<void> set_consumer_forced_parallel_distribution(
+  Maybe<void> set_consumer_parallel_distribution_constraint(
       Symbol<cfg::ParallelDistribution> val) override {
-    impl_->set_consumer_forced_parallel_distribution(val);
+    impl_->set_consumer_parallel_distribution_constraint(val);
     return Maybe<void>::Ok();
   }
 
@@ -308,6 +283,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   ConsistentTensorImpl* mut_impl() { return impl_.get(); }
 
+  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
+    return impl_->tensor_meta();
+  }
+
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
  private:
@@ -315,44 +294,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 };
 
 }  // namespace one
-
-namespace user_op {
-
-class Tensor {
- public:
-  ~Tensor() = default;
-
-  virtual const ShapeView& shape() const = 0;
-  virtual MutShapeView* mut_shape() = 0;
-  virtual DataType data_type() const = 0;
-  virtual const MemoryCase& mem_case() const = 0;
-  virtual const void* raw_dptr() const = 0;
-  virtual void* mut_raw_dptr() = 0;
-
-  template<typename T = void>
-  const T* dptr() const {
-    CheckDataType<T>();
-    return reinterpret_cast<const T*>(raw_dptr());
-  }
-
-  template<typename T = void>
-  T* mut_dptr() {
-    CheckDataType<T>();
-    return reinterpret_cast<T*>(mut_raw_dptr());
-  }
-
- protected:
-  template<typename T>
-  void CheckDataType() const {
-    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && data_type() != DataType::kChar && data_type() != GetDataType<T>::value))
-        << "tensor data_type mismatched. value: " << DataType_Name(data_type())
-        << ", template T:" << DataType_Name(GetDataType<T>::value);
-  }
-};
-
-}  // namespace user_op
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_

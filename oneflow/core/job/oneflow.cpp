@@ -59,6 +59,12 @@ struct hash<oneflow::ParallelBlobConf> {
 
 namespace oneflow {
 
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
+  return lhs.parallel_type_case() == rhs.parallel_type_case();
+}
+
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
 bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
@@ -497,22 +503,6 @@ void LinkTickTaskProto(Plan* plan, TaskProto* identity_tick, TaskProto* src_tick
   UpdateSoleObnRegstDescId(plan, identity_tick);
 }
 
-void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
-  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
-    auto* regst = &pair.second;
-    CHECK(regst->mem_case().has_host_mem());
-    CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
-    bool used_by_network = false;
-    for (int64_t consumer_task_id : regst->consumer_task_id()) {
-      const auto* consumer_task_proto = TaskProto4TaskId(consumer_task_id);
-      used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
-    }
-    regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
-  }
-}
-
 void LinkMainPlan(Plan* plan, Plan&& main_plan,
                   const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
@@ -552,7 +542,6 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
           plan, identity_tick,
           sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
           sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
-      FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
     }
   }
   {
@@ -1061,7 +1050,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -1099,7 +1088,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -1112,7 +1101,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();

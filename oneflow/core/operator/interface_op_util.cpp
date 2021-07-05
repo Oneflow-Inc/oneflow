@@ -85,7 +85,7 @@ Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf&
                                                         const PbRpf<std::string>& input_bns,
                                                         const PbRpf<std::string>& output_bns,
                                                         cfg::SbpSignature* sbp_signature) {
-  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true);
+  JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true));
   return Maybe<void>::Ok();
 }
 
@@ -93,7 +93,7 @@ Maybe<void> InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf
                                                          const PbRpf<std::string>& input_bns,
                                                          const PbRpf<std::string>& output_bns,
                                                          cfg::SbpSignature* sbp_signature) {
-  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false);
+  JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false));
   return Maybe<void>::Ok();
 }
 
@@ -112,7 +112,7 @@ Maybe<void> InterfaceOpUtil::ParseParallelDistributionFromBlobConf(
     cfg::ParallelDistribution* parallel_distribution) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (blob_conf.has_parallel_distribution()) {
-    *parallel_distribution = blob_conf.parallel_distribution();
+    *parallel_distribution = cfg::ParallelDistribution(blob_conf.parallel_distribution());
   } else {
     parallel_distribution->clear_sbp_parallel();
     FOR_RANGE(int64_t, i, 0, num_axes) {

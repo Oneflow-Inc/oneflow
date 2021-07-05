@@ -31,7 +31,7 @@ class DeviceClassRegistryStorage {
   ~DeviceClassRegistryStorage() = default;
   void Register(std::shared_ptr<const DeviceDescriptorClass> descriptor_class) {
     std::lock_guard<std::mutex> lock(mutex_);
-    const std::string& name = descriptor_class->Name();
+    const std::string name = descriptor_class->Name();
     if (!name2index_.emplace(name, classes_.size()).second) { abort(); }
     classes_.emplace_back(std::make_shared<std::string>(name), std::move(descriptor_class));
   }

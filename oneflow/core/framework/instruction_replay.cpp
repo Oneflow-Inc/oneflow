@@ -54,7 +54,7 @@ void ReplayInstructions() {
   for (const auto& instr_msg : *RecordedInstructionList()) {
     instr_msg_list.EmplaceBack(instr_msg->Clone());
   }
-  vm::Run(&instr_msg_list);
+  CHECK_JUST(vm::Run(&instr_msg_list));
 }
 
 }  // namespace debug
