@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_DEVICE_CONTEXT_H_
 
@@ -15,7 +30,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
   LazyJobDeviceCtx() = default;
   ~LazyJobDeviceCtx() override = default;
 
-  const cudaStream_t& cuda_stream() const override { 
+  const cudaStream_t& cuda_stream() const override {
     UNIMPLEMENTED();
     return *(const cudaStream_t*)nullptr;
   }
@@ -45,14 +60,14 @@ class LazyJobDeviceCtx : public DeviceCtx {
     return (vm::Allocator*)nullptr;
   }
 
-  std::queue<T>* mut_queue() { return &queue_; }
+  std::queue<std::weak_ptr<NNGraphIf>>* mut_queue() { return &queue_; }
   std::mutex* mut_mutex() { return &mutex_; }
   std::condition_variable* mut_cond() { return &cond_; }
 
-  void WaitUntilQeueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraphIf>& nn_graph)  {
+  void WaitUntilQeueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraphIf>& nn_graph) {
     std::unique_lock<std::mutex> lock(mutex_);
     if (queue_.empty()) { return; }
-    const auto& last_nn_graph = queue->front().lock();
+    const auto& last_nn_graph = queue_.front().lock();
     if (!last_nn_graph) { return; }
     if (last_nn_graph == nn_graph) { return; }
     cond_.wait(lock, [this]() { return queue_.empty(); });

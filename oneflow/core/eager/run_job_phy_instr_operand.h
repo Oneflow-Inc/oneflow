@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_EAGER_RUN_JOB_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_RUN_JOB_PHY_INSTR_OPERAND_H_
 
@@ -22,10 +37,11 @@ class RunJobPhyInstrOperand final : public PhyInstrOperand {
   RunJobPhyInstrOperand(RunJobPhyInstrOperand&&) = delete;
   ~RunJobPhyInstrOperand() override = default;
 
-  RunJobPhyInstrOperand(
-    const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-    const one::EagerBlobObjectListPtr& parameters, const std::shared_ptr<NNGraphIf>& nn_graph)
-    : inputs_(inputs), outputs_(outputs), parameters_(parameters), nn_graph_(nn_graph) { }
+  RunJobPhyInstrOperand(const one::EagerBlobObjectListPtr& inputs,
+                        const one::EagerBlobObjectListPtr& outputs,
+                        const one::EagerBlobObjectListPtr& parameters,
+                        const std::shared_ptr<NNGraphIf>& nn_graph)
+      : inputs_(inputs), outputs_(outputs), parameters_(parameters), nn_graph_(nn_graph) {}
 
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
@@ -43,13 +59,14 @@ class RunJobPhyInstrOperand final : public PhyInstrOperand {
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;
+
  private:
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
   one::EagerBlobObjectListPtr parameters_;
   std::shared_ptr<NNGraphIf> nn_graph_;
 };
-}
-}
+}  // namespace vm
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_RUN_JOB_PHY_INSTR_OPERAND_H_
