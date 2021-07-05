@@ -87,11 +87,11 @@ const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerat
 
 template<DeviceType device_type>
 Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator) {
-  if (auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator)) {
+    const std::shared_ptr<GeneratorImpl>& gen_impl) {
+  if (auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(gen_impl)) {
     return auto_gen->template GetDeviceGenerator<device_type>();
   }
-  auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
+  auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(gen_impl);
   CHECK_NOTNULL_OR_RETURN(device_gen);
   return device_gen;
 }
@@ -112,6 +112,9 @@ template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
     const std::shared_ptr<Generator>& generator);
 template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
     const std::shared_ptr<Generator>& generator);
+
+template class DeviceGeneratorImpl<DeviceType::kCPU>;
+template class DeviceGeneratorImpl<DeviceType::kGPU>;
 
 }  // namespace one
 }  // namespace oneflow
