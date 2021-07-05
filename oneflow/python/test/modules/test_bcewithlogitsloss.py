@@ -92,7 +92,7 @@ def _test_bcewithlogitsloss_impl(test_case, device, shape, reduction):
     np_out = _np_bcewithlogitsloss(
         x, y, np_weight=w, np_pos_weight=pw, reduction=reduction
     )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     # Backward test with np:
     of_out = of_out.sum()
@@ -100,7 +100,7 @@ def _test_bcewithlogitsloss_impl(test_case, device, shape, reduction):
     np_grad = _np_bcewithlogitsloss_grad(x, y, np_weight=w, np_pos_weight=pw,)[
         reduction
     ]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(

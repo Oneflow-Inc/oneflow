@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 class Shape;
@@ -61,6 +62,8 @@ enum ValueType {
   kDOUBLE_LIST,
   kBOOL_LIST,
   kSTRING_LIST,
+  kVOID_MAYBE,
+  kBOOL_MAYBE,
   kSCALAR,
   kTENSOR,
   kTENSOR_REF,
@@ -77,6 +80,11 @@ enum ValueType {
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
   template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value, int>::type = 0> \
+  inline ValueType ValueTypeOf() {                                                               \
+    return value_type;                                                                           \
+  }                                                                                              \
+  template<typename T,                                                                           \
+           typename std::enable_if<std::is_same<T, Optional<cpp_type>>::value, int>::type = 0>   \
   inline ValueType ValueTypeOf() {                                                               \
     return value_type;                                                                           \
   }
@@ -98,6 +106,9 @@ VALUE_TYPE_OF_IMPL(std::vector<float>, kFLOAT_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<double>, kDOUBLE_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<bool>, kBOOL_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<std::string>, kSTRING_LIST);
+
+VALUE_TYPE_OF_IMPL(Maybe<void>, kVOID_MAYBE);
+VALUE_TYPE_OF_IMPL(Maybe<bool>, kBOOL_MAYBE);
 
 VALUE_TYPE_OF_IMPL(Scalar, kSCALAR);
 VALUE_TYPE_OF_IMPL(one::Tensor, kTENSOR);

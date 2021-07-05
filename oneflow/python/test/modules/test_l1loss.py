@@ -36,7 +36,8 @@ def _np_l1loss(np_input, np_target):
 
 def _np_l1loss_grad(np_input, np_target):
     elem_cnt = np_input.size
-    np_grad = np.where(np_target - np_input > 0, -1, 1)
+    np_grad = np.zeros_like(np_target)
+    np_grad = np.sign(np_input - np_target)
     np_l1_grad_sum = np_grad
     np_l1_grad_mean = np_l1_grad_sum / elem_cnt
 
@@ -48,8 +49,8 @@ def _np_l1loss_grad(np_input, np_target):
 
 
 def _test_l1loss_impl(test_case, device, shape, reduction):
-    x = np.random.randn(*shape)
-    y = np.random.randn(*shape)
+    x = np.random.randn(*shape).astype(np.float32)
+    y = np.random.randn(*shape).astype(np.float32)
     input = flow.Tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )

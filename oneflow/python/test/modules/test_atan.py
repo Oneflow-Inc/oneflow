@@ -75,7 +75,7 @@ class TestAtan(flow.unittest.TestCase):
             _test_atan,
             _test_arctan,
         ]
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

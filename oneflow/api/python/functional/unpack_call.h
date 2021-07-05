@@ -69,6 +69,10 @@ INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>, std::shared_ptr<one::Tensor>,
                            ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
 INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>, std::shared_ptr<one::TensorTuple>,
                            ([](const Maybe<one::TensorTuple>& t) { return t.GetPtrOrThrow(); }));
+INSTANCE_MAYBE_UNPACK_CALL(Maybe<void>, bool, ([](const Maybe<void>& t) {
+                             t.GetOrThrow();
+                             return true;
+                           }));
 
 #undef INSTANCE_MAYBE_UNPACK_CALL
 

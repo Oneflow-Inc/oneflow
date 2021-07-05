@@ -95,7 +95,7 @@ template<>
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                                               const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
-  op_expr.BuildOpConf(op_conf.get(), attrs);
+  JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
   return op_conf;
 }
 
@@ -119,14 +119,6 @@ template<>
                                      /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
-}
-
-/*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const Device>& device) {
-  auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
-                                                /* requires_grad */ false, /* is_leaf */ false);
-  return std::static_pointer_cast<Tensor>(tensor);
 }
 
 }  // namespace one

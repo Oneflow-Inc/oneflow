@@ -30,7 +30,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       CHECK_EQ_OR_RETURN(segment_ids->is_dynamic(), data->is_dynamic());
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       CHECK_GE_OR_RETURN(num_segments, 1);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
       FOR_RANGE(int64_t, i, 0, segment_ids->shape().NumAxes() - 1) {
         CHECK_EQ_OR_RETURN(segment_ids->shape().At(i), data->shape().At(i));
@@ -43,7 +43,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
       CHECK_OR_RETURN(IsIndexDataType(segment_ids->data_type()));
       *out->mut_data_type() = data->data_type();

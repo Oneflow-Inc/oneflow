@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -37,15 +38,12 @@ class Gather : public OpExprGradFunction<GatherInterpState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Gather::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::UnsortedSegmentSumLikeOp(/*axis=*/0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -54,8 +52,8 @@ Maybe<void> Gather::Capture(GatherInterpState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  ctx->SaveTensorForBackward(inputs.at(1));  // indices
-  ctx->SaveTensorForBackward(inputs.at(0));  // in
+  ctx->SaveTensorForBackward(inputs.at(0));
+  ctx->SaveTensorForBackward(inputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
@@ -66,14 +64,10 @@ Maybe<void> Gather::Apply(const GatherInterpState* ctx, const TensorTuple& out_g
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  const std::shared_ptr<oneflow::one::Tensor>& indices = ctx->SavedTensors().at(0);
-  const std::shared_ptr<oneflow::one::Tensor>& in = ctx->SavedTensors().at(1);
-
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("axis", ctx->axis));
-  in_grads->resize(3);
+  const auto& x = ctx->SavedTensors().at(0);
+  const auto& indices = ctx->SavedTensors().at(1);
   in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), indices, in}, attrs));
+      JUST(functional::UnsortedSegmentSumLike(out_grads.at(0), indices, x, ctx->axis));
   return Maybe<void>::Ok();
 }
 

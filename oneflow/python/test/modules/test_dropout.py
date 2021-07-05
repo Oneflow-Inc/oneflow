@@ -68,6 +68,15 @@ def _test_dropout_backward_p1(test_case, shape, device):
     )
 
 
+def _test_dropout_eval(test_case, shape, device):
+    input_arr = np.random.randn(*shape)
+    m = flow.nn.Dropout(p=1)
+    x = flow.Tensor(input_arr, device=flow.device(device))
+    m.eval()
+    y = m(x)
+    test_case.assertTrue(np.allclose(y.numpy(), input_arr))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -80,6 +89,7 @@ class TestDropout(flow.unittest.TestCase):
             _test_dropout_p1,
             _test_dropout_backward_p0,
             _test_dropout_backward_p1,
+            _test_dropout_eval,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]

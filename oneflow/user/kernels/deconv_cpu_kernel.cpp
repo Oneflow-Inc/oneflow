@@ -343,8 +343,6 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->device_ctx(), out->mut_dptr<T>(), 0,
                              out->shape().elem_cnt() * sizeof(T));
 
-    int32_t idx_offset = conv_state->idx_offset_;
-
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
       // channels first:  col_buf' = weight(T) * in[i]'
       // channels last :  col_buf' = weight(T) * in[i]'(T)

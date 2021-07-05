@@ -108,7 +108,7 @@ def _test_atan2_backward(test_case, device):
 class TestAtan2(flow.unittest.TestCase):
     def test_atan2_forward(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4, 5)]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["scalar"] = [2.1, 0.8]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

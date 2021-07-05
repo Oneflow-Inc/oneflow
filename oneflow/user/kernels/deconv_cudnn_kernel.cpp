@@ -145,7 +145,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                                 \
         const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);                         \
-        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                               \
+        const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                           \
             out, weight, in, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),                \

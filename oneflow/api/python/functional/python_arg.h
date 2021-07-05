@@ -62,6 +62,21 @@ class PythonArg {
   virtual ~PythonArg() = default;
 
   template<typename T>
+  friend class ObjectAsHelper;
+
+  template<typename T>
+  struct ObjectAsHelper {
+    Maybe<T> operator()(const PythonArg* self) { return self->ObjectAs<T>(); }
+  };
+  template<typename T>
+  struct ObjectAsHelper<Optional<T>> {
+    Maybe<Optional<T>> operator()(const PythonArg* self) {
+      if (self->object_ == Py_None) { return std::make_shared<Optional<T>>(); }
+      return std::make_shared<Optional<T>>(JUST(self->ObjectAs<T>()));
+    }
+  };
+
+  template<typename T>
   operator T() const {
     if (active_tag_ == HAS_IMMEDIATE) {
       CHECK_EQ_OR_THROW(ValueTypeOf<T>(), immediate_->value_type())
@@ -70,7 +85,7 @@ class PythonArg {
       return *reinterpret_cast<const T*>(immediate_->Ptr());
     }
     CHECK_EQ_OR_THROW(active_tag_, HAS_OBJECT);
-    return this->ObjectAs<oneflow::detail::remove_cvref_t<T>>().GetOrThrow();
+    return ObjectAsHelper<oneflow::detail::remove_cvref_t<T>>()(this).GetOrThrow();
   }
 
  private:

@@ -44,9 +44,6 @@ REQUIRED_PACKAGES = [
     "requests",
 ]
 
-if platform.system() != "Darwin":
-    REQUIRED_PACKAGES += ["onnx"]
-
 
 class BinaryDistribution(Distribution):
     def is_pure(self):

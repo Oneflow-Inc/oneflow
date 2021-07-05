@@ -23,7 +23,6 @@ class Unsqueeze(Module):
     def __init__(self, dim: int = 0) -> None:
         super().__init__()
         self.dim = dim
-        self._op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
 
     def forward(self, input):
         assert (
@@ -32,7 +31,7 @@ class Unsqueeze(Module):
 
         if self.dim < 0:
             self.dim = 1 + input.ndimension() + self.dim
-        return self._op(input, axis=self.dim)[0]
+        return flow.F.expand_dims(input, axis=self.dim)
 
 
 @oneflow_export("unsqueeze")

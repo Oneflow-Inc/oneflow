@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/memory/memory_zone.h"
 
 namespace std {
 
@@ -97,7 +98,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*) const;
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual int64_t MemZoneId121() const;
+  virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);

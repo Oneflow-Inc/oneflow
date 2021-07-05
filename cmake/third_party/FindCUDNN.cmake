@@ -14,7 +14,7 @@ include(FindPackageHandleStandardArgs)
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
 option(CUDNN_STATIC "Look for static cuDNN" ON)
-if(BUILD_SHARED_LIBS)
+if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
    set(CUDNN_STATIC OFF)
 endif()
 if (CUDNN_STATIC)

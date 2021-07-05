@@ -22,10 +22,9 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Sinh(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("sinh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sinh(x)
 
 
 @oneflow_export("sinh")

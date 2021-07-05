@@ -46,7 +46,12 @@ template<typename T>
 struct AbsFunctor {
   static OF_DEVICE_FUNC const T Forward(const T x) { return x < T(0) ? -x : x; }
 
-  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) { return x < T(0) ? -dy : dy; }
+  static OF_DEVICE_FUNC const T Backward(const T x, const T dy) {
+    if (x == T(0))
+      return T(0);
+    else
+      return x < T(0) ? -dy : dy;
+  }
 };
 
 template<typename T>

@@ -45,17 +45,11 @@ class Flatten(Module):
 
     def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
-        self.op_ = (
-            flow.builtin_op("flatten")
-            .Input("in")
-            .Output("out")
-            .Attr("start_dim", start_dim)
-            .Attr("end_dim", end_dim)
-            .Build()
-        )
+        self.start_dim = start_dim
+        self.end_dim = end_dim
 
     def forward(self, input):
-        return self.op_(input)[0]
+        return flow.F.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
 
 
 @oneflow_export("flatten")

@@ -16,6 +16,7 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
+import numpy as np
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
@@ -26,19 +27,11 @@ class Argwhere(Module):
         super().__init__()
         if dtype == None:
             dtype = flow.int32
-        self._op = (
-            flow.builtin_op("argwhere")
-            .Input("input")
-            .Output("output")
-            .Output("output_size")
-            .Attr("dtype", dtype)
-            .Build()
-        )
+        self.dtype = dtype
 
     def forward(self, x):
-        size = self._op(x)[1].numpy()
-        res = self._op(x)[0]
-        slice_tup_list = [[0, int(size), 1]]
+        res, size = flow.F.argwhere(x, dtype=self.dtype)
+        slice_tup_list = [[0, int(size.numpy()), 1]]
         return flow.experimental.slice(res, slice_tup_list=slice_tup_list)
 
 

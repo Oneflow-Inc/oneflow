@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.common_types import _size_any_t
@@ -46,45 +47,12 @@ class _ConstantBase(Module):
         if device is None:
             self.device = flow.device("cpu")
 
-        if dtype in [
-            flow.int,
-            flow.int64,
-            flow.int32,
-            flow.char,
-            flow.int8,
-            flow.long,
-            flow.uint8,
-        ]:
-            floating_value = float(0)
-            integer_value = int(value)
-            is_floating_value = False
-        elif dtype in [
-            flow.float32,
-            flow.float,
-            flow.double,
-            flow.float64,
-            flow.float16,
-            flow.half,
-        ]:
-            floating_value = float(value)
-            integer_value = int(0)
-            is_floating_value = True
-        else:
-            raise NotImplementedError("Unsupport data type")
-
-        self._op = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("is_floating_value", is_floating_value)
-            .Attr("floating_value", floating_value)
-            .Attr("integer_value", integer_value)
-            .Attr("dtype", dtype)
-            .Attr("shape", size)
-            .Build()
-        )
+        self.shape = size
+        self.value = value
+        self.dtype = dtype
 
     def forward(self):
-        res = self._op()[0]
+        res = flow.F.constant(self.shape, self.value, self.dtype)
         res = res.to(device=self.device)
         res.requires_grad = self.requires_grad
         return res
@@ -171,10 +139,9 @@ def zeros_op(
 class ZerosLike(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("zero_like").Input("like").Output("out").Build()
 
     def forward(self, other):
-        return self._op(other)[0]
+        return flow.F.zeros_like(other)
 
 
 @oneflow_export("zeros_like")
@@ -205,10 +172,9 @@ def zeros_like_op(other):
 class OnesLike(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("ones_like").Input("like").Output("out").Build()
 
     def forward(self, other):
-        return self._op(other)[0]
+        return flow.F.ones_like(other)
 
 
 @oneflow_export("ones_like")
@@ -234,6 +200,89 @@ def ones_like_op(other):
 
     """
     return OnesLike()(other)
+
+
+class NewOnes(Module):
+    def __init__(
+        self,
+        size: Union[_size_any_t, flow.Size] = None,
+        dtype: Optional[flow.dtype] = None,
+        device: Union[flow.device, str] = None,
+        requires_grad: bool = False,
+    ):
+        super().__init__()
+
+        self.device = device
+        self.requires_grad = requires_grad
+        if size != None:
+            size = _single(size)
+        self.size = size
+        self.dtype = dtype
+
+    def forward(self, x):
+        new_size = self.size
+        new_dtype = self.dtype
+        new_device = self.device
+        new_requires_grad = self.requires_grad
+
+        if self.size is None:
+            new_size = x.shape
+
+        if self.dtype is None:
+            new_dtype = x.dtype
+
+        if self.device is None:
+            new_device = x.device
+
+        assert isinstance(
+            new_size, (int, tuple, flow.Size)
+        ), f"size parameter not correct, please check!"
+        assert isinstance(
+            new_dtype, (flow.dtype)
+        ), f"dtype parameter not correct, please check!"
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_requires_grad, bool
+        ), f"requires_grad parameter not correct, please check!"
+
+        res = flow.F.constant(new_size, 1.0, new_dtype)
+        res = res.to(new_device)
+        res.requires_grad = new_requires_grad
+        return res
+
+
+@register_tensor_op("new_ones")
+@experimental_api
+def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
+    r"""
+    
+    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.ones((1, 2, 3)))
+        >>> y = x.new_ones((2, 2))
+        >>> y
+        tensor([[1., 1.],
+                [1., 1.]], dtype=oneflow.float32)
+    """
+    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
+        x
+    )
 
 
 if __name__ == "__main__":

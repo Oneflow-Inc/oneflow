@@ -23,10 +23,9 @@ from oneflow.python.nn.module import Module
 class Sign(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("sign").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sign(x)
 
 
 @oneflow_export("sign")

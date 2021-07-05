@@ -197,7 +197,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 };
 
 size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
                             * GetSizeOfDataType(out_tensor->data_type()));
 }

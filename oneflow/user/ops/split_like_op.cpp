@@ -30,7 +30,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(axis, like_num_axes);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc->shape().NumAxes(), like_num_axes);
     FOR_RANGE(int64_t, j, 0, like_num_axes) {
       if (j == axis) {
@@ -61,7 +61,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     *out_i_desc->mut_data_type() = in_desc->data_type();
   }
   return Maybe<void>::Ok();

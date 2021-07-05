@@ -20,7 +20,7 @@ namespace {
 
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   const user_op::TensorDesc* input_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
   *output_tensor_desc->mut_shape() = input_tensor_desc->shape();
   *output_tensor_desc->mut_is_dynamic() = input_tensor_desc->is_dynamic();
   return Maybe<void>::Ok();
@@ -36,7 +36,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
   DataType* dtype = output_tensor_desc->mut_data_type();
   *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();

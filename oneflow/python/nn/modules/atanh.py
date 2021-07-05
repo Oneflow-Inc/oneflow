@@ -22,10 +22,9 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Atanh(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("atanh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.atanh(x)
 
 
 @oneflow_export("atanh")
@@ -49,8 +48,8 @@ def atanh_op(input):
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.atanh(input)
-        >>> print(output.numpy())
-        [0.54930615 0.6931472  0.8673005 ]
+        >>> output
+        tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
     """
 

@@ -50,10 +50,6 @@ class OpInterpUtil {
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
       const bool is_lazy);
-
-  static Maybe<Tensor> BuildEagerMirroredTensorFromEagerBlobObject(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::shared_ptr<const Device>& device);
 };
 
 }  // namespace one

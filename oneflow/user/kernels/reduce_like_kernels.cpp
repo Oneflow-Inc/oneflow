@@ -164,7 +164,7 @@ REGISTER_USER_KERNEL("reduce_sum_like")
                      & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-      const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+      const Shape& out_shape = ctx->OutputTensorDesc("y", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       if (axis.empty()) {
         size_t tmp_bytes = 0;

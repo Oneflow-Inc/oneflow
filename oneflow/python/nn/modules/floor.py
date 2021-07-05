@@ -27,10 +27,9 @@ from oneflow.python.nn.modules.utils import _check_axis
 class Floor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("floor").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.floor(x)
 
 
 @oneflow_export("floor")

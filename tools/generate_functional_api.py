@@ -61,6 +61,7 @@ header_fmt = (
 #ifndef ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 #define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/scalar.h"
@@ -104,6 +105,7 @@ pybind_fmt = (
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/py_function.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {{
@@ -124,6 +126,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {{
 )
 
 types_allowed = {
+    "Void",
     "Tensor",
     "TensorTuple",
     "Scalar",
@@ -173,11 +176,30 @@ argument_type_aliases = {
     **generic_type_aliases,
 }
 
+optional_argument_type_aliases = {
+    "Tensor": "const Optional<one::Tensor>&",
+    "TensorTuple": "const Optional<TensorTuple>&",
+    "Scalar": "const Optional<Scalar>&",
+    "ScalarList": "const Optional<std::vector<Scalar>>&",
+    "IntList": "const Optional<std::vector<int32_t>>&",
+    "Int32List": "const Optional<std::vector<int32_t>>&",
+    "Int64List": "const Optional<std::vector<int64_t>>&",
+    "FloatList": "const Optional<std::vector<float>>&",
+    "DoubleList": "const Optional<std::vector<double>>&",
+    "String": "const Optional<std::string>&",
+    "StringList": "const Optional<std::vector<std::string>>&",
+    "BoolList": "const Optional<std::vector<bool>>&",
+    "DataType": "const Optional<DataType>&",
+    "Shape": "const Optional<Shape>&",
+    **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
+}
+
 return_type_aliases = {
+    "Void": "Maybe<void>",
     "Tensor": "Maybe<one::Tensor>",
     "TensorTuple": "Maybe<one::TensorTuple>",
-    "String": "std::string",
-    **generic_type_aliases,
+    "String": "Maybe<std::string>",
+    **{k: "Maybe<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
 value_aliases = {
@@ -252,19 +274,26 @@ class Argument:
         self._type = _normalize(fmt[0:sp])
         assert self._type in types_allowed, "Unknow type: " + self._type
 
-        if self._type in argument_type_aliases:
-            self._cpp_type = argument_type_aliases[self._type]
-        else:
-            self._cpp_type = self._type
+        optional = False
         self._name = _normalize(fmt[sp + 1 :])
         sp = self._name.find("=")
         if sp != -1:
             self._default_value = _normalize(self._name[sp + 1 :])
-            if self._default_value in value_aliases:
+            if self._default_value == "None":
+                optional = True
+                self._default_cpp_value = ""
+            elif self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
             else:
                 self._default_cpp_value = self._default_value
             self._name = _normalize(self._name[0:sp])
+
+        if not optional and self._type in argument_type_aliases:
+            self._cpp_type = argument_type_aliases[self._type]
+        elif optional and self._type in optional_argument_type_aliases:
+            self._cpp_type = optional_argument_type_aliases[self._type]
+        else:
+            self._cpp_type = self._type
 
     @property
     def has_default_value(self):

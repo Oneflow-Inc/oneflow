@@ -24,7 +24,7 @@ REGISTER_USER_OP("multiply")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(x->shape() == y->shape());
       *out->mut_shape() = x->shape();
       *out->mut_is_dynamic() = x->is_dynamic();
@@ -51,7 +51,7 @@ REGISTER_USER_OP("multiply")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(x->data_type() == y->data_type());
       *out->mut_data_type() = x->data_type();
       return Maybe<void>::Ok();
