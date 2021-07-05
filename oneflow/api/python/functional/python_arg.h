@@ -77,7 +77,7 @@ class PythonArg {
   };
 
   template<typename T>
-  operator T() const {
+  T As() const {
     if (active_tag_ == HAS_IMMEDIATE) {
       CHECK_EQ_OR_THROW(ValueTypeOf<T>(), immediate_->value_type())
           << "Could not convert immediate value from type " << immediate_->value_type()
