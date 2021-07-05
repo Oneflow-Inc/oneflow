@@ -139,7 +139,7 @@ def test_against_pytorch(
     atol=1e-5,
     n=20,
     pytorch_module_class_name=None,
-    api_flag: int = 0, 
+    api_flag: int = 0,
 ):
     assert device in ["cuda", "cpu"]
     if not training:
@@ -174,12 +174,12 @@ def test_against_pytorch(
                 return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
                     spec.kwonlydefaults
                 )
+
     except Exception as e:
         annotations = extra_annotations
         args = annotations.keys()
         annotations.update({"input": torch.Tensor})
 
-    
     def generate(name):
         annotation = annotations[name]
         if name in extra_generators:
@@ -218,11 +218,13 @@ def test_against_pytorch(
                 torch_module.train(training)
                 torch_res = torch_module(torch_input)
                 state_dict = torch_module.state_dict()
-                state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
+                state_dict = {
+                    k: v.detach().cpu().numpy() for k, v in state_dict.items()
+                }
             elif api_flag == 1:
                 torch_xxx_func = eval(f"torch.{pytorch_module_class_name}")
                 torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
-                
+
             else:
                 torch_tensor_xxx_func = eval(f"torch_input.{pytorch_module_class_name}")
                 torch_res = torch_tensor_xxx_func(**torch_attr_dict)
@@ -230,14 +232,15 @@ def test_against_pytorch(
             loss.backward()
             if api_flag == 0:
                 state_dict = torch_module.state_dict()
-                state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
+                state_dict = {
+                    k: v.detach().cpu().numpy() for k, v in state_dict.items()
+                }
         except Exception as e:
             if verbose:
                 print(f"PyTorch error: {e}")
             # The random generated test data is not always valid,
             # so just skip when PyTorch raises an exception
             continue
-        
 
         if api_flag == 0:
             flow_module_class = eval(f"flow.{module_class_name}")
@@ -252,7 +255,7 @@ def test_against_pytorch(
         else:
             flow_tensor_xxx_func = eval(f"flow_input.{module_class_name}")
             flow_res = flow_tensor_xxx_func(**flow_attr_dict)
-            
+
         loss = flow_res.sum()
         loss.backward()
 
@@ -291,9 +294,20 @@ def test_module_against_pytorch(
     n=20,
     pytorch_module_class_name=None,
 ):
-    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
-            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
-            pytorch_module_class_name=pytorch_module_class_name, api_flag=0)
+    return test_against_pytorch(
+        test_case=test_case,
+        module_class_name=module_class_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_module_class_name=pytorch_module_class_name,
+        api_flag=0,
+    )
 
 
 def test_flow_against_pytorch(
@@ -309,9 +323,21 @@ def test_flow_against_pytorch(
     n=20,
     pytorch_module_class_name=None,
 ):
-    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
-            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
-            pytorch_module_class_name=pytorch_module_class_name, api_flag=1)
+    return test_against_pytorch(
+        test_case=test_case,
+        module_class_name=module_class_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_module_class_name=pytorch_module_class_name,
+        api_flag=1,
+    )
+
 
 def test_tensor_against_pytorch(
     test_case,
@@ -326,9 +352,21 @@ def test_tensor_against_pytorch(
     n=20,
     pytorch_module_class_name=None,
 ):
-    return test_against_pytorch(test_case=test_case, module_class_name=module_class_name, extra_annotations=extra_annotations, 
-            extra_generators=extra_generators, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, 
-            pytorch_module_class_name=pytorch_module_class_name, api_flag=2)
+    return test_against_pytorch(
+        test_case=test_case,
+        module_class_name=module_class_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_module_class_name=pytorch_module_class_name,
+        api_flag=2,
+    )
+
 
 __all__ = [
     "random_tensor",

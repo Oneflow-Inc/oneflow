@@ -23,7 +23,6 @@ from test_util import GenArgList
 from automated_test_util import *
 
 
-
 def _test_squeeze(test_case, device):
     np_arr = np.random.rand(1, 1, 1, 3)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -102,17 +101,17 @@ class TestSqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     def test_flow_squeeze_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_flow_against_pytorch(
                 test_case,
                 "squeeze",
-                extra_annotations={"dim": int, },
+                extra_annotations={"dim": int,},
                 extra_generators={"dim": random(0, 6)},
                 device=device,
             )
-    
+
     def test_flow_tensor_squeeze_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
@@ -122,7 +121,6 @@ class TestSqueeze(flow.unittest.TestCase):
                 extra_generators={"dim": random(0, 6)},
                 device=device,
             )
-
 
 
 if __name__ == "__main__":
