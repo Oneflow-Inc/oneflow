@@ -17,11 +17,11 @@ from oneflow.python.test.modules.automated_test_util import test_flow_tensor_xxx
 import unittest
 from collections import OrderedDict
 
-import random
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 
@@ -109,7 +109,8 @@ class TestSqueeze(flow.unittest.TestCase):
             test_flow_xxx_against_pytorch(
                 test_case,
                 "squeeze",
-                extra_generators={"dim": int, },
+                extra_annotations={"dim": int, },
+                extra_generators={"dim": random(0, 6)},
                 device=device,
             )
     
@@ -118,7 +119,8 @@ class TestSqueeze(flow.unittest.TestCase):
             test_flow_tensor_xxx_against_pytorch(
                 test_case,
                 "squeeze",
-                extra_generators={"dim": int, },
+                extra_annotations={"dim": int},
+                extra_generators={"dim": random(0, 6)},
                 device=device,
             )
 
