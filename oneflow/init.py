@@ -69,7 +69,7 @@ import oneflow.python.framework.env_util as env_util
 
 
 if env_util.HasAllMultiClientEnvVars():
-    env_util.api_env_init()
+    env_util.env_init(True)
 else:
     env_util.init_default_physical_env()
 
