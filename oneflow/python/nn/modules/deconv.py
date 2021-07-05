@@ -114,13 +114,13 @@ class ConvTranspose2d(Module):
                         \times (\text{kernel_size}[1] - 1) + \text{output_padding}[1] + 1
 
     Attributes:
-        weight (Tensor): the learnable weights of the module of shape
+        ConvTranspose2d.weight (Tensor): the learnable weights of the module of shape
                          :math:`(\text{in_channels}, \frac{\text{out_channels}}{\text{groups}},`
                          :math:`\text{kernel_size[0]}, \text{kernel_size[1]})`.
                          The values of these weights are sampled from
                          :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
                          :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
-        bias (Tensor):   the learnable bias of the module of shape (out_channels)
+        ConvTranspose2d.bias (Tensor): the learnable bias of the module of shape (out_channels)
                          If :attr:`bias` is ``True``, then the values of these weights are
                          sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
                          :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel_size}[i]}`

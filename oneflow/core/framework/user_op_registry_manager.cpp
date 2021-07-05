@@ -37,9 +37,10 @@ OpRegistry UserOpRegistryMgr::CheckAndGetOpRegistry(const std::string& op_type_n
   return OpRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpRegistryResult result) {
-  CHECK(result.data_type_infer_fn);
-  CHECK(op_reg_result_.emplace(result.op_type_name, result).second);
+Maybe<void> UserOpRegistryMgr::Register(OpRegistryResult result) {
+  CHECK_OR_RETURN(result.data_type_infer_fn);
+  CHECK_OR_RETURN(op_reg_result_.emplace(result.op_type_name, result).second);
+  return Maybe<void>::Ok();
 }
 
 const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
@@ -55,8 +56,9 @@ OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& o
   return OpGradRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpGradRegistryResult result) {
-  CHECK(op_grad_reg_result_.emplace(result.op_type_name, result).second);
+Maybe<void> UserOpRegistryMgr::Register(OpGradRegistryResult result) {
+  CHECK_OR_RETURN(op_grad_reg_result_.emplace(result.op_type_name, result).second);
+  return Maybe<void>::Ok();
 }
 
 const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
@@ -71,8 +73,9 @@ OpKernelRegistry UserOpRegistryMgr::CheckAndGetOpKernelRegistry(const std::strin
   return OpKernelRegistry().Name(op_type_name);
 }
 
-void UserOpRegistryMgr::Register(OpKernelRegistryResult result) {
+Maybe<void> UserOpRegistryMgr::Register(OpKernelRegistryResult result) {
   op_kernel_reg_result_[result.op_type_name].emplace_back(result);
+  return Maybe<void>::Ok();
 }
 
 namespace {

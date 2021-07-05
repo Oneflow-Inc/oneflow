@@ -496,6 +496,14 @@ class Tensor:
     def __lt__(self, other):
         return self.lt(other)
 
+    @register_local_tensor_method()
+    def __ge__(self, other):
+        return self.ge(other)
+
+    @register_local_tensor_method()
+    def __le__(self, other):
+        return self.le(other)
+
     def __array__(self):
         TODO()
 
@@ -761,7 +769,7 @@ class Tensor:
         if _input_args_is_tuple_or_list(*args):
             numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = args[0]
+            numpy_data = np.ascontiguousarray(args[0])
         numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining

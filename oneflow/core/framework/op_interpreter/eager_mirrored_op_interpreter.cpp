@@ -41,12 +41,7 @@ Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
-  auto* tensor_ptr = dynamic_cast<MirroredTensor*>(tensor.get());
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr);
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr->mut_impl());
-  auto* tensor_impl = dynamic_cast<EagerMirroredTensorImpl*>(tensor_ptr->mut_impl());
-  CHECK_NOTNULL_OR_RETURN(tensor_impl);
-  return tensor_impl;
+  return tensor->mut_eager_mirrored_tensor_impl();
 }
 
 }  // namespace
@@ -56,7 +51,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
+  for (int i = 0; i < inputs.size(); i++) {
     const auto& input_device = JUST(inputs.at(i)->device());
     if (i > 0) {
       CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
@@ -65,7 +60,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
-  for (int i = 0; i < outputs->size(); ++i) {
+  for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       outputs->at(i) =
           std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
@@ -78,60 +73,45 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
   bool need_event_record = false;
-  bool is_inplace =
-      std::all_of(output_eager_blob_objects->begin(), output_eager_blob_objects->end(),
-                  [](const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-                    return eager_blob_object != nullptr;
-                  });
-  if (is_inplace) {
-    for (int i = 0; i < outputs->size(); ++i) {
-      CHECK_EQ_OR_RETURN(*JUST(outputs->at(i)->device()), *JUST(inputs.at(i)->device()));
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
-      CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i), input_eager_blob_objects->at(i));
-      CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i)->blob_desc().shape(),
-                         input_eager_blob_objects->at(i)->blob_desc().shape());
-    }
+
+  // Infer devices
+  if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
-  } else {
-    // Infer devices
-    if (!user_op_expr.has_device_infer_fn()) {
-      op_device = default_device;
-      op_parallel_desc = op_device->parallel_desc_ptr();
-      for (int i = 0; i < outputs->size(); ++i) {
-        auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-        *tensor_impl->mut_device() = default_device;
-      }
-    } else {
-      need_check_mem_case = false;
-      op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
-      for (const auto& input_tensor : inputs) {
-        const auto& input_device = JUST(input_tensor->device());
-        need_event_record = need_event_record || !(*op_device == *input_device);
-      }
-      op_device = default_device;
-      op_parallel_desc = op_device->parallel_desc_ptr();
+    for (int i = 0; i < outputs->size(); i++) {
+      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      *JUST(tensor_impl->mut_device()) = default_device;
     }
+  } else {
+    need_check_mem_case = false;
+    op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
+    for (const auto& input_tensor : inputs) {
+      const auto& input_device = JUST(input_tensor->device());
+      need_event_record = need_event_record || !(*op_device == *input_device);
+    }
+    op_parallel_desc = op_device->parallel_desc_ptr();
+  }
 
-    // Infer shapes and dtypes
-    const auto& device_tag = JUST(op_device->of_type());
-    JUST(user_op_expr.InferLogicalShapeAndDType(
-        attrs, device_tag,
-        [&](int32_t i) -> const TensorMeta* {
-          return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->tensor_meta().get();
-        },
-        [&](int32_t i) -> TensorMeta* {
-          return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
-        }));
+  // Infer shapes and dtypes
+  const auto& device_tag = JUST(op_device->of_type());
+  JUST(user_op_expr.InferLogicalShapeAndDType(
+      attrs, device_tag,
+      [&](int32_t i) -> const TensorMeta* {
+        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+      },
+      [&](int32_t i) -> TensorMeta* {
+        return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
+      }));
 
-    for (int i = 0; i < output_eager_blob_objects->size(); ++i) {
+  for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+    if (!output_eager_blob_objects->at(i)) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     }
   }
 
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {

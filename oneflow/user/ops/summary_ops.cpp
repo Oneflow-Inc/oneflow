@@ -37,7 +37,7 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("create_summary_writer")
     .Attr<std::string>("logdir")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
@@ -45,14 +45,14 @@ REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("flush_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_scalar")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -60,7 +60,7 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_histogram")
     .Input("in")
     .Input("step")
     .Input("tag")
@@ -68,14 +68,14 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_pb")
     .Input("in")
     .Input("step")
     .SetTensorDescInferFn(CheckStepShapeInCtx)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("summary_write_image")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_image")
     .Input("in")
     .Input("step")
     .Input("tag")

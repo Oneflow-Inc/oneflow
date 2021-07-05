@@ -18,10 +18,11 @@ limitations under the License.
 
 #include <string>
 #include <Python.h>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace pyext {
-void RegisterPyKernelCaller(const std::string& op_module_name);
+Maybe<void> RegisterPyKernelCaller(const std::string& op_module_name);
 void RegisterPyKernels(PyObject* py_kernels);
 }  // namespace pyext
 }  // namespace oneflow

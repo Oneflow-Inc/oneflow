@@ -69,6 +69,8 @@ class Device final {
 
 std::ostream& operator<<(std::ostream& out, const Device& device);
 
+Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
+
 }  // namespace oneflow
 
 namespace std {
