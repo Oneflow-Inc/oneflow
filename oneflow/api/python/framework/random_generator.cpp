@@ -14,26 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/framework/random_generator.h"
 
 namespace py = pybind11;
 
+namespace oneflow {
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
+  py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
+      .def("manual_seed", &one::Generator::set_current_seed)
+      .def("initial_seed", &one::Generator::current_seed);
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("InitDefaultEnv", &InitDefaultEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
-
-  m.def("CurrentMachineId", &CurrentMachineId);
-
-  m.def("GetRank", &GetRank);
-  m.def("GetWorldSize", &GetWorldSize);
-  m.def("GetNodeSize", &GetNodeSize);
-  m.def("GetLocalRank", &GetLocalRank);
-  m.def("IsMultiClient", &IsMultiClient);
+  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed); });
+  m.def("create_generator",
+        [](const std::string& device) { return one::Generator::New(device).GetPtrOrThrow(); });
+  m.def("create_generator", [](const std::string& device, uint64_t seed) {
+    return one::Generator::New(device, seed).GetPtrOrThrow();
+  });
 }
+
+}  // namespace oneflow
