@@ -42,7 +42,7 @@ ExternalProject_Add(xorg-macros
         URL ${XORG_MACROS_TAR_URL}
         URL_HASH MD5=${XORG_MACROS_URL_HASH}
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/autogen.sh COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/configure --prefix=${XORG_MACROS_INSTALL} --enable-shared=no
+        CONFIGURE_COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/autogen.sh COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/configure --prefix=${XORG_MACROS_INSTALL}
         BUILD_COMMAND make -j${PROC_NUM}
         INSTALL_COMMAND make install
         )
@@ -60,7 +60,7 @@ ExternalProject_Add(pciaccess
   URL_HASH MD5=${PCIACCESS_URL_HASH}
   UPDATE_COMMAND ""
   PATCH_COMMAND cp ${XORG_MACROS_INSTALL}/share/aclocal/xorg-macros.m4 ${PCIACCESS_SOURCE_DIR}/src/pciaccess/m4
-  CONFIGURE_COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/autogen.sh COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/configure --prefix=${PCIACCESS_INSTALL}
+  CONFIGURE_COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/autogen.sh COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/configure --prefix=${PCIACCESS_INSTALL} --enable-shared=no
   BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${PCIACCESS_CFLAGS}
   BUILD_BYPRODUCTS ${PCIACCESS_STATIC_LIBRARIES}
   INSTALL_COMMAND make install
