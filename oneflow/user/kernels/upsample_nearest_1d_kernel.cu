@@ -13,21 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -85,7 +70,7 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
                                                y_blob->shape().At(2));
     RUN_CUDA_KERNEL((UpsampleNearest1DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
-                    1.f / height_scale, y_blob->mut_dptr<T>())
+                    1.f / height_scale, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -111,7 +96,7 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
                                               dx_blob->shape().At(2));
     RUN_CUDA_KERNEL((UpsampleNearest1DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
-                    1.f / height_scale, dx_blob->mut_dptr<T>())
+                    1.f / height_scale, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
