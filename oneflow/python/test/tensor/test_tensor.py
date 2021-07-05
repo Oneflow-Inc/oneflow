@@ -1081,9 +1081,13 @@ class TestTensor(flow.unittest.TestCase):
         of_output = 2 * of_input
         of_output = of_output.sum()
         of_output.backward()
-        new_grad = flow.Tensor(np.full(np_input.shape, np.random.randn(1)),  dtype=flow.float32)
+        new_grad = flow.Tensor(
+            np.full(np_input.shape, np.random.randn(1)), dtype=flow.float32
+        )
         of_input.grad = new_grad
-        test_case.assertTrue(np.allclose(of_input.grad.detach().numpy(),  new_grad.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(
+            np.allclose(of_input.grad.detach().numpy(), new_grad.numpy(), 1e-5, 1e-5)
+        )
         of_input.grad = None
         test_case.assertTrue(of_input.grad == None)
 
@@ -1104,12 +1108,14 @@ class TestTensor(flow.unittest.TestCase):
         of_output = flow.Tensor(rand_scale, dtype=flow.float32) * of_input
         of_output = of_output.sum()
         of_output.backward()
-        test_case.assertTrue(np.allclose(of_input.grad.detach().numpy(), np.full(np_input.shape, rand_init + rand_scale), 1e-5, 1e-5))
-
-
-
-
-
+        test_case.assertTrue(
+            np.allclose(
+                of_input.grad.detach().numpy(),
+                np.full(np_input.shape, rand_init + rand_scale),
+                1e-5,
+                1e-5,
+            )
+        )
 
 
 if __name__ == "__main__":

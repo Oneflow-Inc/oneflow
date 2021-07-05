@@ -279,10 +279,6 @@ class Tensor:
         assert grad.dtype == new_grad.dtype, "Data type of new grad is not equal"
         assert type(grad) == type(new_grad), "Type of new grad is not equal"
 
-
-
-
-
     @property
     def grad_fn(self):
         if self._local_or_consistent_tensor is not None:
@@ -467,8 +463,6 @@ class Tensor:
         if squeeze_dims is not None:
             res = res.squeeze(dim=squeeze_dims)
         return res
-
-
 
     @_auto_determine
     @register_local_tensor_method()
