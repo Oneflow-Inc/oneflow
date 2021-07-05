@@ -24,6 +24,30 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+void InitRank2NodeId(const NumProcessDistribution& num_process_distribution,
+                     PbMap<int64_t, int64_t>* rank2node_id) {
+  int64_t rank_offset = 0;
+  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
+    for (int16_t rank = 0; rank < num_process_distribution.num_process(node_id); ++rank) {
+      (*rank2node_id)[rank + rank_offset] = node_id;
+    }
+    rank_offset += num_process_distribution.num_process(node_id);
+  }
+}
+
+void InitNodeId2RankOffset(const NumProcessDistribution& num_process_distribution,
+                           PbMap<int64_t, int64_t>* node_id2rankoffset) {
+  int64_t rank_offset = 0;
+  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
+    (*node_id2rankoffset)[node_id] = rank_offset;
+    rank_offset += num_process_distribution.num_process(node_id);
+  }
+}
+
+}  // namespace
+
 Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
   std::vector<WorkerProcessInfo> worker_process_info_list;
   if (rank() == 0) {
@@ -65,6 +89,7 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       JUST(SetHostByMaster(addr, worker_process_info.rank()));
     }
     JUST(SetNodeSize(ret_process_ctx));
+    InitProcessDistributionInClusterInfo(ret_process_ctx);
     mut_bootstrap_client()->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
     mut_bootstrap_client()->PullMasterKV("BroadcastProcessCtx", ret_process_ctx);
@@ -112,6 +137,22 @@ Maybe<void> HostListCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> HostListCtrlBootstrap::InitProcessDistributionInClusterInfo(
+    ProcessCtx* process_ctx) const {
+  for (int64_t rank = 0; rank < world_size(); ++rank) {
+    process_ctx->mutable_rank_info_in_cluster()
+        ->mutable_num_process_distribution()
+        ->add_num_process(1);
+  }
+  const auto& num_process_distribution =
+      process_ctx->rank_info_in_cluster().num_process_distribution();
+  InitRank2NodeId(num_process_distribution,
+                  process_ctx->mutable_rank_info_in_cluster()->mutable_rank2node_id());
+  InitNodeId2RankOffset(num_process_distribution,
+                        process_ctx->mutable_rank_info_in_cluster()->mutable_node_id2rankoffset());
+  return Maybe<void>::Ok();
+}
+
 BootstrapServer* HostListCtrlBootstrap::mut_bootstrap_server() { return bootstrap_server_.get(); }
 BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() { return bootstrap_client_.get(); }
 
@@ -130,13 +171,29 @@ RankInfoCtrlBootstrap::~RankInfoCtrlBootstrap() {
   bootstrap_server_.reset();
 }
 
+Maybe<void> RankInfoCtrlBootstrap::InitRank2HosAndNumProcess() const {
+  CHECK_ISNULL(rank2host_and_num_process_on_corresponding_node_.get());
+  rank2host_and_num_process_on_corresponding_node_ =
+      std::make_shared<std::vector<std::pair<std::string, int64_t>>>(world_size_);
+  const auto& host2ranks = CHECK_JUST(bootstrap_server_->host2ranks());
+  int64_t total_proecss_num = 0;
+  for (const auto& pair : host2ranks) {
+    for (const int64_t& rank : pair.second) {
+      rank2host_and_num_process_on_corresponding_node_->at(rank) =
+          std::make_pair(pair.first, pair.second.size());
+      total_proecss_num += pair.second.size();
+    }
+  }
+  CHECK_EQ_OR_RETURN(total_proecss_num, world_size_);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RankInfoCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_rank) const {
   if (addr->has_host()) { return Maybe<void>::Ok(); }
-  const auto& rank2host = JUST(bootstrap_server_->rank2host());
-  CHECK_EQ_OR_RETURN(rank2host.size(), world_size());
+  if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
   CHECK_GE_OR_RETURN(world_rank, 0);
-  CHECK_LT_OR_RETURN(world_rank, rank2host.size());
-  addr->set_host(rank2host.at(world_rank));
+  CHECK_LT_OR_RETURN(world_rank, rank2host_and_num_process_on_corresponding_node_->size());
+  addr->set_host(rank2host_and_num_process_on_corresponding_node_->at(world_rank).first);
   return Maybe<void>::Ok();
 }
 
@@ -164,11 +221,27 @@ Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
     process_ctx->set_node_size(bootstrap_conf_.node_size());
     return Maybe<void>::Ok();
   }
-  const auto& rank2host = JUST(bootstrap_server_->rank2host());
-  std::set<std::string> no_duplicated_host;
-  for (const auto& host : rank2host) { no_duplicated_host.insert(host); }
-  CHECK_EQ_OR_RETURN(world_size() % no_duplicated_host.size(), 0);
-  process_ctx->set_node_size(no_duplicated_host.size());
+  const auto& host2ranks = CHECK_JUST(bootstrap_server_->host2ranks());
+  process_ctx->set_node_size(host2ranks.size());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInClusterInfo(
+    ProcessCtx* process_ctx) const {
+  if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
+  for (int64_t rank = 0; rank < world_size();) {
+    int64_t num_process = rank2host_and_num_process_on_corresponding_node_->at(rank).second;
+    process_ctx->mutable_rank_info_in_cluster()
+        ->mutable_num_process_distribution()
+        ->add_num_process(num_process);
+    rank += num_process;
+  }
+  const auto& num_process_distribution =
+      process_ctx->rank_info_in_cluster().num_process_distribution();
+  InitRank2NodeId(num_process_distribution,
+                  process_ctx->mutable_rank_info_in_cluster()->mutable_rank2node_id());
+  InitNodeId2RankOffset(num_process_distribution,
+                        process_ctx->mutable_rank_info_in_cluster()->mutable_node_id2rankoffset());
   return Maybe<void>::Ok();
 }
 

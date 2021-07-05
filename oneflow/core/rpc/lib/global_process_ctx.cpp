@@ -14,14 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
-  *device_id = *machine_id % NumOfProcessPerNode();
+  int64_t node_id = ThisNodeId();
+  const auto& node_id2rankoffset = NodeId2RankOffset();
+  int64_t rank_offset = CHECK_JUST(MapAt(node_id2rankoffset, node_id));
+  *device_id = *machine_id - rank_offset;
 }
 
 int64_t GlobalProcessCtx::Rank() {
@@ -36,16 +41,39 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return int64_t(Rank() / NumOfProcessPerNode());
+  return NodeId4Rank(Rank());
 }
 
-int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
+int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  const auto& rank2node_id = Global<ProcessCtx>::Get()->rank_info_in_cluster().rank2node_id();
+  return CHECK_JUST(MapAt(rank2node_id, rank));
+}
+
+HashMap<int64_t, int64_t> GlobalProcessCtx::NodeId2RankOffset() {
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return PbMap2HashMap(Global<RankInfoInCluster>::Get()->node_id2rankoffset());
   }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  CHECK_EQ(WorldSize() % NodeSize(), 0);
-  return int64_t(WorldSize() / NodeSize());
+  return PbMap2HashMap(Global<ProcessCtx>::Get()->rank_info_in_cluster().node_id2rankoffset());
+}
+
+int64_t GlobalProcessCtx::NumOfProcessOnNode() {
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return Global<RankInfoInCluster>::Get()->num_process_distribution().num_process(0);
+  }
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  int64_t node_id = ThisNodeId();
+  return Global<ProcessCtx>::Get()->rank_info_in_cluster().num_process_distribution().num_process(
+      node_id);
+}
+
+const NumProcessDistribution& GlobalProcessCtx::NumProcessDistributionInCluster() {
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return Global<RankInfoInCluster>::Get()->num_process_distribution();
+  }
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return Global<ProcessCtx>::Get()->rank_info_in_cluster().num_process_distribution();
 }
 
 bool GlobalProcessCtx::IsThisProcessMaster() {

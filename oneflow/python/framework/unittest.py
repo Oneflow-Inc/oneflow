@@ -281,10 +281,7 @@ class TestCase(unittest.TestCase):
             oneflow.env.ctrl_port(master_port)
             config_world_size = device_num()
             bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                ["127.0.0.1"],
-                master_port,
-                config_world_size,
-                num_process_per_node=device_num(),
+                ["127.0.0.1"], master_port, config_world_size
             )
             env_proto = env_util.default_env_proto
             assert (

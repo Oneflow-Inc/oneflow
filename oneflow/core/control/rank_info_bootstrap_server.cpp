@@ -51,17 +51,20 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
 }
 
-Maybe<const std::vector<std::string>&> RankInfoBootstrapServer::rank2host() const {
-  CHECK_NOTNULL(rank2host_.get());
-  return *rank2host_;
+Maybe<const HashMap<std::string, std::vector<int64_t>>&> RankInfoBootstrapServer::host2ranks()
+    const {
+  CHECK_NOTNULL(host2ranks_.get());
+  return *host2ranks_;
 }
 
 void RankInfoBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) {
   int64_t rank = call->request().rank();
   CHECK_GE(rank, 0);
   CHECK_LT(rank, world_size_);
-  if (!rank2host_) { rank2host_ = std::make_shared<std::vector<std::string>>(world_size_); }
-  rank2host_->at(rank) = GetHostFromUri(call->server_ctx().peer());
+  if (!host2ranks_) {
+    host2ranks_ = std::make_shared<HashMap<std::string, std::vector<int64_t>>>();
+  }
+  (*host2ranks_)[GetHostFromUri(call->server_ctx().peer())].emplace_back(rank);
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();
 }

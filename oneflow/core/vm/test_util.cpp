@@ -47,12 +47,12 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
   resource.set_machine_num(machine_num);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
-  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::WorldSize());
 }
 
 TestResourceDescScope::~TestResourceDescScope() {
   Global<ResourceDesc, ForSession>::Delete();
-  Global<NumProcessPerNode>::Delete();
+  Global<RankInfoInCluster>::Delete();
   Global<EnvDesc>::Delete();
 }
 

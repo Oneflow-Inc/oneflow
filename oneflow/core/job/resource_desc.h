@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
 #include <set>
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/env_desc.h"
@@ -28,7 +29,7 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
-  ResourceDesc(const Resource& resource, int64_t num_process_per_node);
+  ResourceDesc(const Resource& resource, size_t world_size);
   ResourceDesc(const Resource& resource)
       : resource_(resource) {}  // TODO(yaochi): Only for eager, remove it later
 

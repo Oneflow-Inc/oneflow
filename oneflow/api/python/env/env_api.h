@@ -44,4 +44,5 @@ inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
 
 inline size_t GetWorldSize() { return oneflow::GetWorldSize().GetOrThrow(); }
 
+inline size_t GetNodeSize() { return oneflow::GetNodeSize().GetOrThrow(); }
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

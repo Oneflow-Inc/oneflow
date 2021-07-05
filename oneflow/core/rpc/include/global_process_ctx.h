@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
 
 #include <string>
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
@@ -25,7 +27,10 @@ struct GlobalProcessCtx {
   static int64_t Rank();
   static int64_t NodeSize();
   static int64_t ThisNodeId();
-  static int64_t NumOfProcessPerNode();
+  static int64_t NodeId4Rank(int64_t rank);
+  static HashMap<int64_t, int64_t> NodeId2RankOffset();
+  static int64_t NumOfProcessOnNode();
+  static const NumProcessDistribution& NumProcessDistributionInCluster();
   static bool IsThisProcessMaster();
   static size_t WorldSize();
   static std::string LogDirEntry();

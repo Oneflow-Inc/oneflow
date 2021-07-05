@@ -125,10 +125,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
   CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
   CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
-                                    GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto), GlobalProcessCtx::WorldSize());
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                        GlobalProcessCtx::WorldSize());
   Global<device::NodeDeviceDescriptorManager>::SetAllocated(
       new device::NodeDeviceDescriptorManager());
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
