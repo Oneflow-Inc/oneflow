@@ -270,8 +270,30 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
+    }
+    size_t x_count = x->shape()->Count(0);
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
+    if (need_infer_axis == -1) {
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+    } else {
+      Shape infered_shape = shape;
+      infered_shape.Set(need_infer_axis, x_count / count);
+      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+          << "Shape " << shape.ToString() << " is invalid for input of shape "
+          << x->shape()->ToString();
+      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
