@@ -31,7 +31,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("argwhere")
+REGISTER_NO_GRAD_USER_OP("argwhere")
     .Input("input")
     .Output("output")
     .Output("output_size")

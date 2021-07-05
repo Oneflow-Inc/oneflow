@@ -59,6 +59,12 @@ struct hash<oneflow::ParallelBlobConf> {
 
 namespace oneflow {
 
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
+  return lhs.parallel_type_case() == rhs.parallel_type_case();
+}
+
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
 bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
@@ -1044,7 +1050,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -1082,7 +1088,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -1095,7 +1101,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();

@@ -21,10 +21,13 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
 namespace one {
@@ -48,21 +51,22 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Conv2DFunctor {
+class ConvBaseFunctor {
  public:
-  Conv2DFunctor() {
-    conv_op_ =
-        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+  explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
+  virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
-    std::vector<int32_t> kernel_size_vec;
-    for (int i = 0; i < 2; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    for (int i = 0; i < num_spatial_dims_; i++) {
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + 2));
+    }
     JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
@@ -81,9 +85,26 @@ class Conv2DFunctor {
     }
   }
 
- private:
+ protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  int32_t num_spatial_dims_;
+};
+
+class Conv1dFunctor : public ConvBaseFunctor {
+ public:
+  Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class Conv2dFunctor : public ConvBaseFunctor {
+ public:
+  Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+  }
 };
 
 class MatMulBaseFunctor {
@@ -291,11 +312,91 @@ class NormalizationFunctor {
   std::shared_ptr<OpExpr> norm_training_op_;
 };
 
+class PadFunctor {
+ public:
+  PadFunctor() {
+    constant_pad_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
+    reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
+    replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
+                           const std::string& mode, const Scalar& value) const {
+    size_t padding_size = 2 * x->shape()->NumAxes();
+    CHECK_LE_OR_RETURN(pad.size(), padding_size)
+        << "Pad size should less than or equal to input axes * 2.";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    if (mode == "constant") {
+      if (IsFloatingDataType(x->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_value", 0));
+      } else if (IsIntegralDataType(x->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+    } else if (mode == "reflect") {
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
+    } else if (mode == "replicate") {
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
+                                  << ", but only constant, reflect and replicate are valid.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> constant_pad_;
+  std::shared_ptr<OpExpr> reflect_pad_;
+  std::shared_ptr<OpExpr> replicate_pad_;
+};
+
+class DropoutFunctor {
+ public:
+  DropoutFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    dropout_op_ =
+        CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::GetDefaultGenerator("auto"));
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext{.attrs = random_mask_like_attrs, .state = random_mask_like_state}));
+    float scale = 1.0;
+    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    MutableAttrMap dropout_attrs;
+    JUST(dropout_attrs.SetAttr<float>("scale", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> dropout_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
-  m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::Conv1dFunctor>("Conv1d");
+  m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
@@ -305,6 +406,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
+  m.add_functor<impl::PadFunctor>("Pad");
+  m.add_functor<impl::DropoutFunctor>("Dropout");
 };
 
 }  // namespace functional

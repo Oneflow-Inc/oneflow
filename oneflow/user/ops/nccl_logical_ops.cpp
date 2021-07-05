@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("_nccl_logical_all_reduce")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_reduce")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -57,7 +57,7 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
         })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_reduce_scatter")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -96,7 +96,7 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
         })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_all_gather")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -136,7 +136,7 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
         })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
@@ -179,7 +179,7 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
         })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("_nccl_logical_s2s")
+REGISTER_NO_GRAD_USER_OP("_nccl_logical_s2s")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)

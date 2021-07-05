@@ -29,7 +29,7 @@ class RandomMaskLikeKernelState : public user_op::OpKernelState {
   const std::shared_ptr<one::Generator>& generator() const { return generator_; }
 
  private:
-  const std::shared_ptr<one::Generator>& generator_;
+  std::shared_ptr<one::Generator> generator_;
 };
 
 namespace {

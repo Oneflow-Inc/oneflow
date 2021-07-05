@@ -35,7 +35,8 @@ struct unpack_call_dispatcher {
   static R apply(const F& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
     using type = typename std::tuple_element<index, typename function_traits<F>::args_type>::type;
     return unpack_call_dispatcher<F, R, nleft - 1, index + 1>::apply(
-        f, args, std::forward<Args>(unpacked_args)..., args[index].As<oneflow::detail::remove_cvref_t<type>>());
+        f, args, std::forward<Args>(unpacked_args)...,
+        args[index].As<oneflow::detail::remove_cvref_t<type>>());
   }
 };
 
@@ -58,13 +59,13 @@ struct unpack_call {
 };
 
 #define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                     \
-  template<typename F>                                                      \
-  struct unpack_call<F, K> {                                                         \
-    static R apply(const F& f, const std::vector<PythonArg>& args) {                            \
+  template<typename F>                                                                  \
+  struct unpack_call<F, K> {                                                            \
+    static R apply(const F& f, const std::vector<PythonArg>& args) {                    \
       constexpr size_t nargs = function_traits<F>::nargs;                               \
       CHECK_EQ(nargs, args.size())                                                      \
           << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \
-      return (return_fn)(unpack_call_dispatcher<F, K, nargs, 0>::apply(f, args));    \
+      return (return_fn)(unpack_call_dispatcher<F, K, nargs, 0>::apply(f, args));       \
     }                                                                                   \
   };
 
