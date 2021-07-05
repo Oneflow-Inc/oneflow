@@ -26,6 +26,7 @@
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
@@ -98,16 +99,23 @@ void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferC
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj) {
-  std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf = std::make_shared<oneflow::cfg::JobConfigProto>();
-  job_conf->mutable_predict_conf();
-  job_conf->set_job_name("mlp_inference");
+void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring jstr) {
+  // std::shared_ptr<oneflow::JobConfigProto> job_conf = std::make_shared<oneflow::JobConfigProto>();
+  // job_conf->mutable_predict_conf();
+  // job_conf->set_job_name("mlp_inference");
+  oneflow::JobConfigProto job_conf;
+  std::string job_conf_txt = convert_jstring_to_string(env, jstr);
+  oneflow::TxtString2PbMessage(job_conf_txt, &job_conf);
+  std::cout << job_conf.job_name() << std::endl;
+
+  std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf_cfg = std::make_shared<oneflow::cfg::JobConfigProto>();
+  job_conf_cfg->InitFromProto(job_conf);
 
   std::shared_ptr<oneflow::Scope> scope;
-  auto BuildInitialScope = [&scope, &job_conf](oneflow::InstructionsBuilder* builder) mutable -> void {
+  auto BuildInitialScope = [&scope, &job_conf_cfg](oneflow::InstructionsBuilder* builder) mutable -> void {
     int session_id = oneflow::GetDefaultSessionId().GetOrThrow();
     const std::vector<std::string> machine_device_ids({"0:0"});
-    std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf, "gpu", machine_device_ids, nullptr, false).GetPtrOrThrow();
+    std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf_cfg, "gpu", machine_device_ids, nullptr, false).GetPtrOrThrow();
     scope = initialScope;
   };
   oneflow::LogicalRun(BuildInitialScope);
@@ -200,17 +208,18 @@ JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jbyteArray path) {
   std::string load_job_name = convert_jstring_to_string(env, load_job);
   
-  int64_t *_shape = new int64_t[1];
-  (*env).GetArrayLength(path);
+  int _path_length = (*env).GetArrayLength(path);
+  int64_t *_shape = new int64_t[1]{ _path_length };
+  signed char *_path = (*env).GetByteArrayElements(path, NULL);
 
-  auto copy_model_load_path = [_shape](uint64_t of_blob_ptr) -> void {
+  auto copy_model_load_path = [_shape, _path, _path_length](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    int64_t shape[1] = { 20 };
-	  int8_t path[20] = { 46, 47, 109, 111, 100, 101, 108, 115, 47,
-      49, 47, 118, 97, 114, 105, 97, 98, 108, 101, 115 };
-    of_blob->CopyShapeFrom(shape, 1);
-    of_blob->AutoMemCopyFrom(path, 20);
+    of_blob->CopyShapeFrom(_shape, 1);
+    of_blob->AutoMemCopyFrom(_path, _path_length);
+
+    delete []_shape;
+    delete []_path;
   };
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
     new oneflow::JavaForeignJobInstance(load_job_name, "", "", copy_model_load_path, nullptr, nullptr)
