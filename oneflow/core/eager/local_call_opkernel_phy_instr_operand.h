@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
-
 namespace one {
 
 class StatefulLocalOpKernel;

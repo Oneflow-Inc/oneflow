@@ -58,6 +58,11 @@ inline std::string GetForeignOutputBufferName(const std::string& job_name) {
   return prefix + job_name;
 }
 
+inline std::string GetSourceTickBufferName(const std::string& job_name) {
+  static const std::string prefix = "SourceTick-";
+  return prefix + job_name;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_BUFFER_MANAGER_H_
