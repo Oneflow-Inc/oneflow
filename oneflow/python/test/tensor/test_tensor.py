@@ -63,10 +63,19 @@ class TestTensor(flow.unittest.TestCase):
         tensor = flow.Tensor(np_arr)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
+        # construct with contiguous numpy data
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.Tensor(np_int_arr, dtype=flow.int32)
         test_case.assertEqual(tensor.dtype, flow.int32)
+        test_case.assertTrue(np_arr.flags["C_CONTIGUOUS"])
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
+
+        # construct with not contiguous numpy data
+        np_arr = np.random.random((1, 256, 256, 3)).astype(np.float32)
+        np_arr = np_arr.transpose(0, 3, 1, 2)
+        tensor = flow.Tensor(np_arr)
+        test_case.assertFalse(np_arr.flags["C_CONTIGUOUS"])
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
@@ -328,8 +337,6 @@ class TestTensor(flow.unittest.TestCase):
 
         def compare_getitem_with_numpy(tensor, slices):
             np_arr = tensor.numpy()
-            print(np_arr[slices])
-            print(tensor[slices].numpy())
             test_case.assertTrue(np.array_equal(np_arr[slices], tensor[slices].numpy()))
 
         def compare_setitem_with_numpy(tensor, slices, value):
@@ -825,7 +832,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_sqrt_tensor_function(test_case):
-        input_arr = np.random.randn(1, 6, 3, 8)
+        input_arr = np.random.rand(1, 6, 3, 8)
         np_out = np.sqrt(input_arr)
         x = flow.Tensor(input_arr)
         of_out = x.sqrt()
@@ -838,7 +845,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_rsqrt_tensor_function(test_case):
-        np_arr = np.random.randn(3, 2, 5, 7)
+        np_arr = np.random.rand(3, 2, 5, 7)
         np_out = 1 / np.sqrt(np_arr)
         x = flow.Tensor(np_arr)
         of_out = flow.rsqrt(input=x)
