@@ -1,4 +1,5 @@
 #include "oneflow/eager/lazy_job_stream_type.h"
+#include "oneflow/framework/nn_graph_if.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 
@@ -42,7 +43,7 @@ class RunJobInstructionType : public InstructionType {
     return device_ctx;
   }
 
-  std::shared_ptr<NNGraph> GetCurNNGraph(Instruction* instruction) const {
+  std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
     const auto* phy_instr_operand = dynamic_cast<const RunJobPhyInstrOperand*>(instruction.phy_instr_operand().get());
     CHECK_NOTNULL(phy_instr_operand);
     return phy_instr_operand->nn_graph();

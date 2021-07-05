@@ -1,12 +1,11 @@
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_DEVICE_CONTEXT_H_
 
+#include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
-
-class NNGraph;
 
 namespace vm {
 
@@ -50,7 +49,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
   std::mutex* mut_mutex() { return &mutex_; }
   std::condition_variable* mut_cond() { return &cond_; }
 
-  void WaitUntilQeueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraph>& nn_graph)  {
+  void WaitUntilQeueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraphIf>& nn_graph)  {
     std::unique_lock<std::mutex> lock(mutex_);
     if (queue_.empty()) { return; }
     const auto& last_nn_graph = queue->front().lock();
@@ -59,7 +58,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
     cond_.wait(lock, [this]() { return queue_.empty(); });
   }
 
-  void EnqueueNNGraph(const std::shared_ptr<NNGraph>& nn_graph) {
+  void EnqueueNNGraph(const std::shared_ptr<NNGraphIf>& nn_graph) {
     std::unique_lock<std::mutex> lock(mutex_);
     queue_.emplace(nn_graph);
   }
@@ -71,7 +70,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
   }
 
  private:
-  std::queue<std::weak_ptr<NNGraph>> queue_;
+  std::queue<std::weak_ptr<NNGraphIf>> queue_;
   std::mutex mutex_;
   std::condition_variable cond_;
 };
