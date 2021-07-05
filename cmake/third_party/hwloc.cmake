@@ -42,7 +42,7 @@ ExternalProject_Add(xorg-macros
         URL ${XORG_MACROS_TAR_URL}
         URL_HASH MD5=${XORG_MACROS_URL_HASH}
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/autogen.sh COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/configure --prefix=${XORG_MACROS_INSTALL}
+        CONFIGURE_COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/autogen.sh COMMAND ${XORG_MACROS_SOURCE_DIR}/src/xorg-macros/configure --prefix=${XORG_MACROS_INSTALL} --enable-shared=no
         BUILD_COMMAND make -j${PROC_NUM}
         INSTALL_COMMAND make install
         )
@@ -78,7 +78,7 @@ ExternalProject_Add(hwloc
         URL ${HWLOC_TAR_URL}
         URL_HASH MD5=${HWLOC_URL_HASH}
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static
+        CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static --enable-shared=no
         BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${HWLOC_CFLAGS}
         BUILD_BYPRODUCTS ${HWLOC_STATIC_LIBRARIES}
         INSTALL_COMMAND make install
