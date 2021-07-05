@@ -81,6 +81,7 @@ def choose(x):
 
 def random(low, high):
     def generator(annotation):
+        print(annotation)
         if hasattr(annotation, "__origin__"):
             # PyTorch _size_2_t and similar types are defined by type variables,
             # leading to unexpected __args__ and __origin__
@@ -100,13 +101,14 @@ def random(low, high):
             if annotation.__origin__ is Union:
                 x = random_util.choice(annotation.__args__)
                 return generator(x)
-            if annotation.__origin__ is Tuple:
+            if annotation.__origin__ is Tuple or annotation.__origin__ is tuple:
                 t = [generator(x) for x in annotation.__args__]
                 return zip(*t)
             else:
                 raise NotImplementedError(
                     f"Not implemented annotation {annotation} in random, type(annotation.__origin__) is {type(annotation.__origin__)}"
                 )
+        
         if annotation == int:
             val = int(rng.integers(low, high))
         elif annotation == float:
