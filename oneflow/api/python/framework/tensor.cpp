@@ -235,7 +235,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       // setter of grad
       .def("set_grad",
-           [](T& t, const std::shared_ptr<Tensor>& grad) {
+           [](T& t, const std::shared_ptr<T>& grad) {
              if (t.is_leaf()) {
                t.set_acc_grad(grad);
              } else {
