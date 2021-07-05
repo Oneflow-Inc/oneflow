@@ -67,8 +67,6 @@ class Device final {
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
-std::ostream& operator<<(std::ostream& out, const Device& device);
-
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
 
 }  // namespace oneflow
