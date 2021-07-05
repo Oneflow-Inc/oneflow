@@ -50,6 +50,7 @@ import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
 
+# TODO(xuxiaoyu): rm later when having flag
 _is_multi_client_mode = True
 
 
