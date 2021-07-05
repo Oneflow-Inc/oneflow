@@ -136,10 +136,16 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
       - name: Build (third party)
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           cd build
           cmake --build . -j$(nproc) --target oneflow_deps
       - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           cd build
           cmake --build . -j$(nproc)
       - name: Tar core
@@ -147,7 +153,7 @@ jobs:
         continue-on-error: true
         run: |
           set -ex
-          tar -cvf build_core.tar ${PWD}/build/**/core.* ${PWD}/build/**/core
+          tar -cvf build_core.tar ${PWD}/build/**/core.*
       - name: Upload core
         if: always()
         uses: actions/upload-artifact@v2
