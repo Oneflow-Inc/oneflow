@@ -65,6 +65,24 @@ void ManualSeed(uint64_t seed) {
   auto_gen->set_current_seed(seed);
 }
 
+Maybe<Generator> GetDefaultGenerator(const std::string& device) {
+  std::shared_ptr<GeneratorImpl> gen_impl;
+  if (device == "cpu") {
+    gen_impl = GetDefaultDeviceGenerator<DeviceType::kCPU>();
+  }
+#ifdef WITH_CUDA
+  else if (device == "cuda") {
+    gen_impl = GetDefaultDeviceGenerator<DeviceType::kGPU>();
+  }
+#endif  // WITH_CUDA
+  else if (device == "auto") {
+    gen_impl = GetDefaultAutoGenerator();
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << " device unimplemented, device name: " << device;
+  }
+  return std::make_shared<Generator>(gen_impl);
+}
+
 std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
   return std::make_shared<AutoGeneratorImpl>(seed);
 }
@@ -87,14 +105,37 @@ const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerat
 
 template<DeviceType device_type>
 Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator) {
-  if (auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator)) {
+    const std::shared_ptr<GeneratorImpl>& gen_impl) {
+  if (auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(gen_impl)) {
     return auto_gen->template GetDeviceGenerator<device_type>();
   }
-  auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
+  auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(gen_impl);
   CHECK_NOTNULL_OR_RETURN(device_gen);
   return device_gen;
 }
+
+template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<GeneratorImpl>& generator);
+
+#ifdef WITH_CUDA
+template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<GeneratorImpl>& generator);
+#endif  // WITH_CUDA
+
+template<DeviceType device_type>
+Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator) {
+  CHECK_NOTNULL_OR_RETURN(generator);
+  return TryGetDeviceGenerator<device_type>(generator->get_impl());
+}
+
+template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator);
+
+#ifdef WITH_CUDA
+template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
+    const std::shared_ptr<Generator>& generator);
+#endif  // WITH_CUDA
 
 }  // namespace one
 }  // namespace oneflow
