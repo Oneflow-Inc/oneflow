@@ -124,14 +124,14 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     const auto data_type = x.data_type();
     const Shape& x_shape = x.shape();
     if (ctx->has_input("addend", 0)) {
-      const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
-      CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
-      CHECK_EQ_OR_RETURN(addend->shape(), x_shape);
+      const auto& addend = ctx->InputTensorDesc("addend", 0);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend.shape(), x_shape);
     }
     if (ctx->has_input("_add_to_output", 0)) {
-      const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ_OR_RETURN(add_to_output->data_type(), data_type);
-      CHECK_EQ_OR_RETURN(add_to_output->shape(), x_shape);
+      const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output.shape(), x_shape);
     }
     *ctx->OutputTensorDesc("y", 0) = x;
     const auto axis = ctx->Attr<int32_t>("axis");
@@ -161,8 +161,8 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     const auto& x = ctx->InputTensorDesc("x", 0);
     const auto data_type = x.data_type();
     if (ctx->has_input("addend", 0)) {
-      const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
-      CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
+      const auto& addend = ctx->InputTensorDesc("addend", 0);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
@@ -360,8 +360,8 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(dy.shape(), x_shape);
   if (ctx->has_input("y", 0)) {
-    const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    CHECK_EQ_OR_RETURN(y->shape(), x_shape);
+    const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+    CHECK_EQ_OR_RETURN(y.shape(), x_shape);
   }
   *ctx->OutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->OutputTensorDesc("addend_diff", 0) = x; }
@@ -383,8 +383,8 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(dy.data_type(), x_type);
   if (ctx->has_input("y", 0)) {
-    const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    CHECK_EQ_OR_RETURN(y->data_type(), x_type);
+    const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+    CHECK_EQ_OR_RETURN(y.data_type(), x_type);
   }
   *ctx->OutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->OutputTensorDesc("addend_diff", 0) = x; }

@@ -95,9 +95,9 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   for (const auto& in_arg_pair : ctx->inputs()) {
-    const user_op::TensorDesc* in_desc =
-        ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc.data_type());
+    const user_op::TensorDesc& in_desc =
+        ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
+    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();

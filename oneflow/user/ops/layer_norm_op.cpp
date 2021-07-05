@@ -222,9 +222,9 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma_diff) {
         user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
-        const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
-        CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
-        CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
+        const user_op::TensorDesc& normalized = ctx->InputTensorDesc("normalized", 0);
+        CHECK_EQ_OR_RETURN(normalized.data_type(), normalized.data_type());
+        CHECK_EQ_OR_RETURN(normalized.shape(), normalized.shape());
         *gamma_diff->mut_shape() = param_shape;
       }
       if (has_normalized_diff) {
@@ -232,8 +232,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
         *normalized_diff = dy;
       }
       if (has_gamma) {
-        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+        const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
       }
       return Maybe<void>::Ok();
     })
@@ -271,13 +271,13 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma_diff) {
         user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
-        const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
-        CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
+        const user_op::TensorDesc& normalized = ctx->InputTensorDesc("normalized", 0);
+        CHECK_EQ_OR_RETURN(normalized.data_type(), normalized.data_type());
         *gamma_diff->mut_data_type() = dy.data_type();
       }
       if (has_gamma) {
-        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_EQ_OR_RETURN(gamma->data_type(), dy.data_type());
+        const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma.data_type(), dy.data_type());
       }
       return Maybe<void>::Ok();
     });

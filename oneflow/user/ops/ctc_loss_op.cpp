@@ -129,12 +129,11 @@ REGISTER_USER_OP("ctc_greedy_decoder")
     .Output("neg_sum_logits")
     .Attr<bool>("merge_repeated")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs->shape().At(0)});
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
       *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
       return Maybe<void>::Ok();
     })
