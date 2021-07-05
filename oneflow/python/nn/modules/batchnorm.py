@@ -18,8 +18,6 @@ from typing import Union
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-import oneflow._oneflow_internal as oneflow_api
-from torch._C import device
 
 
 class _NormBase(Module):
