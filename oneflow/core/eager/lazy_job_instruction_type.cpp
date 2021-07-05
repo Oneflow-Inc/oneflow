@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/lazy_job_stream_type.h"
 #include "oneflow/core/eager/lazy_job_device_context.h"
-#include "oneflow/core/eager/run_job_phy_instr_operand.h"
+#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -79,8 +79,12 @@ class LazyJobInstance : public JobInstance {
 
 namespace vm {
 
-class RunJobInstructionType : public InstructionType {
+class RunLazyJobInstructionType : public InstructionType {
  public:
+  RunLazyJobInstructionType(const RunLazyJobInstructionType&) = delete;
+  RunLazyJobInstructionType(RunLazyJobInstructionType&&) = delete;
+  RunLazyJobInstructionType() = default;
+  ~RunLazyJobInstructionType() = default;
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
@@ -93,10 +97,10 @@ class RunJobInstructionType : public InstructionType {
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       if (job_instance->has_inputs()) {
-        buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(job_instance);
+        buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(job_instance);
       }
       if (job_instance->has_outputs()) {
-        buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(job_instance);
+        buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(job_instance);
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
@@ -116,14 +120,14 @@ class RunJobInstructionType : public InstructionType {
 
   std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const RunJobPhyInstrOperand*>(ptr);
+    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     return phy_instr_operand->nn_graph();
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const RunJobPhyInstrOperand*>(ptr);
+    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     const auto& nn_graph = phy_instr_operand->nn_graph();
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
@@ -159,6 +163,8 @@ class RunJobInstructionType : public InstructionType {
     return std::make_shared<LazyJobInstance>(nn_graph->job_name(), push_cbs, pull_cbs, FinishCb);
   }
 };
+
+COMMAND(RegisterInstructionType<RunLazyJobInstructionType>("RunLazyJob"));
 
 }  // namespace vm
 }  // namespace oneflow

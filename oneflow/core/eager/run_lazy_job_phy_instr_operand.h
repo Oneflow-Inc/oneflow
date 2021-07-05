@@ -31,16 +31,16 @@ using EagerBlobObjectListPtr =
 
 namespace vm {
 
-class RunJobPhyInstrOperand final : public PhyInstrOperand {
+class RunLazyJobPhyInstrOperand final : public PhyInstrOperand {
  public:
-  RunJobPhyInstrOperand(const RunJobPhyInstrOperand&) = delete;
-  RunJobPhyInstrOperand(RunJobPhyInstrOperand&&) = delete;
-  ~RunJobPhyInstrOperand() override = default;
+  RunLazyJobPhyInstrOperand(const RunLazyJobPhyInstrOperand&) = delete;
+  RunLazyJobPhyInstrOperand(RunLazyJobPhyInstrOperand&&) = delete;
+  ~RunLazyJobPhyInstrOperand() override = default;
 
-  RunJobPhyInstrOperand(const one::EagerBlobObjectListPtr& inputs,
-                        const one::EagerBlobObjectListPtr& outputs,
-                        const one::EagerBlobObjectListPtr& parameters,
-                        const std::shared_ptr<NNGraphIf>& nn_graph)
+  RunLazyJobPhyInstrOperand(const one::EagerBlobObjectListPtr& inputs,
+                            const one::EagerBlobObjectListPtr& outputs,
+                            const one::EagerBlobObjectListPtr& parameters,
+                            const std::shared_ptr<NNGraphIf>& nn_graph)
       : inputs_(inputs), outputs_(outputs), parameters_(parameters), nn_graph_(nn_graph) {}
 
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }

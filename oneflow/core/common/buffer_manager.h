@@ -31,7 +31,9 @@ class BufferMgr final {
     CHECK(name2buffer_.emplace(buffer_name, std::make_unique<Buffer<T>>(buffer_size)).second);
   }
   Buffer<T>* Get(const std::string& buffer_name) const {
-    return name2buffer_.at(buffer_name).get();
+    const auto& iter = name2buffer_.find(buffer_name);
+    CHECK(iter != name2buffer_.end()) << "buffer_name: " << buffer_name;
+    return iter->second.get();
   }
 
  private:

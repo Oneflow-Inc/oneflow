@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/run_job_phy_instr_operand.h"
+#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {
 
-void RunJobPhyInstrOperand::ForEachConstMirroredObject(
+void RunLazyJobPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   for (const auto& input : *inputs()) {
@@ -28,7 +28,7 @@ void RunJobPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
-void RunJobPhyInstrOperand::ForEachMutMirroredObject(
+void RunLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   for (const auto& parameter : *parameters()) {
@@ -38,7 +38,7 @@ void RunJobPhyInstrOperand::ForEachMutMirroredObject(
   }
 }
 
-void RunJobPhyInstrOperand::ForEachMut2MirroredObject(
+void RunLazyJobPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   // TODO(lixinqi): move partial of outputs into ForEachMutMirroredObject if shape infered before
