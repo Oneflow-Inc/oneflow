@@ -102,7 +102,7 @@ template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
 #ifdef WITH_CUDA
 template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
     const std::shared_ptr<GeneratorImpl>& generator);
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
 
 template<DeviceType device_type>
 Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
@@ -117,7 +117,7 @@ template Maybe<DeviceGeneratorImpl<DeviceType::kCPU>> TryGetDeviceGenerator(
 #ifdef WITH_CUDA
 template Maybe<DeviceGeneratorImpl<DeviceType::kGPU>> TryGetDeviceGenerator(
     const std::shared_ptr<Generator>& generator);
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
 
 }  // namespace one
 }  // namespace oneflow
