@@ -61,7 +61,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   // }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  // *out->mut_shape() = src ? src->shape() : like->shape();
   *out->mut_shape() = input ? input->shape() : like->shape();
   return Maybe<void>::Ok();
 }
@@ -105,7 +104,7 @@ Maybe<void> SetSbpLike(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
+Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   _SetSbp(ctx, "src");
   return Maybe<void>::Ok();
 }
@@ -130,19 +129,8 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .SetDataTypeInferFn(InferDtype) \
       .SetGetSbpFn(SetSbpLike)
 
-// #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
-//   REGISTER_USER_OP(optypename)                        \
-//       .OptionalInput("src")                           \
-//       .Input("input")                                 \
-//       .Input("index")                                 \
-//       .Output("output")                               \
-//       .Attr<int32_t>("dim")                           \
-//       .SetTensorDescInferFn(InferTensorDesc)          \
-//       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
-//       .SetDataTypeInferFn(InferDtype) \
-//       .SetGetSbpFn(SetSbpInplace)
 
-#define REGISTER_SCATTER_INPLACE_OP(optypename)       \
+#define REGISTER_SCATTER_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
       .OptionalInput("src")                           \
       .Input("input")                                 \
@@ -151,7 +139,7 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
       .SetDataTypeInferFn(InferDtype) \
-      .SetGetSbpFn(SetSbpInplace)
+      .SetGetSbpFn(SetSbpScatter)
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
@@ -173,8 +161,8 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
 REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
-REGISTER_SCATTER_INPLACE_OP("dim_scatter_add");
-REGISTER_SCATTER_INPLACE_OP("dim_scatter_update");
+REGISTER_SCATTER_OP("dim_scatter_add");
+REGISTER_SCATTER_OP("dim_scatter_update");
 
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");

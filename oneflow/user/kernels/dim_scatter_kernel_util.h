@@ -45,20 +45,6 @@ namespace user_op {
 DECLARE_DIMSCATTER_FUNCTOR(Add);
 DECLARE_DIMSCATTER_FUNCTOR(Update);
 
-// template<typename IN_T, typename IDX_T>
-// OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
-//                                       const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-//                                       int64_t elem_cnt, int32_t dim, const IDX_T* index,
-//                                       const IN_T* src, IN_T* output, BinaryOpFn<IN_T> bin_op) {
-//   XPU_1D_KERNEL_LOOP(src_offset, elem_cnt) {
-//     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-//     src_nd_helper.OffsetToNdIndex(src_offset, coordinate, ndim);
-//     coordinate[dim] = index[src_offset];
-
-//     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-//     bin_op(src + src_offset, output + output_offset);
-//   }
-// }
 
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& src_nd_helper, 
@@ -67,32 +53,12 @@ OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& src_nd_he
                                       int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                       const IN_T* src, IN_T* output, BinaryOpFn<IN_T> bin_op) {
   XPU_1D_KERNEL_LOOP(idx_offset, elem_cnt) {
-    // 感觉需要从index_offset算src_offset
-    // 是不是还需要一个idx_nd_helper?
-    
-    // an example 
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     idx_nd_helper.OffsetToNdIndex(idx_offset, coordinate, ndim);
-    printf("idx offset is: %d \n", idx_offset);
     IDX_T src_offset = src_nd_helper.NdIndexToOffset(coordinate, ndim);
-    printf("src offset is: %d \n", src_offset);
-
     coordinate[dim] = index[idx_offset];
     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    printf("output offset is: %d \n", output_offset);
-
-    printf("src is: %f \n", *(src+src_offset));
-    printf("output is: %f \n", *(output+output_offset));
-
     bin_op(src + src_offset, output + output_offset);
-    // ======= finish ========
-
-    // IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-    // src_nd_helper.OffsetToNdIndex(src_offset, coordinate, ndim);
-    // coordinate[dim] = index[idx_offset];
-
-    // IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    // bin_op(src + src_offset, output + output_offset);
   }
 }
 
