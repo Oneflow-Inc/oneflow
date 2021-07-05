@@ -70,6 +70,7 @@ Maybe<void> Upsample::Capture(UpsampleInterpState* ctx, const TensorTuple& input
   ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   ctx->interpolation = JUST(composed_attrs.GetAttr<std::string>("interpolation"));
+  ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
@@ -84,8 +85,9 @@ Maybe<void> Upsample::Apply(const UpsampleInterpState* ctx, const TensorTuple& o
   JUST(attrs.SetAttr<bool>("align_corners", ctx->align_corners));
   JUST(attrs.SetAttr<std::string>("data_format", ctx->data_format));
   JUST(attrs.SetAttr<std::string>("interpolation", ctx->interpolation));
+  const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), x}, attrs));
   return Maybe<void>::Ok();
 }
 
