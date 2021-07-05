@@ -22,6 +22,7 @@
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_conf.cfg.h"
@@ -33,24 +34,24 @@
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/vm/stream_type.h"
 
-JNIEXPORT 
-void JNICALL Java_org_oneflow_Library_initDefaultSession(JNIEnv* env, jobject obj) {
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_initDefaultSession(JNIEnv* env, jobject obj) {
   int64_t session_id = oneflow::NewSessionId();
   oneflow::RegsiterSession(session_id);
 }
 
 JNIEXPORT
-jboolean JNICALL Java_org_oneflow_Library_isEnvInited(JNIEnv* env, jobject obj) {
+jboolean JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobject obj) {
   return oneflow::IsEnvInited().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_initEnv(JNIEnv* env, jobject obj, jstring env_proto_str) {
+void JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring env_proto_str) {
   oneflow::InitEnv(convert_jstring_to_string(env, env_proto_str)).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_initScopeStack(JNIEnv* env, jobject obj, jstring jstr) {
+void JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobject obj, jstring jstr) {
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf = std::make_shared<oneflow::cfg::JobConfigProto>();
   job_conf->mutable_predict_conf();
   job_conf->set_job_name("");
@@ -67,12 +68,12 @@ void JNICALL Java_org_oneflow_Library_initScopeStack(JNIEnv* env, jobject obj, j
 }
 
 JNIEXPORT
-jboolean JNICALL Java_org_oneflow_Library_isSessionInited(JNIEnv* env, jobject obj) {
+jboolean JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, jobject obj) {
   return oneflow::IsSessionInited().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_initSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj) {
   // default configuration
   std::shared_ptr<oneflow::ConfigProto> config_proto = std::make_shared<oneflow::ConfigProto>();
   config_proto->mutable_resource()->set_machine_num(1);
@@ -87,17 +88,17 @@ void JNICALL Java_org_oneflow_Library_initSession(JNIEnv* env, jobject obj) {
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
+void JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
   oneflow::JobBuildAndInferCtx_Open(convert_jstring_to_string(env, job_name)).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
+void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
   oneflow::CurJobBuildAndInferCtx_SetJobConf(convert_jstring_to_string(env, job_conf_proto)).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_setScopeForCurJob(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj) {
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf = std::make_shared<oneflow::cfg::JobConfigProto>();
   job_conf->mutable_predict_conf();
   job_conf->set_job_name("mlp_inference");
@@ -114,7 +115,7 @@ void JNICALL Java_org_oneflow_Library_setScopeForCurJob(JNIEnv* env, jobject obj
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
+void JNICALL Java_org_oneflow_InferenceSession_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
   std::string op_conf_proto_str = convert_jstring_to_string(env, op_conf_proto);
   op_conf_proto_str = subreplace(op_conf_proto_str, "user_input", "input");
   op_conf_proto_str = subreplace(op_conf_proto_str, "user_output", "output");
@@ -132,27 +133,27 @@ void JNICALL Java_org_oneflow_Library_curJobAddOp(JNIEnv* env, jobject obj, jstr
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   oneflow::CurJobBuildAndInferCtx_Complete().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   oneflow::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_unsetScopeForCurJob(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_unsetScopeForCurJob(JNIEnv* env, jobject obj) {
   oneflow::ThreadLocalScopeStackPop().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   oneflow::JobBuildAndInferCtx_Close().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_startLazyGlobalSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_startLazyGlobalSession(JNIEnv* env, jobject obj) {
   oneflow::StartLazyGlobalSession().GetOrThrow();
 }
 
@@ -196,8 +197,13 @@ class JavaForeignJobInstance : public ForeignJobInstance {
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj) {
-  auto copy_model_load_path = [](uint64_t of_blob_ptr) -> void {
+void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jbyteArray path) {
+  std::string load_job_name = convert_jstring_to_string(env, load_job);
+  
+  int64_t *_shape = new int64_t[1];
+  (*env).GetArrayLength(path);
+
+  auto copy_model_load_path = [_shape](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     int64_t shape[1] = { 20 };
@@ -207,19 +213,19 @@ void JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj) {
     of_blob->AutoMemCopyFrom(path, 20);
   };
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
-    new oneflow::JavaForeignJobInstance("System-ModelLoad", "", "", copy_model_load_path, nullptr, nullptr)
+    new oneflow::JavaForeignJobInstance(load_job_name, "", "", copy_model_load_path, nullptr, nullptr)
   );
   oneflow::LaunchJob(job_inst);
 }
 
 JNIEXPORT 
-void JNICALL Java_org_oneflow_Library_runPushJob(JNIEnv* env, jobject obj, jfloatArray javaArr) {
+void JNICALL Java_org_oneflow_InferenceSession_runPushJob(JNIEnv* env, jobject obj, jfloatArray javaArr) {
   // Input_15 shape[1] = { 1 }, data[0] = { 0 } dtype = int32
   auto input_15 = [](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     int64_t shape[1] = { 1 };
-	  int32_t data[20] = { 0 };
+	  int32_t data[1] = { 0 };
     of_blob->CopyShapeFrom(shape, 1);
     of_blob->AutoMemCopyFrom(data, 1);
   };
@@ -234,9 +240,10 @@ void JNICALL Java_org_oneflow_Library_runPushJob(JNIEnv* env, jobject obj, jfloa
   float *arr = (*env).GetFloatArrayElements(javaArr, 0);
   float image_data[28 * 28] = { 0 };
   for (int i = 0; i < 28 * 28; i++) image_data[i] = arr[i];
-  delete arr;
+  (*env).ReleaseFloatArrayElements(javaArr, arr, JNI_ABORT);
   
-  auto input_14 = [image_data](uint64_t of_blob_ptr) -> void {
+  auto input_14 = [image_data, arr](uint64_t of_blob_ptr) -> void {
+    std::cout << arr << std::endl;
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     int64_t shape[4] = { 1, 1, 28, 28 };
@@ -250,7 +257,53 @@ void JNICALL Java_org_oneflow_Library_runPushJob(JNIEnv* env, jobject obj, jfloa
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_runInferenceJob(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jbyteArray data, jlongArray shape, jint dtype_code, jstring job_name, jstring op_name) {
+  // copy data
+  signed char *data_arr = (*env).GetByteArrayElements(data, NULL);
+  int data_arr_length = (*env).GetArrayLength(data);
+  signed char *_data = new signed char[data_arr_length];  // Todo: shared_ptr
+  std::copy(data_arr, data_arr + data_arr_length, _data);
+  (*env).ReleaseByteArrayElements(data, data_arr, JNI_ABORT);
+
+  // copy shape
+  long *shape_arr = (*env).GetLongArrayElements(shape, NULL);
+  int shape_arr_length = (*env).GetArrayLength(shape);
+  long *_shape = new long[shape_arr_length];
+  std::copy(shape_arr, shape_arr + shape_arr_length, _shape);
+  (*env).ReleaseLongArrayElements(shape, shape_arr, JNI_ABORT);
+
+  // number of elements
+  long element_number = 1;
+  for (int i = 0; i < shape_arr_length; i++) {
+    element_number = element_number * _shape[i];
+  }
+
+  // job_name & op_name
+  std::string _job_name = convert_jstring_to_string(env, job_name);
+  std::string _op_name = convert_jstring_to_string(env, op_name);
+  
+  auto job_instance_fun = [=](uint64_t of_blob_ptr) -> void {
+    using namespace oneflow;
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->CopyShapeFrom(_shape, shape_arr_length);
+    if (dtype_code == 22) {
+      of_blob->AutoMemCopyFrom((float*) _data, element_number);
+    }
+    if (dtype_code == 13) {
+      of_blob->AutoMemCopyFrom((int*) _data, element_number);
+    }
+
+    delete []_data;
+    delete []_shape;
+  };
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_instance(
+    new oneflow::JavaForeignJobInstance(_job_name, _op_name, "", job_instance_fun, nullptr, nullptr)
+  );
+  oneflow::LaunchJob(job_instance);
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobject obj) {
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
     new oneflow::JavaForeignJobInstance("mlp_inference", "", "", nullptr, nullptr, nullptr)
   );
@@ -258,7 +311,7 @@ void JNICALL Java_org_oneflow_Library_runInferenceJob(JNIEnv* env, jobject obj) 
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_Library_runPullJob(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj) {
   float data[10] = { 0 };
   auto return_17 = [&data](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
@@ -271,4 +324,30 @@ void JNICALL Java_org_oneflow_Library_runPullJob(JNIEnv* env, jobject obj) {
     new oneflow::JavaForeignJobInstance("System-Pull-Return_17", "", "Return_17", nullptr, return_17, nullptr)
   );
   oneflow::LaunchJob(job_inst_return_17);
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_stopLazyGlobalSession(JNIEnv* env, jobject obj) {
+  oneflow::StopLazyGlobalSession().GetOrThrow();
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_destroyLazyGlobalSession(JNIEnv* env, jobject obj) {
+  oneflow::DestroyLazyGlobalSession().GetOrThrow();
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_destroyEnv(JNIEnv* env, jobject obj) {
+  oneflow::DestroyEnv().GetOrThrow();
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_InferenceSession_setShuttingDown(JNIEnv* env, jobject obj) {
+  oneflow::SetShuttingDown();
+}
+
+JNIEXPORT
+jstring JNICALL Java_org_oneflow_InferenceSession_getInterUserJobInfo(JNIEnv* env, jobject obj) {
+  std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
+  return convert_string_to_jstring(env, inter_user_job_info);
 }

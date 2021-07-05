@@ -7,9 +7,7 @@ else ()
     message (FATAL_ERROR "JNI is not found on your machine")
 endif()
 
-aux_source_directory(env ENV_SRC)
-aux_source_directory(job_build JOB_BUILD_SRC)
-add_library(oneflow SHARED ${ENV_SRC} ${JOB_BUILD_SRC} library.h library.cpp)
+add_library(oneflow SHARED library.h library.cpp tensor.h tensor.cpp)
 
 target_include_directories(
     oneflow
