@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("ssp_variable_proxy")
+REGISTER_NO_GRAD_USER_OP("ssp_variable_proxy")
     .Input("var")
     .Output("ref")
     .Output("value")

@@ -20,21 +20,22 @@ limitations under the License.
 namespace oneflow {
 namespace pyext {
 
-void RegisterPyKernelCaller(const std::string& op_module_name) {
+Maybe<void> RegisterPyKernelCaller(const std::string& op_module_name) {
   // register python op kernel
   auto reg = user_op::UserOpRegistryMgr::Get()
                  .CheckAndGetOpKernelRegistry(op_module_name + "_forward")
                  .SetCreateFn<PyForwardKernel>()
                  .SetIsMatchedHob(
                      ((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
-  user_op::UserOpRegistryMgr::Get().Register(reg.Finish().GetResult());
+  JUST(user_op::UserOpRegistryMgr::Get().Register(JUST(reg.Finish()).GetResult()));
   // register python grad op kernel
   auto grad_reg = user_op::UserOpRegistryMgr::Get()
                       .CheckAndGetOpKernelRegistry(op_module_name + "_backward")
                       .SetCreateFn<PyBackwardKernel>()
                       .SetIsMatchedHob(((user_op::HobDeviceTag() == "cpu")
                                         & (user_op::HobDeviceSubTag() == "py")));
-  user_op::UserOpRegistryMgr::Get().Register(grad_reg.Finish().GetResult());
+  JUST(user_op::UserOpRegistryMgr::Get().Register(JUST(grad_reg.Finish()).GetResult()));
+  return Maybe<void>::Ok();
 }
 
 void RegisterPyKernels(PyObject* py_kernels) { PyRegisterKernels(py_kernels); }

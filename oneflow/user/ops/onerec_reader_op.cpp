@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("OneRecReader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OneRecReader")
     .Output("out")
     .Attr<std::vector<std::string>>("files")
     .Attr<int32_t>("batch_size")

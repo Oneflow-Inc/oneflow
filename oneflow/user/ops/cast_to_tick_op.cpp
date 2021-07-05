@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("cast_to_tick")
+REGISTER_NO_GRAD_USER_OP("cast_to_tick")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
