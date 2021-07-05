@@ -39,15 +39,15 @@ jobs:
           - test_suite: conda
             os: "ubuntu-20.04"
             make_concurrency: 2
-            shell: ${{ matrix.shell }}
+            shell: bash
           - test_suite: mac
             os: "macos-10.15"
             make_concurrency: 2
-            shell: ${{ matrix.shell }}
+            shell: bash
           - test_suite: ubuntu
             os: "ubuntu-20.04"
             make_concurrency: 2
-            shell: ${{ matrix.shell }} -l {0}
+            shell: bash -l {0}
         exclude:
           - test_suite: conda
             cmake_generator: "Ninja"
