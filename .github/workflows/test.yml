@@ -121,7 +121,7 @@ jobs:
           cd tools/clang-plugin
           mkdir build
           cd build
-          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
           make -j$(nproc)
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
