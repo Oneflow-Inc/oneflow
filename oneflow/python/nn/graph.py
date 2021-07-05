@@ -37,6 +37,7 @@ from oneflow.python.framework.session_util import _TryCompleteConfigProto
 class Graph(object):
     def __init__(self):
         self._name = id_util.UniqueStr(self.__class__.__name__ + "_")
+        self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
@@ -54,7 +55,7 @@ class Graph(object):
 
     def build(self, *args):
         raise NotImplementedError()
-    
+
     def add_optimizer(
         self,
         name: str,
@@ -73,7 +74,6 @@ class Graph(object):
             assert block.type == BlockType.MODULE
             block.origin.train(mode)
 
-    
     def _named_state(self):
         for _, b in self._blocks.items():
             prefix = b.name + "."
@@ -83,15 +83,19 @@ class Graph(object):
             b_gen = b.origin.named_buffers()
             for n, b in b_gen:
                 yield prefix + n, b
-    
+
     def _compile(self):
         print("try to compile")
-        assert not self._is_compiled, "nn.Graph " + self_name + " has already been compiled."
-        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
+        assert not self._is_compiled, (
+            "nn.Graph " + self_name + " has already been compiled."
+        )
+        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
+            tuple(t for _, t in self._named_state())
+        )
         sess = session_ctx.GetDefaultSession()
         sess.TryInit()
         # do job compile
-        
+
         self._is_compiled = True
 
     def __call__(self, *args):
@@ -156,7 +160,7 @@ class Graph(object):
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
-    
+
 
 class BlockType:
     NONE = "NONE"
@@ -164,10 +168,16 @@ class BlockType:
     PARAMETER = "PARAMETER"
     BUFFER = "BUFFER"
 
+
 @oneflow_export("nn.graph.Block")
 @experimental_api
 class Block(object):
-    def __init__(self, prefix: str = "", name: str = "" , value: Union[Module, Parameter, Tensor] = None):
+    def __init__(
+        self,
+        prefix: str = "",
+        name: str = "",
+        value: Union[Module, Parameter, Tensor] = None,
+    ):
         assert not isinstance(value, Block)
         self._name = name
         self._name_prefix = prefix
@@ -181,11 +191,11 @@ class Block(object):
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
             for n, m in list(value.named_children()):
-                self.__setattr__(n, Block(self._name_prefix  + self._name + ".", n, m))
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, m))
             for n, p in list(value.named_parameters("", False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + "." , n, p))
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, p))
             for n, b in list(value.named_buffers("", False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + "." , n, b))
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
         elif isinstance(value, Tensor):
@@ -203,7 +213,7 @@ class Block(object):
     @property
     def name(self):
         return self._name
-    
+
     @property
     def name_prefix(self):
         return self._name_prefix
@@ -314,6 +324,7 @@ class Block(object):
         main_str += ")"
         return main_str
 
+
 @oneflow_export("nn.graph.GraphConfig")
 @experimental_api
 class GraphConfig(FunctionConfig):
@@ -343,7 +354,7 @@ class GraphConfig(FunctionConfig):
 @experimental_api
 class BlockConfig(object):
     def __init__(self):
-        # TODO(): implement config for block 
+        # TODO(): implement config for block
         pass
 
 

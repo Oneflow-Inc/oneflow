@@ -73,7 +73,7 @@ class TestGraph(flow.unittest.TestCase):
 
         # Graph init
         g = CustomGraph()
-        # g.m is Block 
+        # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         # g.m.name is "m"
         test_case.assertEqual(g.m.name, "m")
@@ -83,19 +83,15 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(
             isinstance(g.m._buffers["dummy_buff"], flow.nn.graph.Block)
         )
-        # conv1 is Block 
-        test_case.assertTrue(
-            isinstance(g.m.layer.conv1, flow.nn.graph.Block)
-        )
+        # conv1 is Block
+        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
         # conv1.name is "conv1"
         test_case.assertEqual(g.m.layer.conv1.name, "conv1")
         # conv1.weight is Tensor, Graph.build(...) need weight to be Tensor
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
         # conv1._parameters["weight"] is Block
         test_case.assertTrue(
-            isinstance(
-                g.m.layer.conv1._parameters["weight"], flow.nn.graph.Block
-            )
+            isinstance(g.m.layer.conv1._parameters["weight"], flow.nn.graph.Block)
         )
         # conv1.kernel_size is original data in original module
         test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
@@ -158,8 +154,9 @@ class TestGraph(flow.unittest.TestCase):
                 return x
 
         g = CustomGraph()
-        g._compile()
-    
+        test_case.assertEqual(g.name, g._c_nn_graph.name)
+        # g._compile()
+
     # TODO(): test_add_optimizer
 
 

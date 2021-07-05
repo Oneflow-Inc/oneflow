@@ -52,6 +52,7 @@ from google.protobuf import text_format
 
 _is_multi_client_mode = True
 
+
 class Session(object):
     def __init__(self, sess_id):
         self.job_name2function_desc_ = {}
@@ -521,6 +522,7 @@ def _GetDefaultConfigProto():
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
+
 class MultiClientSession(Session):
     def __init__(self, sess_id):
         self.status_ = SessionStatus.OPEN
@@ -547,6 +549,7 @@ class MultiClientSession(Session):
         self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         oneflow._oneflow_internal.ClearSessionById(self.id)
+
 
 if _is_multi_client_mode:
     new_session = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
