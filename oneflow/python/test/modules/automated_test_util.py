@@ -270,7 +270,7 @@ def test_flow_xxx_against_pytorch(test_case,
 
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    torch_xxx_class = eval(f"torch.{pytorch_xxx_name}")
+    torch_xxx_func = eval(f"torch.{pytorch_xxx_name}")
     annotations = extra_annotations
     args = annotations.keys()
     annotations.update({"input": torch.Tensor})
@@ -302,7 +302,7 @@ def test_flow_xxx_against_pytorch(test_case,
             torch_input_original.to(device),
         )
         try:
-            torch_res = torch_xxx_class(torch_input, **torch_attr_dict)
+            torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
             loss = torch_res.sum()
             loss.backward()
         except Exception as e:
@@ -333,8 +333,8 @@ def test_flow_xxx_against_pytorch(test_case,
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
         n -= 1
 
-def test_tensor_xxx_against_pytorch(test_case,
-    tensor_xxx_name,
+def test_flow_tensor_xxx_against_pytorch(test_case,
+    flow_tensor_xxx_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
@@ -345,7 +345,80 @@ def test_tensor_xxx_against_pytorch(test_case,
     n=20,
     pytorch_tensor_xxx_name=None,
 ):
-    pass
+    assert device in ["cuda", "cpu"]
+    if not training:
+        assert not backward
+    if extra_annotations is None:
+        extra_annotations = {}
+    if extra_generators is None:
+        extra_generators = {}
+    if pytorch_tensor_xxx_name is None:
+        pytorch_tensor_xxx_name = flow_tensor_xxx_name
+
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+
+    annotations = extra_annotations
+    args = annotations.keys()
+    annotations.update({"input": torch.Tensor})
+    
+    def generate(name):
+        annotation = annotations[name]
+        if name in extra_generators:
+            return extra_generators[name](annotation)
+        return default_generators[annotation]()
+
+    while n > 0:
+        flow_attr_dict = {}
+        torch_attr_dict = {}
+        for name in args:
+            if name == "input":
+                continue
+            flow_data, torch_data = generate(name)
+            flow_attr_dict[name] = flow_data
+            torch_attr_dict[name] = torch_data
+
+        if verbose:
+            print(f"attr = {torch_attr_dict}, device = {device}")
+
+        flow_input_original, torch_input_original = generate("input")
+        flow_input_original.requires_grad_(backward)
+        torch_input_original.requires_grad_(backward)
+        flow_input, torch_input = (
+            flow_input_original.to(device),
+            torch_input_original.to(device),
+        )
+        try:
+            torch_tensor_xxx_func = eval(f"torch_input.{pytorch_tensor_xxx_name}")
+            torch_res = torch_tensor_xxx_func(**torch_attr_dict)
+            loss = torch_res.sum()
+            loss.backward()
+        except Exception as e:
+            if verbose:
+                print(f"PyTorch error: {e}")
+            # The random generated test data is not always valid,
+            # so just skip when PyTorch raises an exception
+            continue
+        
+        flow_tensor_xxx_func = eval(f"flow_input.{flow_tensor_xxx_name}")
+        flow_res = flow_tensor_xxx_func(**flow_attr_dict)
+        loss = flow_res.sum()
+        loss.backward()
+
+        def allclose_or_fail(flow_tensor, torch_tensor):
+            is_allclose = np.allclose(
+                flow_tensor.numpy(),
+                torch_tensor.detach().cpu().numpy(),
+                rtol=rtol,
+                atol=atol,
+            )
+            test_case.assertTrue(
+                is_allclose,
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}",
+            )
+
+        allclose_or_fail(flow_res, torch_res)
+        allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
+        n -= 1
 
 __all__ = [
     "random_tensor",
