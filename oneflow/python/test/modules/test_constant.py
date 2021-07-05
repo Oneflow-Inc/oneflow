@@ -34,6 +34,12 @@ def _test_ones(test_case, device, shape):
     y3 = flow.ones(10, dtype=flow.float64, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.float64), y3.numpy()))
 
+    y4 = flow.ones(10, dtype=flow.int32, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.int32), y4.numpy()))
+
+    y5 = flow.ones(10, dtype=flow.uint8, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.uint8), y5.numpy()))
+
 
 def _test_ones_backward(test_case, device, shape):
     x = flow.ones(shape, device=flow.device(device), requires_grad=True)
