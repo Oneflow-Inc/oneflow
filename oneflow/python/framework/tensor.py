@@ -261,23 +261,23 @@ class Tensor:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
             else:
-                new_grad_detach = new_grad.detach()
+                new_grad_detach = new_grad.detach()._local_or_consistent_tensor
                 self.check_grad(self._local_or_consistent_tensor.grad, new_grad_detach)
-                self._local_or_consistent_tensor.set_grad(new_grad)
+                self._local_or_consistent_tensor.set_grad(new_grad_detach)
         else:
             if new_grad is None:
                 self._undetermined_tensor.set_grad(None)
             else:
-                new_grad_detach = new_grad.detach()
+                new_grad_detach = new_grad.detach()._undetermined_tensor
                 self.check_grad(self._undetermined_tensor.grad, new_grad_detach)
-                self._undetermined_tensor.set_grad(new_grad)
+                self._undetermined_tensor.set_grad(new_grad_detach)
 
     @staticmethod
     def check_grad(grad, new_grad):
-        print(grad.shape, new_grad.shape)
-        print(grad.device, new_grad.device)
-        print(grad.dtype, new_grad.dtype)
-        print(type(grad), type(new_grad))
+        assert grad.shape == new_grad.shape, "Shape of new grad is not equal"
+        assert grad.device == new_grad.device, "Device of new grad is not equal"
+        assert grad.dtype == new_grad.dtype, "Data type of new grad is not equal"
+        assert type(grad) == type(new_grad), "Type of new grad is not equal"
 
 
 
@@ -518,6 +518,14 @@ class Tensor:
     @register_local_tensor_method()
     def __lt__(self, other):
         return self.lt(other)
+
+    @register_local_tensor_method()
+    def __ge__(self, other):
+        return self.ge(other)
+
+    @register_local_tensor_method()
+    def __le__(self, other):
+        return self.le(other)
 
     def __array__(self):
         TODO()
