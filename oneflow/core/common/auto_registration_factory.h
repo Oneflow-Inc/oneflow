@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// 带模板参数的简单工厂+单例模式
+// 工厂模式+单例模式
 // 注册工厂类模板
 // 模板参数Key为派生类关键字，Base为基类
 template<typename Key, typename Base, typename... Args>
@@ -97,6 +97,7 @@ struct AutoRegistrationFactory {
   static AutoRegistrationFactory<Key, Base, __VA_ARGS__>::RawRegisterType<Derived> \
       REGISTER_VAR_NAME(k)
 // @PROB(shiyongtao): 未提供自定义CREATOR对应的Destroy，可能存在内存泄漏等风险
+// 除非能够保证CREATOR在堆上只创建目标对象
 #define REGISTER_CLASS_CREATOR(Key, k, Base, f, ...)                                               \
   static AutoRegistrationFactory<Key, Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME( \
       k, f)

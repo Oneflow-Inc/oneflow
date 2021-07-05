@@ -50,6 +50,7 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
 
+// 是否有data类型的输入regst
 bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
   for (const auto& pair : task.consumed_regst_desc_id()) {
     if (pair.first == "in_ctrl") { continue; }

@@ -100,6 +100,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   TakeOverNaiveProduced(task_proto.produced_regst_desc());
   InitBnInOp2BlobInfo(task_proto);
+  // 虚接口VirtualActorInit，供各个子类Actor自己重载自定义的初始化内容
   VirtualActorInit(task_proto);
 }
 
@@ -130,6 +131,7 @@ void Actor::TakeOverInplaceConsumedAndProduced(
   }
 }
 
+// 构建输入regst的slot
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   auto res = GetNaiveOrCustomizedConsumedRegstDescName();
   bool is_naive_names = res.first == RegstNameType::kNaive;
@@ -148,6 +150,7 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
   naive_consumed_rs_.InitedDone();
 }
 
+// 构建输出regst的slot
 void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
   auto res = GetNaiveOrCustomizedProducedRegstDescName();
   bool is_naive_names = res.first == RegstNameType::kNaive;
@@ -355,6 +358,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       (is_naive_consumed_eord_ || is_inplace_consumed_eord_)
       && (naive_consumed_rs_.available_regst_desc_cnt() == 0
           && inplace_consumed_rs_.available_regst_desc_cnt() == 0);
+  // 首先发送结束信息的Actor的关键逻辑
   bool customized_eord = IsCustomizedReadAlwaysUnReadyFromNow();
   if ((has_naive_or_inplace && naive_or_inplace_eord_and_empty)
       || (!has_naive_or_inplace && customized_eord)) {
@@ -515,6 +519,7 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
 
+// 向下游actor发送regst信息
 int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
   auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   CHECK_EQ(regst_reading_cnt_it->second, 0);
@@ -630,6 +635,7 @@ void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t
   if (real_consumer_cnt > 0) { naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()); }
 }
 
+// 向上游actor发送regst信息
 void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
   tmp_regst_desc_id_vec_.clear();
   naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, Regst* regst) {
@@ -737,6 +743,7 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
   return naive_produced_rs_.Front(regst_desc_id);
 }
 
+// 构建Actor
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor* rptr = NewObj<int32_t, Actor>(task_proto.task_type());
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
