@@ -10,3 +10,4 @@ Optimizers
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.CosineAnnealingLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.StepLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.LambdaLR
+.. autofunction:: oneflow.experimental.optim.Optimizer.zero_grad
