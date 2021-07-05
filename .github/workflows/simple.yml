@@ -89,6 +89,11 @@ jobs:
           environment-file: environment.yml
           python-version: 3.6
           auto-activate-base: false
+      - name: Set environment variables (conda)
+        if: matrix.test_suite == 'conda'
+        run: |
+          conda env config vars set CXXFLAGS="-fPIC"
+        shell: bash -l {0}
       - name: Set environment variables
         run: |
           set -x
