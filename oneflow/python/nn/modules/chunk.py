@@ -35,19 +35,31 @@ class Chunk(Module):
 
             channel = input.dim()
             dim_size = input.shape[dim]
-            chunk_size = dim_size / chunks if dim_size % chunks == 0 else (int)(dim_size / chunks)
-            last_chunk_size = dim_size / chunks if dim_size % chunks == 0 else dim_size - (chunk_size * (chunks - 1))
-            
+            chunk_size = (
+                dim_size / chunks
+                if dim_size % chunks == 0
+                else (int)(dim_size / chunks)
+            )
+            last_chunk_size = (
+                dim_size / chunks
+                if dim_size % chunks == 0
+                else dim_size - (chunk_size * (chunks - 1))
+            )
+
             chunk_dim_dict = {}
             tup_ndim = []
             splits = []
-            
-            for chunk in range(0, chunks): 
+
+            for chunk in range(0, chunks):
                 if dim_size % chunks == 0:
                     start = chunk * chunk_size
                     stop = (chunk + 1) * chunk_size
                 else:
-                    start = chunk * chunk_size if chunk < chunks - 1 else chunk_size * (chunks - 1)
+                    start = (
+                        chunk * chunk_size
+                        if chunk < chunks - 1
+                        else chunk_size * (chunks - 1)
+                    )
                     stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
                 step = 1
                 chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), int(step)])
@@ -116,29 +128,4 @@ def chunk_op(input, chunks, dim):
 if __name__ == "__main__":
     import doctest
 
-
     doctest.testmod(raise_on_error=False)
-                        
-
-            
-
-
-
-            
-                
-
-                            
-                             
-
-
-            
-
-
-
-
-
-
-            
-
-
-        
