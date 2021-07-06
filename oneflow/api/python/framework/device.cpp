@@ -26,28 +26,38 @@ namespace oneflow {
 namespace {
 
 struct DeviceExportUtil final {
-  static Symbol<Device> MakeDevice(const std::string& type_and_id) {
-    std::string::size_type pos = type_and_id.find(':');
-    if (pos == std::string::npos) { pos = type_and_id.size(); }
-    std::string type = type_and_id.substr(0, pos);
-    int device_id = type == "cpu" ? 0 : GlobalProcessCtx::LocalRank();
-    if (pos < type_and_id.size()) {
-      std::string id = type_and_id.substr(pos + 1);
-      if (!IsStrInt(id)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
-      device_id = std::stoi(id);
-      if (type == "cpu" && device_id != 0) {
-        throw std::runtime_error("CPU device index must be 0");
-      }
-    }
-    return MakeDevice(type, device_id);
-  }
-
-  static Symbol<Device> MakeDevice(const std::string& type, int64_t device_id) {
+  static void CheckDeviceType(const std::string& type) {
     if (Device::type_supported.find(type) == Device::type_supported.end()) {
       std::string error_msg =
           "Expected one of cpu, cuda device type at start of device string " + type;
       throw std::runtime_error(error_msg);
     }
+  }
+
+  static Symbol<Device> ParseAndNew(const std::string& type_and_id) {
+    std::string::size_type pos = type_and_id.find(':');
+    if (pos == std::string::npos) { pos = type_and_id.size(); }
+    std::string type = type_and_id.substr(0, pos);
+    if (pos < type_and_id.size()) {
+      std::string id = type_and_id.substr(pos + 1);
+      if (!IsStrInt(id)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
+      int device_id = std::stoi(id);
+      if (type == "cpu" && device_id != 0) {
+        throw std::runtime_error("CPU device index must be 0");
+      }
+      return New(type, device_id);
+    } else {
+      return New(type);
+    }
+  }
+
+  static Symbol<Device> New(const std::string& type) {
+    CheckDeviceType(type);
+    return Device::New(type).GetOrThrow();
+  }
+
+  static Symbol<Device> New(const std::string& type, int64_t device_id) {
+    CheckDeviceType(type);
     return Device::New(type, device_id).GetOrThrow();
   }
 };
@@ -56,10 +66,11 @@ struct DeviceExportUtil final {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
-      .def(py::init(
-          [](const std::string& type_and_id) { return DeviceExportUtil::MakeDevice(type_and_id); }))
+      .def(py::init([](const std::string& type_and_id) {
+        return DeviceExportUtil::ParseAndNew(type_and_id);
+      }))
       .def(py::init([](const std::string& type, int64_t device_id) {
-        return DeviceExportUtil::MakeDevice(type, device_id);
+        return DeviceExportUtil::New(type, device_id);
       }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })
