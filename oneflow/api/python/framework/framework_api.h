@@ -28,7 +28,7 @@ inline void RegisterWatcherOnlyOnce(const std::shared_ptr<oneflow::ForeignWatche
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetOrThrow();
 }
 
-inline void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+inline void LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   return oneflow::LaunchJob(cb).GetOrThrow();
 }
 
