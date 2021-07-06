@@ -137,7 +137,7 @@ def test_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
+    pytorch_callable_name: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -145,7 +145,7 @@ def test_against_pytorch(
     atol=1e-5,
     n=20,
     pytorch_module_class_name=None,
-    api_flag: int = 0,
+    api_flag: int = TEST_MODULE,
 ):
     assert device in ["cuda", "cpu"]
     if not training:
@@ -154,33 +154,36 @@ def test_against_pytorch(
         extra_annotations = {}
     if extra_generators is None:
         extra_generators = {}
-    if extra_defaults is None:
-        extra_defaults = {}
+    if pytorch_callable_name is None:
+        pytorch_callable_name = {}
     if pytorch_module_class_name is None:
         pytorch_module_class_name = module_class_name
 
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    try:
-        torch_module_class = eval(f"torch.{pytorch_module_class_name}")
+    def has_full_args_spec(callable):
+        try:
+            spec = inspect.getfullargspec(callable)
+            return True
+        except Exception:
+            return False
+
+    torch_module_class = eval(f"torch.{pytorch_module_class_name}")
+    if has_full_args_spec(torch_module_class):
         spec = inspect.getfullargspec(torch_module_class)
-    except Exception as e:
+    else:
         Spec = namedtuple('spec', 'args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations')
         spec = Spec([], None, None, [], [],  {}, {})
     
     annotations = spec.annotations
     annotations.update(extra_annotations)
-    annotations.update(extra_defaults)
+    annotations.update(pytorch_callable_name)
     if "return" in annotations:
         del annotations["return"]
     
-    def has_full_args_spec(args):
-        if args == set():
-            return False
-        return True
 
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-    if has_full_args_spec(args) == False:
+    if not has_full_args_spec(args):
         args = set(annotations.keys())
     
     assert args == set(
@@ -208,10 +211,6 @@ def test_against_pytorch(
         flow_attr_dict = {}
         torch_attr_dict = {}
         for name in args:
-            if api_flag == TEST_MODULE:
-                if has_default(name):
-                    if rng.random() < 1 / 3:
-                        continue
             flow_data, torch_data = generate(name)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
@@ -245,7 +244,7 @@ def test_against_pytorch(
                 torch_res = torch_tensor_xxx_func(**torch_attr_dict)
             loss = torch_res.sum()
             loss.backward()
-            if api_flag == 0:
+            if api_flag == TEST_MODULE:
                 state_dict = torch_module.state_dict()
                 state_dict = {
                     k: v.detach().cpu().numpy() for k, v in state_dict.items()
@@ -301,7 +300,7 @@ def test_module_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
+    pytorch_callable_name: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -315,7 +314,7 @@ def test_module_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
+        pytorch_callable_name=pytorch_callable_name,
         device=device,
         training=training,
         backward=backward,
@@ -323,7 +322,7 @@ def test_module_against_pytorch(
         atol=atol,
         n=n,
         pytorch_module_class_name=pytorch_module_class_name,
-        api_flag=0,
+        api_flag=TEST_MODULE,
     )
 
 
@@ -332,7 +331,7 @@ def test_flow_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
+    pytorch_callable_name: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -346,7 +345,7 @@ def test_flow_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
+        pytorch_callable_name=pytorch_callable_name,
         device=device,
         training=training,
         backward=backward,
@@ -354,7 +353,7 @@ def test_flow_against_pytorch(
         atol=atol,
         n=n,
         pytorch_module_class_name=pytorch_module_class_name,
-        api_flag=1,
+        api_flag=TEST_FLOW,
     )
 
 
@@ -363,7 +362,7 @@ def test_tensor_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
+    pytorch_callable_name: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -377,7 +376,7 @@ def test_tensor_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
+        pytorch_callable_name=pytorch_callable_name,
         device=device,
         training=training,
         backward=backward,
@@ -385,7 +384,7 @@ def test_tensor_against_pytorch(
         atol=atol,
         n=n,
         pytorch_module_class_name=pytorch_module_class_name,
-        api_flag=2,
+        api_flag=TEST_TENSOR,
     )
 
 
