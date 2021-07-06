@@ -994,6 +994,38 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_fmod(test_case):
+        x = flow.Tensor(np.random.randint(1,100,(5,5)))
+        y = random.randint(1,10)
+        of_out = x.fmod(y)
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(),y))
+
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        # of_out = of_out.sum()
+        # of_out.backward()
+        # test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2, 3)), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_magic_fmod(test_case):
+        x = flow.Tensor(np.random.randint(1,100,(5,5)))
+        y = random.randint(1,10)
+        of_out = x % y
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(),y))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        # of_out = of_out.sum()
+        # of_out.backward()
+        # test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2, 3)), 1e-4, 1e-4))
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",

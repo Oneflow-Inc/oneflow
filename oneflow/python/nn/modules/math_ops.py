@@ -754,6 +754,74 @@ def arctan_op_tensor(tensor):
     return Atan()(tensor)
 
 
+class FMod(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        if not isinstance(x, (flow.Tensor, flow._oneflow_internal.LocalTensor)):
+            raise ValueError("Expected type of input is Tensor")
+        if isinstance(y, (int, float)):
+            x = flow.F.cast(x, flow.float32)
+            y = flow.tensor([y],dtype=flow.float32,device=x.device)
+        elif isinstance(y, (flow.Tensor, flow._oneflow_internal.LocalTensor)):
+            if x.dtype != y.dtype:
+                x = flow.F.cast(x, flow.float32)
+                y = flow.F.cast(y, flow.float32)
+        else:
+            raise ValueError("Expected type of other is Tensor or Scalar")
+        res = flow.F.abs(flow.F.fmod(x, y))
+        sign = flow.experimental.sign(x)
+        return  flow.F.mul(res, sign)
+
+
+@oneflow_export("fmod")
+@experimental_api
+def fmod_op(input,other):
+    r"""
+    fmod(input, other, *, out=None) -> Tensor
+
+    Computes the element-wise remainder of division.
+
+    The dividend and divisor may contain both for integer and floating point
+    numbers. The remainder has the same sign as the dividend :attr:`input`.
+
+    Supports broadcasting to a common shape, integer and float inputs.
+
+
+    Args:
+        input (Tensor): the dividend
+        other (Tensor or Scalar): the divisor
+
+    Keyword args:
+        out (Tensor, optional): the output tensor.
+
+    Example::
+
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2)
+        tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
+        tensor([1. , 0.5, 0. , 1. , 0.5], dtype=oneflow.float32)
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., -1]))
+        tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
+
+    """
+    return FMod()(input,other)
+
+
+@register_tensor_op("fmod")
+@experimental_api
+def fmod_op_tensor(input,other):
+    r"""
+
+    See :func:`oneflow.experimental.fmod`
+    
+    """
+    return FMod()(input,other)
+
+
 class Log(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1698,4 +1766,4 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
