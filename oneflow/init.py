@@ -73,8 +73,6 @@ if env_util.HasAllMultiClientEnvVars():
 else:
     env_util.init_default_physical_env()
 
-del env_util
-
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(is_multi_client, get_rank, sync):
@@ -102,22 +100,23 @@ atexit.register(
 )
 del atexit
 
-import sys
+if not env_util.HasAllMultiClientEnvVars():
+    import sys
 
-__original_exit__ = sys.exit
+    __original_exit__ = sys.exit
 
+    def custom_exit(returncode):
+        if returncode != 0:
+            import oneflow
 
-def custom_exit(returncode):
-    if returncode != 0:
-        import oneflow
+            oneflow._oneflow_internal.MasterSendAbort()
+        __original_exit__(returncode)
 
-        oneflow._oneflow_internal.MasterSendAbort()
-    __original_exit__(returncode)
+    sys.exit = custom_exit
 
+    del custom_exit
+    del sys
 
-sys.exit = custom_exit
-
-del custom_exit
-del sys
+del env_util
 del absolute_import
 del oneflow
