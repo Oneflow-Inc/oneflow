@@ -23,6 +23,12 @@
 
   ### Install with Pip Package
 
+  - (Recommended) Upgrade pip
+
+    ```
+    python3 -m pip install --upgrade pip --user
+    ```
+
   - To install latest stable release of OneFlow with CUDA support:
 
     ```bash
