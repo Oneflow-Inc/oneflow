@@ -21,22 +21,15 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
 class Bernoulli(Module):
-    def __init__(self, dtype=flow.float32):
+    def __init__(self, dtype=flow.float32, generator=None):
         super().__init__()
-
-        seed = random.randint(-sys.maxsize, sys.maxsize)
-        self._op = (
-            flow.builtin_op("bernoulli")
-            .Input("in")
-            .Output("out")
-            .Attr("dtype", dtype)
-            .Attr("has_seed", True)
-            .Attr("seed", seed)
-            .Build()
-        )
+        if generator is None:
+            generator = flow.Generator()
+        self.generator = generator
+        self.dtype = dtype
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.bernoulli(x, self.dtype, self.generator)
 
 
 @oneflow_export("bernoulli")
@@ -77,7 +70,7 @@ def bernoulli(input, *, generator=None, out=None):
 
 
     """
-    return Bernoulli()(input)
+    return Bernoulli(generator=generator)(input)
 
 
 if __name__ == "__main__":

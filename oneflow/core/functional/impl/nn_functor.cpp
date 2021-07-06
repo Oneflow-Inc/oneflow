@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
+#include "oneflow/user/kernels/bernoulli_kernel.h"
 
 namespace oneflow {
 namespace one {
@@ -391,6 +392,37 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
 };
 
+class BernoulliFunctor {
+ public:
+  BernoulliFunctor() {
+    bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap bernoulli_attrs;
+    JUST(bernoulli_attrs.SetAttr<float>("has_seed", true));
+    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::GetDefaultGenerator("cpu"));
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& bernoulli_kernel_state = std::make_shared<BernoulliKernelState>(gen);
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *bernoulli_op_, {x},
+        OpExprInterpContext{.attrs = bernoulli_attrs, .state = bernoulli_kernel_state});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> bernoulli_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -408,6 +440,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
+  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
 };
 
 }  // namespace functional
