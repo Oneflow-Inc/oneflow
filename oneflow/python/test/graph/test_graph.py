@@ -55,7 +55,7 @@ class CustomModule(flow.nn.Module):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGraph(flow.unittest.TestCase):
-    def _test_add_nested_module(test_case):
+    def test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
@@ -101,7 +101,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def _test_graph_config(test_case):
+    def test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -123,7 +123,6 @@ class TestGraph(flow.unittest.TestCase):
         # set graph config
         g.config.enable_fuse_add_to_output(True)
 
-        print(g.config.proto)
         # check set train to False
         g.train(False)
         test_case.assertEqual(g.training, False)
@@ -133,7 +132,6 @@ class TestGraph(flow.unittest.TestCase):
 
         # set graph config
         g.config.enable_fuse_add_to_output(False)
-        print(g.config.proto)
 
         # check _named_state get the right tensor
         for n, t in g._named_state():
@@ -160,9 +158,7 @@ class TestGraph(flow.unittest.TestCase):
         g2 = CustomGraph()
         print(g2.name)
         g2.print_creation_info()
-        # g._compile()
 
-    # TODO(): test_add_optimizer
 
 
 if __name__ == "__main__":
