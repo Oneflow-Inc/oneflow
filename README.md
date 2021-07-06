@@ -15,6 +15,12 @@
   ### System Requirements
 
   - Python 3.6, 3.7, 3.8
+  - (**Highly recommended**) Upgrade pip
+
+    ```
+    python3 -m pip install --upgrade pip --user
+    ```
+
   - CUDA Toolkit Linux x86_64 Driver
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
@@ -22,12 +28,6 @@
     - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
 
   ### Install with Pip Package
-
-  - (Recommended) Upgrade pip
-
-    ```
-    python3 -m pip install --upgrade pip --user
-    ```
 
   - To install latest stable release of OneFlow with CUDA support:
 
