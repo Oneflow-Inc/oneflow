@@ -638,7 +638,7 @@ class TestPooling(flow.unittest.TestCase):
             _test_maxpool3d,
             _test_maxpool3d_backward,
             _test_maxpool3d_special_kernel_size_backward,
-            _test_maxpool3d_diff_kernel_stride_backward,
+            # _test_maxpool3d_diff_kernel_stride_backward,
             _test_maxpool3d_negative_input_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]

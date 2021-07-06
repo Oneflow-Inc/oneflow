@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
 
-#include <cuda_runtime.h>
-
 #include <memory>
 
 #include <glog/logging.h>
@@ -277,11 +275,14 @@ class OpKernel {
   }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
-    std::cout << "Comoute kernel >>>>>>> " << ctx->op_name() << std::endl;
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    // NOTE:debug kernel runtime error, need #include <cuda_runtime.h>
+
+    // std::cout << "Comoute kernel >>>>>>> " << ctx->op_name() << std::endl;
+    // OF_CUDA_CHECK(cudaDeviceSynchronize());
+    // Compute(ctx);
+    // cudaError_t err = cudaGetLastError();
+    // printf("Kernel >> Compute finish! >> %s\n", cudaGetErrorString(err));
     Compute(ctx);
-    cudaError_t err = cudaGetLastError();
-    printf("Kernel >> Compute finish! >> %s\n", cudaGetErrorString(err));
   }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
