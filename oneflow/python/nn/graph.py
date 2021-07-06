@@ -14,14 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-from collections import OrderedDict, namedtuple
-from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
+from collections import OrderedDict
+from typing import Union
 
 import oneflow._oneflow_internal
-import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -29,7 +26,6 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
-from oneflow.python.framework.session_util import _TryCompleteConfigProto
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
@@ -86,7 +82,7 @@ class Graph(object):
 
     def _compile(self):
         assert not self._is_compiled, (
-            "nn.Graph " + self_name + " has already been compiled."
+            "nn.Graph " + self._name + " has already been compiled."
         )
         self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
             tuple(t for _, t in self._named_state())
@@ -137,7 +133,8 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(
+                "'{}' object are not allowed to set Optimizer attribute named '{}', \
+                 please use add_optimizer(...) instead.".format(
                     type(self).__name__, name
                 )
             )
