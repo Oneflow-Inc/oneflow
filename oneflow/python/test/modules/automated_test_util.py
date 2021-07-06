@@ -182,6 +182,7 @@ def test_against_pytorch(
     annotations = spec.annotations
     annotations.update(extra_annotations)
     annotations.update(extra_defaults)
+
     if "return" in annotations:
         del annotations["return"]
     
@@ -193,14 +194,13 @@ def test_against_pytorch(
     assert args == set(
         annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
+    annotations.update({"input": torch.Tensor})
 
     def generate(name):
         annotation = annotations[name]
         if name in extra_generators:
             return extra_generators[name](annotation)
         return default_generators[annotation]()
-
-    annotations.update({"input": torch.Tensor})
 
     while n > 0:
         flow_attr_dict = {}
