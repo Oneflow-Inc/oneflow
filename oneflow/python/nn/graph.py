@@ -92,8 +92,8 @@ class Graph(object):
         self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
             tuple(t for _, t in self._named_state())
         )
-        sess = session_ctx.GetDefaultSession()
-        sess.TryInit()
+        # sess = session_ctx.GetDefaultSession()
+        # sess.TryInit()
         # do job compile
 
         self._is_compiled = True

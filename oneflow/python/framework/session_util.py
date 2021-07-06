@@ -50,9 +50,6 @@ import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
 
-# TODO(xuxiaoyu): rm later when having flag
-_is_multi_client_mode = True
-
 
 class Session(object):
     def __init__(self, sess_id):
@@ -486,11 +483,7 @@ def api_clear_default_session() -> None:
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
-    if _is_multi_client_mode:
-        new_session = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-    else:
-        new_session = Session(oneflow._oneflow_internal.NewSessionId())
-    session_ctx.OpenDefaultSession(new_session)
+    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 
 @oneflow_export("sync_default_session")
@@ -524,39 +517,7 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-class MultiClientSession(Session):
-    def __init__(self, sess_id):
-        self.status_ = SessionStatus.OPEN
-        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
-        self.config_proto_ = None
-        self.resource_ = None
-        self.job_name2function_desc_ = {}
-
-    def Init(self):
-        assert self.status_ is SessionStatus.OPEN
-        self.status_ = SessionStatus.RUNNING
-        if not oneflow._oneflow_internal.IsEnvInited():
-            oneflow.env.init()
-        _TryCompleteConfigProto(self.config_proto)
-        self.resource_ = self.config_proto.resource
-        c_api_util.InitLazyGlobalSession(self.config_proto)
-        # oneflow._oneflow_internal.StartLazyGlobalSession() is replace by nn.Graph._c_nn_graph
-        return self
-
-    def Close(self):
-        assert self.status_ is SessionStatus.RUNNING
-        # oneflow._oneflow_internal.StopLazyGlobalSession() is replace by nn.Graph._c_nn_graph
-        oneflow._oneflow_internal.DestroyLazyGlobalSession()
-        self.status_ = SessionStatus.CLOSED
-        self.resource_ = None
-        oneflow._oneflow_internal.ClearSessionById(self.id)
-
-
-if _is_multi_client_mode:
-    new_session = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-else:
-    new_session = Session(oneflow._oneflow_internal.NewSessionId())
-session_ctx.OpenDefaultSession(new_session)
+session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 
 @oneflow_export("InitEagerGlobalSession")
