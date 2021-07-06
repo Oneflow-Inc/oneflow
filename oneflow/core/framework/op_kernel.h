@@ -274,16 +274,7 @@ class OpKernel {
     return std::shared_ptr<OpKernelState>();
   }
 
-  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const {
-    // NOTE:debug kernel runtime error, need #include <cuda_runtime.h>
-
-    // std::cout << "Comoute kernel >>>>>>> " << ctx->op_name() << std::endl;
-    // OF_CUDA_CHECK(cudaDeviceSynchronize());
-    // Compute(ctx);
-    // cudaError_t err = cudaGetLastError();
-    // printf("Kernel >> Compute finish! >> %s\n", cudaGetErrorString(err));
-    Compute(ctx);
-  }
+  virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
