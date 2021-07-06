@@ -340,7 +340,6 @@ def _test_maxpool3d_special_kernel_size_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
 
-
 def _test_maxpool3d_negative_input_backward(test_case, device):
     dim = 3
     input_arr = -1.23456 * np.ones((1, 1, 1, 1, 1), dtype=np.float)
