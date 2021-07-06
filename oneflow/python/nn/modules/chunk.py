@@ -62,7 +62,9 @@ class Chunk(Module):
                     )
                     stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
                 step = 1
-                chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), int(step)])
+                chunk_dim_dict.setdefault(dim, []).append(
+                    [int(start), int(stop), int(step)]
+                )
 
             for k, v in chunk_dim_dict.items():
                 for v_chunk in v:
@@ -72,8 +74,14 @@ class Chunk(Module):
                             tup_list.append([None, None, None])
                         else:
                             tup_list.append(v_chunk)
-                    start_tup, stop_tup, step_tup = check_slice_tup_list(tup_list, input.shape)
-                    splits.append(flow.F.slice(input, start=start_tup, stop=stop_tup, step=step_tup))
+                    start_tup, stop_tup, step_tup = check_slice_tup_list(
+                        tup_list, input.shape
+                    )
+                    splits.append(
+                        flow.F.slice(
+                            input, start=start_tup, stop=stop_tup, step=step_tup
+                        )
+                    )
             return splits
 
 
