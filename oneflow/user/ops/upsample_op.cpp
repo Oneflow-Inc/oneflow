@@ -50,6 +50,7 @@ REGISTER_USER_OP("upsample")
 
 REGISTER_USER_OP("upsample_grad")
     .Input("dy")
+    .Input("x")
     .Output("dx")
     .Attr<float>("height_scale")
     .Attr<float>("width_scale")
@@ -59,14 +60,10 @@ REGISTER_USER_OP("upsample_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      const float height_scale = ctx->Attr<float>("height_scale");
-      const float width_scale = ctx->Attr<float>("width_scale");
       if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
         LOG(FATAL) << "upsample_nearest only supports NCHW";
       }
-      *dx_shape = Shape({dy_shape.At(0), dy_shape.At(1),
-                         static_cast<int32_t>(std::round(dy_shape.At(2) / height_scale)),
-                         static_cast<int32_t>(std::round(dy_shape.At(3) / width_scale))});
+      *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -85,6 +82,7 @@ REGISTER_USER_OP_GRAD("upsample")
         user_op::UserOpConfWrapper grad_op =
             builder.Op("upsample_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("x", op.input("x", 0))
                 .Output("dx")
                 .Attr("height_scale", op.attr<float>("height_scale"))
                 .Attr("width_scale", op.attr<float>("width_scale"))

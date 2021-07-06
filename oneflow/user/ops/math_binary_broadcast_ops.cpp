@@ -181,20 +181,23 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix) \
-  REGISTER_USER_OP(op_name)                                                   \
-      .Input("x")                                                             \
-      .Input("y")                                                             \
-      .Output("z")                                                            \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetDataTypeInferFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix)      \
+  REGISTER_USER_OP(op_name)                                            \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastNormal)      \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastNormal);
 
-#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
-
-#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Logical)
+#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)     \
+  REGISTER_NO_GRAD_USER_OP(op_name)                                    \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastLogical)     \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastLogical);
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,
