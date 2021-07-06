@@ -88,3 +88,56 @@ OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, 
   params->right_w_index = w1 + w1p;
   params->w_lerp = w1r - w1;
 }
+
+template <typename T>
+OF_DEVICE_FUNC T upsample_get_value_bounded(
+    T* data,
+    int64_t width,
+    int64_t height,
+    int64_t x,
+    int64_t y) {
+  int64_t access_x = std::max(std::min(x, width - 1), static_cast<int64_t>(0));
+  int64_t access_y = std::max(std::min(y, height - 1), static_cast<int64_t>(0));
+  return data[access_y * width + access_x];
+}
+
+// Based on
+// https://en.wikipedia.org/wiki/Bicubic_interpolation#Bicubic_convolution_algorithm
+template <typename T>
+OF_DEVICE_FUNC T cubic_convolution1(T x, T A) {
+  return ((A + 2) * x - (A + 3)) * x * x + 1;
+}
+
+template <typename T>
+OF_DEVICE_FUNC T cubic_convolution2(T x, T A) {
+  return ((A * x - 5 * A) * x + 8 * A) * x - 4 * A;
+}
+
+template <typename T>
+OF_DEVICE_FUNC void get_cubic_upsample_coefficients(
+    T coeffs[4],
+    T t) {
+  T A = -0.75;
+
+  T x1 = t;
+  coeffs[0] = cubic_convolution2<T>(x1 + 1.0, A);
+  coeffs[1] = cubic_convolution1<T>(x1, A);
+
+  // opposite coefficients
+  T x2 = 1.0 - t;
+  coeffs[2] = cubic_convolution1<T>(x2, A);
+  coeffs[3] = cubic_convolution2<T>(x2 + 1.0, A);
+}
+
+template <typename T>
+OF_DEVICE_FUNC T cubic_interp1d(
+    T x0,
+    T x1,
+    T x2,
+    T x3,
+    T t) {
+  T coeffs[4];
+  get_cubic_upsample_coefficients<T>(coeffs, t);
+
+  return x0 * coeffs[0] + x1 * coeffs[1] + x2 * coeffs[2] + x3 * coeffs[3];
+}
