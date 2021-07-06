@@ -266,8 +266,8 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       builder.create<ReturnOp>(mul_op->getLoc());
       // TODO: decare terminator
       // TODO: skip outline functions when translating beck to job
-      // rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
-      function.dump();
+      jit_module->push_back(function);
+      jit_module->dump();
       cast_op.erase();
       return created->getResults();
     }
