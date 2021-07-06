@@ -155,6 +155,11 @@ class TestGraph(flow.unittest.TestCase):
 
         g = CustomGraph()
         test_case.assertEqual(g.name, g._c_nn_graph.name)
+        print(g.name)
+        g.print_creation_info() 
+        g2 = CustomGraph()
+        print(g2.name)
+        g2.print_creation_info() 
         # g._compile()
 
     # TODO(): test_add_optimizer
