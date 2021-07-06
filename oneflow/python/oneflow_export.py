@@ -91,7 +91,7 @@ def export_oneflow_api_internal_symbols(internal_name, api_name):
 
 
 internal_names_2_api_names = {
-    "PlacementSymbol": "placement",
+    "placement": "placement",
     "Size": "Size",
     "device": "device",
     "autograd.no_grad": "no_grad",
