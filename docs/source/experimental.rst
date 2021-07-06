@@ -182,6 +182,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.tile
 .. autofunction:: oneflow.experimental.fmod
 .. autofunction:: oneflow.experimental.Tensor.fmod
+.. autofunction:: oneflow.experimental.view
+.. autofunction:: oneflow.experimental.Tensor.view
 .. autofunction:: oneflow.experimental.reshape
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze
