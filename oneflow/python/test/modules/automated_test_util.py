@@ -26,9 +26,9 @@ import oneflow.experimental as flow
 import torch
 import numpy as np
 
-CONSTANT_ZERO = 0
-CONSTANT_ONE = 1
-CONSTANT_TWO = 2
+TEST_MODULE = 0
+TEST_FLOW = 1
+TEST_TENSOR = 2
 
 rng = np.random.default_rng()
 
@@ -227,7 +227,7 @@ def test_against_pytorch(
             torch_input_original.to(device),
         )
         try:
-            if api_flag == CONSTANT_ZERO:
+            if api_flag == TEST_MODULE:
                 torch_module = torch_module_class(**torch_attr_dict)
                 torch_module = torch_module.to(device)
                 torch_module.train(training)
@@ -236,7 +236,7 @@ def test_against_pytorch(
                 state_dict = {
                     k: v.detach().cpu().numpy() for k, v in state_dict.items()
                 }
-            elif api_flag == CONSTANT_ONE:
+            elif api_flag == TEST_FLOW:
                 torch_xxx_func = eval(f"torch.{pytorch_module_class_name}")
                 torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
 
@@ -257,14 +257,14 @@ def test_against_pytorch(
             # so just skip when PyTorch raises an exception
             continue
 
-        if api_flag == CONSTANT_ZERO:
+        if api_flag == TEST_MODULE:
             flow_module_class = eval(f"flow.{module_class_name}")
             flow_module = flow_module_class(**flow_attr_dict)
             flow_module = flow_module.to(device)
             flow_module.train(training)
             flow_module.load_state_dict(state_dict)
             flow_res = flow_module(flow_input)
-        elif api_flag == CONSTANT_ONE:
+        elif api_flag == TEST_FLOW:
             flow_xxx_func = eval(f"flow.{module_class_name}")
             flow_res = flow_xxx_func(flow_input, **flow_attr_dict)
         else:
