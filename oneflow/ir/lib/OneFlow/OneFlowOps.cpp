@@ -268,6 +268,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       // TODO: skip outline functions when translating beck to job
       jit_module->push_back(function);
       jit_module->dump();
+
       cast_op.erase();
       return created->getResults();
     }
