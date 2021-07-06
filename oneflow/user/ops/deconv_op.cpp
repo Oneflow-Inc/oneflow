@@ -23,7 +23,7 @@ namespace {
 template<size_t NDims>
 Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  CHECK_EQ(NDims + 2, in->shape().NumAxes());
+  CHECK_EQ_OR_RETURN(NDims + 2, in->shape().NumAxes());
 
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -69,7 +69,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
     const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight->shape(), Shape(weight_shape));
   }
 
   return Maybe<void>::Ok();
@@ -146,8 +146,8 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
   const Shape& weight_shape = op.TensorDesc4ArgNameAndIndex("weight", 0).shape();
 
   const int32_t ndims = kernel_size.size();
-  CHECK_EQ(ndims, strides.size());
-  CHECK_EQ(ndims, dilation_rate.size());
+  CHECK_EQ_OR_RETURN(ndims, strides.size());
+  CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
 
   if (op.NeedGenGradTensor4OpInput("weight", 0)) {
     auto filter_grad_op =

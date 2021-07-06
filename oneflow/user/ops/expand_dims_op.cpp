@@ -19,34 +19,31 @@ namespace oneflow {
 
 namespace {
 
-int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
+Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   axis = axis < 0 ? axis + num_axes + 1 : axis;
-  CHECK_GE(axis, 0);
-  CHECK_LE(axis, num_axes);
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LE_OR_RETURN(axis, num_axes);
   return axis;
 }
 
 }  // namespace
-
-REGISTER_USER_OP("expand_dims")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("axis")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+//Check function name ???
+Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->OutputShape("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
+        JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes()));
 
       auto dim_vec = in_shape.dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+}
+//Check function name ???
+Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
+          JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes()));
 
       auto dim_vec = in_tensor.shape().dim_vec();
       FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
@@ -60,7 +57,14 @@ REGISTER_USER_OP("expand_dims")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
-    })
+}
+
+REGISTER_USER_OP("expand_dims")
+    .Input("in")
+    .Output("out")
+    .Attr<int32_t>("axis")
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetGetSbpFn(GetSbpSignatures)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();

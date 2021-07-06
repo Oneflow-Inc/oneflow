@@ -85,7 +85,7 @@ REGISTER_USER_OP("TestReshape")
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& conf_shape = ctx->Attr<Shape>("shape");
-      CHECK_EQ(in_shape.NumAxes(), conf_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(in_shape.NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
     })

@@ -30,7 +30,7 @@ REGISTER_USER_OP("hardtanh")
       *out_shape = in_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
-      CHECK_LE(min_val, max_val);
+      CHECK_LE_OR_RETURN(min_val, max_val);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -62,7 +62,7 @@ REGISTER_USER_OP("hardtanh_grad")
       *dx_shape = dy_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
-      CHECK_LE(min_val, max_val);
+      CHECK_LE_OR_RETURN(min_val, max_val);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

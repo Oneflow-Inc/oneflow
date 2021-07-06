@@ -51,7 +51,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      CHECK_GE(x_tensor.shape().NumAxes(), 2);
+      CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
       FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("x", 0), axis)
@@ -90,7 +90,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      CHECK_GE(dy_tensor.shape().NumAxes(), 2);
+      CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
       FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("softmax_y", 0), axis)

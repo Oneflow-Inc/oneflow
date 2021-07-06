@@ -19,14 +19,15 @@ limitations under the License.
 
 namespace oneflow {
 
-void CheckIsPerm(const std::vector<int32_t>& perm) {
+Maybe<void> CheckIsPerm(const std::vector<int32_t>& perm) {
   std::vector<bool> is_used(perm.size(), false);
   FOR_RANGE(size_t, i, 0, perm.size()) {
-    CHECK_GE(perm[i], 0);
-    CHECK_LE(perm[i], perm.size());
-    CHECK_EQ(is_used[perm[i]], false);
+    CHECK_GE_OR_RETURN(perm[i], 0);
+    CHECK_LE_OR_RETURN(perm[i], perm.size());
+    CHECK_EQ_OR_RETURN(is_used[perm[i]], false);
     is_used[perm[i]] = true;
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_USER_OP("transpose")
@@ -55,12 +56,12 @@ REGISTER_USER_OP("transpose")
       const user_op::TensorDesc& input_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-      CHECK_EQ(perm.size(), input_tensor.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(perm.size(), input_tensor.shape().NumAxes());
       FOR_RANGE(int32_t, i, 0, perm.size()) {
         int32_t axis = perm.at(i);
         if (axis < 0) { axis += perm.size(); }
-        CHECK_GE(axis, 0);
-        CHECK_LT(axis, perm.size());
+        CHECK_GE_OR_RETURN(axis, 0);
+        CHECK_LT_OR_RETURN(axis, perm.size());
         ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();

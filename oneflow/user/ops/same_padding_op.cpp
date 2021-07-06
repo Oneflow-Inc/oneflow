@@ -20,15 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-REGISTER_USER_OP("same_padding")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+Maybe<void>SetTensorDescInferFunction (user_op::InferContext* ctx) {
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_shape() = x_desc->shape();
@@ -46,14 +38,24 @@ REGISTER_USER_OP("same_padding")
       for (int32_t i = 0; i < num_spatial_dims; ++i) {
         int32_t padding_small = 0;
         int32_t padding_large = 0;
-        CalcSamePadding(x_desc->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                        strides.at(i), &padding_small, &padding_large);
+        JUST(CalcSamePadding(x_desc->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                        strides.at(i), &padding_small, &padding_large));
         y_dim_vec[idx_offset + i] =
             x_desc->shape().At(idx_offset + i) + padding_small + padding_large;
       }
       *y_desc->mut_shape() = Shape(y_dim_vec);
       return Maybe<void>::Ok();
-    })
+}
+
+REGISTER_USER_OP("same_padding")
+    .Input("x")
+    .Output("y")
+    .Attr<std::string>("padding")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .SetTensorDescInferFn(SetTensorDescInferFunction)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int32_t num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x_like", 0).shape().NumAxes();

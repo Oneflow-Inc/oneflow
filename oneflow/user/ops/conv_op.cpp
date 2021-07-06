@@ -44,8 +44,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
-      CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                  strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i));
+      JUST(CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                  strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i)));
     }
     *out->mut_is_dynamic() = in->is_dynamic();
     *out->mut_shape() = Shape(out_shape);
