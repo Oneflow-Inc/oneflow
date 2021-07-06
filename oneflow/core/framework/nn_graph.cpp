@@ -22,4 +22,3 @@ const std::vector<std::string>& NNGraph::inputs_op_names() const { UNIMPLEMENTED
 const std::vector<std::string>& NNGraph::outputs_op_names() const { UNIMPLEMENTED(); }
 
 }  // namespace oneflow
-
