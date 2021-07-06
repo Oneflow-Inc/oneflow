@@ -63,7 +63,7 @@ Maybe<Generator> GetDefaultAutoGenerator() {
 
 Maybe<Generator> GetDefaultCPUGenerator() {
   static auto default_cpu_generator =
-      std::make_shared<Generator>(JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kCPU>()));
+      std::make_shared<Generator>(JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kCPU>(0)));
   return default_cpu_generator;
 }
 
@@ -123,7 +123,7 @@ Maybe<Generator> MakeDeviceGenerator<DeviceType::kGPU>(int device_index) {
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
-    return MakeDeviceGenerator<DeviceType::kCPU>();
+    return MakeDeviceGenerator<DeviceType::kCPU>(0);
   }
 #ifdef WITH_CUDA
   else if (device == "cuda" || device == "gpu") {
@@ -132,6 +132,24 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
 #endif  // WITH_CUDA
   else if (device == "auto") {
     return MakeAutoGenerator();
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
+                                << " for making generator, please make sure the device is one of "
+                                   "\"cpu\", \"cuda\" and \"auto\".";
+  }
+}
+
+Maybe<Generator> GetDefaultGenerator(const std::string& device, int device_index) {
+  if (device == "cpu") {
+    return GetDefaultDeviceGenerator<DeviceType::kCPU>(0);
+  }
+#ifdef WITH_CUDA
+  else if (device == "cuda" || device == "gpu") {
+    return GetDefaultDeviceGenerator<DeviceType::kGPU>(device_index);
+  }
+#endif  // WITH_CUDA
+  else if (device == "auto") {
+    return GetDefaultAutoGenerator();
   } else {
     UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
                                 << " for making generator, please make sure the device is one of "

@@ -20,10 +20,17 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("Generator")
-def MakeGenerator(device=None):
+def create_generator(device=None):
     if device is None:
         device = "auto"
     return oneflow._oneflow_internal.create_generator(device)
+
+
+@oneflow_export("default_generator")
+def default_generator(device=None):
+    if device is None:
+        device = "auto"
+    return oneflow._oneflow_internal.default_generator(device)
 
 
 @oneflow_export("manual_seed")

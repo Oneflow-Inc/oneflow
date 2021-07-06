@@ -62,12 +62,13 @@ Maybe<Generator> GetDefaultAutoGenerator();
 Maybe<Generator> MakeAutoGenerator();
 
 template<DeviceType device_type>
-Maybe<Generator> GetDefaultDeviceGenerator(int device_index = -1);
+Maybe<Generator> GetDefaultDeviceGenerator(int device_index);
 
 template<DeviceType device_type>
-Maybe<Generator> MakeDeviceGenerator(int device_index = -1);
+Maybe<Generator> MakeDeviceGenerator(int device_index);
 
-Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> GetDefaultGenerator(const std::string& device, int device_index);
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index);
 
 }  // namespace one
 }  // namespace oneflow
