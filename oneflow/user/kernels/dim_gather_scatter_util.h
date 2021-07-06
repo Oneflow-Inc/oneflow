@@ -42,7 +42,6 @@ template<typename T>
 struct DeviceBinOp {
   OF_DEVICE_FUNC static void Add(const T* x, T* y) {
 #ifdef __CUDA_ARCH__
-    // gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
     cuda::atomic::Add(y, *x); 
 #else
     *y += *x;
