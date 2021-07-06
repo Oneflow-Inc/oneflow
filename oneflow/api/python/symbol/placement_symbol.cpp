@@ -65,19 +65,6 @@ struct PlacementSymbolExportUtil {
     return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
-  static Maybe<ParallelDesc> CreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const py::tuple& hierarchy) {
-    std::shared_ptr<Shape> shape = CHECK_JUST(MakeShape(hierarchy));
-    return CreatePlacementSymbol(device_tag, machine_device_ids, shape);
-  }
-
-  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const py::tuple& hierarchy) {
-    return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
-  }
-
   static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
       const std::string& device_type, const py::dict& machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
@@ -219,12 +206,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](const std::string& device_tag,
                        const std::vector<std::string>& machine_device_ids,
                        const std::shared_ptr<Shape>& hierarchy) {
-        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
-                                                                   hierarchy);
-      }))
-      .def(py::init([](const std::string& device_tag,
-                       const std::vector<std::string>& machine_device_ids,
-                       const py::tuple& hierarchy) {
         return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
                                                                    hierarchy);
       }))
