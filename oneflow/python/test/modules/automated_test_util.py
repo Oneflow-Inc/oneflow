@@ -167,10 +167,8 @@ def test_against_pytorch(
         torch_module_class = eval(f"torch.{pytorch_module_class_name}")
         spec = inspect.getfullargspec(torch_module_class)
     except Exception as e:
-        spec = namedtuple('spec', 'args, kwonlyargs, annotations')
-        spec.annotations = dict()
-        spec.args = []
-        spec.kwonlyargs = []
+        Spec = namedtuple('spec', 'args, kwonlyargs, annotations')
+        spec = Spec([], [], dict())
     
     annotations = spec.annotations
     annotations.update(extra_annotations)
