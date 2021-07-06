@@ -31,7 +31,6 @@ class Generator final {
 
  public:
   explicit Generator(const std::shared_ptr<AutoGeneratorImpl>& impl);
-
   explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
 
   ~Generator() = default;
@@ -58,7 +57,7 @@ Maybe<Generator> GetDefaultAutoGenerator();
 Maybe<Generator> MakeAutoGenerator(uint64_t seed);
 
 template<DeviceType device_type>
-Maybe<Generator> GetDefaultDeviceGenerator();
+Maybe<Generator> GetDefaultDeviceGenerator(int device_index = -1);
 
 template<DeviceType device_type>
 Maybe<Generator> MakeDeviceGenerator(uint64_t seed);

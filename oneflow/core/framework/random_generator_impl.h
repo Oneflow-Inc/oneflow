@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_IMPL_H_
 #define ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_IMPL_H_
 
+#include <mutex>
 #include <random>
 #include <unordered_map>
 
@@ -49,20 +50,20 @@ class GeneratorImpl {
 
 class CPUGeneratorImpl : public GeneratorImpl {
  public:
-  explicit CPUGeneratorImpl(uint64_t seed)
-      : GeneratorImpl(seed, DeviceType::kCPU), mt19937_generator_(seed) {}
+  explicit CPUGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, DeviceType::kCPU), engine_(seed) {}
 
   virtual ~CPUGeneratorImpl() = default;
 
   void set_current_seed(uint64_t seed) override {
     seed_ = seed;
-    mt19937_generator_.seed(seed_);
+    engine_.seed(seed_);
   }
 
-  std::mt19937& generator() { return mt19937_generator_; }
+  std::mt19937& engine() { return engine_; }
+  void set_engine(std::mt19937 engine) { engine_ = engine; }
 
  public:
-  std::mt19937 mt19937_generator_;
+  std::mt19937 engine_;
 };
 
 #ifdef WITH_CUDA
@@ -109,6 +110,8 @@ class AutoGeneratorImpl {
   template<DeviceType device_type>
   Maybe<GeneratorImpl> GetOrCreateDeviceGenerator() {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
+    std::lock_guard<std::mutex> lock(mutex_);
+
     auto it = generators_.find(device_type);
     if (it == generators_.end()) {
       CHECK_OR_RETURN(enable_auto_create_)
@@ -122,9 +125,10 @@ class AutoGeneratorImpl {
   Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed);
 
  private:
+  mutable std::mutex mutex_;
   uint64_t seed_;
   bool enable_auto_create_;
-  std::unordered_map<DeviceType, std::shared_ptr<GeneratorImpl>, std::hash<int>> generators_;
+  std::unordered_map<int, std::shared_ptr<GeneratorImpl>> generators_;
 };
 
 }  // namespace one

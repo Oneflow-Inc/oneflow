@@ -64,7 +64,8 @@ Maybe<Generator> GetDefaultCPUGenerator() {
 }
 
 #ifdef WITH_CUDA
-Maybe<Generator> GetDefaultCUDAGenerator() {
+Maybe<Generator> GetDefaultCUDAGenerator(int device_index) {
+  // TODO(hjchen2): Get the device local generator.
   static auto default_cuda_generator =
       std::make_shared<Generator>(JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kGPU>()));
   return default_cuda_generator;
@@ -72,14 +73,14 @@ Maybe<Generator> GetDefaultCUDAGenerator() {
 #endif  // WITH_CUDA
 
 template<>
-Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kCPU>() {
+Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kCPU>(int device_index) {
   return GetDefaultCPUGenerator();
 }
 
 #ifdef WITH_CUDA
 template<>
-Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kGPU>() {
-  return GetDefaultCUDAGenerator();
+Maybe<Generator> GetDefaultDeviceGenerator<DeviceType::kGPU>(int device_index) {
+  return GetDefaultCUDAGenerator(device_index);
 }
 #endif  // WITH_CUDA
 
@@ -116,7 +117,7 @@ Maybe<Generator> MakeGenerator(const std::string& device, uint64_t seed) {
   } else {
     UNIMPLEMENTED_THEN_RETURN() << "Invalid device " << device
                                 << " for making generator, please make sure the device is one of "
-                                   "\"cpu\", \"gpu\" and \"auto\".";
+                                   "\"cpu\", \"cuda\" and \"auto\".";
   }
 }
 
