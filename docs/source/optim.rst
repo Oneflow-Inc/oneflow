@@ -3,6 +3,7 @@ oneflow.optim
 Optimizers
 ----------------------------------
 .. currentmodule:: oneflow.optim
+.. autofunction:: oneflow.experimental.optim.Optimizer.zero_grad
 .. autofunction:: oneflow.experimental.optim.Adam
 .. autofunction:: oneflow.experimental.optim.AdamW
 .. autofunction:: oneflow.experimental.optim.RMSprop
@@ -10,4 +11,4 @@ Optimizers
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.CosineAnnealingLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.StepLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.LambdaLR
-.. autofunction:: oneflow.experimental.optim.Optimizer.zero_grad
+
