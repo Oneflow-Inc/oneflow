@@ -167,10 +167,14 @@ def test_against_pytorch(
             return True
         except Exception:
             return False
-
-    torch_module_class = eval(f"torch.{pytorch_callable_name}")
-    if has_full_args_spec(torch_module_class):
-        spec = inspect.getfullargspec(torch_module_class)
+    
+    if api_flag == TEST_TENSOR:
+        pytorch_tensor = torch.Tensor(1)
+        pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
+    else:    
+        pytorch_call = eval(f"torch.{pytorch_callable_name}")
+    if has_full_args_spec(pytorch_call):
+        spec = inspect.getfullargspec(pytorch_call)
     else:
         Spec = namedtuple('spec', 'args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations')
         spec = Spec([], None, None, [], [],  {}, {})
@@ -189,15 +193,6 @@ def test_against_pytorch(
     assert args == set(
         annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
-
-    def has_default(name):
-        if name in spec.args:
-            return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
-        else:
-            assert name in spec.kwonlyargs
-            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
-                spec.kwonlydefaults
-            )
 
     def generate(name):
         annotation = annotations[name]
@@ -227,7 +222,7 @@ def test_against_pytorch(
         )
         try:
             if api_flag == TEST_MODULE:
-                torch_module = torch_module_class(**torch_attr_dict)
+                torch_module = pytorch_call(**torch_attr_dict)
                 torch_module = torch_module.to(device)
                 torch_module.train(training)
                 torch_res = torch_module(torch_input)
