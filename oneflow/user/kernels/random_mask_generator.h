@@ -34,8 +34,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
-    generator_ = std::dynamic_pointer_cast<one::CPUGeneratorImpl>(
-        CHECK_JUST(generator->Get<DeviceType::kCPU>()));
+    generator_ = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
   }
   ~RandomMaskGenerator() = default;
 
@@ -51,8 +50,7 @@ class RandomMaskGenerator<DeviceType::kGPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
-    generator_ = std::dynamic_pointer_cast<one::CUDAGeneratorImpl>(
-        CHECK_JUST(generator->Get<DeviceType::kGPU>()));
+    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
   }
   ~RandomMaskGenerator() = default;
 

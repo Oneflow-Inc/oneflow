@@ -39,7 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     std::string device_name = "";
     int device_index = -1;
     ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-    return one::GetDefaultGenerator(device_name, device_index).GetPtrOrThrow();
+    return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
   });
 }
 
