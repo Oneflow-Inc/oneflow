@@ -33,7 +33,7 @@ namespace oneflow {
 namespace {
 
 Maybe<Shape> MakeShape(const py::tuple& py_shape) {
-  DimVector shape_dims;
+  DimVector shape_dims{};
   for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
   return std::make_shared<Shape>(shape_dims);
 }
