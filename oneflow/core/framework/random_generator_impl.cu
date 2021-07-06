@@ -30,10 +30,13 @@ __global__ void InitCurandStatesKernel(uint64_t seed, curandState* states) {
 
 }  // namespace
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num,
-                      curandState* curand_states) {
-  InitCurandStatesKernel<<<block_num, thread_num>>>(seed, curand_states);
+namespace detail {
+
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states) {
+  InitCurandStatesKernel<<<block_num, thread_num>>>(seed, states);
 }
+
+}  // namespace detail
 
 }  // namespace one
 }  // namespace oneflow

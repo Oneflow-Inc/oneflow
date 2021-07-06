@@ -15,12 +15,24 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include "oneflow/api/python/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/random_generator.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
+
+namespace {
+
+Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
+  std::string device_name = "";
+  int device_index = -1;
+  ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
+  return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
+}
+
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
@@ -29,10 +41,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
   m.def("create_generator",
-        [](const std::string& device) { return one::MakeGenerator(device).GetPtrOrThrow(); });
-  m.def("create_generator", [](const std::string& device, uint64_t seed) {
-    return one::MakeGenerator(device, seed).GetPtrOrThrow();
-  });
+        [](const std::string& device_tag) { CreateGenerator(device_tag).GetOrThrow(); });
 }
 
 }  // namespace oneflow

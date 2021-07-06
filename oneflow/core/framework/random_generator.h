@@ -46,7 +46,12 @@ class Generator final {
 
   template<DeviceType device_type>
   Maybe<GeneratorImpl> Get() const {
-    return impl_->GetOrCreateDeviceGenerator<device_type>();
+    return Get<device_type>(-1);
+  }
+
+  template<DeviceType device_type>
+  Maybe<GeneratorImpl> Get(int device_index) const {
+    return impl_->GetOrCreateDeviceGenerator<device_type>(device_index);
   }
 
  private:
@@ -54,16 +59,15 @@ class Generator final {
 };
 
 Maybe<Generator> GetDefaultAutoGenerator();
-Maybe<Generator> MakeAutoGenerator(uint64_t seed);
+Maybe<Generator> MakeAutoGenerator();
 
 template<DeviceType device_type>
 Maybe<Generator> GetDefaultDeviceGenerator(int device_index = -1);
 
 template<DeviceType device_type>
-Maybe<Generator> MakeDeviceGenerator(uint64_t seed);
+Maybe<Generator> MakeDeviceGenerator(int device_index = -1);
 
-Maybe<Generator> MakeGenerator(const std::string& device);
-Maybe<Generator> MakeGenerator(const std::string& device, uint64_t seed);
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
 
 }  // namespace one
 }  // namespace oneflow

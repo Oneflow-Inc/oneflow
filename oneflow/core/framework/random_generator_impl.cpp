@@ -48,35 +48,68 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 
 }  // namespace
 
-CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, DeviceType::kGPU) {
+CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
+    : GeneratorImpl(seed, detail::DeviceKey{DeviceType::kGPU, device_index}) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   max_block_num_ = prop.multiProcessorCount;
   max_thread_num_ = GetThreadNum(prop);
   OF_CUDA_CHECK(
       cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandState)));
-  InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
+  detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
 }
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() { OF_CUDA_CHECK(cudaFree(curand_states_)); }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   seed_ = seed;
-  InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
+  detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
 }
 #endif  // WITH_CUDA
 
+namespace detail {
+
+bool operator==(const DeviceKey& k1, const DeviceKey& k2) {
+  return k1.device_type == k2.device_type && k1.device_index == k2.device_index;
+}
+
+size_t DeviceKeyHash::operator()(const DeviceKey& key) const {
+  return (static_cast<uint64_t>(key.device_type) << 10) + key.device_index;
+}
+
 template<>
-Maybe<GeneratorImpl> AutoGeneratorImpl::MakeGeneratorImpl<DeviceType::kCPU>(uint64_t seed) {
+DeviceKey GetCurrentDeviceKey<DeviceType::kCPU>() {
+  return DeviceKey{DeviceType::kCPU, 0};
+}
+
+template<>
+Maybe<GeneratorImpl> MakeGeneratorImpl<DeviceType::kCPU>(uint64_t seed, int device_index) {
   return std::shared_ptr<GeneratorImpl>(new CPUGeneratorImpl(seed));
 }
 
 #ifdef WITH_CUDA
+int GetCudaDeviceCount() {
+  /*static*/ int cuda_device_count;
+  OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
+  return cuda_device_count;
+}
+
 template<>
-Maybe<GeneratorImpl> AutoGeneratorImpl::MakeGeneratorImpl<DeviceType::kGPU>(uint64_t seed) {
-  return std::shared_ptr<GeneratorImpl>(new CUDAGeneratorImpl(seed));
+DeviceKey GetCurrentDeviceKey<DeviceType::kGPU>() {
+  int device_index = -1;
+  OF_CUDA_CHECK(cudaGetDevice(&device_index));
+  return DeviceKey{DeviceType::kGPU, device_index};
+}
+
+template<>
+Maybe<GeneratorImpl> MakeGeneratorImpl<DeviceType::kGPU>(uint64_t seed, int device_index) {
+  CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
+      << "Invalid device index " << device_index;
+  return std::shared_ptr<GeneratorImpl>(new CUDAGeneratorImpl(seed, device_index));
 }
 #endif  // WITH_CUDA
+
+}  // namespace detail
 
 }  // namespace one
 }  // namespace oneflow

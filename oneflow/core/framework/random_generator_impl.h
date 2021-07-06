@@ -30,27 +30,53 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+class GeneratorImpl;
+
+namespace detail {
+
+template<DeviceType device_type>
+Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, int device_index);
+
+struct DeviceKey {
+  DeviceType device_type;
+  int device_index;
+};
+
+bool operator==(const DeviceKey& k1, const DeviceKey& k2);
+
+struct DeviceKeyHash {
+  size_t operator()(const DeviceKey& key) const;
+};
+
+template<DeviceType device_type>
+DeviceKey GetCurrentDeviceKey();
+
+}  // namespace detail
+
 class GeneratorImpl {
  public:
   GeneratorImpl() = default;
-  explicit GeneratorImpl(const uint64_t& seed, const DeviceType& device_type)
-      : seed_(seed), device_type_(device_type) {}
+  explicit GeneratorImpl(const uint64_t& seed, const detail::DeviceKey& device_key)
+      : seed_(seed), device_key_(device_key) {}
 
   virtual ~GeneratorImpl() = default;
 
   virtual void set_current_seed(uint64_t seed) = 0;
   uint64_t current_seed() const { return seed_; }
 
-  const DeviceType& device_type() const { return device_type_; }
+  int device_index() const { return device_key_.device_index; }
+  const DeviceType& device_type() const { return device_key_.device_type; }
+  const detail::DeviceKey& device_key() const { return device_key_; }
 
  protected:
   uint64_t seed_;
-  DeviceType device_type_;
+  detail::DeviceKey device_key_;
 };
 
 class CPUGeneratorImpl : public GeneratorImpl {
  public:
-  explicit CPUGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, DeviceType::kCPU), engine_(seed) {}
+  explicit CPUGeneratorImpl(uint64_t seed)
+      : GeneratorImpl(seed, detail::DeviceKey{DeviceType::kCPU, 0}), engine_(seed) {}
 
   virtual ~CPUGeneratorImpl() = default;
 
@@ -69,7 +95,7 @@ class CPUGeneratorImpl : public GeneratorImpl {
 #ifdef WITH_CUDA
 class CUDAGeneratorImpl : public GeneratorImpl {
  public:
-  explicit CUDAGeneratorImpl(uint64_t seed);
+  explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
   virtual ~CUDAGeneratorImpl();
 
   int32_t max_block_num() const { return max_block_num_; }
@@ -85,8 +111,13 @@ class CUDAGeneratorImpl : public GeneratorImpl {
   curandState* curand_states_;
 };
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num,
-                      curandState* curand_states);
+namespace detail {
+
+int GetCudaDeviceCount();
+
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+
+}  // namespace detail
 #endif  // WITH_CUDA
 
 class AutoGeneratorImpl {
@@ -95,9 +126,8 @@ class AutoGeneratorImpl {
 
   AutoGeneratorImpl(const std::shared_ptr<GeneratorImpl>& impl)
       : seed_(impl->current_seed()), enable_auto_create_(false) {
-    generators_.emplace(impl->device_type(), impl);
+    generators_.emplace(impl->device_key(), impl);
   }
-
   virtual ~AutoGeneratorImpl() = default;
 
   uint64_t current_seed() const { return seed_; }
@@ -108,27 +138,34 @@ class AutoGeneratorImpl {
   }
 
   template<DeviceType device_type>
-  Maybe<GeneratorImpl> GetOrCreateDeviceGenerator() {
+  Maybe<GeneratorImpl> GetOrCreateDeviceGenerator(int device_index) {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
+    detail::DeviceKey device_key;
+    if (device_index == -1) {
+      device_key = detail::GetCurrentDeviceKey<device_type>();
+    } else {
+      device_key = detail::DeviceKey{device_type, device_index};
+    }
     std::lock_guard<std::mutex> lock(mutex_);
-
-    auto it = generators_.find(device_type);
+    auto it = generators_.find(device_key);
     if (it == generators_.end()) {
       CHECK_OR_RETURN(enable_auto_create_)
           << "There is no generator for device " << device_type << ".";
-      it = generators_.emplace(device_type, JUST(MakeGeneratorImpl<device_type>(seed_))).first;
+      it =
+          generators_
+              .emplace(device_key,
+                       JUST(detail::MakeGeneratorImpl<device_type>(seed_, device_key.device_index)))
+              .first;
     }
     return it->second;
   }
-
-  template<DeviceType device_type>
-  Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed);
 
  private:
   mutable std::mutex mutex_;
   uint64_t seed_;
   bool enable_auto_create_;
-  std::unordered_map<int, std::shared_ptr<GeneratorImpl>> generators_;
+  std::unordered_map<detail::DeviceKey, std::shared_ptr<GeneratorImpl>, detail::DeviceKeyHash>
+      generators_;
 };
 
 }  // namespace one

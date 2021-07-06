@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/common/str_util.h"
 
 namespace py = pybind11;
 
@@ -26,18 +26,9 @@ namespace {
 
 struct DeviceExportUtil final {
   static Symbol<Device> MakeDevice(const std::string& type_and_id) {
-    std::string::size_type pos = type_and_id.find(':');
-    if (pos == std::string::npos) { pos = type_and_id.size(); }
-    std::string type = type_and_id.substr(0, pos);
-    int device_id = 0;
-    if (pos < type_and_id.size()) {
-      std::string id = type_and_id.substr(pos + 1);
-      if (!IsStrInt(id)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
-      device_id = std::stoi(id);
-      if (type == "cpu" && device_id != 0) {
-        throw std::runtime_error("CPU device index must be 0");
-      }
-    }
+    std::string type;
+    int device_id = -1;
+    ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
     return MakeDevice(type, device_id);
   }
 
