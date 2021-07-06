@@ -18,6 +18,7 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -77,9 +78,9 @@ struct PlacementSymbolExportUtil {
     return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
-  static Maybe<ParallelDesc> CreatePlacementSymbol(const std::string& device_type,
-                                                   const py::dict& machine_device_ids,
-                                                   const std::shared_ptr<Shape>& hierarchy) {
+  static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
+      const std::string& device_type, const py::dict& machine_device_ids,
+      const std::shared_ptr<Shape>& hierarchy) {
     static const HashMap<std::string, std::string> type2device_tag{
         {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
     CHECK_OR_RETURN(type2device_tag.find(device_type) != type2device_tag.end())
@@ -106,26 +107,33 @@ struct PlacementSymbolExportUtil {
         }
       }
     }
-    return CreatePlacementSymbol(device_tag, formated_machine_device_ids, hierarchy);
+    const auto parallel_conf =
+        MakeParallelConf(device_tag, formated_machine_device_ids, hierarchy).GetPtrOrThrow();
+    std::shared_ptr<ParallelDesc> parallel_desc;
+    JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+      return Maybe<void>::Ok();
+    }));
+    return SymbolOf(*parallel_desc);
   }
 
-  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
-      const std::string& device_type, const py::dict& machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
-    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetPtrOrThrow();
+  static Symbol<ParallelDesc> ApiCreatePlacementSymbol(const std::string& device_type,
+                                                       const py::dict& machine_device_ids,
+                                                       const std::shared_ptr<Shape>& hierarchy) {
+    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetOrThrow();
   }
 
-  static Maybe<ParallelDesc> CreatePlacementSymbol(const std::string& device_tag,
-                                                   const py::dict& machine_device_ids,
-                                                   const py::tuple& hierarchy) {
+  static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(const std::string& device_tag,
+                                                           const py::dict& machine_device_ids,
+                                                           const py::tuple& hierarchy) {
     std::shared_ptr<Shape> shape = CHECK_JUST(MakeShape(hierarchy));
     return CreatePlacementSymbol(device_tag, machine_device_ids, shape);
   }
 
-  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(const std::string& device_type,
-                                                                const py::dict& machine_device_ids,
-                                                                const py::tuple& hierarchy) {
-    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetPtrOrThrow();
+  static Symbol<ParallelDesc> ApiCreatePlacementSymbol(const std::string& device_type,
+                                                       const py::dict& machine_device_ids,
+                                                       const py::tuple& hierarchy) {
+    return CreatePlacementSymbol(device_type, machine_device_ids, hierarchy).GetOrThrow();
   }
 
   static HashMap<int64_t, std::vector<int64_t>> MachineId2DeviceIdList(const ParallelDesc& x) {
@@ -138,34 +146,69 @@ struct PlacementSymbolExportUtil {
     }
     return map_without_shared_ptr;
   }
-};
 
-std::shared_ptr<ParallelDesc> AllDevicePlacement(const std::string& device_type) {
-  CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
-  static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
-  CHECK(type2device_tag.find(device_type) != type2device_tag.end())
-      << "Invalid device_type: " << device_type
-      << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
-  std::string device_tag = type2device_tag.at(device_type);
-  int64_t world_size = GlobalProcessCtx::WorldSize();
-  int64_t device_num = 0;
-  {
-    if (device_tag == "gpu") {
-      device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-    } else {
-      device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+  static Symbol<ParallelDesc> AllDevicePlacement(const std::string& device_type) {
+    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+    static const HashMap<std::string, std::string> type2device_tag{
+        {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
+    CHECK(type2device_tag.find(device_type) != type2device_tag.end())
+        << "Invalid device_type: " << device_type
+        << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
+    std::string device_tag = type2device_tag.at(device_type);
+    int64_t world_size = GlobalProcessCtx::WorldSize();
+    int64_t device_num = 0;
+    {
+      if (device_tag == "gpu") {
+        device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
+      } else {
+        device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+      }
     }
+    std::vector<std::string> machine_device_ids;
+    for (int64_t rank = 0; rank < world_size; ++rank) {
+      std::string device_name = std::to_string(rank) + ":0-" + std::to_string(device_num - 1);
+      machine_device_ids.emplace_back(device_name);
+    }
+    return SymbolOf(*PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+        device_tag, machine_device_ids, std::shared_ptr<Shape>()));
   }
-  std::vector<std::string> machine_device_ids;
-  for (int64_t rank = 0; rank < world_size; ++rank) {
-    std::string device_name = std::to_string(rank) + ":0-" + std::to_string(device_num - 1);
-    machine_device_ids.emplace_back(device_name);
-  }
-  return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
-                                                             std::shared_ptr<Shape>());
-}
 
+  static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
+    std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+    std::string machine_device_ids = "{";
+    std::string device_name;
+    int64_t machine_idx = 0;
+    for (int64_t machine_id : placement->sorted_machine_ids()) {
+      std::string device_name = std::to_string(machine_id) + " : [";
+      int64_t device_idx = 0;
+      for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
+        device_name += std::to_string(device_id);
+        if (++device_idx != placement->sorted_dev_phy_ids(machine_id).size()) {
+          device_name += ", ";
+        }
+      }
+      device_name += "]";
+      if (++machine_idx != placement->sorted_machine_ids().size()) { device_name += ", "; }
+      machine_device_ids += device_name;
+    }
+    machine_device_ids += "}";
+    std::string hierarchy = "(";
+    int32_t hierarchy_dim_idx = 0;
+    for (int64_t dim : placement->hierarchy()->dim_vec()) {
+      hierarchy += std::to_string(dim);
+      if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
+        hierarchy += ", ";
+      } else if (placement->hierarchy()->dim_vec().size() == 1) {
+        hierarchy += ",";
+      }
+    }
+    hierarchy += ")";
+    std::string placement_str = "oneflow.placement(device_type=" + device_type
+                                + ", machine_device_ids=" + machine_device_ids
+                                + ", hierarchy=" + hierarchy + ")";
+    return placement_str;
+  }
+};
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -185,18 +228,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
                                                                    hierarchy);
       }))
-      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
-                       const std::shared_ptr<Shape>& hierarchy) {
-        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_type, machine_device_ids,
-                                                                   hierarchy);
-      }))
-      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
-                       const py::tuple& hierarchy) {
-             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
-                 device_type, machine_device_ids, hierarchy);
-           }),
-           py::arg("device_type"), py::arg("machine_device_ids"),
-           py::arg("hierarchy") = py::tuple())
       .def_property_readonly("symbol_id",
                              [](const ParallelDesc& x) { return x.symbol_id().GetOrThrow(); })
       .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
@@ -208,7 +239,24 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
-  m.def("AllDevicePlacement", &AllDevicePlacement);
+
+  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement")
+      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
+                       const std::shared_ptr<Shape>& hierarchy) {
+             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+                 device_type, machine_device_ids, hierarchy);
+           }),
+           py::arg("device_type"), py::arg("machine_device_ids"), py::arg("hierarchy"))
+      .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
+                       const py::tuple& hierarchy) {
+             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+                 device_type, machine_device_ids, hierarchy);
+           }),
+           py::arg("device_type"), py::arg("machine_device_ids"),
+           py::arg("hierarchy") = py::tuple())
+      .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
+      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
+  m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
 }
 
 }  // namespace oneflow
