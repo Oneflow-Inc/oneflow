@@ -115,7 +115,6 @@ def chunk_op(input, chunks, dim):
 if __name__ == "__main__":
     import doctest
 
-<<<<<<< HEAD
 
     doctest.testmod(raise_on_error=False)
                         
@@ -142,6 +141,3 @@ if __name__ == "__main__":
 
 
         
-=======
-    doctest.testmod(raise_on_error=False)
->>>>>>> a4a8131c37a8846411ed61d11b33fd2c01049e97
