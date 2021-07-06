@@ -173,6 +173,23 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return sbp_str;
 }
 
+bool ParseParallelDistributionFromStringVec(const std::vector<std::string>& sbp_str_vec,
+                                            cfg::ParallelDistribution* parallel_distribution) {
+  parallel_distribution->clear_sbp_parallel();
+  for (int64_t i = 0; i < sbp_str_vec.size(); ++i) {
+    ParseSbpParallelFromString(sbp_str_vec.at(i), parallel_distribution->add_sbp_parallel());
+  }
+}
+
+std::vector<std::string> ParallelDistributionToStringVec(
+    const cfg::ParallelDistribution& parallel_distribution) {
+  std::vector<std::string> sbp_str_vec;
+  for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+    sbp_str_vec.push_back(SbpParallelToString(parallel_distribution.sbp_parallel(i)));
+  }
+  return sbp_str_vec;
+}
+
 void SbpSignatureToParallelDistributionSignature(
     const cfg::SbpSignature& sbp_signature,
     cfg::ParallelDistributionSignature* parallel_distribution_signature) {

@@ -21,6 +21,8 @@ namespace oneflow {
 REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
     .Input("in")
     .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -30,35 +32,33 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-          CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
-
-          // out dim0 use hint
-          *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(0);
-          // out dim1 = broadcast
-          out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-
-          return Maybe<void>::Ok();
-        });
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
     .Input("in")
     .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -68,35 +68,35 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-          CHECK_OR_RETURN(in_dis_hint.sbp_parallel(0).has_partial_sum_parallel());
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(0).has_partial_sum_parallel());
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
 
-          // out dim0 = broadcast
-          out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-          // out dim1 use hint
-          *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(1);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
 
-          return Maybe<void>::Ok();
-        });
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
     .Input("in")
     .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -106,37 +106,37 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-          // (*, S(0)) -> (*, B)
-          CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), 0);
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      // (*, S(0)) -> (*, B)
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
+      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), 0);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
 
-          // out dim0 use hint
-          *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(0);
-          // out dim1 = broadcast
-          out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
 
-          return Maybe<void>::Ok();
-        });
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
     .Input("in")
     .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
     .Attr<int64_t>("in_dim1_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
@@ -147,39 +147,39 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-          // (*, S(1)) -> (*, B)
-          const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
-          CHECK_GE_OR_RETURN(in_split_axis, 1);
-          CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      // (*, S(1)) -> (*, B)
+      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
+      CHECK_GE_OR_RETURN(in_split_axis, 1);
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
+      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
 
-          // out dim0 use hint
-          *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(0);
-          // out dim1 = broadcast
-          out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
 
-          return Maybe<void>::Ok();
-        });
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all2all")
     .Input("in")
     .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
     .Attr<int64_t>("in_dim1_split_axis", -1)
     .Attr<int64_t>("out_dim1_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -191,34 +191,70 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all2all")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-          // (*, S(in_dim1_split_axis)) -> (*, S(out_dim1_split_axis))
-          const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
-          const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_dim1_split_axis");
-          CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      // (*, S(in_dim1_split_axis)) -> (*, S(out_dim1_split_axis))
+      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
+      const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_dim1_split_axis");
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
+      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
 
-          // out dim0 use hint
-          *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(0);
-          // out dim1 = Split(out_split_axis)
-          out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
+      return Maybe<void>::Ok();
+    });
 
-          return Maybe<void>::Ok();
-        });
+REGISTER_USER_OP("_nccl_logical_2D_same_dim0_reduce_scatter")
+    .Input("in")
+    .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const cfg::ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      // (*, P) -> (*, S0)
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
+
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

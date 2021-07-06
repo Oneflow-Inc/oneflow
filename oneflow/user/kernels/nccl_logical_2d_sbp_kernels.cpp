@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -33,7 +34,22 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
         has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
         stream_index_(ctx->op_conf().stream_index_hint()),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    cfg::ParallelDistribution src_parallel_distribution;
+    cfg::ParallelDistribution dst_parallel_distribution;
+    ParallelDesc src_parallel_desc = ctx->parallel_desc();
+    ParallelDesc dst_parallel_desc = ctx->parallel_desc();
+    cfg::ParallelDistribution in_distribution;
+    cfg::ParallelDistribution out_distribution;
+    ParseParallelDistributionFromStringVec(ctx->Attr<std::vector<std::string>>("in_distribution"),
+                                           &in_distribution);
+    ParseParallelDistributionFromStringVec(ctx->Attr<std::vector<std::string>>("out_distribution"),
+                                           &out_distribution);
+    InOutParallelDimReduce(ctx->parallel_desc(), ctx->parallel_desc(), in_distribution,
+                           out_distribution, &src_parallel_desc, &dst_parallel_desc,
+                           &src_parallel_distribution, &dst_parallel_distribution);
+    parallel_desc_ = src_parallel_desc;
+  }
   ~NcclLogical2DSameDim0KernelCommState() = default;
 
   ncclComm_t comm() {
@@ -130,6 +146,32 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
                                 ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+class NcclLogical2DSameDim0ReduceScatter final : public user_op::OpKernel {
+ public:
+  NcclLogical2DSameDim0ReduceScatter() = default;
+  ~NcclLogical2DSameDim0ReduceScatter() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->data_type(), out->data_type());
+    const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
+    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -342,7 +384,22 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
   NcclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    cfg::ParallelDistribution src_parallel_distribution;
+    cfg::ParallelDistribution dst_parallel_distribution;
+    ParallelDesc src_parallel_desc = ctx->parallel_desc();
+    ParallelDesc dst_parallel_desc = ctx->parallel_desc();
+    cfg::ParallelDistribution in_distribution;
+    cfg::ParallelDistribution out_distribution;
+    ParseParallelDistributionFromStringVec(ctx->Attr<std::vector<std::string>>("in_distribution"),
+                                           &in_distribution);
+    ParseParallelDistributionFromStringVec(ctx->Attr<std::vector<std::string>>("out_distribution"),
+                                           &out_distribution);
+    InOutParallelDimReduce(ctx->parallel_desc(), ctx->parallel_desc(), in_distribution,
+                           out_distribution, &src_parallel_desc, &dst_parallel_desc,
+                           &src_parallel_distribution, &dst_parallel_distribution);
+    parallel_desc_ = src_parallel_desc;
+  }
   ~NcclLogical2DSameDim1KernelCommState() = default;
 
   ncclComm_t comm() {
@@ -408,6 +465,10 @@ REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
     .SetCreateFn<NcclLogical2DSameDim0AllGather>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_reduce_scatter")
+    .SetCreateFn<NcclLogical2DSameDim0ReduceScatter>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 #define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                     \

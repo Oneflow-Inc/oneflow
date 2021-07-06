@@ -238,6 +238,8 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
 bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
                                        const cfg::ParallelDistribution& src_parallel_distribution,
                                        const cfg::ParallelDistribution& dst_parallel_distribution,
+                                       const cfg::ParallelDistribution& in_parallel_distribution,
+                                       const cfg::ParallelDistribution& out_parallel_distribution,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
@@ -246,6 +248,10 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
   CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
   const cfg::SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
   const cfg::SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
+  std::vector<std::string> src_sbp_str_vec =
+      ParallelDistributionToStringVec(in_parallel_distribution);
+  std::vector<std::string> dst_sbp_str_vec =
+      ParallelDistributionToStringVec(out_parallel_distribution);
 
   // split when dim0 sbp is split parallel
   DimVector dim_vec = logical_blob_desc.shape().dim_vec();
@@ -262,6 +268,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim0_all_reduce")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -275,6 +283,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim0_all_gather")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -288,6 +298,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build()
@@ -303,8 +315,25 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim0_all2all")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
             .Attr<int64_t>("out_dim1_split_axis", dst_dim1_sbp.split_parallel().axis())
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  } else if ((dim_vec.at(0) % num_ranks == 0)
+             && (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_split_parallel())
+             && (dst_dim1_sbp.split_parallel().axis() == 0)) {
+    // (*, P) -> (*, S0) : ReduceScatter
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S0)2(*B)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_reduce_scatter")
+            .Input("in", lbn)
+            .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -316,6 +345,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
 bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
                                        const cfg::ParallelDistribution& src_parallel_distribution,
                                        const cfg::ParallelDistribution& dst_parallel_distribution,
+                                       const cfg::ParallelDistribution& in_parallel_distribution,
+                                       const cfg::ParallelDistribution& out_parallel_distribution,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
@@ -324,6 +355,11 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
   CHECK(src_parallel_distribution.sbp_parallel(1) == dst_parallel_distribution.sbp_parallel(1));
   const cfg::SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(0);
   const cfg::SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(0);
+  std::vector<std::string> src_sbp_str_vec =
+      ParallelDistributionToStringVec(in_parallel_distribution);
+  std::vector<std::string> dst_sbp_str_vec =
+      ParallelDistributionToStringVec(out_parallel_distribution);
+
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
     // (P, *) -> (B, *) : AllReduce
     *ret =
@@ -331,6 +367,8 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim1_all_reduce")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -419,6 +457,65 @@ bool TryBuildNcclBy3DHierarchyChangeDim2(OperatorConf* ret,
             .Build()
             .op_conf();
     return true;
+  } else if (src_dim2_sbp.has_split_parallel() && dst_dim2_sbp.has_broadcast_parallel()
+             && (src_dim2_sbp.split_parallel().axis() == 0)) {
+    // S(0)->B : AllGather
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim2_all_gather")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if ((src_dim2_sbp.has_split_parallel() && dst_dim2_sbp.has_broadcast_parallel())
+             && (src_dim2_sbp.split_parallel().axis() > 0)) {
+    // S(1)->B : AllGather Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim2_all_gather_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("in_dim2_split_axis", src_dim2_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if (src_dim2_sbp.has_partial_sum_parallel() && dst_dim2_sbp.has_split_parallel()
+             && (dst_dim2_sbp.split_parallel().axis() == 0)) {
+    // P->S(0) : ReduceScatter
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim2_reduce_scatter")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if (src_dim2_sbp.has_partial_sum_parallel() && dst_dim2_sbp.has_split_parallel()
+             && (dst_dim2_sbp.split_parallel().axis() > 0)) {
+    // P->S(0) : ReduceScatter Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim2_reduce_scatter_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("out_dim2_split_axis", dst_dim2_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if ((src_dim2_sbp.has_split_parallel() && dst_dim2_sbp.has_split_parallel())
+             && (src_dim2_sbp.split_parallel().axis() != dst_dim2_sbp.split_parallel().axis())) {
+    // S(in)->S(out) : All2All
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
+               .Op("_nccl_logical_s2s")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("in_dim2_split_axis", src_dim2_sbp.split_parallel().axis())
+               .Attr<int64_t>("out_dim2_split_axis", dst_dim2_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   }
   return false;
 }
@@ -462,16 +559,18 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                      scope_symbol_id, logical_blob_desc, parallel_num);
   } else if (src_hierarchy->NumAxes() == 2 && (*src_hierarchy == *dst_hierarchy)) {
     if (src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0)) {
-      return TryBuildNcclBy2DHierarchySameDim0(ret, src_parallel_distribution,
-                                               dst_parallel_distribution, src_hierarchy, lbn,
-                                               scope_symbol_id, logical_blob_desc);
+      return TryBuildNcclBy2DHierarchySameDim0(
+          ret, src_parallel_distribution, dst_parallel_distribution,
+          src_node->ParallelDistribution4Lbi(lbi), dst_node->ParallelDistribution4Lbi(lbi),
+          src_hierarchy, lbn, scope_symbol_id, logical_blob_desc);
     } else if (src_parallel_distribution.sbp_parallel(1)
                == dst_parallel_distribution.sbp_parallel(1)) {
       if (!(ParallelDistributionAllSameSplitParallel(src_parallel_distribution)
             || ParallelDistributionAllSameSplitParallel(dst_parallel_distribution))) {
-        return TryBuildNcclBy2DHierarchySameDim1(ret, src_parallel_distribution,
-                                                 dst_parallel_distribution, src_hierarchy, lbn,
-                                                 scope_symbol_id, logical_blob_desc);
+        return TryBuildNcclBy2DHierarchySameDim1(
+            ret, src_parallel_distribution, dst_parallel_distribution,
+            src_node->ParallelDistribution4Lbi(lbi), dst_node->ParallelDistribution4Lbi(lbi),
+            src_hierarchy, lbn, scope_symbol_id, logical_blob_desc);
       }
     }
   } else if (src_hierarchy->NumAxes() == 3 && (*src_hierarchy == *dst_hierarchy)) {
