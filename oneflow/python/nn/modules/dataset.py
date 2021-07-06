@@ -537,3 +537,22 @@ class COCOReader(Module):
     def forward(self):
         res = self._op()
         return res
+
+
+@oneflow_export("nn.image.batch_align")
+@experimental_api
+class ImageBatchAlign(Module):
+    def __init__(self, shape: Sequence[int], dtype: flow.dtype, alignment: int):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_batch_align")
+            .Input("in")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("data_type", dtype)
+            .Attr("alignment", alignment)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
