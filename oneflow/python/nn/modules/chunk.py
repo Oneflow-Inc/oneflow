@@ -20,6 +20,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
+from oneflow.python.ops.array_ops import check_slice_tup_list
 
 
 class Chunk(Module):
@@ -49,7 +50,7 @@ class Chunk(Module):
                     start = chunk * chunk_size if chunk < chunks - 1 else chunk_size * (chunks - 1)
                     stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
                 step = 1
-                chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), step])
+                chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), int(step)])
 
             for k, v in chunk_dim_dict.items():
                 for v_chunk in v:
@@ -59,10 +60,8 @@ class Chunk(Module):
                             tup_list.append([None, None, None])
                         else:
                             tup_list.append(v_chunk)
-                    splits.append(
-                        flow.experimental.slice(input, slice_tup_list=tup_list)
-                    )
-
+                    start_tup, stop_tup, step_tup = check_slice_tup_list(tup_list, input.shape)
+                    splits.append(flow.F.slice(input, start=start_tup, stop=stop_tup, step=step_tup))
             return splits
 
 
@@ -90,6 +89,7 @@ def chunk_op(input, chunks, dim):
        
         >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
+        >>> of_out = []
         >>> of_out = flow.chunk(input, chunks=3, dim=2)
         >>> chunks = 3
         >>> of_out_shape = []
@@ -100,6 +100,7 @@ def chunk_op(input, chunks, dim):
 
         >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
+        >>> of_out = []
         >>> of_out = flow.chunk(input, chunks=4, dim=3)
         >>> chunks = 4
         >>> of_out_shape = []
