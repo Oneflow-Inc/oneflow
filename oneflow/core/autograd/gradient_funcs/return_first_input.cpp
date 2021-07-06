@@ -44,7 +44,7 @@ class ReturnFirstInput : public OpExprGradFunction<ReturnFirstInputExprInterpSta
     for (int i = 1; i < ctx->inputs.size(); i++) {
       const auto& tensor = ctx->inputs.at(i);
       std::shared_ptr<OpExpr> grad_op = JUST(op_expr_helper::ZeroLikeOp());
-      in_grads->at(i) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {tensor}, {}));
+      in_grads->at(i) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {tensor}, AttrMap{}));
     }
     return Maybe<void>::Ok();
   }
