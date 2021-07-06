@@ -1,5 +1,6 @@
 #include <bits/stdint-intn.h>
 #include <bits/stdint-uintn.h>
+#include <cstddef>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -8,6 +9,7 @@
 #include <future>
 
 #include "jni.h"
+#include "jni_md.h"
 #include "oneflow/api/java/library.h"
 #include "oneflow/api/python/framework/framework.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
@@ -279,11 +281,17 @@ void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobj
 }
 
 JNIEXPORT
-jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {
+jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {
   std::promise<unsigned char*> prom;
   std::future<unsigned char*> fut = prom.get_future();
   std::promise<uint64_t> len_prom;
   std::future<uint64_t> len_fut = len_prom.get_future();
+  std::promise<long*> shape_prom;
+  std::future<long*> shape_fut = shape_prom.get_future();
+  std::promise<size_t> axes_prom;
+  std::future<size_t> axes_fut = axes_prom.get_future();
+  std::promise<int> dtype_prom;
+  std::future<int> dtype_fut = dtype_prom.get_future();
 
   auto return_17 = [&](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
@@ -312,9 +320,11 @@ jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, job
       of_blob->AutoMemCopyTo((int*) data, element_number / 4);
     }
 
-    delete []shape;
     prom.set_value(data);
     len_prom.set_value(element_number);
+    shape_prom.set_value(shape);
+    dtype_prom.set_value(of_blob->data_type());
+    axes_prom.set_value(axes);
   };
 
   std::string job_name_ = convert_jstring_to_string(env, job_name);
@@ -327,10 +337,31 @@ jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, job
 
   unsigned char* data = fut.get();
   uint64_t len = len_fut.get();
+  long* shape = shape_fut.get();
+  int dtype = dtype_fut.get();
+  size_t axes = axes_fut.get();
+
   jbyteArray array = (*env).NewByteArray(len);
   (*env).SetByteArrayRegion(array, 0, len, reinterpret_cast<jbyte*>(data));
+  jlongArray shapeArray = (*env).NewLongArray(axes);
+  (*env).SetLongArrayRegion(shapeArray, 0, axes, shape);
+
+  // call nativeNewTensor
+  jclass tensorClass = (*env).FindClass("org/oneflow/Tensor");
+  if (tensorClass == nullptr) {
+    std::cout << "class not found" << std::endl;
+  }
+
+  jmethodID mid = (*env).GetStaticMethodID(tensorClass, "nativeNewTensor", "([B[JI)Lorg/oneflow/Tensor;");
+  if (mid == nullptr) {
+    std::cout << "method not found" << std::endl;
+  }
+
+  jobject tensor = (*env).CallStaticObjectMethod(tensorClass, mid, array, shapeArray, dtype);
+
   delete []data;
-  return array;
+  delete []shape;
+  return tensor;
 }
 
 JNIEXPORT
