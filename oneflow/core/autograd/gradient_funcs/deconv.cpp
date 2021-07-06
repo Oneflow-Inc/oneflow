@@ -98,8 +98,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdInterpState* ctx,
   if (ctx->weight_requires_grad) {
     int idx = ctx->activation_requires_grad;
     const auto& x = ctx->SavedTensors().at(idx);
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}, /*attrs=*/{}));
+    in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}));
   }
   return Maybe<void>::Ok();
 }

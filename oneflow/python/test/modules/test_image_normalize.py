@@ -18,19 +18,22 @@ import cv2
 import numpy as np
 import oneflow.experimental as flow
 
+
 def _of_image_normalize(images, image_static_shape, std, mean):
     image_zeros = np.zeros(tuple(image_static_shape))
     for idx, image in enumerate(images):
         image_zeros[idx, : image.shape[1], : image.shape[2], : image.shape[3]] = image
 
-    image_tensors = flow.Tensor(image_zeros, dtype=flow.float, device=flow.device("cpu"))
+    image_tensors = flow.Tensor(
+        image_zeros, dtype=flow.float, device=flow.device("cpu")
+    )
     image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
     image_normalizer = flow.nn.image.normalize(std, mean)
-    normalized_images = image_normalizer(image_tensor_buffer)
-    return normalized_images.numpy()
+    norm_images = image_normalizer(image_tensor_buffer)
+    return norm_images.numpy()
+
 
 def _read_images_by_cv(image_files):
-
     images = [cv2.imread(image_file).astype(np.single) for image_file in image_files]
     return [np.expand_dims(image, axis=0) for image in images]
 
@@ -60,11 +63,17 @@ def _compare_image_normalize(test_case, image_files, std, mean):
     mean_array = np.array(mean).reshape(1, 1, 1, -1)
 
     for image, norm_image in zip(images, norm_images):
-        exp_norm_image = np.squeeze((image - mean_array) / std_array, axis=0)
-        norm_image = norm_image[: exp_norm_image.shape[0], : exp_norm_image.shape[1], : exp_norm_image.shape[2]]
+        np_norm_image = np.squeeze((image - mean_array) / std_array, axis=0)
+        norm_image = norm_image[
+            : np_norm_image.shape[0],
+            : np_norm_image.shape[1],
+            : np_norm_image.shape[2],
+        ]
 
-        test_case.assertTrue(np.allclose(exp_norm_image, norm_image))
+        test_case.assertTrue(np.allclose(np_norm_image, norm_image))
 
+
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

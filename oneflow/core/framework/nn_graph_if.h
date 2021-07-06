@@ -13,20 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
-#include "oneflow/core/job/job_instance.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+#define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+
+#include <string>
+#include <vector>
 
 namespace oneflow {
 
-RuntimeBufferManagersScope::RuntimeBufferManagersScope() {
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
-}
+class NNGraphIf {
+ public:
+  virtual ~NNGraphIf() = default;
 
-RuntimeBufferManagersScope::~RuntimeBufferManagersScope() {
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
-}
+  virtual const std::string& job_name() const = 0;
+  virtual const std::vector<std::string>& inputs_op_names() const = 0;
+  virtual const std::vector<std::string>& outputs_op_names() const = 0;
+
+ protected:
+  NNGraphIf() = default;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
