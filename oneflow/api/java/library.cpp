@@ -279,7 +279,7 @@ void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobj
 }
 
 JNIEXPORT
-jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj) {
+jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {
   std::promise<unsigned char*> prom;
   std::future<unsigned char*> fut = prom.get_future();
   std::promise<uint64_t> len_prom;
@@ -316,8 +316,12 @@ jbyteArray JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, job
     prom.set_value(data);
     len_prom.set_value(element_number);
   };
+
+  std::string job_name_ = convert_jstring_to_string(env, job_name);
+  std::string op_name_ = convert_jstring_to_string(env, op_name);
+
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_return_17(
-    new oneflow::JavaForeignJobInstance("System-Pull-Return_17", "", "Return_17", nullptr, return_17, nullptr)
+    new oneflow::JavaForeignJobInstance(job_name_, "", op_name_, nullptr, return_17, nullptr)
   );
   oneflow::LaunchJob(job_inst_return_17);
 
