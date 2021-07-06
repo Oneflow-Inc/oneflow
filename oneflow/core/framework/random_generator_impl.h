@@ -142,6 +142,7 @@ class AutoGeneratorImpl {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
     detail::DeviceKey device_key;
     if (device_index == -1) {
+      if (generators_.size() == 1) { return generators_.begin()->second; }
       device_key = detail::GetCurrentDeviceKey<device_type>();
     } else {
       device_key = detail::DeviceKey{device_type, device_index};

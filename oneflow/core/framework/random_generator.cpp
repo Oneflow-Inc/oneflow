@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/random_generator.h"
 
+#include <mutex>
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #endif  // WITH_CUDA
@@ -69,9 +69,21 @@ Maybe<Generator> GetDefaultCPUGenerator() {
 
 #ifdef WITH_CUDA
 Maybe<Generator> GetDefaultCUDAGenerator(int device_index) {
-  static auto default_cuda_generator = std::make_shared<Generator>(
-      JUST(JUST(GetDefaultAutoGenerator())->Get<DeviceType::kGPU>(device_index)));
-  return default_cuda_generator;
+  static std::vector<std::shared_ptr<Generator>> default_cuda_generator;
+  static std::once_flag init_flags;
+  static int device_count = 0;
+  std::call_once(init_flags, [&]() {
+    device_count = detail::GetCudaDeviceCount();
+    default_cuda_generator.resize(device_count);
+    for (int i = 0; i < device_count; ++i) {
+      default_cuda_generator[i] = std::make_shared<Generator>(
+          CHECK_JUST(CHECK_JUST(GetDefaultAutoGenerator())->Get<DeviceType::kGPU>(i)));
+    }
+  });
+  if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
+  CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
+      << "Invalid device index " << device_index;
+  return default_cuda_generator.at(device_index);
 }
 #endif  // WITH_CUDA
 
