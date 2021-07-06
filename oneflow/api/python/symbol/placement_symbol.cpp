@@ -187,11 +187,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
                        const std::shared_ptr<Shape>& hierarchy) {
-             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
-                 device_type, machine_device_ids, hierarchy);
-           }),
-           py::arg("device_type"), py::arg("machine_device_ids"),
-           py::arg("hierarchy") = std::shared_ptr<Shape>())
+        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_type, machine_device_ids,
+                                                                   hierarchy);
+      }))
       .def(py::init([](const std::string& device_type, const py::dict& machine_device_ids,
                        const py::tuple& hierarchy) {
              return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
