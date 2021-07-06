@@ -28,14 +28,10 @@ class Chunk(Module):
 
     def forward(self, input, chunks, dim):
         if dim is not None:
-            assert (
-                input.shape[dim] > 0
-            ), "chunk expects at least a 1-dimensional tensor"
+            assert input.shape[dim] > 0, "chunk expects at least a 1-dimensional tensor"
 
-            assert (
-                chunks > 0
-            ), "chunk expects `chunks` to be greater than 0"
-            
+            assert chunks > 0, "chunk expects `chunks` to be greater than 0"
+
             channel = input.dim()
             dim_size = input.shape[dim]
             chunk_size = dim_size / chunks if dim_size % chunks == 0 else (int)(dim_size / chunks)
@@ -63,8 +59,10 @@ class Chunk(Module):
                             tup_list.append([None, None, None])
                         else:
                             tup_list.append(v_chunk)
-                    splits.append(flow.experimental.slice(input, slice_tup_list=tup_list))
-    
+                    splits.append(
+                        flow.experimental.slice(input, slice_tup_list=tup_list)
+                    )
+
             return splits
 
 
@@ -113,9 +111,11 @@ def chunk_op(input, chunks, dim):
     """
     return Chunk()(input, chunks, dim)
 
+
 if __name__ == "__main__":
     import doctest
 
+<<<<<<< HEAD
 
     doctest.testmod(raise_on_error=False)
                         
@@ -142,3 +142,6 @@ if __name__ == "__main__":
 
 
         
+=======
+    doctest.testmod(raise_on_error=False)
+>>>>>>> a4a8131c37a8846411ed61d11b33fd2c01049e97
