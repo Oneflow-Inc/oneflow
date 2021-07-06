@@ -60,6 +60,16 @@ inline std::string GetForeignOutputBufferName(const std::string& job_name) {
   return prefix + job_name;
 }
 
+inline std::string GetInputBufferName(const std::string& job_name, const std::string& op_name) {
+  static const std::string prefix = "ForeignInput-";
+  return prefix + job_name + "-" + op_name;
+}
+
+inline std::string GetOutputBufferName(const std::string& job_name, const std::string& op_name) {
+  static const std::string prefix = "ForeignOutput-";
+  return prefix + job_name + "-" + op_name;
+}
+
 inline std::string GetSourceTickBufferName(const std::string& job_name) {
   static const std::string prefix = "SourceTick-";
   return prefix + job_name;

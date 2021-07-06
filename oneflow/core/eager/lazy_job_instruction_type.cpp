@@ -44,8 +44,6 @@ class LazyJobInstance : public JobInstance {
                   const std::function<void()> finish_cb)
       : job_name_(job_name), push_cbs_(push_cbs), pull_cbs_(pull_cbs), finish_cb_(finish_cb) {}
 
-  bool has_inputs() const { return !push_cbs_.empty(); }
-  bool has_outputs() const { return !pull_cbs_.empty(); }
   std::string job_name() const override { return job_name_; }
   void PushBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
     const auto& push_cb = CHECK_JUST(MapAt(push_cbs_, op_name));
@@ -96,11 +94,11 @@ class RunLazyJobInstructionType : public InstructionType {
       const auto& job_instance = MakeJobInstance(instruction);
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-      if (job_instance->has_inputs()) {
-        buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(job_instance);
+      for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
+        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
       }
-      if (job_instance->has_outputs()) {
-        buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(job_instance);
+      for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
+        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);

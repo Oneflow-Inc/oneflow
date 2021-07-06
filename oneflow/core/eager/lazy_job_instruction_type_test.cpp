@@ -97,8 +97,6 @@ TEST(RunLazyJobInstructionType, simple) {
       test_job_instance->Finish();
     }
   });
-  buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 128);
-  buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 128);
   InstructionMsgList list;
   vm::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(nullptr, &list, &eager_symbol_list);
