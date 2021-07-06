@@ -25,8 +25,9 @@ class NopKernel final : public user_op::OpKernel {
   ~NopKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     // do nothing
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -85,7 +85,7 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
   ~ImageTargetResizeKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* size_tensor = ctx->Tensor4ArgNameAndIndex("size", 0);
@@ -115,6 +115,7 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
                                / static_cast<float>(in_img_buf[i].shape().At(1));
       }
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

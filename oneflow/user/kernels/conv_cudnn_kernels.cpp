@@ -166,7 +166,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -191,6 +191,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
                                     conv_state->bias_desc->Get(), bias->dptr<T>(),
                                     CudnnSPOnePtr<T>(), args.ydesc.Get(), out->mut_dptr<T>()));
     }
+    return Maybe<void>::Ok();
   }
 };
 
@@ -229,7 +230,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -261,6 +262,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), alpha, args.wdesc.Get(), filter->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
+    return Maybe<void>::Ok();
   }
 };
 
@@ -300,7 +302,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
@@ -318,6 +320,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
+    return Maybe<void>::Ok();
   }
 };
 
@@ -375,7 +378,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     CHECK_EQ(bias_diff->shape().NumAxes(), 1);
@@ -391,6 +394,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
     OF_CUDNN_CHECK(cudnnConvolutionBackwardBias(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(), dy->dptr<T>(),
         CudnnSPZeroPtr<T>(), bias_grad_state->bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
+    return Maybe<void>::Ok();
   }
 };
 

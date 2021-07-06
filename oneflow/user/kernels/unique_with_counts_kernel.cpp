@@ -27,7 +27,7 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
   ~UniqueWithCountsKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* idx = ctx->Tensor4ArgNameAndIndex("idx", 0);
@@ -39,6 +39,7 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
     UniqueKernelUtil<device_type, T, K>::UniqueWithCounts(
         ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
         y->mut_dptr<T>(), idx->mut_dptr<K>(), count->mut_dptr<K>(), tmp_ptr, tmp_size);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

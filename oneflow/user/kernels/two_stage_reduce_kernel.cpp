@@ -45,13 +45,13 @@ struct CopyTensor<DeviceType::kGPU, T, U> {
 namespace user_op {
 
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class ReduceDeviceStageKernel final : public OpKernel {
+class ReduceDeviceStageKernel final : public user_op::OpKernel {
  public:
   ReduceDeviceStageKernel() = default;
   ~ReduceDeviceStageKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -79,6 +79,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
         ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
         XpuVarNdarray<int32_t>(mask->shape(), reduce_sum_tmp_buf));
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -109,13 +110,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_KERNEL, ("reduce_m
                                  FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T>
-class ReduceDeviceStageGradKernel final : public OpKernel {
+class ReduceDeviceStageGradKernel final : public user_op::OpKernel {
  public:
   ReduceDeviceStageGradKernel() = default;
   ~ReduceDeviceStageGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const user_op::Tensor* count = ctx->Tensor4ArgNameAndIndex("count", 0);
@@ -136,6 +137,7 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
     TwoStageReduceKernelUtil<device_type, T, int8_t>::Mask(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr,
         mask->dptr<int8_t>(), in_diff->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -167,13 +169,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_DEVICE_STAGE_GRAD_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ)
 
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class ReduceGlobalStageKernel final : public OpKernel {
+class ReduceGlobalStageKernel final : public user_op::OpKernel {
  public:
   ReduceGlobalStageKernel() = default;
   ~ReduceGlobalStageKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -189,6 +191,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
         ctx->device_ctx(), XpuVarNdarray<int8_t>(in->shape(), mask->mut_dptr<int8_t>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -211,13 +214,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_GLOBAL_STAGE_KERNEL, ("reduce_m
                                  FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T>
-class ReduceGlobalStageGradKernel final : public OpKernel {
+class ReduceGlobalStageGradKernel final : public user_op::OpKernel {
  public:
   ReduceGlobalStageGradKernel() = default;
   ~ReduceGlobalStageGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const user_op::Tensor* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     const user_op::Tensor* device_count = ctx->Tensor4ArgNameAndIndex("device_count", 0);
@@ -266,6 +269,7 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_divided_buf_ptr,
         device_count_with_mask, in_diff->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -221,7 +221,7 @@ class ImageFlipKernel final : public user_op::OpKernel {
   ~ImageFlipKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -236,6 +236,7 @@ class ImageFlipKernel final : public user_op::OpKernel {
       FlipCode flip_code = static_cast<FlipCode>(flip_code_tensor->dptr<int8_t>()[i]);
       if (flip_code != FlipCode::kNonFlip) { FlipImage(out_buffer, flip_code); }
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -246,7 +247,7 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
   ~ObjectBboxFlipKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* bbox_tensor = ctx->Tensor4ArgNameAndIndex("bbox", 0);
     const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
@@ -270,6 +271,7 @@ class ObjectBboxFlipKernel final : public user_op::OpKernel {
       SwitchFlipBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, image_width,
                       image_height, flip_code);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -280,7 +282,7 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
   ~ObjectBboxScaleKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* bbox_tensor = ctx->Tensor4ArgNameAndIndex("bbox", 0);
     const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -300,6 +302,7 @@ class ObjectBboxScaleKernel final : public user_op::OpKernel {
       float scale_h = scale_tensor->dptr<float>()[i * 2 + 1];
       SwitchScaleBoxes(SwitchCase(out_bbox_buffer->data_type()), out_bbox_buffer, scale_w, scale_h);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -310,7 +313,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
   ~ObjectSegmentationPolygonFlipKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* polygon_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
     const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
     const user_op::Tensor* flip_code_tensor = ctx->Tensor4ArgNameAndIndex("flip_code", 0);
@@ -334,6 +337,7 @@ class ObjectSegmentationPolygonFlipKernel final : public user_op::OpKernel {
       SwitchFlipPolygons(SwitchCase(out_polygons_buffer->data_type()), out_polygons_buffer,
                          image_width, image_height, flip_code);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -344,7 +348,7 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
   ~ObjectSegmentationPolygonScaleKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* poly_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
     const user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -365,6 +369,7 @@ class ObjectSegmentationPolygonScaleKernel final : public user_op::OpKernel {
       SwitchScalePolygons(SwitchCase(out_poly_buffer->data_type()), out_poly_buffer, scale_w,
                           scale_h);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -375,7 +380,7 @@ class ImageNormalize final : public user_op::OpKernel {
   ~ImageNormalize() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     int num_images = in_tensor->shape().elem_cnt();
@@ -391,6 +396,7 @@ class ImageNormalize final : public user_op::OpKernel {
       SwitchImageNormalizeByChannel(SwitchCase(out_buffer->data_type()), out_buffer, std_vec,
                                     mean_vec);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -401,7 +407,7 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
   ~ObjectSegmentationPolygonToMask() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* poly_tensor = ctx->Tensor4ArgNameAndIndex("poly", 0);
     const user_op::Tensor* poly_index_tensor = ctx->Tensor4ArgNameAndIndex("poly_index", 0);
     const user_op::Tensor* image_size_tensor = ctx->Tensor4ArgNameAndIndex("image_size", 0);
@@ -422,6 +428,7 @@ class ObjectSegmentationPolygonToMask final : public user_op::OpKernel {
       SwitchPolygonsToMask(SwitchCase(poly_buffer.data_type(), poly_index_buffer.data_type()),
                            poly_buffer, poly_index_buffer, mask_buffer, image_width, image_height);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

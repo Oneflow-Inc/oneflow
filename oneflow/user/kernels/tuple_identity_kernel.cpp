@@ -27,7 +27,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
   ~TupleIdentityKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const int64_t in_size = ctx->input_size("in");
     CHECK_EQ(ctx->output_size("out"), in_size);
     for (int64_t i = 0; i < in_size; ++i) {
@@ -40,6 +40,7 @@ class TupleIdentityKernel final : public user_op::OpKernel {
       Memcpy<device_type>(ctx->device_ctx(), out_i->mut_dptr(), in_i->dptr(),
                           shape.elem_cnt() * GetSizeOfDataType(data_type));
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

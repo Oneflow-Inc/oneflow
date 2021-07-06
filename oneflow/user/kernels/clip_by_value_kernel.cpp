@@ -71,7 +71,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
   ~ClipByScalarKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     double floating_min = ctx->Attr<double>("floating_min");
@@ -82,6 +82,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
                                      GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -93,7 +94,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
   ~ClipByScalarMinKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     double floating_min = ctx->Attr<double>("floating_min");
@@ -101,6 +102,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
     ClipByMinFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -112,7 +114,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
   ~ClipByScalarMaxKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     double floating_max = ctx->Attr<double>("floating_max");
@@ -120,6 +122,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
     ClipByMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Forward(ctx->device_ctx(), clip_func, y->shape().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -131,7 +134,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
   ~ClipByScalarGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -143,6 +146,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
                                          GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -154,7 +158,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
   ~ClipByScalarMinGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -163,6 +167,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
     ClipByMinGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -174,7 +179,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
   ~ClipByScalarMaxGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -183,6 +188,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
     ClipByMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
     ClipKernelUtil<device_type, T>::Backward(ctx->device_ctx(), clip_func, dx->shape().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

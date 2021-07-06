@@ -49,7 +49,7 @@ class ConcatKernel final : public user_op::OpKernel {
     ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
   }
 
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const int64_t out_cols = out_tensor->shape().Count(axis);
@@ -69,6 +69,7 @@ class ConcatKernel final : public user_op::OpKernel {
       out_col_offset += in_cols;
     }
     CHECK_EQ(out_col_offset, out_cols);
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

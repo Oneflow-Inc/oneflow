@@ -44,7 +44,7 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
   ~DynamicLossScaleScheduleGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* count_not_finite = ctx->Tensor4ArgNameAndIndex("count_not_finite", 0);
     user_op::Tensor* loss_scale = ctx->Tensor4ArgNameAndIndex("loss_scale", 0);
     user_op::Tensor* good_step_counter = ctx->Tensor4ArgNameAndIndex("good_step_counter", 0);
@@ -53,6 +53,7 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
     DynamicLossScaleScheduleGpu<<<1, 1, 0, ctx->device_ctx()->cuda_stream()>>>(
         increment_period, multiplier, count_not_finite->dptr<int64_t>(),
         loss_scale->mut_dptr<float>(), good_step_counter->mut_dptr<int64_t>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

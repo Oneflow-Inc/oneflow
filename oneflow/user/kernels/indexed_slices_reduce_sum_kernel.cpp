@@ -27,7 +27,7 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
   ~IndexedSlicesReduceSumKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_indices = ctx->Tensor4ArgNameAndIndex("x_indices", 0);
     const user_op::Tensor* x_values = ctx->Tensor4ArgNameAndIndex("x_values", 0);
     user_op::Tensor* y_indices = ctx->Tensor4ArgNameAndIndex("y_indices", 0);
@@ -42,6 +42,7 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
         ctx->device_ctx(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
         num_unique->mut_dptr<int64_t>(), y_indices->mut_dptr<K>(), y_values->mut_dptr<T>(), tmp_ptr,
         tmp_size);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

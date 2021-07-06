@@ -33,7 +33,7 @@ class SummaryWriteScalar final : public user_op::OpKernel {
   ~SummaryWriteScalar() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* step = ctx->Tensor4ArgNameAndIndex("step", 0);
     const user_op::Tensor* tag = ctx->Tensor4ArgNameAndIndex("tag", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -47,6 +47,7 @@ class SummaryWriteScalar final : public user_op::OpKernel {
     std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteScalarToFile(
         istep[0], static_cast<double>(tvalue[0]), tag_str);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -68,9 +69,10 @@ class CreateSummaryWriter final : public user_op::OpKernel {
   ~CreateSummaryWriter() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
     CHECK_JUST(Global<EventsWriter>::Get()->Init(logdir));
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -85,8 +87,9 @@ class FlushSummaryWriter final : public user_op::OpKernel {
   ~FlushSummaryWriter() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     Global<EventsWriter>::Get()->Flush();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -102,7 +105,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
   ~SummaryWriteHistogram() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* step = ctx->Tensor4ArgNameAndIndex("step", 0);
     const user_op::Tensor* tag = ctx->Tensor4ArgNameAndIndex("tag", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -113,6 +116,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
     std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(static_cast<float>(istep[0]),
                                                                  *value, tag_str);
+                                                                 return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -137,7 +141,7 @@ class SummaryWritePb final : public user_op::OpKernel {
   ~SummaryWritePb() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* step = ctx->Tensor4ArgNameAndIndex("step", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
     int64_t* istep = const_cast<int64_t*>(step->dptr<int64_t>());
@@ -146,6 +150,7 @@ class SummaryWritePb final : public user_op::OpKernel {
     CHECK_NOTNULL(cvalue);
     std::string value_str(reinterpret_cast<char*>(cvalue), value->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0], value_str);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -162,7 +167,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
   ~SummaryWriteImage() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* step = ctx->Tensor4ArgNameAndIndex("step", 0);
     const user_op::Tensor* tag = ctx->Tensor4ArgNameAndIndex("tag", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -173,6 +178,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
     std::string tag_str(ctag, tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
                                                              tag_str);
+                                                             return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

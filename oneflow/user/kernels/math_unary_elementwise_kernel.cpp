@@ -25,7 +25,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
@@ -33,6 +33,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -44,7 +45,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -55,6 +56,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

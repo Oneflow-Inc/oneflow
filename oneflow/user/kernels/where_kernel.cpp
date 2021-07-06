@@ -25,7 +25,7 @@ class WhereKernel final : public user_op::OpKernel {
   ~WhereKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* cond = ctx->Tensor4ArgNameAndIndex("condition", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -33,6 +33,7 @@ class WhereKernel final : public user_op::OpKernel {
     WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
                                                   cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
                                                   out->mut_dptr<T>());
+                                                  return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

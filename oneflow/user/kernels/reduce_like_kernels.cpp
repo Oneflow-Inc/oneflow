@@ -35,7 +35,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
   ~ReduceSumLikeOpKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
@@ -54,6 +54,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
                                  tensor_x->shape().NumAxes()),
           XpuVarNdarray<T>(tensor_x->shape(), temp_storage, tensor_x->shape().NumAxes()));
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -97,7 +98,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel {
   ~ReduceSumLikeHalfKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     if (axis_.empty()) {
@@ -151,6 +152,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel {
                                       tensor_y->mut_dptr<float16>(), tensor_y->shape().elem_cnt());
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

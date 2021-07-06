@@ -119,7 +119,7 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
   ~ImageResizeToFixedSizeKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_NOTNULL(in_tensor);
     const int64_t batch_size = in_tensor->shape().elem_cnt();
@@ -172,6 +172,7 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
         scale_dptr[1] = static_cast<float>(res_h) / static_cast<float>(origin_height);
       }
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -182,7 +183,7 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
   ~ImageResizeKeepAspectRatioKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* size_tensor = ctx->Tensor4ArgNameAndIndex("size", 0);
@@ -218,6 +219,7 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
       size_buf[i].mut_data<int32_t>()[0] = static_cast<int32_t>(res_w);
       size_buf[i].mut_data<int32_t>()[1] = static_cast<int32_t>(res_h);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

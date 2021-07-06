@@ -27,7 +27,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
   ~SspVariableProxyKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* var = ctx->Tensor4ArgNameAndIndex("var", 0);
     const user_op::Tensor* ref = ctx->Tensor4ArgNameAndIndex("ref", 0);
     CHECK_EQ(var->dptr(), ref->dptr());
@@ -38,6 +38,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
     CHECK_EQ(value->data_type(), in_data_type);
     Memcpy<device_type>(ctx->device_ctx(), value->mut_dptr<void>(), ref->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
+                        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

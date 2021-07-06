@@ -27,7 +27,7 @@ class BatchGatherKernel final : public user_op::OpKernel {
   ~BatchGatherKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -37,6 +37,7 @@ class BatchGatherKernel final : public user_op::OpKernel {
     BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->device_ctx(), in->dptr<T>(),
                                                           indices->dptr<K>(), flat_out_shape,
                                                           in->shape().At(axis), out->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

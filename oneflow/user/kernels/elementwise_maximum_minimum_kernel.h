@@ -80,7 +80,7 @@ class ElemwiseXimumKernel final : public user_op::OpKernel {
   ~ElemwiseXimumKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
@@ -88,6 +88,7 @@ class ElemwiseXimumKernel final : public user_op::OpKernel {
 
     ElemwiseXimumFunctor<device_type, Opt, T>()(ctx->device_ctx(), n, tensor_z->mut_dptr<T>(),
                                                 tensor_x->dptr<T>(), tensor_y->dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -99,7 +100,7 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
   ~ElemwiseXimumBackwardKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -116,6 +117,7 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
     ElemwiseXimumGradFunctor<device_type, Opt, T>()(ctx->device_ctx(),
                                                     tensor_dz->shape().elem_cnt(), dptr_dz, dptr_x,
                                                     dptr_y, dptr_dx, dptr_dy);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

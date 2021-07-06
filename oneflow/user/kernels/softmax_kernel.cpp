@@ -28,7 +28,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
   ~SoftmaxKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_classes = in->shape().At(in->shape().NumAxes() - 1);
@@ -38,6 +38,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     SoftmaxKernelUtil<device_type, T>::ComputeProb(ctx->device_ctx(), num_instances, num_classes,
                                                    in->dptr<T>(), out->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
+                                                   return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,7 +71,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
   ~SoftmaxGradKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -84,6 +85,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     SoftmaxKernelUtil<device_type, T>::ComputeDiff(ctx->device_ctx(), num_instances, num_classes,
                                                    dy->dptr<T>(), y->dptr<T>(), dx->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
+                                                   return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

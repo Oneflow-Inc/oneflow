@@ -41,7 +41,7 @@ class DiagKernel final : public user_op::OpKernel {
   ~DiagKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -69,6 +69,7 @@ class DiagKernel final : public user_op::OpKernel {
       DiagFunctor<device_type, T>()(ctx->device_ctx(), out_buf, in_buf, size, in_shape.At(1) + 1,
                                     in_dim);
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -80,7 +81,7 @@ class DiagBackwardKernel final : public user_op::OpKernel {
   ~DiagBackwardKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     int32_t diagonal = ctx->Attr<int32_t>("diagonal");
@@ -103,6 +104,7 @@ class DiagBackwardKernel final : public user_op::OpKernel {
       DiagGradFunctor<device_type, T>()(ctx->device_ctx(), dx_buf, dy_buf, dx_cnt, dy_cnt,
                                         dx_shape.At(1) + 1, in_dim);
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

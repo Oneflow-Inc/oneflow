@@ -64,7 +64,7 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
   ~CpuMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor* zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
@@ -111,6 +111,7 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

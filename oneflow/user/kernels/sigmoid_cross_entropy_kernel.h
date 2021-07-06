@@ -61,7 +61,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* loss = ctx->Tensor4ArgNameAndIndex("loss", 0);
@@ -69,6 +69,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
     ElemwiseSigmoidCrossEntropyFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->device_ctx(), n, loss->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -89,7 +90,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* loss_diff = ctx->Tensor4ArgNameAndIndex("loss_diff", 0);
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
@@ -98,6 +99,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
     ElemwiseSigmoidCrossEntropyGradFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->device_ctx(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>(), loss_diff->dptr<PredT>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

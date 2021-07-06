@@ -82,7 +82,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
   ~GpuTriuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
     const auto diagonal = ctx->Attr<int64_t>("diagonal");
@@ -100,6 +100,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
                 ctx->device_ctx()->cuda_stream()>>>(elem_cnt, num_rows, num_cols, diagonal,
                                                     x->dptr<T>(), y->mut_dptr<T>());
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

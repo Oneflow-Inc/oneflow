@@ -44,10 +44,11 @@ class OnesLikeKernel final : public user_op::OpKernel {
   ~OnesLikeKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& data_type = out->data_type();
     FillOnesUtil<device_type>::SwitchFillOnes(SwitchCase(data_type), ctx->device_ctx(), out);
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

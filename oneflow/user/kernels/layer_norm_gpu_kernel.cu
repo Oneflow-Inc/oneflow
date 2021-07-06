@@ -382,7 +382,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
@@ -444,6 +444,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
                                gamma_ptr, beta_ptr, y->mut_dptr<T>());
       }
     }
+    return Maybe<void>::Ok();
   };
 };
 
@@ -471,7 +472,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
@@ -510,6 +511,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
         reinterpret_cast<BNParamT*>(cudnn_bn_scale_diff_buf_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_bias_diff_buf_dptr), epsilon, mean->dptr(),
         inv_variance->dptr()));
+        return Maybe<void>::Ok();
   };
 };
 
@@ -544,7 +546,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
@@ -620,6 +622,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
         }
       }
     }
+    return Maybe<void>::Ok();
   };
 };
 
@@ -639,7 +642,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;
     auto Val = NdUtil::GetValNdarrayBuilder();
     auto Var = NdUtil::GetVarNdarrayBuilder();
@@ -728,6 +731,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
         }
       }
     }
+    return Maybe<void>::Ok();
   }
 };
 

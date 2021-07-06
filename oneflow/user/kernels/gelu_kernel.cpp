@@ -24,7 +24,7 @@ class CpuGeluKernel final : public user_op::OpKernel {
   ~CpuGeluKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = in->shape().elem_cnt();
@@ -34,6 +34,7 @@ class CpuGeluKernel final : public user_op::OpKernel {
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       out_ptr[i] = 0.5 * in_ptr[i] * (1.0 + std::erf(inv_sqrt2 * in_ptr[i]));
     }
+    return Maybe<void>::Ok();
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -54,7 +55,7 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
   ~CpuGeluGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -70,6 +71,7 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
                      + x_ptr[i] * coef * std::exp(-0.5 * x_ptr[i] * x_ptr[i]))
                   * dy_ptr[i];
     }
+    return Maybe<void>::Ok();
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

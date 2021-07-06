@@ -35,7 +35,7 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
   ~AdaptivePoolCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const T* in_ptr = in_tensor->dptr<T>();
@@ -79,6 +79,7 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
         }
       }
     }
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -106,7 +107,7 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
   ~AdaptivePoolCpuGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -152,6 +153,7 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
         }
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -20,13 +20,13 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class ConstantKernel final : public OpKernel {
+class ConstantKernel final : public user_op::OpKernel {
  public:
   ConstantKernel() = default;
   ~ConstantKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
@@ -36,6 +36,7 @@ class ConstantKernel final : public OpKernel {
                                          ? static_cast<T>(ctx->Attr<double>("floating_value"))
                                          : static_cast<T>(ctx->Attr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
+                                     return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

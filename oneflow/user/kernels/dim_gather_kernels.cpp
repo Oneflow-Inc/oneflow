@@ -38,7 +38,7 @@ class DimGatherKernel final : public user_op::OpKernel {
   ~DimGatherKernel() override = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
@@ -62,6 +62,7 @@ class DimGatherKernel final : public user_op::OpKernel {
     DimGatherFunctor<device_type, IN_T, IDX_T>()(
         ctx->device_ctx(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
         dim, index, input, output);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -73,7 +74,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
   ~ScatterDimKernel() override = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
@@ -100,6 +101,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
     DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
         ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
         input_tensor->shape().elem_cnt(), dim, index, src, output);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

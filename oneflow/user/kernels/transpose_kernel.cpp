@@ -22,13 +22,13 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class TransposeKernel final : public OpKernel {
+class TransposeKernel final : public user_op::OpKernel {
  public:
   TransposeKernel() = default;
   ~TransposeKernel() override = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
@@ -37,6 +37,7 @@ class TransposeKernel final : public OpKernel {
     NewKernelUtil<device_type>::Transpose(ctx->device_ctx(), in_shape.NumAxes(), in_shape,
                                           out_shape, perm, in_shape.elem_cnt(),
                                           tensor_in->dptr<T>(), tensor_out->mut_dptr<T>());
+                                          return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -25,7 +25,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
@@ -35,6 +35,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -46,7 +47,7 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
@@ -59,6 +60,7 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,7 +72,7 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
@@ -83,6 +85,7 @@ class MathBinaryElementwiseYGradCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dy[i] = BinaryFunctor<T>::BackwardYGrad(x[i], y[i], dz[i]); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

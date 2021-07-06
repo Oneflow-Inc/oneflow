@@ -24,7 +24,7 @@ class PyForwardKernel final : public user_op::OpKernel {
   ~PyForwardKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -34,7 +34,7 @@ class PyBackwardKernel final : public user_op::OpKernel {
   ~PyBackwardKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

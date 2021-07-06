@@ -31,7 +31,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
   ~MathBinaryBroadcastKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
@@ -42,6 +42,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
     binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
                 XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
                 XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
+                return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

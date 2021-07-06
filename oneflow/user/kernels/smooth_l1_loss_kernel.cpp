@@ -24,7 +24,7 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
   ~SmoothL1LossCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const float beta = ctx->Attr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
@@ -39,6 +39,7 @@ class SmoothL1LossCPUKernel final : public user_op::OpKernel {
         loss[i] = abs_diff - 0.5 * beta;
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -59,7 +60,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
   ~SmoothL1LossGradCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const float beta = ctx->Attr<float>("beta");
     const user_op::Tensor* prediction_blob = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const T* prediction = prediction_blob->dptr<T>();
@@ -77,6 +78,7 @@ class SmoothL1LossGradCpuKernel final : public user_op::OpKernel {
       }
       prediction_grad[i] = prediction_grad[i] * loss_grad[i];
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

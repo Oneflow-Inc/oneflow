@@ -28,7 +28,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
   ~BroadcastLikeKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -38,6 +38,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel {
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx->device_ctx(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

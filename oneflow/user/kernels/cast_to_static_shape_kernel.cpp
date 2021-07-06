@@ -27,7 +27,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
   ~CastToStaticShapeKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Shape& input_static_shape = ctx->TensorDesc4ArgNameAndIndex("input", 0)->shape();
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
@@ -37,6 +37,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
         output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
     Memcpy<device_type>(ctx->device_ctx(), output_tensor->mut_dptr(), input_tensor->dptr(),
                         output_tensor_size);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

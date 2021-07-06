@@ -26,7 +26,7 @@ class CpuTrilKernel final : public user_op::OpKernel {
   ~CpuTrilKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
     const auto diagonal = ctx->Attr<int64_t>("diagonal");
@@ -45,6 +45,7 @@ class CpuTrilKernel final : public user_op::OpKernel {
       int64_t j = offset_in_matrix - num_cols * i;
       y_dptr[k] = j > i + diagonal ? fill : x_dptr[k];
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

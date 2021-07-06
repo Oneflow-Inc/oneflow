@@ -24,7 +24,7 @@ class MultiCountNotFiniteCpuKernel final : public user_op::OpKernel {
   ~MultiCountNotFiniteCpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     int64_t* y_ptr = y->mut_dptr<int64_t>();
     int64_t count = 0;
@@ -36,6 +36,7 @@ class MultiCountNotFiniteCpuKernel final : public user_op::OpKernel {
       }
     }
     y_ptr[0] = count;
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

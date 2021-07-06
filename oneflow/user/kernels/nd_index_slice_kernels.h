@@ -27,7 +27,7 @@ class GatherNdKernel final : public user_op::OpKernel {
   ~GatherNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -38,7 +38,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
   ~ScatterNdKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -49,7 +49,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
   ~TensorScatterNdUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -60,36 +60,38 @@ class TensorScatterNdAddKernel final : public user_op::OpKernel {
   ~TensorScatterNdAddKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override;
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename T, typename I>
-void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
+Maybe<void> GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (indices->shape().elem_cnt() == 0) { return; }
+  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok(); }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
   GatherNdFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                        params->dptr<T>(), out->mut_dptr<T>());
+                                       return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
-void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
+Maybe<void> ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* updates = ctx->Tensor4ArgNameAndIndex("updates", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
-  if (indices->shape().elem_cnt() == 0) { return; }
+  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok();; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
+                                           return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
+Maybe<void> TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
     user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -97,16 +99,17 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
-  if (indices->shape().elem_cnt() == 0) { return; }
+  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok(); }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ZeroByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                             out->mut_dptr<T>());
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
+                                           return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
-void TensorScatterNdAddKernel<device_type, T, I>::Compute(
+Maybe<void> TensorScatterNdAddKernel<device_type, T, I>::Compute(
     user_op::KernelComputeContext* ctx) const {
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -114,10 +117,11 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
-  if (indices->shape().elem_cnt() == 0) { return; }
+  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok(); }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
+                                           return Maybe<void>::Ok();
 }
 
 #define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,            \

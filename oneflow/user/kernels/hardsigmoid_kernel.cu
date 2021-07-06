@@ -58,13 +58,13 @@ struct HardsigmoidGradFunctor<half> {
 };
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidKernel final : public OpKernel {
+class GpuHardsigmoidKernel final : public user_op::OpKernel {
  public:
   GpuHardsigmoidKernel() = default;
   ~GpuHardsigmoidKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
@@ -72,6 +72,7 @@ class GpuHardsigmoidKernel final : public OpKernel {
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(HardsigmoidFunctor<T>(), elem_cnt, out_ptr,
                                                      in_ptr, ctx->device_ctx()->cuda_stream())));
+                                                     return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -87,13 +88,13 @@ REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidGradKernel final : public OpKernel {
+class GpuHardsigmoidGradKernel final : public user_op::OpKernel {
  public:
   GpuHardsigmoidGradKernel() = default;
   ~GpuHardsigmoidGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -105,6 +106,7 @@ class GpuHardsigmoidGradKernel final : public OpKernel {
     OF_CUDA_CHECK(
         (oneflow::cuda::elementwise::Binary(HardsigmoidGradFunctor<T>(), elem_cnt, dx_ptr, x_ptr,
                                             dy_ptr, ctx->device_ctx()->cuda_stream())));
+                                            return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

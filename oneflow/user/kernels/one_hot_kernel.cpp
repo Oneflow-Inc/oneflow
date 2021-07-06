@@ -25,7 +25,7 @@ class CpuOneHotKernel final : public user_op::OpKernel {
   ~CpuOneHotKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_indices = indices->shape().elem_cnt();
@@ -48,6 +48,7 @@ class CpuOneHotKernel final : public user_op::OpKernel {
       CHECK_LT(idx, depth);
       out_dptr[i * depth + idx] = on_value;
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

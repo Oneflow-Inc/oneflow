@@ -170,12 +170,13 @@ class SliceKernel final : public user_op::OpKernel {
   ~SliceKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
     SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, x_tensor->dptr<T>(),
                                              y_tensor->mut_dptr<T>());
+                                             return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -187,7 +188,7 @@ class SliceGradKernel final : public user_op::OpKernel {
   ~SliceGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
@@ -195,6 +196,7 @@ class SliceGradKernel final : public user_op::OpKernel {
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
+                                              return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -366,7 +368,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
   ~SliceUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* update_tensor = ctx->Tensor4ArgNameAndIndex("update", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -375,6 +377,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, update_tensor->dptr<T>(),
                                               y_tensor->mut_dptr<T>());
+                                              return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

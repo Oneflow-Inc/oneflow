@@ -29,9 +29,10 @@ class ArgWhereKernel final : public user_op::OpKernel {
   ~ArgWhereKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape().NumAxes();
     SwitchNdimCompute(SwitchCase(ndims), ctx);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

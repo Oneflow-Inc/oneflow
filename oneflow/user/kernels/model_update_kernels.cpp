@@ -116,7 +116,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
   ~SGDUpdateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const auto scale = ctx->Attr<double>("scale");
@@ -146,6 +146,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
         learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -262,7 +263,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
   ~MomentumUpdateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
@@ -288,6 +289,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
         weight_decay_, learning_rate_val_, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
@@ -396,7 +398,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
   ~AdamUpdateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
@@ -431,6 +433,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         epsilon, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -567,7 +570,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
   ~LambUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
@@ -602,6 +605,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
         weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
         v->mut_dptr<T>(), tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -638,7 +642,7 @@ class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
   ~AdamBiasCorrectionLearningRateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -647,6 +651,7 @@ class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
     AdamBiasCorrectionLearningRateKernelUtil<device_type>::AdamBiasCorrectionLearningRate(
         ctx->device_ctx(), beta1, beta2, learning_rate->dptr<float>(), train_step->dptr<int64_t>(),
         out->mut_dptr<float>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -667,7 +672,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
   ~RmsPropUpdateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* mean_square = ctx->Tensor4ArgNameAndIndex("mean_square", 0);
@@ -707,6 +712,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
         epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
         mean_gradient_ptr);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -768,7 +774,7 @@ class LarsUpdateKernel final : public user_op::OpKernel {
   ~LarsUpdateKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
@@ -800,6 +806,7 @@ class LarsUpdateKernel final : public user_op::OpKernel {
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
         tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

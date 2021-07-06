@@ -21,13 +21,13 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuHardsigmoidKernel final : public OpKernel {
+class CpuHardsigmoidKernel final : public user_op::OpKernel {
  public:
   CpuHardsigmoidKernel() = default;
   ~CpuHardsigmoidKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
@@ -43,6 +43,7 @@ class CpuHardsigmoidKernel final : public OpKernel {
         out_ptr[i] = (in_ptr[i] / static_cast<T>(6)) + static_cast<T>(0.5);
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -57,13 +58,13 @@ REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuHardsigmoidGradKernel final : public OpKernel {
+class CpuHardsigmoidGradKernel final : public user_op::OpKernel {
  public:
   CpuHardsigmoidGradKernel() = default;
   ~CpuHardsigmoidGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -76,6 +77,7 @@ class CpuHardsigmoidGradKernel final : public OpKernel {
                       ? dy_ptr[i] / static_cast<T>(6)
                       : static_cast<T>(0);
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

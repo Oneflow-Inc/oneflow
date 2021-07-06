@@ -103,13 +103,14 @@ class GpuAddNKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
 
     const auto* caller = LookUpInRegistry<T>(in_num);
     CHECK(caller != nullptr) << "GpuAddNKernel: Cannot find registered funtion for in_num: "
                              << in_num << " of data_type: " << DataType_Name(GetDataType<T>::value);
     (*caller)(ctx);
+    return Maybe<void>::Ok();
   }
 };
 
@@ -177,13 +178,14 @@ class GpuAddNHalfKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
 
     const auto* caller = LookUpInRegistry<float16>(in_num);
     CHECK(caller != nullptr) << "GpuAddNHalfKernel: Cannot find registered funtion for in_num: "
                              << in_num << " of data_type: " << DataType_Name(DataType::kFloat16);
     (*caller)(ctx);
+    return Maybe<void>::Ok();
   }
 };
 

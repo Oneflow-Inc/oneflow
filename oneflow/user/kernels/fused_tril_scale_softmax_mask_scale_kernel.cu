@@ -146,7 +146,7 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
   ~FusedTrilScaleSoftmaxMaskScaleKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -165,6 +165,7 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
                                             ctx->Attr<float>("mask_scale_value"));
     cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -187,7 +188,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
   ~FusedTrilScaleSoftmaxMaskScaleGradKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* softmax_y = ctx->Tensor4ArgNameAndIndex("softmax_y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -207,6 +208,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
     cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy), decltype(store),
                                        ComputeType>(ctx->device_ctx()->cuda_stream(),
                                                     load_softmax_y, load_dy, store, rows, cols);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -24,7 +24,7 @@ class FusedCastScaleCpuKernel final : public user_op::OpKernel {
   ~FusedCastScaleCpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -34,6 +34,7 @@ class FusedCastScaleCpuKernel final : public user_op::OpKernel {
     const U* x_ptr = x->dptr<U>();
     T* y_ptr = y->mut_dptr<T>();
     FOR_RANGE(int64_t, i, 0, n) { y_ptr[i] = static_cast<T>(x_ptr[i]) * scale; }
+    return Maybe<void>::Ok();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

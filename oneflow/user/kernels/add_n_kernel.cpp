@@ -38,7 +38,7 @@ class CpuAddNKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     size_t in_num = ctx->inputs().size();
 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -51,6 +51,7 @@ class CpuAddNKernel : public user_op::OpKernel {
     }
 
     cpu_add<T>(n, out_dptr, in_dptrs);
+    return Maybe<void>::Ok();
   }
 };
 

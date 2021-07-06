@@ -21,13 +21,13 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuHardtanhKernel final : public OpKernel {
+class CpuHardtanhKernel final : public user_op::OpKernel {
  public:
   CpuHardtanhKernel() = default;
   ~CpuHardtanhKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T min_val = static_cast<T>(ctx->Attr<double>("min_val"));
@@ -45,6 +45,7 @@ class CpuHardtanhKernel final : public OpKernel {
         out_ptr[i] = in_ptr[i];
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -64,13 +65,13 @@ REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuHardtanhGradKernel final : public OpKernel {
+class CpuHardtanhGradKernel final : public user_op::OpKernel {
  public:
   CpuHardtanhGradKernel() = default;
   ~CpuHardtanhGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -86,6 +87,7 @@ class CpuHardtanhGradKernel final : public OpKernel {
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] = (y_ptr[i] != min_val && y_ptr[i] != max_val) ? dy_ptr[i] : zero_t;
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

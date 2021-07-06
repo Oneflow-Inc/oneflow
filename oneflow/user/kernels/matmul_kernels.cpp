@@ -41,7 +41,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
     CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -66,6 +66,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     }
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+                                       return Maybe<void>::Ok();
   }
 };
 
@@ -98,7 +99,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
     CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -122,6 +123,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                             a->dptr<float16>(), b->dptr<float16>(), beta,
                                             out->mut_dptr<float16>());
+                                            return Maybe<void>::Ok();
   }
 };
 
@@ -150,7 +152,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
     CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -178,6 +180,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     NewKernelUtil<device_type>::OFBatchedGemm(ctx->device_ctx(), trans_a, trans_b, batch_size, m, n,
                                               k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
                                               out->mut_dptr<T>());
+                                              return Maybe<void>::Ok();
   }
 };
 
@@ -210,7 +213,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
     CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -236,6 +239,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
         ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, alpha, a->dptr<float16>(),
         b->dptr<float16>(), beta, out->mut_dptr<float16>());
+        return Maybe<void>::Ok();
   }
 };
 
@@ -262,7 +266,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     double alpha = ctx->Attr<double>("alpha");
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
@@ -299,6 +303,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel {
     CBLAS_TRANSPOSE trans_b = transpose_b ? CblasTrans : CblasNoTrans;
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+                                       return Maybe<void>::Ok();
   }
 };
 
@@ -311,7 +316,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     double alpha = ctx->Attr<double>("alpha");
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -335,6 +340,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
 
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasTrans, CblasNoTrans, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+                                       return Maybe<void>::Ok();
   }
 };
 

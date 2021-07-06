@@ -59,7 +59,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
     CHECK_EQ(total_dim_size, in_shape_view.At(axis));
   }
 
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto axis = ctx->Attr<int64_t>("axis");
     const int64_t in_cols = in_tensor->shape().Count(axis);
@@ -79,6 +79,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
       in_col_offset += out_cols;
     }
     CHECK_EQ(in_col_offset, in_cols);
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

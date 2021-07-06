@@ -39,7 +39,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
@@ -49,6 +49,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
+            return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,7 +61,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseGradGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -73,6 +74,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
+            return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -103,7 +105,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseGpuHalfKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const half* x = reinterpret_cast<const half*>(tensor_x->dptr<float16>());
@@ -113,6 +115,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
+            return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -124,7 +127,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathUnaryElementwiseGradGpuHalfKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -137,6 +140,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
+            return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

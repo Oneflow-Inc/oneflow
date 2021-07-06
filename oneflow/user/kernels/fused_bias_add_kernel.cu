@@ -324,7 +324,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -337,6 +337,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     DispatchFusedBiasAddForwardImpl<decltype(gelu_functor), T>(
         ctx->device_ctx(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
         b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
+    return Maybe<void>::Ok();
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -359,7 +360,7 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   ~FusedBiasAddMaskScaleKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     const auto* mask_tensor = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -383,6 +384,7 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
           ctx->device_ctx(), mask_and_scale_functor, n, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     }
+    return Maybe<void>::Ok();
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -405,7 +407,7 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddGradKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     const auto* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -425,6 +427,7 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
           ctx->device_ctx(), gelu_grad_functor, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), dy_tensor->dptr<T>(), dx_tensor->mut_dptr<T>());
     }
+    return Maybe<void>::Ok();
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

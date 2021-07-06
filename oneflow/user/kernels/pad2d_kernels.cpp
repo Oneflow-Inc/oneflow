@@ -61,13 +61,13 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T>
-class ReflectionPad2dKernel final : public OpKernel {
+class ReflectionPad2dKernel final : public user_op::OpKernel {
  public:
   ReflectionPad2dKernel() = default;
   ~ReflectionPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -97,18 +97,19 @@ class ReflectionPad2dKernel final : public OpKernel {
     ReflectionPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
                                                 n_channel, y_height, y_width, x_height, x_width,
                                                 pad_left, pad_top);
+                                                return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename IN_T>
-class ReflectionPad2dGradKernel final : public OpKernel {
+class ReflectionPad2dGradKernel final : public user_op::OpKernel {
  public:
   ReflectionPad2dGradKernel() = default;
   ~ReflectionPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -141,6 +142,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                     n_batch, n_channel, dy_height, dy_width,
                                                     dx_height, dx_width, pad_left, pad_top);
+                                                    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -167,13 +169,13 @@ REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
-class ReplicationPad2dKernel final : public OpKernel {
+class ReplicationPad2dKernel final : public user_op::OpKernel {
  public:
   ReplicationPad2dKernel() = default;
   ~ReplicationPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -203,18 +205,19 @@ class ReplicationPad2dKernel final : public OpKernel {
     ReplicationPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                  n_batch, n_channel, y_height, y_width, x_height,
                                                  x_width, pad_left, pad_top);
+                                                 return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename IN_T>
-class ReplicationPad2dGradKernel final : public OpKernel {
+class ReplicationPad2dGradKernel final : public user_op::OpKernel {
  public:
   ReplicationPad2dGradKernel() = default;
   ~ReplicationPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -247,6 +250,7 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                      n_batch, n_channel, dy_height, dy_width,
                                                      dx_height, dx_width, pad_left, pad_top);
+                                                     return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -273,13 +277,13 @@ REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
-class ConstantPad2dKernel final : public OpKernel {
+class ConstantPad2dKernel final : public user_op::OpKernel {
  public:
   ConstantPad2dKernel() = default;
   ~ConstantPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -311,18 +315,19 @@ class ConstantPad2dKernel final : public OpKernel {
     ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
                                               n_channel, y_height, y_width, x_height, x_width,
                                               pad_left, pad_top, constant_value);
+                                              return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename IN_T>
-class ConstantPad2dGradKernel final : public OpKernel {
+class ConstantPad2dGradKernel final : public user_op::OpKernel {
  public:
   ConstantPad2dGradKernel() = default;
   ~ConstantPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
@@ -355,6 +360,7 @@ class ConstantPad2dGradKernel final : public OpKernel {
     ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                   n_batch, n_channel, dy_height, dy_width,
                                                   dx_height, dx_width, pad_left, pad_top);
+                                                  return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

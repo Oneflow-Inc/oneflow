@@ -81,7 +81,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel {
   ~CountNotFiniteGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
@@ -90,6 +90,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel {
     CountNotFiniteGpu<T>
         <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -110,7 +111,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
   ~MultiCountNotFiniteGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Param<T, 128> para;
     Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
@@ -140,6 +141,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
           <<<GetCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->device_ctx()->cuda_stream()>>>(para);
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

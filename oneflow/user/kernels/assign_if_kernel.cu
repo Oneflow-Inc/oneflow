@@ -33,19 +33,20 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   ~AssignIfGPUKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
     CHECK_EQ(condition->shape().NumAxes(), 1);
     CHECK_EQ(condition->shape().At(0), 1);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    if (value->dptr() == ref->dptr()) { return; }
+    if (value->dptr() == ref->dptr()) { return Maybe<void>::Ok();; }
     CHECK_EQ(value->shape(), ref->shape());
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t elem_cnt = ref->shape().elem_cnt();
     AssignGpu<assign_if, C, T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                  ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, condition->dptr<C>(), value->dptr<T>(), ref->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

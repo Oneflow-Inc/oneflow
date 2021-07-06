@@ -178,7 +178,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
   ~NormalizationInferenceKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -221,6 +221,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
         desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), moving_mean->dptr(),
         moving_variance->dptr(), epsilon));
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -355,7 +356,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
   ~NormalizationTrainKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -447,6 +448,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
              mask->mut_dptr<int32_t>());
       }
     }
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -489,7 +491,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
   ~NormalizationGradUserKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -587,6 +589,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
         desc_helper.param_desc(), gamma->dptr(), gamma_diff->mut_dptr(), beta_diff->mut_dptr(),
         epsilon, mean->dptr(), inv_variance->dptr()));
 #endif
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -670,7 +673,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -735,6 +738,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
         1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon,
         mean->mut_dptr(), inv_variance->mut_dptr(), activation_desc.Get(), tmp_buffer->mut_dptr(),
         workspace_size, reserve_space->mut_dptr(), reserve_space_size));
+        return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -756,7 +760,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -826,6 +830,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
         beta_diff->mut_dptr(), epsilon, mean->dptr(), inv_variance->dptr(), activation_desc.Get(),
         tmp_buffer->mut_dptr(), workspace_size, const_cast<void*>(reserve_space->dptr()),
         reserve_space_size));
+        return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

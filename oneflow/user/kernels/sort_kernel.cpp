@@ -25,7 +25,7 @@ class CpuSortKernel final : public user_op::OpKernel {
   ~CpuSortKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -46,6 +46,7 @@ class CpuSortKernel final : public user_op::OpKernel {
         UNIMPLEMENTED();
       }
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

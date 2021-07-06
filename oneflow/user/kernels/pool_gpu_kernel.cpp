@@ -149,9 +149,10 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -162,9 +163,10 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
   ~AvgPool1DGradGpuKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -176,9 +178,10 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -190,9 +193,10 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -204,9 +208,10 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -218,9 +223,10 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -232,9 +238,10 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -246,9 +253,10 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -260,9 +268,10 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -274,9 +283,10 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -288,9 +298,10 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
     PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 
@@ -302,9 +313,10 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
     PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    return Maybe<void>::Ok();
   };
 };
 

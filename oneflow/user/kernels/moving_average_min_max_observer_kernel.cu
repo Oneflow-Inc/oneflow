@@ -215,7 +215,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   ~GpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* current_train_step =
         ctx->Tensor4ArgNameAndIndex("current_train_step", 0);
@@ -289,6 +289,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     }
 
     delete[] host_current_train_step_ptr;
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -56,7 +56,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   ~ImageBatchAlignKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in_tensor->shape().NumAxes(), 1);
@@ -94,6 +94,7 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
       ImageCopier<T>::SwitchCopyFromTensorBuffer(SwitchCase(image_buffer.data_type()), out_ptr,
                                                  image_buffer, max_height, max_width, channels);
     });
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

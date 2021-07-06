@@ -177,7 +177,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
   ~FusedSelfAttentionQueryMulKeyAndValueGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* h_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
     int64_t seq_len = h_tensor->shape().At(0);
     int64_t batch_size = h_tensor->shape().At(1);
@@ -208,6 +208,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
     TransposeGpu<T>(ctx->device_ctx(), value_shape, v_tensor->shape(), {1, 2, 0, 3},
                     tmp_v_tensor->dptr<T>(), v_tensor->mut_dptr<T>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -219,7 +220,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
   ~FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* v_grad_tensor = ctx->Tensor4ArgNameAndIndex("value_grad", 0);
     const user_op::Tensor* qmk_grad_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key_grad", 0);
     const user_op::Tensor* h_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
@@ -260,6 +261,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
     BatchedGemm<T>(ctx->device_ctx(), 'T', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
                    seq_len, seq_len * seq_len, q_dptr, ld, stride, 0.0f, grad_k_dptr, ld, stride,
                    batch_size * num_heads);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

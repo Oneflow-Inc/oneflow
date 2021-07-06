@@ -68,18 +68,19 @@ struct CastUtil final {
 };
 
 template<DeviceType device_type>
-class CastKernel final : public OpKernel {
+class CastKernel final : public user_op::OpKernel {
  public:
   CastKernel() = default;
   ~CastKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
     CastUtil<device_type>::SwitchCopyTensor(
         std::make_pair(input_tensor->data_type(), output_tenor->data_type()), ctx->device_ctx(),
         input_tensor, output_tenor);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

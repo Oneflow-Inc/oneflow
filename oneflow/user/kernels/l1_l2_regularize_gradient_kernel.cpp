@@ -27,7 +27,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
   ~L1L2RegularizeGradientKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -36,6 +36,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
     L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
         ctx->device_ctx(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
         out->mut_dptr<T>(), l1, l2);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -24,7 +24,7 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
   ~CpuLeakyReluKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
@@ -32,6 +32,7 @@ class CpuLeakyReluKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * alpha; }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -52,7 +53,7 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
   ~CpuLeakyReluGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -62,6 +63,7 @@ class CpuLeakyReluGradKernel final : public user_op::OpKernel {
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();
     FOR_RANGE(int32_t, i, 0, elem_cnt) { dx_ptr[i] = x_ptr[i] > 0 ? dy_ptr[i] : dy_ptr[i] * alpha; }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -27,7 +27,7 @@ class CpuExpandKernel final : public user_op::OpKernel {
   ~CpuExpandKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -47,6 +47,7 @@ class CpuExpandKernel final : public user_op::OpKernel {
       int offset = OffsetToNdIndexToOffset(i, out_stride, expand_stride.data(), out_dims);
       out_ptr[i] = in_ptr[offset];
     }
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -68,7 +69,7 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
   ~CpuExpandGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -91,6 +92,7 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
       int offset = OffsetToNdIndexToOffset(i, in_stride, expand_stride.data(), in_dims);
       out_ptr[offset] += in_ptr[i];
     }
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

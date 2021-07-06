@@ -25,7 +25,7 @@ class CtcLossKernel final : public user_op::OpKernel {
   ~CtcLossKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* log_probs = ctx->Tensor4ArgNameAndIndex("log_probs", 0);
     const user_op::Tensor* targets = ctx->Tensor4ArgNameAndIndex("targets", 0);
     const user_op::Tensor* input_lengths = ctx->Tensor4ArgNameAndIndex("input_lengths", 0);
@@ -56,6 +56,7 @@ class CtcLossKernel final : public user_op::OpKernel {
         ctx->device_ctx(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
         alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_input_length,
         max_target_length, blank);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -78,7 +79,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
   ~CtcLossGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* grad_out = ctx->Tensor4ArgNameAndIndex("grad_out", 0);
     const user_op::Tensor* loss = ctx->Tensor4ArgNameAndIndex("loss", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -116,6 +117,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
         ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, log_probs_ptr, targets_ptr,
         input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper, beta_helper,
         batch_size, max_input_length, max_target_length, num_labels, blank, zero_infinity);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -45,7 +45,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
   ~SparseCrossEntropyKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -57,6 +57,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -146,7 +147,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SparseCrossEntropyGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -163,6 +164,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -174,7 +176,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
   ~SparseCrossEntropyMsGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -195,6 +197,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

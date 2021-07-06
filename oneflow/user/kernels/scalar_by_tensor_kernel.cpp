@@ -67,13 +67,14 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
   ~ScalarAddByTensorKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     ComputeScalarByTensor<by_scalar_func, device, T>::DoCompute(ctx->device_ctx(), x->dptr<T>(),
                                                                 scalar->dptr<T>(), y->mut_dptr<T>(),
                                                                 x->shape().elem_cnt());
+                                                                return Maybe<void>::Ok();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

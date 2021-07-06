@@ -28,7 +28,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
   ~TensorBufferToTensorKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const ShapeView& in_shape = in->shape();
@@ -53,6 +53,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_ptr + i * instance_size,
                                tensor_buffer->data(), instance_size);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -68,7 +69,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
   ~TensorToTensorBufferKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const ShapeView& in_shape = in->shape();
@@ -95,6 +96,7 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), tensor_buffer->mut_data(),
                                in_ptr + i * instance_size, instance_size);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -111,7 +113,7 @@ class GenTensorBuffer final : public user_op::OpKernel {
   ~GenTensorBuffer() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_tensor_buffers = ctx->Attr<Shape>("shape").elem_cnt();
     const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
@@ -125,6 +127,7 @@ class GenTensorBuffer final : public user_op::OpKernel {
       T* begin = reinterpret_cast<T*>(tensor_buffer->mut_data());
       std::fill(begin, begin + shape.elem_cnt(), static_cast<T>(value_list.at(i)));
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -148,7 +151,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
   ~TensorBufferToListOfTensors() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_GT(in->shape().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
@@ -169,6 +172,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -184,7 +188,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
   ~TensorBufferToListOfTensorsV2() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_GT(in->shape().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
@@ -205,6 +209,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

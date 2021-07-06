@@ -27,11 +27,12 @@ class SigmoidKernel final : public user_op::OpKernel {
   ~SigmoidKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     NewKernelUtil<device_type>::Sigmoid(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
                                         y->mut_dptr<T>());
+                                        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -62,13 +63,14 @@ class SigmoidGradKernel final : public user_op::OpKernel {
   ~SigmoidGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     NewKernelUtil<device_type>::SigmoidBackward(ctx->device_ctx(), y_blob->shape().elem_cnt(),
                                                 y_blob->dptr<T>(), y_blob->dptr<T>(),
                                                 dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
+                                                return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

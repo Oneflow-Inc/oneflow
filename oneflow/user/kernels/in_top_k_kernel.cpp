@@ -25,7 +25,7 @@ class InTopkKernel final : public user_op::OpKernel {
   ~InTopkKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* targets = ctx->Tensor4ArgNameAndIndex("targets", 0);
     const user_op::Tensor* predictions = ctx->Tensor4ArgNameAndIndex("predictions", 0);
     const int32_t k = ctx->Attr<int32_t>("k");
@@ -38,6 +38,7 @@ class InTopkKernel final : public user_op::OpKernel {
     InTopkKernelUtil<device_type, T>::InTopk(ctx->device_ctx(), instance_num, classes_num,
                                              targets->dptr<T>(), predictions->dptr<float>(), k,
                                              out->mut_dptr<int8_t>());
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

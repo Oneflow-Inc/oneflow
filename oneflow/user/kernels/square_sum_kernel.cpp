@@ -54,7 +54,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
   ~MultiSquareSumKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     std::vector<SquareSumParam<T>> params;
     params.resize(ctx->input_size("x"));
     for (int64_t i = 0; i < params.size(); ++i) {
@@ -65,6 +65,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     SquareSumKernelUtil<device_type, T>::MultiSquareSum(ctx->device_ctx(), params,
                                                         y->mut_dptr<T>());
+                                                        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

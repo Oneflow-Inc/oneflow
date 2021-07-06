@@ -20,18 +20,19 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class EmptyKernel final : public OpKernel {
+class EmptyKernel final : public user_op::OpKernel {
  public:
   EmptyKernel() = default;
   ~EmptyKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
     CHECK_GT(elem_cnt, 0);
 
     // Do nothing
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

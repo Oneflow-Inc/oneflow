@@ -77,7 +77,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
   ~OFRecordRawDecoderKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     // TODO(chengcheng): remove record num in record blob, fix by shape elem cnt
@@ -99,6 +99,7 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
       const Feature& feature = record.feature().at(name);
       DecodeOneRawOFRecord(feature, dptr, sample_elem_cnt, auto_zero_padding, dim1_varying_length);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -124,7 +125,7 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
   ~OFRecordBytesDecoderKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(out->shape(), in->shape());
@@ -146,6 +147,7 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
       buffer->Resize(Shape({size}), DataType::kUInt8);
       memcpy(buffer->mut_data(), feature.bytes_list().value(0).data(), size);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -259,7 +261,7 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
   ~OFRecordImageDecoderKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = out_blob->shape().At(0);
     CHECK(record_num > 0);
@@ -275,6 +277,7 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
       TensorBuffer* buffer = buffers + i;
       DecodeRandomCropImageFromOneRecord(record, buffer, name, color_space, nullptr);
     });
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -23,7 +23,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
   ~DynamicLossScaleScheduleCpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* count_not_finite =
         ctx->Tensor4ArgNameAndIndex("count_not_finite", 0)->dptr<int64_t>();
     auto* loss_scale = ctx->Tensor4ArgNameAndIndex("loss_scale", 0)->mut_dptr<float>();
@@ -52,6 +52,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
       LOG(INFO) << "There are nan or inf in gradients, so we decrease loss_scale from "
                 << old_loss_scale << " to " << new_loss_scale;
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

@@ -116,7 +116,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -134,6 +134,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), weight->dptr(),
         args.ydesc.Get(), in->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), out->mut_dptr()));
+    return Maybe<void>::Ok();
   }
 };
 

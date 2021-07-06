@@ -27,7 +27,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
   ~SamePaddingKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t num_axes = x->shape().NumAxes();
@@ -42,8 +42,8 @@ class SamePaddingKernel final : public user_op::OpKernel {
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large);
+      JUST(CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                      strides.at(i), &padding_small, &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -77,6 +77,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->CopyElem<T>(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                       reduced_memory_copy_nd_desc);
+                                      return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -108,7 +109,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
   ~SamePaddingGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t num_axes = dy->shape().NumAxes();
@@ -123,8 +124,8 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large);
+      JUST(CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                      strides.at(i), &padding_small, &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -155,6 +156,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->CopyElem<T>(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
                                       reduced_memory_copy_nd_desc);
+                                      return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

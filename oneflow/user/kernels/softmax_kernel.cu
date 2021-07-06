@@ -25,7 +25,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
   ~SoftmaxKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const ShapeView& in_shape = in->shape();
@@ -36,6 +36,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     cuda::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
     cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -57,7 +58,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
   ~SoftmaxGradKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -70,6 +71,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
                                        ComputeType>(ctx->device_ctx()->cuda_stream(), load_y,
                                                     load_dy, store, rows, cols);
+                                                    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

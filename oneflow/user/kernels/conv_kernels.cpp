@@ -395,7 +395,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& conv_state = CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
     CHECK_NOTNULL(conv_state.get());
 
@@ -447,6 +447,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
             GetImgMutDptr<T>(out, i));
       }
     }
+    return Maybe<void>::Ok();
   }
 };
 
@@ -491,7 +492,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& conv_state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
     CHECK_NOTNULL(conv_state.get());
 
@@ -530,6 +531,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
           ctx->device_ctx(), add_to_output->shape().elem_cnt(), dx->mut_dptr<T>(), dx->dptr<T>(),
           add_to_output->dptr<T>());
     }
+    return Maybe<void>::Ok();
   }
 };
 
@@ -563,7 +565,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& conv_state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
     CHECK_NOTNULL(conv_state.get());
 
@@ -592,6 +594,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
           static_cast<T>(1), GetImgDptr<T>(dy, i), col_buf->dptr<T>(), static_cast<T>(1),
           filter_diff->mut_dptr<T>());
     }
+    return Maybe<void>::Ok();
   }
 };
 
@@ -625,7 +628,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     user_op::Tensor* bias_mul_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -659,6 +662,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
           static_cast<T>(1), GetImgDptr<T>(dy, i), bias_mul_buf->dptr<T>(), static_cast<T>(1),
           bias_diff->mut_dptr<T>());
     }
+    return Maybe<void>::Ok();
   }
 };
 

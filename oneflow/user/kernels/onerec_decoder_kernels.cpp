@@ -241,7 +241,7 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
   ~OneRecDecoderKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = in_blob->shape().At(0);
@@ -259,6 +259,7 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
 
     DecodeField(records, record_num, key, data_type, static_shape, is_dynamic, has_reshape, reshape,
                 has_batch_padding, batch_padding, out_blob);
+                return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

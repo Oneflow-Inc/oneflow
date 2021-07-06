@@ -38,7 +38,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
   ~UnsortedBatchSegmentSumKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -49,6 +49,7 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel {
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
         ctx->device_ctx(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
         out->shape().At(axis), out->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

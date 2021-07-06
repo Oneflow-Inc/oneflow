@@ -124,13 +124,13 @@ struct GpuAdaptiveAvgpool2dGradFunctor final {
 };
 
 template<DeviceType device_type, typename T>
-class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
+class GpuAdaptiveAvgPool2dKernel final : public user_op::OpKernel {
  public:
   GpuAdaptiveAvgPool2dKernel() = default;
   ~GpuAdaptiveAvgPool2dKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* in_ptr = in_tensor->dptr<T>();
@@ -151,6 +151,7 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
 
     GpuAdaptiveAvgPool2dFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_h, in_w,
                                      out_h, out_w);
+                                     return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -166,13 +167,13 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
+class GpuAdaptiveAvgPool2dGradKernel final : public user_op::OpKernel {
  public:
   GpuAdaptiveAvgPool2dGradKernel() = default;
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const T* out_ptr = out_tensor->dptr<T>();
@@ -194,6 +195,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
 
     GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_elems,
                                          in_h, in_w, out_h, out_w);
+                                         return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

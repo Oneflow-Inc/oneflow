@@ -28,7 +28,7 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
   ~BroadcastDivGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* z_tensor = ctx->Tensor4ArgNameAndIndex("z", 0);
     const user_op::Tensor* dz_tensor = ctx->Tensor4ArgNameAndIndex("dz", 0);
@@ -51,6 +51,7 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
     NdarrayUtil<device, T>::InplaceNegative(
         ctx->device_ctx(),
         XpuVarNdarray<T>(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes));
+    return Maybe<void>::Ok();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

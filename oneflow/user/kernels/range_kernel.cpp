@@ -20,13 +20,13 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
-class RangeKernel final : public OpKernel {
+class RangeKernel final : public user_op::OpKernel {
  public:
   RangeKernel() = default;
   ~RangeKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
     const int32_t start = ctx->Attr<int64_t>("start");
@@ -35,6 +35,7 @@ class RangeKernel final : public OpKernel {
     const int32_t range_elem_cnt =
         (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
     RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_elem_cnt, output);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

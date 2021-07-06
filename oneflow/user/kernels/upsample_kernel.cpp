@@ -159,7 +159,7 @@ class UpsampleNearestCPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -172,6 +172,7 @@ class UpsampleNearestCPUKernel final : public user_op::OpKernel {
     UpsampleNearestForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
                               x_blob->shape().At(2), x_blob->shape().At(3), 1.f / height_scale,
                               1.f / width_scale, y_blob->mut_dptr<T>());
+                              return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -183,9 +184,9 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestGradCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_blob == nullptr) { return; }
+    if (dx_blob == nullptr) { return Maybe<void>::Ok(); }
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -199,6 +200,7 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
     UpsampleNearestBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
                                dx_blob->shape().At(2), dx_blob->shape().At(3), 1.f / height_scale,
                                1.f / width_scale, dx_blob->mut_dptr<T>());
+                               return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -227,7 +229,7 @@ class UpsampleBilinearCPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinearCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -248,6 +250,7 @@ class UpsampleBilinearCPUKernel final : public user_op::OpKernel {
     UpsampleBilinearForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
                                in_width, scale_height, scale_width, align_corners,
                                y_blob->mut_dptr<T>());
+                               return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -259,9 +262,9 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
   ~UpsampleBilinearGradCPUKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_blob == nullptr) { return; }
+    if (dx_blob == nullptr) { return Maybe<void>::Ok(); }
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -283,6 +286,7 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
     UpsampleBilinearBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
                                 in_width, scale_height, scale_width, align_corners,
                                 dx_blob->mut_dptr<T>());
+                                return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

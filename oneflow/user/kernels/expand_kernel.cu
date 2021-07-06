@@ -113,7 +113,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
   ~GpuExpandKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -132,6 +132,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
     InitStride(out_stride.val, out_dim_vec.data(), out_dims);
     GpuExpandFunctor<T>()(ctx->device_ctx(), in_ptr, out_stride, expand_stride, out_dims, out_size,
                           out_ptr);
+    return Maybe<void>::Ok(); 
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -154,7 +155,7 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
   ~GpuExpandGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
@@ -175,6 +176,7 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
     InitStride(in_stride.val, in_dim_vec.data(), in_dims);
     GpuExpandGradFunctor<T>()(ctx->device_ctx(), in_ptr, in_stride, expand_stride, in_dims, in_size,
                               out_size, out_ptr);
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

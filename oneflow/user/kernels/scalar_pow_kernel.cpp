@@ -21,13 +21,13 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuScalarPowKernel final : public OpKernel {
+class CpuScalarPowKernel final : public user_op::OpKernel {
  public:
   CpuScalarPowKernel() = default;
   ~CpuScalarPowKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
@@ -36,6 +36,7 @@ class CpuScalarPowKernel final : public OpKernel {
 
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -50,13 +51,13 @@ REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuScalarPowGradKernel final : public OpKernel {
+class CpuScalarPowGradKernel final : public user_op::OpKernel {
  public:
   CpuScalarPowGradKernel() = default;
   ~CpuScalarPowGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(KernelComputeContext* ctx) const override {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -69,6 +70,7 @@ class CpuScalarPowGradKernel final : public OpKernel {
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] = exponent * (std::pow(x_ptr[i], exponent - static_cast<T>(1))) * dy_ptr[i];
     }
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -71,7 +71,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel {
   ~FusedCastScaleGpuKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -84,6 +84,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel {
     FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
                               ctx->device_ctx()->cuda_stream()>>>(
         n, static_cast<T>(scale), x->dptr<U>(), scale_by_tensor->dptr<T>(), y->mut_dptr<T>());
+    return Maybe<void>::Ok();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

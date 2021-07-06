@@ -47,7 +47,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   ~SparseSoftmaxCrossEntropyKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
@@ -64,6 +64,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prob->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -75,8 +76,9 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
   ~SparseSoftmaxCrossEntropyMsKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(FATAL) << "SparseSoftmaxCrossEntropyMsKernel should be split to ops";
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -122,7 +124,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SparseSoftmaxCrossEntropyGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
@@ -135,6 +137,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+        return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
