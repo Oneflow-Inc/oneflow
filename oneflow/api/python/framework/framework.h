@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/foreign_watcher.h"
-#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/framework/config_def.h"
@@ -58,11 +58,11 @@ inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
   if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
     buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
