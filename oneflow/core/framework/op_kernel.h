@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
 
-#include <cuda.h>
 #include <cuda_runtime.h>
 
 #include <memory>
