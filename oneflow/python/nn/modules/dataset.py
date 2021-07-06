@@ -488,7 +488,7 @@ class COCOReader(Module):
         random_seed: Optional[int] = None,
         group_by_aspect_ratio: bool = True,
         remove_images_without_annotations: bool = True,
-        stride_partition: bool = True
+        stride_partition: bool = True,
     ):
         super().__init__()
         if random_seed is None:

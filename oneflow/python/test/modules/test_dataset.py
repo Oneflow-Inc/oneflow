@@ -274,7 +274,7 @@ class TestCocoReader(flow.unittest.TestCase):
             image_dir=image_dir,
             batch_size=2,
             shuffle=True,
-            stride_partition=True
+            stride_partition=True,
         )
         image_decoder = flow.nn.image.decode(dtype=flow.float)
 
@@ -286,7 +286,7 @@ class TestCocoReader(flow.unittest.TestCase):
                 gt_bbox,
                 gt_label,
                 gt_segm,
-                gt_segm_index
+                gt_segm_index,
             ) = coco_reader()
 
             decoded_image = image_decoder(image)
@@ -301,7 +301,9 @@ class TestCocoReader(flow.unittest.TestCase):
             samples = _get_coco_image_samples(anno_file, image_dir, image_id)
             for i, sample in enumerate(samples):
                 test_case.assertTrue(np.array_equal(image_list[i], sample["image"]))
-                test_case.assertTrue(np.array_equal(image_size[i], sample["image_size"]))
+                test_case.assertTrue(
+                    np.array_equal(image_size[i], sample["image_size"])
+                )
                 test_case.assertTrue(np.allclose(bbox_list[i], sample["bbox"]))
                 cur_label = label_list[i]
                 if len(cur_label.shape) == 0:
@@ -309,7 +311,9 @@ class TestCocoReader(flow.unittest.TestCase):
                     cur_label = np.array([cur_label])
                 test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
                 test_case.assertTrue(np.allclose(segm_list[i], sample["poly"]))
-                test_case.assertTrue(np.array_equal(segm_index_list[i], sample["poly_index"]))
+                test_case.assertTrue(
+                    np.array_equal(segm_index_list[i], sample["poly_index"])
+                )
 
 
 if __name__ == "__main__":
