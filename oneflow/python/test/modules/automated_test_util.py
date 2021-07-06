@@ -18,6 +18,7 @@ from email.policy import default
 import inspect
 import typing  # This unused import is needed
 from typing import Dict, Optional, Tuple, Any, Union
+from collections import namedtuple
 import random as random_util
 import os
 
@@ -166,7 +167,10 @@ def test_against_pytorch(
         torch_module_class = eval(f"torch.{pytorch_module_class_name}")
         spec = inspect.getfullargspec(torch_module_class)
     except Exception as e:
-        spec = {}
+        spec = namedtuple('empty', 'args, kwonlyargs, annotations')
+        spec.annotations = dict()
+        spec.args = []
+        spec.kwonlyargs = []
     
     annotations = spec.annotations
     annotations.update(extra_annotations)
