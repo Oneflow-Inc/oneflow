@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from email.policy import default
 import inspect
 import typing  # This unused import is needed
 from typing import Dict, Optional, Tuple, Any, Union
@@ -23,6 +24,10 @@ import os
 import oneflow.experimental as flow
 import torch
 import numpy as np
+
+CONSTANT_ZERO = 0
+CONSTANT_ONE = 1
+CONSTANT_TWO = 2
 
 rng = np.random.default_rng()
 
@@ -133,6 +138,7 @@ def test_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -149,6 +155,8 @@ def test_against_pytorch(
         extra_annotations = {}
     if extra_generators is None:
         extra_generators = {}
+    if extra_defaults is None:
+        extra_defaults = {}
     if pytorch_module_class_name is None:
         pytorch_module_class_name = module_class_name
 
@@ -157,29 +165,28 @@ def test_against_pytorch(
     try:
         torch_module_class = eval(f"torch.{pytorch_module_class_name}")
         spec = inspect.getfullargspec(torch_module_class)
-        annotations = spec.annotations
-        annotations.update(extra_annotations)
-        if "return" in annotations:
-            del annotations["return"]
-        args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-        assert args == set(
-            annotations.keys()
-        ), f"args = {args}, annotations = {annotations.keys()}"
-        annotations.update({"input": torch.Tensor})
-
-        def has_default(name):
-            if name in spec.args:
-                return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
-            else:
-                assert name in spec.kwonlyargs
-                return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
-                    spec.kwonlydefaults
-                )
-
     except Exception as e:
-        annotations = extra_annotations
-        args = annotations.keys()
-        annotations.update({"input": torch.Tensor})
+        spec = {}
+    
+    annotations = spec.annotations
+    annotations.update(extra_annotations)
+    annotations.update(extra_defaults)
+    if "return" in annotations:
+        del annotations["return"]
+    args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
+    assert args == set(
+        annotations.keys()
+    ), f"args = {args}, annotations = {annotations.keys()}"
+    annotations.update({"input": torch.Tensor})
+
+    def has_default(name):
+        if name in spec.args:
+            return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
+        else:
+            assert name in spec.kwonlyargs
+            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
+                spec.kwonlydefaults
+            )
 
     def generate(name):
         annotation = annotations[name]
@@ -213,7 +220,7 @@ def test_against_pytorch(
             torch_input_original.to(device),
         )
         try:
-            if api_flag == 0:
+            if api_flag == CONSTANT_ZERO:
                 torch_module = torch_module_class(**torch_attr_dict)
                 torch_module = torch_module.to(device)
                 torch_module.train(training)
@@ -222,7 +229,7 @@ def test_against_pytorch(
                 state_dict = {
                     k: v.detach().cpu().numpy() for k, v in state_dict.items()
                 }
-            elif api_flag == 1:
+            elif api_flag == CONSTANT_ONE:
                 torch_xxx_func = eval(f"torch.{pytorch_module_class_name}")
                 torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
 
@@ -243,14 +250,14 @@ def test_against_pytorch(
             # so just skip when PyTorch raises an exception
             continue
 
-        if api_flag == 0:
+        if api_flag == CONSTANT_ZERO:
             flow_module_class = eval(f"flow.{module_class_name}")
             flow_module = flow_module_class(**flow_attr_dict)
             flow_module = flow_module.to(device)
             flow_module.train(training)
             flow_module.load_state_dict(state_dict)
             flow_res = flow_module(flow_input)
-        elif api_flag == 1:
+        elif api_flag == CONSTANT_ONE:
             flow_xxx_func = eval(f"flow.{module_class_name}")
             flow_res = flow_xxx_func(flow_input, **flow_attr_dict)
         else:
@@ -287,6 +294,7 @@ def test_module_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -300,6 +308,7 @@ def test_module_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
         device=device,
         training=training,
         backward=backward,
@@ -316,6 +325,7 @@ def test_flow_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -329,6 +339,7 @@ def test_flow_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
         device=device,
         training=training,
         backward=backward,
@@ -345,6 +356,7 @@ def test_tensor_against_pytorch(
     module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
@@ -358,6 +370,7 @@ def test_tensor_against_pytorch(
         module_class_name=module_class_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
         device=device,
         training=training,
         backward=backward,
