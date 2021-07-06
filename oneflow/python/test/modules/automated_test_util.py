@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-from email.policy import default
 import inspect
 import typing  # This unused import is needed
 from typing import Dict, Optional, Tuple, Any, Union
