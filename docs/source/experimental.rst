@@ -102,6 +102,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.L1Loss
 .. autofunction:: oneflow.experimental.nn.BCELoss
 .. autofunction:: oneflow.experimental.chunk
+.. autofunction:: oneflow.experimental.Tensor.chunk
 .. autofunction:: oneflow.experimental.nn.NLLLoss
 .. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss

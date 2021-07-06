@@ -18,6 +18,7 @@ from typing import Optional
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
 
@@ -37,23 +38,23 @@ class Chunk(Module):
             
             channel = input.dim()
             dim_size = input.shape[dim]
-            chunk_size = (int)((dim_size + chunks - 1) / chunks)
-            last_chunk_size = chunk_size if dim_size % chunk_size == 0  else  dim_size % chunk_size
+            chunk_size = dim_size / chunks if dim_size % chunks == 0 else (int)(dim_size / chunks)
+            last_chunk_size = dim_size / chunks if dim_size % chunks == 0 else dim_size - (chunk_size * (chunks - 1))
+            
             chunk_dim_dict = {}
             tup_ndim = []
             splits = []
-
+            
             for chunk in range(0, chunks): 
-                if dim_size % chunk_size == 0:
+                if dim_size % chunks == 0:
                     start = chunk * chunk_size
                     stop = (chunk + 1) * chunk_size
-                    step = 1
                 else:
-                    start = chunk * chunk_size if chunk < chunks -1 else dim_size - 1 - last_chunk_size
-                    stop = (chunk + 1) * chunk_size if chunk < chunks -1 else dim_size - 1
-                    step = 1
-                chunk_dim_dict.setdefault(dim, []).append([start, stop, step])
-               
+                    start = chunk * chunk_size if chunk < chunks - 1 else chunk_size * (chunks - 1)
+                    stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
+                step = 1
+                chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), step])
+
             for k, v in chunk_dim_dict.items():
                 for v_chunk in v:
                     tup_list = []
@@ -68,6 +69,7 @@ class Chunk(Module):
 
 
 @oneflow_export("chunk")
+@register_tensor_op("chunk")
 @experimental_api
 def chunk_op(input, chunks, dim):
     r"""Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
@@ -87,19 +89,35 @@ def chunk_op(input, chunks, dim):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
+       
+        >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> of_out = flow.chunk(input, chunks=3, dim=2)
+        >>> chunks = 3
+        >>> of_out_shape = []
+        >>> for i in range(0, chunks):
+        ...     of_out_shape.append(of_out[i].numpy().shape)
+        >>> of_out_shape
+        [(5, 3, 2, 9), (5, 3, 2, 9), (5, 3, 2, 9)]
 
-        >>> input = flow.Tensor([[1, 2, 3], [7, 8, 9]], dtype = flow.float32)
-        >>> out = flow.chunk(input, chunks=2, dim=0)
-        >>> out
-        [tensor([[1., 2., 3.]], dtype=oneflow.float32), tensor([[7., 8., 9.]], dtype=oneflow.float32)]
+        >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> of_out = flow.chunk(input, chunks=4, dim=3)
+        >>> chunks = 4
+        >>> of_out_shape = []
+        >>> for i in range(0, chunks):
+        ...     of_out_shape.append(of_out[i].numpy().shape)
+        >>> of_out_shape
+        [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
+
     """
     return Chunk()(input, chunks, dim)
 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
 
+    doctest.testmod(raise_on_error=False)
                         
 
             
