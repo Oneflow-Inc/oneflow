@@ -36,11 +36,11 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
   auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  // Sequantialize nccl instructions by consuming `compute_local_dep_object` of the
-  // same device.
   if (opkernel().device()->type() == "nccl") {
+    // Sequantialize nccl instructions to avoid deadlock
     DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
   } else {
+    // Sequantialize instructions to avoid explosive memory allocation of source ops
     if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
       DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
     }
