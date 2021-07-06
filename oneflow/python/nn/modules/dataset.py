@@ -472,3 +472,21 @@ class ImageDecode(Module):
 
     def forward(self, input):
         return self._op(input)[0]
+
+
+@oneflow_export("nn.image.normalize")
+@experimental_api
+class ImageNormalize(Module):
+    def __init__(self, std: Sequence[float], mean: Sequence[float]):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_normalize")
+            .Input("in")
+            .Output("out")
+            .Attr("std", std)
+            .Attr("mean", mean)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
