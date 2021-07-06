@@ -269,7 +269,7 @@ py::class_<T, Tensor, std::shared_ptr<T>> ExportTensor(py::module& m, const char
 Maybe<ConsistentTensor> CastLocalToConsistent(
     const std::shared_ptr<MirroredTensor>& mirrored_tensor,
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    Symbol<ParallelDesc> parallel_desc) {
   TensorTuple input_list;
   input_list.emplace_back(mirrored_tensor);
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -300,7 +300,7 @@ Maybe<MirroredTensor> CastConsistentToLocal(
   auto outputs = std::make_shared<one::TensorTuple>(1);
   const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
   const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
-                                                           *parallel_distribution, *parallel_desc));
+                                                           *parallel_distribution, parallel_desc));
   const auto& session = JUST(GetDefaultSession());
   session->PushMirroredStrategyEnabled(false);
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
@@ -313,7 +313,8 @@ Maybe<MirroredTensor> CastConsistentToLocal(
 // used in consistent_tensor.to_consistent(sbp)
 Maybe<ConsistentTensor> CastParallelDistribution(
     const std::shared_ptr<ConsistentTensor>& consistent_tensor,
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+    Symbol<ParallelDesc> parallel_desc) {
   TensorTuple input_list;
   input_list.emplace_back(consistent_tensor);
   auto outputs = std::make_shared<one::TensorTuple>(1);
@@ -350,17 +351,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("to_consistent",
            [](const std::shared_ptr<MirroredTensor>& mirrored_tensor,
               const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-              const std::shared_ptr<ParallelDesc>& parallel_desc)
-               -> std::shared_ptr<ConsistentTensor> {
+              Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<ConsistentTensor> {
              return CastLocalToConsistent(mirrored_tensor, sbp_parallels, parallel_desc)
                  .GetPtrOrThrow();
            });
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor")
       .def("to_consistent",
-           [](const std::shared_ptr<ConsistentTensor>& mirrored_tensor,
-              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels)
-               -> std::shared_ptr<ConsistentTensor> {
-             return CastParallelDistribution(mirrored_tensor, sbp_parallels).GetPtrOrThrow();
+           [](const std::shared_ptr<ConsistentTensor>& consistent_tensor,
+              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+              Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<ConsistentTensor> {
+             return CastParallelDistribution(consistent_tensor, sbp_parallels, parallel_desc)
+                 .GetPtrOrThrow();
            })
       .def("to_local",
            [](const std::shared_ptr<ConsistentTensor>& consistent_tensor)

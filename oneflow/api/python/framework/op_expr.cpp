@@ -103,7 +103,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
              std::shared_ptr<one::CastToConsistentOpExpr>>(m, "CastToConsistentOpExpr")
       .def(py::init([](const std::string& op_name,
                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
+                       Symbol<ParallelDesc> parallel_desc) {
         return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
             .GetPtrOrThrow();
       }));

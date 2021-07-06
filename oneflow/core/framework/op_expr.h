@@ -192,7 +192,7 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
 
   static Maybe<CastToConsistentOpExpr> New(
       const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-      const std::shared_ptr<ParallelDesc>& parallel_desc);
+      Symbol<ParallelDesc> parallel_desc);
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
                                            Symbol<cfg::ParallelDistribution> parallel_distribution,
@@ -213,7 +213,7 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
 
   static Maybe<CastFromConsistentOpExpr> New(
       const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-      const std::shared_ptr<ParallelDesc>& parallel_desc);
+      Symbol<ParallelDesc> parallel_desc);
 
   static Maybe<CastFromConsistentOpExpr> New(
       const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
