@@ -52,6 +52,9 @@ def customized_symbols():
         # oneflow.Tensor
         """from oneflow.python.framework.tensor import Tensor""",
         """Tensor.__module__ = \"oneflow\"""",
+        # oneflow.placement
+        """from oneflow._oneflow_internal import placement""",
+        """placement.__module__ = \"oneflow\"""",
     ]
 
 
