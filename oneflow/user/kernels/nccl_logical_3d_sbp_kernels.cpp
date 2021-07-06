@@ -495,7 +495,7 @@ class NcclLogical3DChangeDim2ReduceScatter final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
+    const int64_t num_ranks = nccl_comm->num_ranks();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
                                     GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
