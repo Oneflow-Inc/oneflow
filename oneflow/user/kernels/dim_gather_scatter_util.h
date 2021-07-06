@@ -56,17 +56,17 @@ struct DeviceBinOp {
   template<DeviceType device_type, typename IN_T, typename IDX_T>                                  \
   struct DimScatter##binop##Functor final {                                                        \
     void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
-                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);               \
+                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim, const int64_t elem_cnt, \
+                    const int32_t dim, const int64_t upper_bound, const IDX_T* index, const IN_T* src, IN_T* output);               \
   }
 
 #define IMPLEMENT_DIMSCATTER_CPUFUNCTOR(binop)                                                     \
   template<typename IN_T, typename IDX_T>                                                          \
   struct DimScatter##binop##Functor<DeviceType::kCPU, IN_T, IDX_T> final {                         \
     void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
-                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) {            \
-      DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,       \
+                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim, const int64_t elem_cnt, \
+                    const int32_t dim, const int64_t upper_bound, const IDX_T* index, const IN_T* src, IN_T* output) {            \
+      DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, \
                                      index, src, output, DeviceBinOp<IN_T>::binop);              \
     }                                                                                              \
   }
@@ -76,28 +76,28 @@ struct DeviceBinOp {
   __global__ void DoCUDADimScatter##binop(const DimOpIndexNdHelper<IDX_T> src_nd_helper,         \
                                           const DimOpIndexNdHelper<IDX_T> idx_nd_helper, \
                                           const DimOpIndexNdHelper<IDX_T> output_nd_helper,        \
-                                          int ndim, int64_t elem_cnt, int32_t dim,                 \
+                                          const int ndim, const int64_t elem_cnt, const int32_t dim,  const int64_t upper_bound,  \
                                           const IDX_T* index, const IN_T* src, IN_T* output) {   \
-    DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,  \
+    DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,  \
                                    src, output, DeviceBinOp<IN_T>::binop);                       \
   }                                                                                                \
   template<typename IN_T, typename IDX_T>                                                          \
   struct DimScatter##binop##Functor<DeviceType::kGPU, IN_T, IDX_T> final {                         \
     void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
-                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) {            \
+                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim, const int64_t elem_cnt, \
+                    const int32_t dim, const int64_t upper_bound, const IDX_T* index, const IN_T* src, IN_T* output) {            \
       RUN_CUDA_KERNEL((DoCUDADimScatter##binop<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
-                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src,        \
+                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index, src,        \
                       output);                                                                     \
     }                                                                                              \
   };                                                                                               \
   template<typename IDX_T>                                                                         \
   struct DimScatter##binop##Functor<DeviceType::kGPU, float16, IDX_T> final {                      \
     void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
-                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt, \
-                    int32_t dim, const IDX_T* index, const float16* src, float16* output) {      \
+                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim, const int64_t elem_cnt, \
+                    const int32_t dim, const int64_t upper_bound, const IDX_T* index, const float16* src, float16* output) {      \
       RUN_CUDA_KERNEL((DoCUDADimScatter##binop<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
-                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,               \
+                      src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,      \
                       reinterpret_cast<const half*>(src), reinterpret_cast<half*>(output));      \
     }                                                                                              \
   }

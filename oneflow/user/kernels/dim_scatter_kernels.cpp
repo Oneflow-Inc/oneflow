@@ -30,10 +30,10 @@ namespace user_op {
    private:                                                                                       \
     void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,  \
-                  int32_t dim, const IDX_T* index, const IN_T* src,                             \
+                  int32_t dim, int64_t upper_bound, const IDX_T* index, const IN_T* src,                             \
                   IN_T* output) const override {                                                  \
       DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                     \
-          ctx, src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src, output);     \
+          ctx, src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index, src, output);     \
     }                                                                                             \
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      \
   }
@@ -107,8 +107,8 @@ class DimScatterBaseKernel : public user_op::OpKernel {
   DimScatterBaseKernel() = default;
   ~DimScatterBaseKernel() override = default;
   virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
-                        const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* src,
+                        const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, 
+                        int64_t elem_cnt, int32_t dim, int64_t upper_bound, const IDX_T* index, const IN_T* src,
                         IN_T* output) const = 0;
 
  private:
@@ -133,14 +133,15 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
     } else {
-      Error::Unimplemented();
+      std::cout<<"Unimplemented Error"<<std::endl;
+      throw Error::Unimplemented();
     }
 
-    int ndim = input_tensor->shape().NumAxes();
+    const int ndim = input_tensor->shape().NumAxes();
     fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
-                     [](int64_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
+                     [](int32_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
     };
     shape2dims(src_tensor->shape());
     DimOpIndexNdHelper<IDX_T> src_nd_helper(shape_vec.data(), ndim);
@@ -148,8 +149,11 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> idx_nd_helper(shape_vec.data(), ndim);
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
+
+    const int64_t upper_bound = input_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
+
     BinaryOp(ctx->device_ctx(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
-             index_tensor->shape().elem_cnt(), dim, index, src, output);
+             index_tensor->shape().elem_cnt(), dim, upper_bound, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

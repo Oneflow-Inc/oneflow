@@ -32,13 +32,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
+  // check input.numaxes == index.numaxes == src/like.num_axes
   int64_t input_num_axes = input->shape().NumAxes();
   CHECK_GT_OR_RETURN(input_num_axes, 0);
   CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
-
   int64_t index_num_axes = index->shape().NumAxes();
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
-
   int64_t output_num_axes = 0;
   if (src) {
     output_num_axes = src->shape().NumAxes();
@@ -49,10 +48,22 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
   CHECK_EQ_OR_RETURN(input_num_axes, output_num_axes);
 
-  // todo(zzk): it is not align with torch
-  // FOR_RANGE(int64_t, i, 0, input_num_axes) {
-  //   CHECK_EQ_OR_RETURN(index->shape().At(i), input->shape().At(i));
-  // }
+  // check index.shape(i) <= input.shape(i)
+  FOR_RANGE(int64_t, i, 0, input_num_axes) {
+    if(i==dim) continue; 
+    CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
+  }
+  
+  // check index.shape(i) <= src/like.shape(i)
+  FOR_RANGE(int64_t, i, 0, input_num_axes) {
+    if(i==dim) continue; 
+    if(src){
+      CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
+    }
+    else{
+      CHECK_LE_OR_RETURN(index->shape().At(i), like->shape().At(i));
+    }
+  }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
@@ -63,7 +74,6 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK(like_arg_modifier != nullptr);
-  // like_arg_modifier->set_use_header_only(true);
   like_arg_modifier->set_requires_grad(false);
 
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
