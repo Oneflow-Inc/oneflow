@@ -32,12 +32,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
-  // const cfg::SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-  // int64_t split_axis = input_sbp.split_parallel().axis();
-  // if (ctx->parallel_ctx().parallel_num() != 1 && input_sbp.has_split_parallel()) {
-  //   CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-  // }
-
   int64_t input_num_axes = input->shape().NumAxes();
   CHECK_GT_OR_RETURN(input_num_axes, 0);
   CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
@@ -109,6 +103,16 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SetSbpInfer(user_op::InferSbpSignatureFnContext* ctx) {
+  int32_t dim = ctx->Attr<int32_t>("dim");
+  const cfg::SbpParallel input_sbp = ctx->SbpParallelHint4InputArgNameAndIndex("input", 0);
+  int64_t split_axis = input_sbp.split_parallel().axis();
+  if (ctx->parallel_num() != 1 && input_sbp.has_split_parallel()) {
+    CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
@@ -127,7 +131,8 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .SetTensorDescInferFn(InferTensorDesc)   \
       .SetInputArgModifyFn(InputArgModifierFn) \
       .SetDataTypeInferFn(InferDtype) \
-      .SetGetSbpFn(SetSbpLike)
+      .SetGetSbpFn(SetSbpLike) \
+      .SetSbpSignatureInferFn(SetSbpInfer)
 
 
 #define REGISTER_SCATTER_OP(optypename)       \
@@ -139,7 +144,9 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
       .SetDataTypeInferFn(InferDtype) \
-      .SetGetSbpFn(SetSbpScatter)
+      .SetGetSbpFn(SetSbpScatter) \
+      .SetSbpSignatureInferFn(SetSbpInfer)
+
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
