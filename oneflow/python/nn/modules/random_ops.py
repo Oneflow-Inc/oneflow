@@ -20,18 +20,6 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
-class Bernoulli(Module):
-    def __init__(self, dtype=flow.float32, generator=None):
-        super().__init__()
-        if generator is None:
-            generator = flow.Generator()
-        self.generator = generator
-        self.dtype = dtype
-
-    def forward(self, x):
-        return flow.F.bernoulli(x, self.dtype, self.generator)
-
-
 @oneflow_export("bernoulli")
 @experimental_api
 def bernoulli(input, *, generator=None, out=None):
@@ -70,7 +58,7 @@ def bernoulli(input, *, generator=None, out=None):
 
 
     """
-    return Bernoulli(generator=generator)(input)
+    return flow.F.bernoulli(input, flow.float32, None)
 
 
 if __name__ == "__main__":

@@ -400,7 +400,6 @@ class BernoulliFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<float>("has_seed", true));
     JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype));
 
     std::shared_ptr<one::Generator> gen;
