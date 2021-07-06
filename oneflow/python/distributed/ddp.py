@@ -21,10 +21,8 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
-module2params = {}
-
-
 def allreducefn(reversed_param_list, param, nccl_allreduce_op):
+    assert param.device.type == 'cuda'
     def allreduce(grad):
         reversed_param_list[param][0] = True
         ret = None
