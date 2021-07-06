@@ -13,20 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
-#include "oneflow/core/job/job_instance.h"
+#include "oneflow/user/kernels/activation_kernels.h"
 
 namespace oneflow {
 
-RuntimeBufferManagersScope::RuntimeBufferManagersScope() {
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
-}
+#define REGISTER_ACTIVATION_CPU_KERNEL(dtype)           \
+  REGISTER_ELU_KERNEL(DeviceType::kCPU, dtype);         \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCPU, dtype);   \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCPU, dtype); \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCPU, dtype);
 
-RuntimeBufferManagersScope::~RuntimeBufferManagersScope() {
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
-}
-
+REGISTER_ACTIVATION_CPU_KERNEL(float);
+REGISTER_ACTIVATION_CPU_KERNEL(double);
 }  // namespace oneflow

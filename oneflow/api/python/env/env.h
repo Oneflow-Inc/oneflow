@@ -57,7 +57,11 @@ inline Maybe<void> DestroyDefaultEnv() {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  if (!GlobalProcessCtx::IsMultiClient()) {
+    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  } else {
+    ClusterInstruction::HaltBarrier();
+  }
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
@@ -70,12 +74,12 @@ inline Maybe<void> InitDefaultEnv(const std::string& env_proto_str) {
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto, false));
   if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> InitEnv(const std::string& env_proto_str) {
+inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
@@ -84,8 +88,8 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto, is_multi_client));
+  if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
@@ -93,6 +97,9 @@ inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
 inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
+inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
+inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
+inline Maybe<bool> IsMultiClient() { return GlobalProcessCtx::IsMultiClient(); }
 
 }  // namespace oneflow
 

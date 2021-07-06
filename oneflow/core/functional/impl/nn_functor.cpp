@@ -21,10 +21,13 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
 namespace one {
@@ -393,6 +396,44 @@ class PadFunctor {
   std::shared_ptr<OpExpr> replicate_pad_;
 };
 
+class DropoutFunctor {
+ public:
+  DropoutFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    dropout_op_ =
+        CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::GetDefaultGenerator("auto"));
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x},
+        OpExprInterpContext{.attrs = random_mask_like_attrs, .state = random_mask_like_state}));
+    float scale = 1.0;
+    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    MutableAttrMap dropout_attrs;
+    JUST(dropout_attrs.SetAttr<float>("scale", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> dropout_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -411,6 +452,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
+  m.add_functor<impl::DropoutFunctor>("Dropout");
 };
 
 }  // namespace functional
