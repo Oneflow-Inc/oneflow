@@ -174,15 +174,18 @@ def test_against_pytorch(
     if "return" in annotations:
         del annotations["return"]
     
-    try:
-        args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-        assert args == set(
-            annotations.keys()
-        ), f"args = {args}, annotations = {annotations.keys()}"
-    except Exception as e:
-        pass
+    def has_full_args_spec(args):
+        if args == set():
+            return False
+        return True
+
+    args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
+    if has_full_args_spec(args) == False:
+        args = set(annotations.keys())
     
-    annotations.update({"input": torch.Tensor})
+    assert args == set(
+        annotations.keys()
+    ), f"args = {args}, annotations = {annotations.keys()}"
 
     def has_default(name):
         if name in spec.args:
@@ -199,17 +202,16 @@ def test_against_pytorch(
             return extra_generators[name](annotation)
         return default_generators[annotation]()
 
+    annotations.update({"input": torch.Tensor})
+
     while n > 0:
         flow_attr_dict = {}
         torch_attr_dict = {}
         for name in args:
-            if api_flag == 0:
+            if api_flag == TEST_MODULE:
                 if has_default(name):
                     if rng.random() < 1 / 3:
                         continue
-            else:
-                if name == "input":
-                    continue
             flow_data, torch_data = generate(name)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data

@@ -1826,6 +1826,7 @@ class TestConv2d(flow.unittest.TestCase):
                     "padding_mode": constant("zeros"),
                 },
                 device=device,
+                rtol=1e-4,
             )
 
 
