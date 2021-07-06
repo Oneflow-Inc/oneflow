@@ -121,7 +121,7 @@ jobs:
           cd tools/clang-plugin
           mkdir build
           cd build
-          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
           make -j$(nproc)
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
@@ -136,12 +136,31 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
       - name: Build (third party)
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           cd build
           cmake --build . -j$(nproc) --target oneflow_deps
       - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           cd build
           cmake --build . -j$(nproc)
+      - name: Tar core
+        if: always()
+        continue-on-error: true
+        run: |
+          set -ex
+          tar -cvf build_core.tar ${PWD}/build/**/core.*
+      - name: Upload core
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: core-build-oneflow-with-clang-plugin
+          path: |
+            build.tar
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -159,7 +178,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/gh-action-scheduler-v2@849c5f271f5a3673ea33ce6d75ce5ebc0b288b3d
+      - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
