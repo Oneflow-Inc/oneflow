@@ -22,7 +22,8 @@ from oneflow.python.nn.module import Module
 
 
 def allreducefn(reversed_param_list, param, nccl_allreduce_op):
-    assert param.device.type == 'cuda'
+    assert param.device.type == "cuda"
+
     def allreduce(grad):
         reversed_param_list[param][0] = True
         ret = None
@@ -45,7 +46,7 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
 @oneflow_export("ddp")
 def DDP(module: Module, world_size=None):
     if world_size is None:
-        world_size = flow.world_size()
+        world_size = flow.distributed.get_world_size()
     nccl_allreduce_op = (
         builtin_op("eager_nccl_all_reduce")
         .Input("in")
