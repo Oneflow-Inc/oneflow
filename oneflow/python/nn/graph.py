@@ -19,6 +19,7 @@ from typing import Union
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.graph_compile_util as graph_compile_util
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -34,6 +35,7 @@ class Graph(object):
     def __init__(self):
         self.config = GraphConfig()
         self._name = id_util.UniqueStr(self.__class__.__name__ + "_")
+        self.config.proto.set_job_name(self._name)
         self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
@@ -91,6 +93,8 @@ class Graph(object):
         # sess = session_ctx.GetDefaultSession()
         # sess.TryInit()
         # do job compile
+        with graph_compile_util.graph_build_context(self.config):
+            print("self.build()")
 
         self._is_compiled = True
 

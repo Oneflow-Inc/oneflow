@@ -152,7 +152,9 @@ class TestGraph(flow.unittest.TestCase):
                 return x
 
         g = CustomGraph()
+        # check _c_nn_graph init
         test_case.assertEqual(g.name, g._c_nn_graph.name)
+        g._compile()
 
 
 if __name__ == "__main__":
