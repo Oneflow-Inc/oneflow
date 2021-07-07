@@ -85,7 +85,7 @@ inline Maybe<void> InitDefaultEnv(const std::string& env_proto_str) {
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto, false));
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
   if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
@@ -99,7 +99,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_clien
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto, is_multi_client));
+  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
   if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
