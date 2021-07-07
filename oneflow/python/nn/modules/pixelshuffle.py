@@ -20,13 +20,13 @@ from oneflow.python.nn.module import Module
 
 @oneflow_export("nn.PixelShuffle")
 @experimental_api
-class PixelShuffle(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
+class PixelShufflev2(Module):
+    r"""
+    Part of the documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.PixelShuffle.html#torch.nn.PixelShuffle
 
-    Rearranges elements in a tensor of shape :math:`(*, C \times r^2, H, W)`
-    to a tensor of shape :math:`(*, C, H \times r, W \times r)`, where r is an upscale factor.
+    Rearranges elements in a tensor of shape :math:`(*, C \times r_h \times r_w, H, W)`
+    to a tensor of shape :math:`(*, C, H \times r_h, W \times r_w)`, where r_h and r_w are upscale factors.
 
     This is useful for implementing efficient sub-pixel convolution
     with a stride of :math:`1/r`.
@@ -36,20 +36,21 @@ class PixelShuffle(Module):
     by Shi et. al (2016) for more details.
 
     Args:
-        upscale_factor (int): factor to increase spatial resolution by
+        h_upscale_factor (int): factor to increase height spatial resolution by
+        w_upscale_factor (int): factor to increase width spatial resolution by
 
     Shape:
         - Input: :math:`(*, C_{in}, H_{in}, W_{in})`, where * is zero or more batch dimensions
         - Output: :math:`(*, C_{out}, H_{out}, W_{out})`, where
 
     .. math::
-        C_{out} = C_{in} \div \text{upscale_factor}^2
+        C_{out} = C_{in} \div \text{h_upscale_factor} \div \text{w_upscale_factor}
 
     .. math::
-        H_{out} = H_{in} \times \text{upscale_factor}
+        H_{out} = H_{in} \times \text{h_upscale_factor}
 
     .. math::
-        W_{out} = W_{in} \times \text{upscale_factor}
+        W_{out} = W_{in} \times \text{w_upscale_factor}
 
     For example:
 
@@ -59,31 +60,22 @@ class PixelShuffle(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> m = flow.nn.PixelShuffle(upscale_factor=2)
+        >>> m = flow.nn.PixelShuffle(h_upscale_factor=2, w_upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
         >>> y = m(x)
         >>> print(y.size())
         flow.Size([3, 1, 10, 10])
 
-        >>> m = flow.nn.PixelShuffle(upscale_factor=3)
-        >>> x = flow.Tensor(np.random.randn(1, 18, 2, 2))
+        >>> m = flow.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
+        >>> x = flow.Tensor(np.random.randn(1, 24, 2, 2))
         >>> y = m(x)
         >>> print(y.size())
-        flow.Size([1, 2, 6, 6])
+        flow.Size([1, 2, 6, 8])
 
     .. _Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network:
         https://arxiv.org/abs/1609.05158
     """
 
-    def __init__(self, upscale_factor: int) -> None:
-        super().__init__()
-        self._pixel_shuffle_v2_op = PixelShufflev2(upscale_factor, upscale_factor)
-
-    def forward(self, input: Tensor) -> Tensor:
-        return self._pixel_shuffle_v2_op(input)
-
-
-class PixelShufflev2(Module):
     def __init__(self, h_upscale_factor: int, w_upscale_factor: int) -> None:
         super().__init__()
         assert (
