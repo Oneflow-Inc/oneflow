@@ -49,10 +49,6 @@ list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
 # Find hip
 find_package(hip)
 
-# Set compiler and linker
-#set(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
-#set(CMAKE_CXX_LINKER   ${HIP_HIPCC_EXECUTABLE})
-
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 get_filename_component(real_src_dir "${CMAKE_SOURCE_DIR}" REALPATH)
