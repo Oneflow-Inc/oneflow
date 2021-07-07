@@ -134,7 +134,7 @@ def constant(val):
 
 def test_against_pytorch(
     test_case,
-    module_class_name,
+    callable_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     extra_defaults: Optional[Dict[str, Any]] = None,
@@ -157,7 +157,7 @@ def test_against_pytorch(
     if extra_defaults is None:
         extra_defaults = {}
     if pytorch_callable_name is None:
-        pytorch_callable_name = module_class_name
+        pytorch_callable_name = callable_name
 
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -185,19 +185,29 @@ def test_against_pytorch(
 
     annotations = spec.annotations
     annotations.update(extra_annotations)
-    annotations.update(extra_defaults)
 
     if "return" in annotations:
         del annotations["return"]
 
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
     if not has_full_args_spec(args):
-        args = set(annotations.keys())
+        args = set(annotations.keys() | extra_defaults.keys())
+        for item in args:
+            spec.args.append(item)
 
     assert args == set(
-        annotations.keys()
+        annotations.keys() | extra_defaults.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
     annotations.update({"input": torch.Tensor})
+
+    def has_default(name):
+        if name in spec.args:
+            return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
+        else:
+            assert name in spec.kwonlyargs
+            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
+                spec.kwonlydefaults
+            )
 
     def generate(name):
         annotation = annotations[name]
@@ -209,6 +219,9 @@ def test_against_pytorch(
         flow_attr_dict = {}
         torch_attr_dict = {}
         for name in args:
+            if has_default(name):
+                if rng.random() < 1 / 3:
+                    continue
             flow_data, torch_data = generate(name)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
@@ -225,11 +238,11 @@ def test_against_pytorch(
         )
         try:
             if api_flag == TEST_MODULE:
-                torch_module = pytorch_call(**torch_attr_dict)
-                torch_module = torch_module.to(device)
-                torch_module.train(training)
-                torch_res = torch_module(torch_input)
-                state_dict = torch_module.state_dict()
+                torch_call = pytorch_call(**torch_attr_dict)
+                torch_call = torch_call.to(device)
+                torch_call.train(training)
+                torch_res = torch_call(torch_input)
+                state_dict = torch_call.state_dict()
                 state_dict = {
                     k: v.detach().cpu().numpy() for k, v in state_dict.items()
                 }
@@ -244,7 +257,7 @@ def test_against_pytorch(
             loss = torch_res.sum()
             loss.backward()
             if api_flag == TEST_MODULE:
-                state_dict = torch_module.state_dict()
+                state_dict = torch_call.state_dict()
                 state_dict = {
                     k: v.detach().cpu().numpy() for k, v in state_dict.items()
                 }
@@ -256,17 +269,17 @@ def test_against_pytorch(
             continue
 
         if api_flag == TEST_MODULE:
-            flow_module_class = eval(f"flow.{module_class_name}")
-            flow_module = flow_module_class(**flow_attr_dict)
-            flow_module = flow_module.to(device)
-            flow_module.train(training)
-            flow_module.load_state_dict(state_dict)
-            flow_res = flow_module(flow_input)
+            flow_call_class = eval(f"flow.{callable_name}")
+            flow_call = flow_call_class(**flow_attr_dict)
+            flow_call = flow_call.to(device)
+            flow_call.train(training)
+            flow_call.load_state_dict(state_dict)
+            flow_res = flow_call(flow_input)
         elif api_flag == TEST_FLOW:
-            flow_xxx_func = eval(f"flow.{module_class_name}")
+            flow_xxx_func = eval(f"flow.{callable_name}")
             flow_res = flow_xxx_func(flow_input, **flow_attr_dict)
         else:
-            flow_tensor_xxx_func = eval(f"flow_input.{module_class_name}")
+            flow_tensor_xxx_func = eval(f"flow_input.{callable_name}")
             flow_res = flow_tensor_xxx_func(**flow_attr_dict)
 
         loss = flow_res.sum()
@@ -287,8 +300,8 @@ def test_against_pytorch(
         allclose_or_fail(flow_res, torch_res)
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
         if api_flag == TEST_MODULE:
-            flow_parameters = dict(flow_module.named_parameters())
-            for name, torch_param in torch_module.named_parameters():
+            flow_parameters = dict(flow_call.named_parameters())
+            for name, torch_param in torch_call.named_parameters():
                 flow_param = flow_parameters[name]
                 allclose_or_fail(flow_param.grad, torch_param.grad)
         n -= 1
@@ -296,7 +309,7 @@ def test_against_pytorch(
 
 def test_module_against_pytorch(
     test_case,
-    module_class_name,
+    callable_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     extra_defaults: Optional[Dict[str, Any]] = None,
@@ -310,7 +323,7 @@ def test_module_against_pytorch(
 ):
     return test_against_pytorch(
         test_case=test_case,
-        module_class_name=module_class_name,
+        callable_name=callable_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
         extra_defaults=extra_defaults,
@@ -327,7 +340,7 @@ def test_module_against_pytorch(
 
 def test_flow_against_pytorch(
     test_case,
-    module_class_name,
+    callable_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     extra_defaults: Optional[Dict[str, Any]] = None,
@@ -341,7 +354,7 @@ def test_flow_against_pytorch(
 ):
     return test_against_pytorch(
         test_case=test_case,
-        module_class_name=module_class_name,
+        callable_name=callable_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
         extra_defaults=extra_defaults,
@@ -358,7 +371,7 @@ def test_flow_against_pytorch(
 
 def test_tensor_against_pytorch(
     test_case,
-    module_class_name,
+    callable_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     extra_defaults: Optional[Dict[str, Any]] = None,
@@ -372,7 +385,7 @@ def test_tensor_against_pytorch(
 ):
     return test_against_pytorch(
         test_case=test_case,
-        module_class_name=module_class_name,
+        callable_name=callable_name,
         extra_annotations=extra_annotations,
         extra_generators=extra_generators,
         extra_defaults=extra_defaults,
