@@ -76,7 +76,7 @@ struct DeviceBinOp {
   __global__ void DoCUDADimScatter##binop(const DimOpIndexNdHelper<IDX_T> src_nd_helper,         \
                                           const DimOpIndexNdHelper<IDX_T> idx_nd_helper, \
                                           const DimOpIndexNdHelper<IDX_T> output_nd_helper,        \
-                                          const int ndim, const int64_t elem_cnt, const int32_t dim,  const int64_t upper_bound,  \
+                                          const int ndim, const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound, \
                                           const IDX_T* index, const IN_T* src, IN_T* output) {   \
     DoDimScatterBinOp<IN_T, IDX_T>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,  \
                                    src, output, DeviceBinOp<IN_T>::binop);                       \

@@ -32,46 +32,49 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
-  // check input.numaxes == index.numaxes == src/like.num_axes
-  int64_t input_num_axes = input->shape().NumAxes();
-  CHECK_GT_OR_RETURN(input_num_axes, 0);
-  CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
+  // check index.numaxes == src.num_axes == input/like.numaxes
+  int64_t src_num_axes = src->shape().NumAxes();
+  CHECK_GT_OR_RETURN(src_num_axes, 0);
+  CHECK_LE_OR_RETURN(src_num_axes, kDimGatherMaxDimCount);
   int64_t index_num_axes = index->shape().NumAxes();
-  CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
-  int64_t output_num_axes = 0;
-  if (src) {
-    output_num_axes = src->shape().NumAxes();
+  CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
+  
+  int64_t output_num_axes = 0; 
+  if (input) {
+    output_num_axes = input->shape().NumAxes();
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
     Error::Unimplemented();
   }
-  CHECK_EQ_OR_RETURN(input_num_axes, output_num_axes);
-
-  // check index.shape(i) <= input.shape(i)
-  FOR_RANGE(int64_t, i, 0, input_num_axes) {
-    if(i==dim) continue; 
-    CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
-  }
+  CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
   
-  // check index.shape(i) <= src/like.shape(i)
-  FOR_RANGE(int64_t, i, 0, input_num_axes) {
+  // check index.shape(i) <= input/like.shape(i)
+  FOR_RANGE(int64_t, i, 0, index_num_axes) {
     if(i==dim) continue; 
-    if(src){
-      CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
+    if(input){
+      CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
     }
     else{
       CHECK_LE_OR_RETURN(index->shape().At(i), like->shape().At(i));
     }
   }
+  
+  // check index.shape(i) <= src.shape(i)
+  FOR_RANGE(int64_t, i, 0, index_num_axes) {
+    if(i==dim) continue; 
+    CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
+  }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
+  printf("infertensor ok");
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
+  // is there a problem?
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK(like_arg_modifier != nullptr);
   like_arg_modifier->set_requires_grad(false);
@@ -95,6 +98,36 @@ Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgMo
 }
 
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src) {
+  const user_op::TensorDesc& index_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
+  int64_t index_num_axes = index_tensor.shape().NumAxes();
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+
+  FOR_RANGE(int64_t, i, 0, index_num_axes) {
+    if (i != dim) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Split(user_op::OpArg(like_or_src, 0), i)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .PartialSum(user_op::OpArg("output", 0))
+          .Broadcast(user_op::OpArg(like_or_src, 0))
+          .Build();
+
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .PartialSum(user_op::OpArg("output", 0))
+          .PartialSum(user_op::OpArg(like_or_src, 0))
+          .Build();
+    }
+  }
+
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("input", 0))
       .Broadcast(user_op::OpArg("index", 0))
@@ -113,20 +146,28 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SetSbpInfer(user_op::InferSbpSignatureFnContext* ctx) {
-  int32_t dim = ctx->Attr<int32_t>("dim");
-  const cfg::SbpParallel input_sbp = ctx->SbpParallelHint4InputArgNameAndIndex("input", 0);
-  int64_t split_axis = input_sbp.split_parallel().axis();
-  if (ctx->parallel_num() != 1 && input_sbp.has_split_parallel()) {
-    CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-  }
-  return Maybe<void>::Ok();
-}
+// Maybe<void> SetSbpInfer(user_op::InferSbpSignatureFnContext* ctx) {
+//   int32_t dim = ctx->Attr<int32_t>("dim");
+//   const cfg::SbpParallel input_sbp = ctx->SbpParallelHint4InputArgNameAndIndex("input", 0);
+//   int64_t split_axis = input_sbp.split_parallel().axis();
+//   if (ctx->parallel_num() != 1 && input_sbp.has_split_parallel()) {
+//     CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+//   }
+//   return Maybe<void>::Ok();
+// }
 
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+  const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0); // can be deleted
+  if(input){
+    CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
+  }
+  else{
+    CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
+  }
+  *ctx->OutputDType("output", 0) = ctx->InputDType("src", 0);
   return Maybe<void>::Ok();
 }
 }  // namespace
@@ -134,28 +175,26 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
       .Input("like")                           \
-      .Input("input")                          \
       .Input("index")                          \
+      .Input("src")                          \
       .Output("output")                        \
       .Attr<int32_t>("dim")                    \
       .SetTensorDescInferFn(InferTensorDesc)   \
       .SetInputArgModifyFn(InputArgModifierFn) \
       .SetDataTypeInferFn(InferDtype) \
-      .SetGetSbpFn(SetSbpLike) \
-      .SetSbpSignatureInferFn(SetSbpInfer)
+      .SetGetSbpFn(SetSbpLike)
 
 
 #define REGISTER_SCATTER_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
-      .OptionalInput("src")                           \
       .Input("input")                                 \
-      .Input("index")                                 \
+      .Input("index") \
+      .Input("src")                           \
       .Output("output")                               \
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
       .SetDataTypeInferFn(InferDtype) \
-      .SetGetSbpFn(SetSbpScatter) \
-      .SetSbpSignatureInferFn(SetSbpInfer)
+      .SetGetSbpFn(SetSbpScatter)
 
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
@@ -181,8 +220,6 @@ REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_OP("dim_scatter_add");
 REGISTER_SCATTER_OP("dim_scatter_update");
 
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
 

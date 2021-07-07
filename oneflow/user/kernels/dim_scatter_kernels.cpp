@@ -42,7 +42,7 @@ namespace user_op {
   REGISTER_USER_KERNEL(optypename)                                                       \
       .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
 #define REGISTER_DIM_SCATTER_BINOP_LIKE_KERNELS_DEVICE(device, optypename, binop)    \
@@ -119,7 +119,6 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     const Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
     const int32_t dim = ctx->Attr<int32_t>("dim");
 
-    const IN_T* input = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
@@ -129,7 +128,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     const IN_T* src = src_tensor->dptr<IN_T>();
 
     if (input_tensor) {
-      Memcpy<device_type>(ctx->device_ctx(), output, input, out_bytes_size);
+      Memcpy<device_type>(ctx->device_ctx(), output, input_tensor->dptr<IN_T>(), out_bytes_size);
     } else if (like_tensor) {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
     } else {
@@ -137,7 +136,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
       throw Error::Unimplemented();
     }
 
-    const int ndim = input_tensor->shape().NumAxes();
+    const int ndim = src_tensor->shape().NumAxes();
     fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
@@ -150,7 +149,13 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
-    const int64_t upper_bound = input_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
+    int64_t upper_bound = 0;
+    if(input_tensor){
+      upper_bound = input_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
+    }
+    else{
+      upper_bound = like_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
+    }
 
     BinaryOp(ctx->device_ctx(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
              index_tensor->shape().elem_cnt(), dim, upper_bound, index, src, output);

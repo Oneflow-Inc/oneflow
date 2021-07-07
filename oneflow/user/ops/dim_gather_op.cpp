@@ -35,22 +35,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(dim, input_num_axes);
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
-  // split_axs should NOT equals dim when in consistent view
-  // const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-  // auto is_split = in_sbp.has_split_parallel();
-  // if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
-  //   int64_t split_axis = in_sbp.split_parallel().axis();
-  //   CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-  // }
-
   CHECK_OR_RETURN(!in->is_dynamic());
   CHECK_OR_RETURN(!index->is_dynamic());
-
-  // for scatter backword, this check moved to python
-  // FOR_RANGE(int64_t, i, 0, input_num_axes) {
-  //   if (i == dim) { continue; }
-  //   CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
-  // }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = index->shape();
