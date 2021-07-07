@@ -332,8 +332,8 @@ class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
   ObjectMsgDefaultAllocator() = default;
 
   static ObjectMsgDefaultAllocator* GlobalObjectMsgAllocator() {
-    static ObjectMsgDefaultAllocator allocator;
-    return &allocator;
+    static ObjectMsgDefaultAllocator* allocator = new ObjectMsgDefaultAllocator();
+    return allocator;
   }
 
   char* Allocate(std::size_t size) override { return allocator_.allocate(size); }
