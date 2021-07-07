@@ -69,10 +69,12 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ParameterDict
 .. autofunction:: oneflow.experimental.nn.ModuleList
 .. autofunction:: oneflow.experimental.nn.ModuleDict
+.. autofunction:: oneflow.experimental.nn.Conv1d
 .. autofunction:: oneflow.experimental.nn.Conv2d
 .. autofunction:: oneflow.experimental.nn.ConstantPad2d
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d
 .. autofunction:: oneflow.experimental.nn.Dropout
+.. autofunction:: oneflow.experimental.slice
 .. autofunction:: oneflow.experimental.eq
 .. autofunction:: oneflow.experimental.ne
 .. autofunction:: oneflow.experimental.to
@@ -108,6 +110,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.CTCLoss
 .. autofunction:: oneflow.experimental.nn.L1Loss
 .. autofunction:: oneflow.experimental.nn.BCELoss
+.. autofunction:: oneflow.experimental.chunk
+.. autofunction:: oneflow.experimental.Tensor.chunk
 .. autofunction:: oneflow.experimental.nn.NLLLoss
 .. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
@@ -115,6 +119,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
+.. autofunction:: oneflow.experimental.masked_select
+.. autofunction:: oneflow.experimental.Tensor.masked_select
 .. autofunction:: oneflow.experimental.sum
 .. autofunction:: oneflow.experimental.Tensor.sum
 .. autofunction:: oneflow.experimental.min
@@ -177,6 +183,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.repeat
 .. autofunction:: oneflow.experimental.tile
 .. autofunction:: oneflow.experimental.Tensor.tile
+.. autofunction:: oneflow.experimental.view
+.. autofunction:: oneflow.experimental.Tensor.view
 .. autofunction:: oneflow.experimental.reshape
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze

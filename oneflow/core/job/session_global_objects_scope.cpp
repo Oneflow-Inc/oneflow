@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"

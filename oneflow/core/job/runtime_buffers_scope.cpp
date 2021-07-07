@@ -16,14 +16,14 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/job_instance.h"
 
 namespace oneflow {
 
 RuntimeBuffersScope::RuntimeBuffersScope(const JobConfs& job_confs) {
   size_t job_size = Global<JobName2JobId>::Get()->size();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_size);
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   for (const auto& pair : job_confs.job_id2job_conf()) {
     const auto& job_name = pair.second.job_name();
     CHECK_EQ(pair.first, Global<JobName2JobId>::Get()->at(job_name));
@@ -35,7 +35,7 @@ RuntimeBuffersScope::RuntimeBuffersScope(const JobConfs& job_confs) {
 }
 
 RuntimeBuffersScope::~RuntimeBuffersScope() {
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   for (const auto& pair : *Global<JobName2JobId>::Get()) {
     const auto& job_name = pair.first;
     buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
