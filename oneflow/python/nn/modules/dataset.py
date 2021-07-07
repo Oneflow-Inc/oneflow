@@ -458,6 +458,23 @@ def get_ofrecord_handle(
     )()
 
 
+@oneflow_export("nn.image.flip")
+@experimental_api
+class ImageFlip(Module):
+    def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_flip")
+                .Input("in")
+                .Input("flip_code")
+                .Output("out")
+                .Build()
+        )
+
+    def forward(self, image, flip_code):
+        return self._op([image], [flip_code])[0]
+
+
 @oneflow_export("nn.image.decode")
 @experimental_api
 class ImageDecode(Module):
