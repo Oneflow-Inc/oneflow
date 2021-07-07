@@ -17,16 +17,16 @@ from __future__ import absolute_import
 
 import oneflow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.blob_trait as blob_trait
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.hob as hob
-import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.eager.eager_blob_util as eager_blob_util
+import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
+import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow._oneflow_internal

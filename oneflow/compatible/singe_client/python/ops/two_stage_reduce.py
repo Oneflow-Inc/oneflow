@@ -18,12 +18,12 @@ from __future__ import absolute_import
 from typing import Optional, Sequence, Union
 
 import oneflow as flow
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.ops.user_op_builder as user_op_builder
+import oneflow.compatible.single_client.python.framework.distribute as distribute_util
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 

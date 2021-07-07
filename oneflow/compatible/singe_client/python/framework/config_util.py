@@ -15,9 +15,9 @@ limitations under the License.
 """
 from __future__ import absolute_import, print_function
 
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 import traceback

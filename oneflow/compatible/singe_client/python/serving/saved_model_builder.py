@@ -20,8 +20,8 @@ from google.protobuf import text_format
 
 import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb

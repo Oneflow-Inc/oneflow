@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow.python.framework.distribute_context as distribute_ctx
+import oneflow.compatible.single_client.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,

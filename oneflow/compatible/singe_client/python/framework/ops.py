@@ -18,12 +18,12 @@ from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.compile_context as compile_context
+import oneflow.compatible.single_client.python.framework.distribute as distribute_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow
 import oneflow._oneflow_internal

@@ -21,22 +21,22 @@ from google.protobuf import text_format
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.framework.runtime_mode as rt_mode
-import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.compatible.single_client.python.framework.config_util as config_util
+import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.ops.initializer_util as initializer_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.op_infer_util as op_infer_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.lib.core.async_util as async_util
+import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
+import oneflow.compatible.single_client.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.experimental import interface_op_read_and_write
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.ops.get_variable as get_variable
+import oneflow.compatible.single_client.python.ops.get_variable as get_variable
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util

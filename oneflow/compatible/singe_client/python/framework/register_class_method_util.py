@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.framework.op_expr_util as op_expr_util
-import oneflow.python.framework.functional as functional
-import oneflow.python.framework.generator as generator
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.blob_trait as blob_trait
+import oneflow.compatible.single_client.python.eager.eager_blob_util as eager_blob_util
+import oneflow.compatible.single_client.python.framework.op_expr_util as op_expr_util
+import oneflow.compatible.single_client.python.framework.functional as functional
+import oneflow.compatible.single_client.python.framework.generator as generator
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.blob_trait as blob_trait
 import oneflow._oneflow_internal
 
 

@@ -18,7 +18,7 @@ from __future__ import absolute_import
 
 import oneflow
 import oneflow._oneflow_internal
-import oneflow.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.python.framework.attr_util import convert_to_user_attr_value
 from oneflow.python.oneflow_export import oneflow_export
 

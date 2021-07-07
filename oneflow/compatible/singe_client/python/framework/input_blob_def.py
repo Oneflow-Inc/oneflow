@@ -25,12 +25,12 @@ import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.compile_context as compile_context
+import oneflow.compatible.single_client.python.framework.distribute as distribute_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow._oneflow_internal

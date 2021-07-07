@@ -15,12 +15,12 @@ limitations under the License.
 """
 from __future__ import absolute_import
 import re
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.scope_util as scope_util
+import oneflow.compatible.single_client.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 import oneflow
 import traceback
 import oneflow._oneflow_internal

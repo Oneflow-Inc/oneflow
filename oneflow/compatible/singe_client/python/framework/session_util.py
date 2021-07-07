@@ -18,21 +18,21 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.compiler as compiler
-import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.env_util as env_util
-import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.job_instance as job_instance_util
-import oneflow.python.framework.push_util as push_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.op_executor as op_executor
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.compiler as compiler
+import oneflow.compatible.single_client.python.framework.config_util as config_util
+import oneflow.compatible.single_client.python.framework.env_util as env_util
+import oneflow.compatible.single_client.python.framework.typing_util as oft_util
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.job_instance as job_instance_util
+import oneflow.compatible.single_client.python.framework.push_util as push_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.eager.op_executor as op_executor
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
-import oneflow.python.framework.module as module_util
+import oneflow.compatible.single_client.python.framework.module as module_util
 from oneflow.python.framework.pull_util import (
     LazyFutureRemoteBlobs,
     EagerFutureRemoteBlobs,
@@ -41,7 +41,7 @@ from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
-import oneflow.python.framework.check_point_v2 as check_point_v2
+import oneflow.compatible.single_client.python.framework.check_point_v2 as check_point_v2
 from contextlib import contextmanager
 from typing import Callable
 import inspect

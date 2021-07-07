@@ -18,14 +18,14 @@ import os
 import shutil
 
 import numpy as np
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.job_instance as job_instance
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.job_instance as job_instance
 
-import oneflow.python.framework.check_point_v2 as check_point_v2
-import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.op_executor as op_executor
+import oneflow.compatible.single_client.python.framework.check_point_v2 as check_point_v2
+import oneflow.compatible.single_client.python.framework.config_util as config_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.eager.op_executor as op_executor
 
 from oneflow.python.oneflow_export import oneflow_export
 from typing import List, Union

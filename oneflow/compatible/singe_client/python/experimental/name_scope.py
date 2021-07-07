@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow.python.framework.session_context as session_context
-import oneflow.python.framework.scope_util as scope_util
+import oneflow.compatible.single_client.python.framework.session_context as session_context
+import oneflow.compatible.single_client.python.framework.scope_util as scope_util
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 import traceback

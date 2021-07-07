@@ -15,10 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal

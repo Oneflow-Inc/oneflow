@@ -20,15 +20,15 @@ import os
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.framework.interpret_util as interpret_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.interpret_util as interpret_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.hob as hob
+import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
+import oneflow.compatible.single_client.python.framework.interpret_util as interpret_util
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.interpret_util as interpret_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 

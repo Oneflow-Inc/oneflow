@@ -15,21 +15,21 @@ limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 import numpy as np
 import inspect
 from typing import Union
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.check_point_v2 as check_point_v2
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
-import oneflow.python.framework.runtime_mode as rt_mode
-import oneflow.python.framework.ofblob as ofblob_util
-import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.ops.initializer_util as initializer_util
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.framework.tensor_str as tensor_str_util
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.framework.ofblob as ofblob_util
+import oneflow.compatible.single_client.python.lib.core.async_util as async_util
+import oneflow.compatible.single_client.python.ops.initializer_util as initializer_util
+import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+import oneflow.compatible.single_client.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
 
