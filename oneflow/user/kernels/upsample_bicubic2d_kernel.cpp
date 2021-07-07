@@ -68,10 +68,25 @@ static void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
+    
+    T real_x = scale_w * w;
+    int64_t input_x = real_x;
+    T t_x = real_x - input_x;
 
-    // const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
-    // const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
-    // *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w)) += dy_dptr[index];
+    T real_y = scale_h * h;
+    int64_t input_y = real_y;
+    T t_y = real_y - input_y;
+
+    T x_coeffs[4], y_coeffs[4];
+
+    get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
+    get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
+
+    for(int64_t i = 0; i < 4; i++){
+      for(int64_t j = 0; j < 4; j++){
+        *(dx_dptr + dx_helper.NdIndexToOffset(n, c, input_y - 1 + j, input_x - 1 + i)) += dy_dptr[index];
+      }
+    }
   }
 }
 
