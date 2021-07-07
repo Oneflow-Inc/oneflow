@@ -181,7 +181,8 @@ def test_against_pytorch(
             "spec",
             "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
         )
-        spec = Spec([], None, None, [], [], {}, {})
+        args = list(extra_annotations.keys()) + list(extra_defaults.keys())
+        spec = Spec(args, None, None, [], [], {}, {})
 
     annotations = spec.annotations
     annotations.update(extra_annotations)
@@ -190,10 +191,6 @@ def test_against_pytorch(
         del annotations["return"]
 
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-    if not has_full_args_spec(args):
-        args = set(annotations.keys() | extra_defaults.keys())
-        for item in args:
-            spec.args.append(item)
 
     assert args == set(
         annotations.keys() | extra_defaults.keys()
