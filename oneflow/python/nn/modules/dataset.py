@@ -464,9 +464,13 @@ class Flip(Module):
     r"""This operator flips the images.
 
     The flip code corresponds to the different flip mode:
+
     0 (0x00): Non Flip
+
     1 (0x01): Horizontal Flip
+
     16 (0x10): Vertical Flip
+
     17 (0x11): Both Horizontal and Vertical Flip
 
     Args:
@@ -486,12 +490,12 @@ class Flip(Module):
         >>> arr = np.random.randn(2,2,2,3)
         >>> image_tensors = flow.Tensor(arr)
         >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
-        >>> flip_codes = flow.Tensor([1,1],dtype=flow.int8)
-        >>> output = nn.image.flip()(image_tensor_buffer, flip_codes)
+        >>> output = nn.image.flip(1)(image_tensor_buffer)
     """
 
-    def __init__(self):
+    def __init__(self, flip_code):
         super().__init__()
+        self.flip_code = flip_code
         self._op = (
             flow.builtin_op("image_flip")
                 .Input("in")
@@ -500,7 +504,9 @@ class Flip(Module):
                 .Build()
         )
 
-    def forward(self, images, flip_codes):
+    def forward(self, images):
+        flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
+
         return self._op(images, flip_codes)[0]
 
 

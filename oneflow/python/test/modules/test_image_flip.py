@@ -28,7 +28,7 @@ def _of_image_flip(images, image_static_shape, flip_code):
         image_zeros, dtype=flow.float, device=flow.device("cpu")
     )
     image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
-    flip_images = flow.nn.image.flip()(image_tensor_buffer, flip_code)
+    flip_images = flow.nn.image.flip(flip_code)(image_tensor_buffer)
     return flip_images.numpy()
 
 
@@ -56,9 +56,8 @@ def _compare_image_flip_with_cv(test_case, image_files):
     assert all([len(image.shape) == 4 for image in images])
 
     image_static_shape = _get_images_static_shape(images)
-    flip_codes = flow.Tensor([1, 1], dtype=flow.int8)
 
-    flip_images = _of_image_flip(images, image_static_shape, flip_codes)
+    flip_images = _of_image_flip(images, image_static_shape, 1)
 
     for image, flip_image in zip(images, flip_images):
         exp_flip_image = cv2.flip(image.squeeze(), 1)
