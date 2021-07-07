@@ -68,32 +68,29 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
-  printf("infertensor ok");
+  // printf("infertensor ok");
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
   // is there a problem?
-  user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-  CHECK(like_arg_modifier != nullptr);
-  like_arg_modifier->set_requires_grad(false);
+  // user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+  // CHECK(like_arg_modifier != nullptr);
+  // like_arg_modifier->set_requires_grad(false);
+
+  // user_op::InputArgModifier* src_arg_modifier = GetInputArgModifierFn("src", 0);
+  // CHECK(src_arg_modifier != nullptr);
+  // src_arg_modifier->set_requires_grad(false);
+
+  user_op::InputArgModifier* input_arg_modifier = GetInputArgModifierFn("input", 0);
+  CHECK(input_arg_modifier != nullptr);
+  input_arg_modifier->set_requires_grad(false);
 
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                      const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* src_arg_modifier = GetInputArgModifierFn("src", 0);
-  CHECK(src_arg_modifier != nullptr);
-  src_arg_modifier->set_requires_grad(false);
-
-  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  CHECK(indices_modifier != nullptr);
-  indices_modifier->set_requires_grad(false);
+  
   return Maybe<void>::Ok();
 }
 
@@ -193,6 +190,7 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .Output("output")                               \
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
+      .SetInputArgModifyFn(InputArgModifierFn) \
       .SetDataTypeInferFn(InferDtype) \
       .SetGetSbpFn(SetSbpScatter)
 
@@ -200,8 +198,8 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
       .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
-        const auto op_grad_name = ctx->FwOp().op_name() + "_grad";                       \
-        ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+        const auto op_src_grad_name = ctx->FwOp().op_name() + "_grad";                       \
+        ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
           return builder.OpTypeName("dim_gather")                                        \
               .InputBind("index", ctx->FwOp().input("index", 0))                         \
               .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
@@ -209,10 +207,10 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
               .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                             \
               .Build();                                                                  \
         });                                                                              \
-        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
-                                  [&ctx, &op_grad_name]() -> const std::string& {        \
-                                    return ctx->GetOp(op_grad_name).output("output", 0); \
-                                  });                                                    \
+        ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                            \
+                                  [&ctx, &op_src_grad_name]() -> const std::string& {        \
+                                    return ctx->GetOp(op_src_grad_name).output("output", 0); \
+                                  });  
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
