@@ -146,9 +146,10 @@ REGISTER_USER_OP("upsample_nearest_3d")
           || x_desc->shape().NumAxes() != 5) {
         LOG(FATAL) << "upsample only supports NCDHW";
       }
-      *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1), x_desc->shape().At(2),
-                                    static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
-                                    static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
+      *y_desc->mut_shape() =
+          Shape({x_desc->shape().At(0), x_desc->shape().At(1), x_desc->shape().At(2),
+                 static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
+                 static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -159,7 +160,6 @@ REGISTER_USER_OP("upsample_nearest_3d")
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_USER_OP("upsample_linear_1d_grad")
     .Input("dy")
