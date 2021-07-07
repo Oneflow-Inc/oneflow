@@ -173,6 +173,7 @@ def test_against_pytorch(
         pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
     else:    
         pytorch_call = eval(f"torch.{pytorch_callable_name}")
+    
     if has_full_args_spec(pytorch_call):
         spec = inspect.getfullargspec(pytorch_call)
     else:
