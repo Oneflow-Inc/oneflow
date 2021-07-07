@@ -49,7 +49,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
-    : GeneratorImpl(seed, detail::DeviceKey{DeviceType::kGPU, device_index}) {
+    : DeviceGeneratorImpl(seed, detail::DeviceKey{DeviceType::kGPU, device_index}) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   max_block_num_ = prop.multiProcessorCount;
@@ -78,13 +78,13 @@ size_t DeviceKeyHash::operator()(const DeviceKey& key) const {
 }
 
 template<>
-DeviceKey GetCurrentDeviceKey<DeviceType::kCPU>() {
+DeviceKey MakeDeviceKey<CPUGeneratorImpl>(int device_index) {
   return DeviceKey{DeviceType::kCPU, 0};
 }
 
 template<>
-Maybe<GeneratorImpl> MakeGeneratorImpl<DeviceType::kCPU>(uint64_t seed, int device_index) {
-  return std::shared_ptr<GeneratorImpl>(new CPUGeneratorImpl(seed));
+Maybe<CPUGeneratorImpl> MakeGeneratorImpl<CPUGeneratorImpl>(uint64_t seed, int device_index) {
+  return std::make_shared<CPUGeneratorImpl>(seed);
 }
 
 #ifdef WITH_CUDA
@@ -95,17 +95,16 @@ int GetCudaDeviceCount() {
 }
 
 template<>
-DeviceKey GetCurrentDeviceKey<DeviceType::kGPU>() {
-  int device_index = -1;
-  OF_CUDA_CHECK(cudaGetDevice(&device_index));
+DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
+  if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
   return DeviceKey{DeviceType::kGPU, device_index};
 }
 
 template<>
-Maybe<GeneratorImpl> MakeGeneratorImpl<DeviceType::kGPU>(uint64_t seed, int device_index) {
+Maybe<CUDAGeneratorImpl> MakeGeneratorImpl<CUDAGeneratorImpl>(uint64_t seed, int device_index) {
   CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
       << "Invalid device index " << device_index;
-  return std::shared_ptr<GeneratorImpl>(new CUDAGeneratorImpl(seed, device_index));
+  return std::make_shared<CUDAGeneratorImpl>(seed, device_index);
 }
 #endif  // WITH_CUDA
 

@@ -29,6 +29,7 @@ struct DeviceExportUtil final {
     std::string type;
     int device_id = -1;
     ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
+    if (device_id == -1) { device_id = 0; }
     return MakeDevice(type, device_id);
   }
 

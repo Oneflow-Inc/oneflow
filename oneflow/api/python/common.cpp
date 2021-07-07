@@ -24,13 +24,14 @@ Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_
   std::string::size_type pos = device_tag.find(':');
   if (pos == std::string::npos) {
     *device_name = device_tag;
-    *device_index = 0;
+    *device_index = -1;
   } else {
     std::string index_str = device_tag.substr(pos + 1);
     CHECK_OR_RETURN(IsStrInt(index_str)) << "Invalid device " << device_tag;
+    *device_name = device_tag.substr(0, pos);
     *device_index = std::stoi(index_str);
   }
-  if (*device_name == "cpu") {
+  if (*device_name == "cpu" && *device_index != -1) {
     CHECK_EQ_OR_RETURN(*device_index, 0) << "CPU device index must be 0.";
   }
   return Maybe<void>::Ok();

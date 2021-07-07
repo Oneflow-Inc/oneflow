@@ -21,8 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<void> ManualSeed(uint64_t seed);
-
 class Generator final {
  public:
   // The default seed is selected to be a large number
@@ -30,7 +28,6 @@ class Generator final {
   static constexpr uint64_t default_rng_seed_val = 67280421310721;
 
  public:
-  explicit Generator(const std::shared_ptr<AutoGeneratorImpl>& impl);
   explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
 
   ~Generator() = default;
@@ -42,32 +39,42 @@ class Generator final {
   // Reset current seed by default seed, and returns it.
   uint64_t seed();
 
-  const std::shared_ptr<AutoGeneratorImpl>& impl() const { return impl_; }
+  const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
 
-  template<DeviceType device_type>
-  Maybe<GeneratorImpl> Get() const {
-    return Get<device_type>(-1);
-  }
-
-  template<DeviceType device_type>
-  Maybe<GeneratorImpl> Get(int device_index) const {
-    return impl_->GetOrCreateDeviceGenerator<device_type>(device_index);
+  template<typename T>
+  Maybe<T> Get(int device_index = -1) const {
+    if (auto* impl = dynamic_cast<AutoGeneratorImpl*>(impl_.get())) {
+      return impl->GetOrCreate<T>(device_index);
+    }
+    auto impl = std::dynamic_pointer_cast<T>(impl_);
+    CHECK_NOTNULL_OR_RETURN(impl);
+    if (device_index != -1) {
+      CHECK_EQ_OR_RETURN(device_index, impl->device_index())
+          << "Invalid device index " << device_index << " since the generator's device index is "
+          << impl->device_index();
+    }
+    return impl;
   }
 
  private:
-  std::shared_ptr<AutoGeneratorImpl> impl_;
+  std::shared_ptr<GeneratorImpl> impl_;
 };
 
-Maybe<Generator> GetDefaultAutoGenerator();
+Maybe<void> ManualSeed(uint64_t seed);
+
+Maybe<Generator> DefaultAutoGenerator();
 Maybe<Generator> MakeAutoGenerator();
 
-template<DeviceType device_type>
-Maybe<Generator> GetDefaultDeviceGenerator(int device_index = -1);
+Maybe<Generator> DefaultCPUGenerator();
+Maybe<Generator> MakeCPUGenerator();
 
-template<DeviceType device_type>
-Maybe<Generator> MakeDeviceGenerator(int device_index = -1);
+#ifdef WITH_CUDA
+Maybe<Generator> DefaultCUDAGenerator(int device_index);
+Maybe<Generator> MakeCUDAGenerator();
+#endif  // WITH_CUDA
 
-Maybe<Generator> MakeGenerator(const std::string& device, int device_index = -1);
+Maybe<Generator> DefaultGenerator(const std::string& device, int device_index);
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index);
 
 }  // namespace one
 }  // namespace oneflow
