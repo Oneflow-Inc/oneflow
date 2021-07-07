@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "iostream"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 OF_DEVICE_FUNC static int64_t GetLinearInputIndex(const int64_t out_dim_idx, const float scale,
@@ -89,34 +90,35 @@ OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, 
   params->w_lerp = w1r - w1;
 }
 
-template <typename T>
-OF_DEVICE_FUNC T upsample_get_value_bounded(
-    T* data,
-    int64_t width,
-    int64_t height,
-    int64_t x,
-    int64_t y) {
-  int64_t access_x = std::max(std::min(x, width - 1), static_cast<int64_t>(0));
-  int64_t access_y = std::max(std::min(y, height - 1), static_cast<int64_t>(0));
+template<typename T>
+OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
+                                            const int64_t height, const int64_t x,
+                                            const int64_t y) {
+  int64_t access_x = x;
+  access_x = access_x < 0 ? 0 : access_x;
+  access_x = access_x > width - 1 ? width - 1 : access_x;
+
+  int64_t access_y = y;
+  access_y = access_y < 0 ? 0 : access_y;
+  access_y = access_y > height - 1 ? height - 1 : access_y;
+
   return data[access_y * width + access_x];
 }
 
 // Based on
 // https://en.wikipedia.org/wiki/Bicubic_interpolation#Bicubic_convolution_algorithm
-template <typename T>
-OF_DEVICE_FUNC T cubic_convolution1(T x, T A) {
+template<typename T>
+OF_DEVICE_FUNC T cubic_convolution1(const T x, const T A) {
   return ((A + 2) * x - (A + 3)) * x * x + 1;
 }
 
-template <typename T>
-OF_DEVICE_FUNC T cubic_convolution2(T x, T A) {
+template<typename T>
+OF_DEVICE_FUNC T cubic_convolution2(const T x, const T A) {
   return ((A * x - 5 * A) * x + 8 * A) * x - 4 * A;
 }
 
-template <typename T>
-OF_DEVICE_FUNC void get_cubic_upsample_coefficients(
-    T coeffs[4],
-    T t) {
+template<typename T>
+OF_DEVICE_FUNC void get_cubic_upsample_coefficients(T coeffs[4], const T t) {
   T A = -0.75;
 
   T x1 = t;
@@ -129,13 +131,8 @@ OF_DEVICE_FUNC void get_cubic_upsample_coefficients(
   coeffs[3] = cubic_convolution2<T>(x2 + 1.0, A);
 }
 
-template <typename T>
-OF_DEVICE_FUNC T cubic_interp1d(
-    T x0,
-    T x1,
-    T x2,
-    T x3,
-    T t) {
+template<typename T>
+OF_DEVICE_FUNC T cubic_interp1d(const T x0, const T x1, const T x2, const T x3, const T t) {
   T coeffs[4];
   get_cubic_upsample_coefficients<T>(coeffs, t);
 
