@@ -28,6 +28,8 @@ struct IsFloat16;
 template<>
 struct IsFloat16<float16> : std::true_type {};
 
-REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn([]() -> void {}).SetDeviceTag("cpu");
+void CpuDumpVersionInfo();
+
+REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn(CpuDumpVersionInfo).SetDeviceTag("cpu");
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
