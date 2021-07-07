@@ -44,6 +44,17 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
+inline Maybe<bool> IsMultiClient() {
+  CHECK_NOTNULL_OR_RETURN((Global<bool, MultiClient>::Get()));
+  return *Global<bool, MultiClient>::Get();
+}
+
+inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
+  CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
+  *Global<bool, MultiClient>::Get() = is_multi_client;
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<bool> IsEnvInited() {
   return Global<EnvGlobalObjectsScope>::Get() != nullptr
          && !JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env());
@@ -57,10 +68,10 @@ inline Maybe<void> DestroyDefaultEnv() {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (!GlobalProcessCtx::IsMultiClient()) {
-    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
-  } else {
+  if (JUST(IsMultiClient())) {
     ClusterInstruction::HaltBarrier();
+  } else {
+    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
   }
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
@@ -99,7 +110,6 @@ inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
-inline Maybe<bool> IsMultiClient() { return GlobalProcessCtx::IsMultiClient(); }
 
 }  // namespace oneflow
 

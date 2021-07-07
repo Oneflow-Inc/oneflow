@@ -20,5 +20,6 @@ limitations under the License.
 namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
+COMMAND(Global<bool, MultiClient>::SetAllocated(new bool(false)));
 
 }  // namespace oneflow
