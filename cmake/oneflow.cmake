@@ -279,7 +279,7 @@ set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(gen_pip_args "")
