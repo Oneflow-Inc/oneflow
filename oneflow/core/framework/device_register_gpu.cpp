@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/device_register_gpu.h"
+#include "oneflow/core/framework/device_registry_manager.h"
 
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
@@ -80,5 +81,7 @@ void GpuDumpVersionInfo() {
     }
   }
 }
+
+REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 }  // namespace oneflow
 #endif  // WITH_CUDA

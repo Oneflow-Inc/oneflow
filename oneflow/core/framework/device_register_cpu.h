@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
 #include <half.hpp>
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 typedef half_float::half float16;
@@ -30,6 +29,5 @@ struct IsFloat16<float16> : std::true_type {};
 
 void CpuDumpVersionInfo();
 
-REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn(CpuDumpVersionInfo).SetDeviceTag("cpu");
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CPU_H_
