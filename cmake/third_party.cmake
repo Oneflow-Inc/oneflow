@@ -222,6 +222,13 @@ if (BUILD_CUDA)
   )
 endif()
 
+if (BUILD_ROCM)
+  # Find hip
+  find_package(hip)
+  add_definitions(-DWITH_ROCM)
+  list(APPEND oneflow_third_party_libs hip::device)
+endif()
+
 if(BUILD_RDMA)
   if(UNIX)
     include(CheckIncludeFiles)

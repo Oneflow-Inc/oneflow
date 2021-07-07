@@ -19,6 +19,7 @@ endif()
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
+option(BUILD_ROCM "" OFF)
 option(BUILD_TESTING "" OFF)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
@@ -29,6 +30,10 @@ option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 set(PIP_INDEX_MIRROR "" CACHE STRING "")
+
+if (BUILD_CUDA AND BUILD_ROCM)
+  message(FATAL_ERROR "Enable cuda and rocm simultaneously are not supported")
+endif()
 
 if (APPLE)
   set(RPC_BACKEND "LOCAL")
@@ -44,10 +49,10 @@ endif()
 
 project(oneflow C CXX)
 
-# Search for rocm in common locations
-list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
-# Find hip
-find_package(hip)
+if (BUILD_ROCM)
+  # Search for rocm in common locations
+  list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
+endif()
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
