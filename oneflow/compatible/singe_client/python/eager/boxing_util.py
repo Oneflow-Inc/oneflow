@@ -16,20 +16,20 @@ limitations under the License.
 from __future__ import absolute_import
 
 from contextlib import contextmanager
-import oneflow.python.eager.symbol as symbol_util
+import oneflow.compatible.single_client.python.eager.symbol as symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.balanced_splitter as balanced_splitter
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.lib.core.high_order_bool as high_order_bool
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.balanced_splitter as balanced_splitter
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.boxing_hob as boxing_hob
-import oneflow.python.eager.op_infer_util as op_infer_util
+import oneflow.compatible.single_client.python.eager.boxing_hob as boxing_hob
+import oneflow.compatible.single_client.python.eager.op_infer_util as op_infer_util
 from oneflow.python.eager.boxing_hob import BoxingHobContext
-import oneflow.python.eager.boxing_middle as boxing_middle
+import oneflow.compatible.single_client.python.eager.boxing_middle as boxing_middle
 import random
 import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg

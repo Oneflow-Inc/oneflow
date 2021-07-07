@@ -15,8 +15,8 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.python_callback as python_callback
-import oneflow.python.eager.interpreter_callback as interpreter_callback
+import oneflow.compatible.single_client.python.framework.python_callback as python_callback
+import oneflow.compatible.single_client.python.eager.interpreter_callback as interpreter_callback
 import oneflow._oneflow_internal
 
 python_callback.interpreter_callback = interpreter_callback

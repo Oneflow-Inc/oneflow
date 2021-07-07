@@ -21,13 +21,13 @@ from contextlib import closing
 
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_util as scope_util
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.scope_util as scope_util
 import oneflow.core.job.resource_pb2 as resource_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 import traceback

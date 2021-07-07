@@ -16,13 +16,13 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.framework.input_blob_def as input_blob_def
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.framework.python_callback as python_callback
-import oneflow.python.framework.balanced_splitter as balanced_splitter
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def
+import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+import oneflow.compatible.single_client.python.framework.python_callback as python_callback
+import oneflow.compatible.single_client.python.framework.balanced_splitter as balanced_splitter
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util

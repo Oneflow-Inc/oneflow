@@ -16,7 +16,7 @@ limitations under the License.
 
 from __future__ import absolute_import
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
 
 
 @oneflow_export("deprecated.nn.Module")

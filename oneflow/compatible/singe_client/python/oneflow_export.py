@@ -17,8 +17,8 @@ import inspect
 import re
 import collections
 
-import oneflow.python.lib.core.enable_if as enable_if_util
-import oneflow.python.lib.core.traceinfo as traceinfo
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if_util
+import oneflow.compatible.single_client.python.lib.core.traceinfo as traceinfo
 from oneflow.python.lib.core.high_order_bool import always_true
 import oneflow._oneflow_internal
 

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.python.framework.runtime_mode as rt_mode
-import oneflow.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
 import oneflow.compatible.single_client as flow
 from oneflow.python.lib.core.high_order_bool import bool_functor
 import oneflow._oneflow_internal

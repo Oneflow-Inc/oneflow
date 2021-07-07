@@ -20,9 +20,9 @@ import traceback
 from typing import Optional, Union, Sequence, List, Text, Callable
 
 import oneflow as flow
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow._oneflow_internal.oneflow.core.job.learning_rate_schedule_conf as learning_rate_schedule_conf_cfg

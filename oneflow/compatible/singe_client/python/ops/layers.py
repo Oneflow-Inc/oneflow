@@ -21,8 +21,8 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.distribute as distribute_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]

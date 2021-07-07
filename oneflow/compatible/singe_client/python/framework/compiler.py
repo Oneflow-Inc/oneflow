@@ -18,22 +18,22 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import inspect
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.distribute as distribute_util
-import oneflow.python.framework.input_blob_def as input_blob_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.placement_util as placement_util
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.runtime_mode as runtime_mode
-import oneflow.python.framework.push_util as push_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.typing as oft
-import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.lib.core.func_inspect_util as func_inspect_util
-import oneflow.python.ops as ops
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.distribute as distribute_util
+import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_util
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.placement_util as placement_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.runtime_mode as runtime_mode
+import oneflow.compatible.single_client.python.framework.push_util as push_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.scope_util as scope_util
+import oneflow.compatible.single_client.python.framework.typing as oft
+import oneflow.compatible.single_client.python.framework.typing_util as oft_util
+import oneflow.compatible.single_client.python.lib.core.func_inspect_util as func_inspect_util
+import oneflow.compatible.single_client.python.ops as ops
 import typing
 import oneflow
 import oneflow._oneflow_internal

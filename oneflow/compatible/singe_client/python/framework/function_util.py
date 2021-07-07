@@ -22,17 +22,17 @@ import inspect
 import traceback
 from typing import Any, Callable, Optional, Union
 
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.hob as hob
-import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.hob as hob
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.distribute_context as distribute_ctx
-import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.framework.runtime_mode as rt_mode
-import oneflow.python.lib.core.pb_util as pb_util
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.distribute_context as distribute_ctx
+import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
+import oneflow.compatible.single_client.python.framework.typing_util as oft_util
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg

@@ -19,20 +19,20 @@ import uuid
 from typing import Callable, Optional, Union
 
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.local_blob as local_blob_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.watcher as watcher_util
-import oneflow.python.framework.typing as oft
-import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.framework.hob as hob
+import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.compile_context as compile_context
+import oneflow.compatible.single_client.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.local_blob as local_blob_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.watcher as watcher_util
+import oneflow.compatible.single_client.python.framework.typing as oft
+import oneflow.compatible.single_client.python.framework.typing_util as oft_util
+import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+import oneflow.compatible.single_client.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.eager as eager_util
+import oneflow.compatible.single_client.python.eager as eager_util
 import oneflow
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob

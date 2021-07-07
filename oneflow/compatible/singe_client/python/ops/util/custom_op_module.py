@@ -25,7 +25,7 @@ import sysconfig
 import numpy
 
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.sysconfig as oneflow_sysconfig
+import oneflow.compatible.single_client.python.framework.sysconfig as oneflow_sysconfig
 import oneflow
 import oneflow._oneflow_internal
 

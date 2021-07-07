@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import oneflow
 from typing import Sequence, Optional
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.input_blob_def as input_blob_def
+import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def
 import typing
 import inspect
 import sys

@@ -15,9 +15,9 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.ops.user_op_builder as user_op_builder
+import oneflow.compatible.single_client.python.ops.user_op_builder as user_op_builder
 
 import oneflow as flow
 

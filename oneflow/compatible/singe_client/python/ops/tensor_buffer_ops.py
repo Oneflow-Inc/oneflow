@@ -20,7 +20,7 @@ import operator
 
 import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export, stable_api
 from typing import Optional, Sequence, List
 

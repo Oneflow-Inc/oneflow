@@ -16,9 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
-import oneflow.python.framework.id_util as id_util
+import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 from typing import Optional, Tuple
 

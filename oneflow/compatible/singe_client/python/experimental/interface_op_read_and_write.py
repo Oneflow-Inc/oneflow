@@ -15,15 +15,15 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.framework.input_blob_def as input_blob_def_util
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.push_util as push_util
-import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.runtime_mode as rt_mode
+import oneflow.compatible.single_client.python.lib.core.async_util as async_util
+import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def_util
+import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+import oneflow.compatible.single_client.python.framework.push_util as push_util
+import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.eager.op_executor as op_executor
+import oneflow.compatible.single_client.python.eager.op_executor as op_executor
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg

@@ -15,14 +15,14 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.op_executor as op_executor
+import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
+import oneflow.compatible.single_client.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
-import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow.compatible.single_client.python.framework.scope_util as scope_util
+import oneflow.compatible.single_client.python.eager.symbol_storage as symbol_storage
 import oneflow._oneflow_internal
 
 
