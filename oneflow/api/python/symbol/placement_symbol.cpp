@@ -234,8 +234,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            py::arg("hierarchy") = py::tuple())
       .def_property_readonly("device_type",
                              [](Symbol<ParallelDesc> p) {
-                               std::string device_type =
-                                   p->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+                               std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
                                return device_type;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
