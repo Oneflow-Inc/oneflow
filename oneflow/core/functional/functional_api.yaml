@@ -153,7 +153,7 @@
   bind_python: True
 
 - name: "relu"
-  signature: "Tensor Relu(Tensor x)"
+  signature: "Tensor Relu(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "relu_grad"
