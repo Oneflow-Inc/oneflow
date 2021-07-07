@@ -13,18 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
+#define ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
+
 #include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-void RandomMaskGenerator<DeviceType::kCPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
-                                                     const float rate, int8_t* mask) {
-  CHECK_GE(n, 0);
-  std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
-                                                            GetOneVal<float>());
-  for (int64_t i = 0; i < n; ++i) { mask[i] = random_distribution(generator_->engine()) > rate; }
-}
+class BernoulliKernelState : public user_op::OpKernelState {
+ public:
+  explicit BernoulliKernelState(const std::shared_ptr<one::Generator>& generator)
+      : generator_(generator) {}
 
-template class RandomMaskGenerator<DeviceType::kCPU>;
+  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
+
+ private:
+  std::shared_ptr<one::Generator> generator_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
