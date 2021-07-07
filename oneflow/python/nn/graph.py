@@ -82,19 +82,21 @@ class Graph(object):
             for n, b in b_gen:
                 yield prefix + n, b
 
-    def _compile(self):
+    def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
-            tuple(t for _, t in self._named_state())
-        )
+        state = tuple(t for _, t in self._named_state())
+        if len(state) > 0:
+            self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
+                state
+            )
         # TODO(xuxiaoyu)
         # sess = session_ctx.GetDefaultSession()
         # sess.TryInit()
-        # do job compile
+
         with graph_compile_util.graph_build_context(self.config):
-            print("self.build()")
+            outputs = self.build(*args)
 
         self._is_compiled = True
 

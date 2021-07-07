@@ -12,12 +12,29 @@ import oneflow._oneflow_internal
 
 @contextmanager
 def graph_build_context(config):
-    # TODO(xuxiaoyu): set to lazy mode
-    with JobBuildAndInferCtx(config):
-        with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-            yield
-            # with scope_util.ScopeContext(scope):
-            #     yield
+    with LazyInterpretCtx():
+        yield
+      # with JobBuildAndInferCtx(config):
+      #      yield
+          # with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
+              # with scope_util.ScopeContext(scope):
+              #     yield
+
+class LazyInterpretCtx(object):
+    def __init__(self):
+        # doing nothing
+        pass
+    
+    def __enter__(self):
+        oneflow._oneflow_internal.EnableEagerEnvironment(False)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            oneflow._oneflow_internal.EnableEagerEnvironment(True)
+            return True
+        else:
+            return False
+
 
 class JobBuildAndInferCtx(object):
     def __init__(self, config):

@@ -73,6 +73,8 @@ class TestGraph(flow.unittest.TestCase):
 
         # Graph init
         g = CustomGraph()
+        # check _c_nn_graph init
+        test_case.assertEqual(g.name, g._c_nn_graph.name)
         # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         # g.m.name is "m"
@@ -140,21 +142,18 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
-    def test_graph_compile(test_case):
+    def test_graph_build_ctx(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.m = CustomModule()
-                self.config.enable_auto_mixed_precision(True)
 
-            def build(self, x):
-                x = self.m(x)
-                return x
+            def build(self):
+                test_case.assertEqual(flow.eager_execution_enabled(), False)
 
         g = CustomGraph()
-        # check _c_nn_graph init
-        test_case.assertEqual(g.name, g._c_nn_graph.name)
+        test_case.assertEqual(flow.eager_execution_enabled(), True)
         g._compile()
+        test_case.assertEqual(flow.eager_execution_enabled(), True)
 
 
 if __name__ == "__main__":
