@@ -297,6 +297,7 @@ add_custom_target(of_pyscript_copy ALL
         "${PROJECT_SOURCE_DIR}/oneflow/__main__.py" "${of_pyscript_dir}/oneflow/__main__.py"
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/oneflow/compatible" "${of_pyscript_dir}/oneflow/compatible"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/F"
