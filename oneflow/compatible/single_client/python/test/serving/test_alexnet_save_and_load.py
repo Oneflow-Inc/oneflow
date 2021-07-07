@@ -19,7 +19,7 @@ import shutil
 import numpy as np
 import google.protobuf.text_format as text_format
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 
 from alexnet import load_data, alexnet

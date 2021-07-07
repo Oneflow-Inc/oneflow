@@ -17,7 +17,7 @@ import unittest
 import os
 import numpy as np
 import tensorflow as tf
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as oft
 from collections import OrderedDict
 

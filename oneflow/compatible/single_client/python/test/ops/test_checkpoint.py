@@ -19,7 +19,7 @@ import shutil
 import tempfile
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as tp
 
 

@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import, division, print_function
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 BLOCK_COUNTS = [3, 4, 6, 3]
 BLOCK_FILTERS = [256, 512, 1024, 2048]

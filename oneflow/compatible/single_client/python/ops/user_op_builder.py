@@ -27,7 +27,7 @@ import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow
+import oneflow.compatible.single_client
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow.compatible.single_client.python.framework.hob as hob
 import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
@@ -36,7 +36,7 @@ import oneflow.compatible.single_client.python.eager.eager_blob_util as eager_bl
 import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 import random
 import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import traceback
 
@@ -51,7 +51,9 @@ class UserOp(object):
         self.op_conf_.name = op_name
         if op_type_name is not None:
             self.op_conf_.user_conf.op_type_name = op_type_name
-        device_tag = oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.device_tag
+        device_tag = (
+            oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.device_tag
+        )
         self.op_conf_.device_tag = device_tag
         self.output_arg_key_list_ = []
 

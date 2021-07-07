@@ -19,7 +19,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 def GenCartesianProduct(sets):

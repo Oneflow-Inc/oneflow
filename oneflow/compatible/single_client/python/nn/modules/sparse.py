@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 from oneflow.compatible.single_client.python.framework.tensor import Tensor
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
@@ -44,7 +44,7 @@ class Embedding(Module):
     .. code-block:: python
         
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)

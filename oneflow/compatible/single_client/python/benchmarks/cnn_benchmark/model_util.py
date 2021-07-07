@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 def conv2d_layer(

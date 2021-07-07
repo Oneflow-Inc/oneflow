@@ -20,7 +20,7 @@ import cv2
 import operator
 from functools import reduce
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 
 
 def _read_images_by_cv(image_files):

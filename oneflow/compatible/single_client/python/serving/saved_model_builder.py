@@ -18,7 +18,7 @@ import os
 import typing
 from google.protobuf import text_format
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
 import oneflow.compatible.single_client.python.framework.session_context as session_ctx

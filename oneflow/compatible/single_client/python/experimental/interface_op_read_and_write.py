@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.compatible.single_client.python.lib.core.async_util as async_util
 import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def_util

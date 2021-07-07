@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+import oneflow.compatible.single_client
 import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def
 import oneflow.compatible.single_client.python.framework.dtype as dtype_util
 import oneflow.compatible.single_client.python.framework.python_callback as python_callback

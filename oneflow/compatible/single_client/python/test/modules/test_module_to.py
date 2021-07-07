@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 from test_util import GenArgList
 
 dummy_val = np.random.randn(2, 3)

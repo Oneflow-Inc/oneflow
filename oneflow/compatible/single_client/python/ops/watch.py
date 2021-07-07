@@ -33,7 +33,7 @@ import oneflow.compatible.single_client.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow.compatible.single_client.python.eager as eager_util
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
 import inspect
@@ -57,7 +57,7 @@ def Watch(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -87,7 +87,7 @@ def Watch(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -183,7 +183,7 @@ def WatchDiff(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -236,7 +236,7 @@ def WatchDiff(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -282,7 +282,7 @@ def WatchDiff(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 

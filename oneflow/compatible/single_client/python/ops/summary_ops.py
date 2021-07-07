@@ -19,7 +19,7 @@ import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow.compatible.single_client.python.ops.user_op_builder as user_op_builder
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 @oneflow_export("summary.scalar")

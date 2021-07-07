@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+import oneflow.compatible.single_client
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
 import oneflow.compatible.single_client.python.framework.id_util as id_util
@@ -104,7 +104,9 @@ def with_distribute(self, distribute):
 
 
 def with_gradient_distribute(self, distribute):
-    return oneflow.compatible.single_client.parallel_cast(self, gradient_distribute=distribute)
+    return oneflow.compatible.single_client.parallel_cast(
+        self, gradient_distribute=distribute
+    )
 
 
 def get_lazy_shape_log_warning(self):

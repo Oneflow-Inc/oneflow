@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from typing import Optional, Sequence, Union
 
-import oneflow
+import oneflow.compatible.single_client
 import oneflow.compatible.single_client.python.framework.id_util as id_util
 import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 from oneflow.compatible.single_client.python.oneflow_export import (
@@ -52,7 +52,7 @@ def pad(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -104,7 +104,9 @@ def pad(
         floating_constant_value = float(0)
         integral_constant_value = int(constant_value)
     return (
-        oneflow.compatible.single_client.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
+        oneflow.compatible.single_client.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Pad_")
+        )
         .Op("pad")
         .Input("x", [x])
         .Output("y")
@@ -184,7 +186,7 @@ def same_padding(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -262,7 +264,7 @@ def reflection_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -343,7 +345,7 @@ def replication_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -418,7 +420,7 @@ def constant_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -505,7 +507,7 @@ def zero_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 

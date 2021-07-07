@@ -28,7 +28,7 @@ from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     stable_api,
 )
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
@@ -75,7 +75,9 @@ def api_acc(
 def acc(one, max_acc_num, name=None):
     assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.compatible.single_client.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
+        oneflow.compatible.single_client.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Acc_")
+        )
         .Op("acc")
         .Input("in", [one])
         .Output("out")

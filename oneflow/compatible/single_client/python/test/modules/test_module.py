@@ -21,7 +21,7 @@ import tempfile
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 import oneflow.compatible.single_client.typing as tp
 
 

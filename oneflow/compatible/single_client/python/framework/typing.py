@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+import oneflow.compatible.single_client
 from typing import Sequence, Optional
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def

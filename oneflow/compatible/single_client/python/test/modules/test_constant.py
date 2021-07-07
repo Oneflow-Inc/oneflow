@@ -20,7 +20,7 @@ from oneflow.compatible.single_client.python.framework.tensor import register_te
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 from test_util import GenArgList
 
 

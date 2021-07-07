@@ -15,7 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import unittest
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import os
 
 

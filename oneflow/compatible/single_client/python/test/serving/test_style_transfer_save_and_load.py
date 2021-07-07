@@ -20,7 +20,7 @@ import sys
 import os
 import argparse
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import style_model
 
 

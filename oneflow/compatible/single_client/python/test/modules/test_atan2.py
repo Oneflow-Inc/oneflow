@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 from test_util import GenArgList
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):

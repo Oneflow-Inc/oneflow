@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 import tensorflow as tf
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from collections import OrderedDict
 import oneflow.compatible.single_client.typing as oft
 

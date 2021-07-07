@@ -296,9 +296,7 @@ def _EagerRunModelInit(var_op_conf):
         upstream_signature = op_node_signature_pb.OpNodeSignature()
         op_conf.scope_symbol_id = flow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
-        parallel_conf = (
-            flow.current_scope().device_parallel_desc_symbol.parallel_conf
-        )
+        parallel_conf = flow.current_scope().device_parallel_desc_symbol.parallel_conf
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
@@ -316,9 +314,7 @@ def _EagerRunModelInit(var_op_conf):
 def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
     def BuildModelIOPathInputInstruction(builder):
         op_attribute = op_infer_util.Infer(op_conf, ibn2blob_object={})
-        parallel_conf = (
-            flow.current_scope().device_parallel_desc_symbol.parallel_conf
-        )
+        parallel_conf = flow.current_scope().device_parallel_desc_symbol.parallel_conf
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )

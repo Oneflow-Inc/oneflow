@@ -21,7 +21,7 @@ import os
 import enum
 import google.protobuf.text_format as text_format
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
 

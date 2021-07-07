@@ -22,7 +22,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
 import oneflow.compatible.single_client.python.framework.op_util as op_util
 import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal
 

@@ -32,7 +32,7 @@ import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
 import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
 import oneflow.compatible.single_client.python.eager.op_executor as op_executor
 import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 import os
@@ -44,7 +44,9 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[oneflow.compatible.single_client.dtype] = oneflow.compatible.single_client.float32,
+    dtype: Optional[
+        oneflow.compatible.single_client.dtype
+    ] = oneflow.compatible.single_client.float32,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
@@ -77,7 +79,7 @@ def api_get_variable(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -114,7 +116,7 @@ def api_get_variable(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

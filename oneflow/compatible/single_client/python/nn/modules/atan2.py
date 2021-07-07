@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,

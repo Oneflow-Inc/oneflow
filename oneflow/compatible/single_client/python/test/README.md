@@ -5,7 +5,7 @@ Created: Oct 4, 2020 10:52 AM
 对op的测试代码进行了更新，主要解决的问题：
 
 1. 旧代码在 python 自带的 unittest 上引入了一些还有点复杂的抽象，导致并行运行单元测试很难做到
-2. 不能随意运行单一脚本，比如 `python3 oneflow/python/test/ops/test_add.py` 这样
+2. 不能随意运行单一脚本，比如 `python3 oneflow/compatible/single_client/python/test/ops/test_add.py` 这样
 3. 对于启动测试的配置信息，都要靠命令行传入，对 CI 不友好
 
 新的编写规范：
@@ -31,10 +31,10 @@ if __name__ == "__main__":
 
 如何运行：
 
-- 整体运行，进入 `oneflow/python/test/ops`目录，运行`python3 -m unittest`
+- 整体运行，进入 `oneflow/compatible/single_client/python/test/ops`目录，运行`python3 -m unittest`
 
     ```cpp
-    oneflow/python/test/ops
+    oneflow/compatible/single_client/python/test/ops
     export ONEFLOW_TEST_DEVICE_NUM=1
     python3 -m unittest --failfast --verbose
     ```
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     或者：
 
     ```cpp
-    python3 -m unittest discover oneflow/python/test/ops
+    python3 -m unittest discover oneflow/compatible/single_client/python/test/ops
     ```
 
     更多用法请参考 [https://docs.python.org/3/library/unittest.html](https://docs.python.org/3/library/unittest.html)
@@ -52,5 +52,5 @@ if __name__ == "__main__":
 - 运行单一脚本，可以直接用 python3 二进制运行一个文件，接受 python unitest 的所有命令行参数，如 `--failfast` , `--verbose`
 
     ```cpp
-    python3 oneflow/python/test/ops/test_add.py --verbose
+    python3 oneflow/compatible/single_client/python/test/ops/test_add.py --verbose
     ```

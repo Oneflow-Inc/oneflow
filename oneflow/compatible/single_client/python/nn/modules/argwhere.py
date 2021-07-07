@@ -15,7 +15,7 @@ limitations under the License.
 """
 from typing import Optional
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import numpy as np
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (

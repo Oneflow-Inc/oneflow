@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 from oneflow.compatible.single_client.python.ops.array_ops import zeros
 from test_util import (
     GenArgList,

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 # flow.enable_eager_execution(True)
 flow.config.gpu_device_num(1)

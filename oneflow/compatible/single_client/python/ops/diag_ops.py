@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.python.framework.id_util as id_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
@@ -43,7 +43,7 @@ def diag(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

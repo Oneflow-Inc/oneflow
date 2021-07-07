@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -131,8 +131,8 @@ class ConvTranspose2d(Module):
     Examples::
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental.nn as nn
         >>> flow.enable_eager_execution()
 
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)

@@ -15,7 +15,7 @@ limitations under the License.
 """
 from typing import Optional
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
@@ -107,7 +107,7 @@ class AvgPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow.compatible.single_client.experimental as flow
         import numpy as np
 
 
@@ -212,7 +212,7 @@ class AvgPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
 
         >>> flow.enable_eager_execution()
@@ -384,7 +384,7 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -517,7 +517,7 @@ class MaxPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

@@ -132,7 +132,10 @@ class FileBackendVariableBlob:
 
 
 ValueContainer = Union[
-    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.compatible.single_client.Tensor"
+    EagerBlobTrait,
+    FileBackendVariableBlob,
+    np.ndarray,
+    "oneflow.compatible.single_client.Tensor",
 ]
 
 
@@ -472,7 +475,10 @@ def _LogicalSliceAssign(
 
 
 def FeedValueToVariable(
-    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, "oneflow.compatible.single_client.Tensor"],
+    var_blob: Union[
+        oneflow._oneflow_internal.EagerConsistentBlob,
+        "oneflow.compatible.single_client.Tensor",
+    ],
     value: ValueContainer,
     scope_symbol_id: Optional[int],
 ) -> None:

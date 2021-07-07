@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 from oneflow.compatible.single_client.python.framework.tensor import Tensor
 from oneflow.compatible.single_client.python.oneflow_export import (
@@ -79,7 +79,7 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

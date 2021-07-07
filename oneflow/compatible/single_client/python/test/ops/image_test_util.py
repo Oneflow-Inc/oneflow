@@ -15,7 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import cv2
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import PIL
 import random
 import os

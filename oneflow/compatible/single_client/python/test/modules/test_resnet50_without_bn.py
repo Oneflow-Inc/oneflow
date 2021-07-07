@@ -18,7 +18,7 @@ import unittest
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 from resnet50_model import resnet50, FakeBN
 
 

@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import typing
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import oneflow.compatible.single_client.python.framework.id_util as id_util
 

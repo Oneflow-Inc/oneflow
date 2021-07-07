@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 import typing
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, GenArgDict, type_name_to_flow_type

@@ -54,7 +54,7 @@ import oneflow.compatible.single_client.python.framework.check_point_v2 as check
 from contextlib import contextmanager
 from typing import Callable
 import inspect
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
@@ -450,7 +450,9 @@ def api_find_or_create_module(
 def find_or_create_module(module_name, create, reuse=False):
     assert callable(create)
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow.compatible.single_client.current_global_function_desc().job_config_proto.job_name()
+    job_name = (
+        oneflow.compatible.single_client.current_global_function_desc().job_config_proto.job_name()
+    )
     if job_name not in sess.job_name2module_name2module_:
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]

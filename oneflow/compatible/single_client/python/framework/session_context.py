@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import functools
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 
 

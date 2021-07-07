@@ -17,7 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import tensorflow as tf
 from tensorflow.python.ops import gen_math_ops
 from test_util import GenArgList

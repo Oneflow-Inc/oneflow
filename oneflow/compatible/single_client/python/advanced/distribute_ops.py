@@ -23,7 +23,7 @@ import oneflow.compatible.single_client.python.framework.id_util as id_util
 import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow.compatible.single_client.python.framework.hob as hob
 import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 import oneflow._oneflow_internal
 

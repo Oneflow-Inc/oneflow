@@ -26,7 +26,7 @@ limitations under the License.
 
 import argparse
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 DATA_DIR = "/dataset/imagenet_1k/oneflow/30/train"
 parser = argparse.ArgumentParser(description="flags for multi-node and resource")

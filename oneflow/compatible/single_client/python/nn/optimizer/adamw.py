@@ -17,7 +17,7 @@ limitations under the License.
 from typing import List, Dict, Callable, Union, Iterator, Tuple
 import collections
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,

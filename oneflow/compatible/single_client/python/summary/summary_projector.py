@@ -18,7 +18,7 @@ import oneflow.core.summary.projector_pb2 as projector_pb2
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import time
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 @oneflow_export("summary.Projector")

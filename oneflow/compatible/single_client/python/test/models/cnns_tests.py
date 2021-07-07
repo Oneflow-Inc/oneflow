@@ -18,7 +18,7 @@ import os
 import sys
 
 import numpy
-import oneflow
+import oneflow.compatible.single_client
 from absl import app, flags
 
 FLAGS = flags.FLAGS

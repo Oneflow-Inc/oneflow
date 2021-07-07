@@ -19,7 +19,7 @@ import os
 import imp
 import importlib.util
 
-import oneflow
+import oneflow.compatible.single_client
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from typing import List
 import oneflow._oneflow_internal

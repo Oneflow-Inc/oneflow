@@ -20,7 +20,7 @@ import oneflow._oneflow_internal
 import time
 import logging
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 @oneflow_export("summary.Graph")

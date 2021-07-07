@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 from collections import OrderedDict
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from test_util import GenArgDict, type_name_to_flow_type, type_name_to_np_type
 
 

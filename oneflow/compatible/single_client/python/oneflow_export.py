@@ -31,7 +31,9 @@ def oneflow_export(*api_names, **kwargs):
                 new_api_names = ["experimental." + n for n in new_api_names]
         else:
             new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
-        func_or_class._ONEFLOW_API = new_api_names
+        func_or_class._ONEFLOW_API = [
+            "compatible.single_client." + x for x in new_api_names
+        ]
         func_or_class._IS_VALUE = False
         return func_or_class
 
@@ -46,7 +48,9 @@ def oneflow_export_value(*api_names, **kwargs):
                 new_api_names = ["experimental." + n for n in new_api_names]
         else:
             new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
-        func_or_class._ONEFLOW_API = new_api_names
+        func_or_class._ONEFLOW_API = [
+            "compatible.single_client." + x for x in new_api_names
+        ]
         func_or_class._IS_VALUE = True
         return func_or_class
 

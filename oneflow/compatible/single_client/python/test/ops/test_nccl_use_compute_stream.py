@@ -17,7 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from test_util import GenArgList
 import oneflow.compatible.single_client.typing as oft
 

@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -46,7 +46,7 @@ def log1p_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))

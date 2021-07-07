@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.python.framework.id_util as id_util
 import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow.compatible.single_client.python.framework.module as module_util
@@ -107,7 +107,7 @@ def api_ofrecord_image_decoder_random_crop(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
@@ -226,7 +226,7 @@ def OFRecordImageDecoder(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
@@ -326,7 +326,7 @@ def api_image_resize(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
@@ -519,7 +519,7 @@ def api_image_target_resize(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
         import numpy as np
@@ -659,7 +659,7 @@ def CropMirrorNormalize(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
@@ -768,7 +768,7 @@ def api_image_random_crop(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
         import cv2
@@ -909,7 +909,7 @@ def api_coin_flip(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
@@ -1028,7 +1028,7 @@ def image_decode(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
         from PIL import Image
@@ -1120,7 +1120,7 @@ def image_batch_align(
 
         import cv2
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -1219,7 +1219,7 @@ def image_normalize(
 
         import cv2
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -1322,7 +1322,7 @@ def image_flip(
 
         import cv2
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -1431,7 +1431,7 @@ def object_bbox_flip(
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -1536,7 +1536,7 @@ def object_bbox_scale(
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
@@ -1679,7 +1679,7 @@ def object_segm_poly_flip(
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import cv2
 
@@ -1813,7 +1813,7 @@ def object_segm_poly_scale(
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
@@ -1959,7 +1959,7 @@ def object_segm_poly_to_mask(
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
@@ -2257,7 +2257,7 @@ def ofrecord_image_classification_reader(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 

@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from typing import Optional, Sequence, Union
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.python.framework.distribute as distribute_util
 import oneflow.compatible.single_client.python.framework.hob as hob
 import oneflow.compatible.single_client.python.framework.id_util as id_util

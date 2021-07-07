@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 import os
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 @unittest.skipIf(

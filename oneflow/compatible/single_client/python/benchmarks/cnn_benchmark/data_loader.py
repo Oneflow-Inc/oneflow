@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import, division, print_function
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 def load_imagenet(

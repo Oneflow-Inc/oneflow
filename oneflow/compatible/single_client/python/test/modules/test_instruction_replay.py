@@ -17,10 +17,10 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
-import oneflow
+import oneflow.compatible.single_client
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow.compatible.single_client.experimental as flow
 from test_util import GenArgList
 
 

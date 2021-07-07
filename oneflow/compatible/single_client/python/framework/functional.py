@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 
 
@@ -59,10 +59,22 @@ def RegisterFunctionalApis():
             func_name = s
             if s in _function_name_aliases:
                 func_name = _function_name_aliases[s]
-                setattr(oneflow.compatible.single_client.F, func_name, Function(func_name, f))
-                setattr(oneflow.compatible.single_client.experimental.F, func_name, Function(func_name, f))
+                setattr(
+                    oneflow.compatible.single_client.F,
+                    func_name,
+                    Function(func_name, f),
+                )
+                setattr(
+                    oneflow.compatible.single_client.experimental.F,
+                    func_name,
+                    Function(func_name, f),
+                )
             setattr(oneflow.compatible.single_client.F, s, Function(func_name, f))
-            setattr(oneflow.compatible.single_client.experimental.F, s, Function(func_name, f))
+            setattr(
+                oneflow.compatible.single_client.experimental.F,
+                s,
+                Function(func_name, f),
+            )
 
     del inspect
 

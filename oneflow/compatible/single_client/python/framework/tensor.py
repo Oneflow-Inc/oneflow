@@ -32,7 +32,7 @@ import oneflow.compatible.single_client.python.lib.core.async_util as async_util
 import oneflow.compatible.single_client.python.ops.initializer_util as initializer_util
 import oneflow.compatible.single_client.python.framework.dtype as dtype_util
 import oneflow.compatible.single_client.python.framework.tensor_str as tensor_str_util
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 
 def register_local_tensor_method(name=None):

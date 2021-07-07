@@ -35,7 +35,7 @@ import oneflow.compatible.single_client.python.framework.typing_util as oft_util
 import oneflow.compatible.single_client.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.compatible.single_client.python.ops as ops
 import typing
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 import inspect
 

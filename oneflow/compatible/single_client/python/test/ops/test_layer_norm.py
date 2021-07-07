@@ -19,7 +19,7 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import tensorflow as tf
 import test_global_storage
 

@@ -23,7 +23,7 @@ from datetime import datetime
 import alexnet_model
 import data_loader
 import inceptionv3_model
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import resnet_model
 import vgg_model
 

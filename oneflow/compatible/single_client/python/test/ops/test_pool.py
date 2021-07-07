@@ -19,7 +19,7 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.compatible.single_client.typing as oft

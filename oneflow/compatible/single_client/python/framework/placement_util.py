@@ -24,7 +24,7 @@ from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_deprecate,
 )
 import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow
+import oneflow.compatible.single_client
 import traceback
 import oneflow._oneflow_internal
 

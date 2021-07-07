@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import cv2
 import numpy as np
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as oft
 
 

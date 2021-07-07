@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from typing import Optional, Sequence, Tuple, Union, List
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -298,7 +298,7 @@ def ofrecord_reader(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 

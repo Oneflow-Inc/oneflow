@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from typing import Optional
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.python.framework.id_util as id_util
 import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
 import oneflow.compatible.single_client.python.framework.module as module_util
@@ -46,7 +46,7 @@ def Bernoulli(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

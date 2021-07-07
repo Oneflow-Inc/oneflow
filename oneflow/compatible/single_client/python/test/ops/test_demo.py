@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import oneflow as flow
+import oneflow.compatible.single_client as flow
 
 # test file names and methods names are starts with `test'
 
