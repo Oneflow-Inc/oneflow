@@ -125,10 +125,10 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
 
-    const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) < x_height
+    const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
                              : x_height;
-    const int64_t wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) < x_width
+    const int64_t wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
                              ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
                              : x_width;
 
@@ -200,9 +200,9 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     const int64_t t1 = tstart + (kernel_size_t - 1) * dilation_t + 1;
     const int64_t t2 = hstart + (kernel_size_h - 1) * dilation_h + 1;
     const int64_t t3 = wstart + (kernel_size_w - 1) * dilation_w + 1;
-    const int64_t tend = t1 < x_time ? t1 : x_time;
-    const int64_t hend = t2 < x_height ? t2 : x_height;
-    const int64_t wend = t3 < x_width ? t3 : x_width;
+    const int64_t tend = t1 <= x_time ? t1 : x_time;
+    const int64_t hend = t2 <= x_height ? t2 : x_height;
+    const int64_t wend = t3 <= x_width ? t3 : x_width;
 
     while (tstart < 0) { tstart += dilation_t; }
     while (hstart < 0) { hstart += dilation_h; }
