@@ -29,7 +29,8 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto generator = CHECK_JUST(one::Generator::New("cpu", ctx->Attr<int64_t>("seed")));
+    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     return std::make_shared<BernoulliKernelState>(generator);
   }
 
@@ -47,13 +48,13 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_NOTNULL(bernoulli_kernel_state);
     const auto& generator = bernoulli_kernel_state->generator();
     CHECK_NOTNULL(generator);
-    const auto& cpu_generator = CHECK_JUST(one::TryGetDeviceGenerator<DeviceType::kCPU>(generator));
+    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
     for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
       double prob = static_cast<double>(*(in_dptr + i));
       CHECK(prob >= 0.0 && prob <= 1.0);
       std::bernoulli_distribution dis(prob);
-      *(out_dptr + i) = dis(cpu_generator->generator()) ? GetOneVal<K>() : GetZeroVal<K>();
+      *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
