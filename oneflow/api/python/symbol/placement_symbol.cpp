@@ -147,7 +147,7 @@ struct PlacementSymbolExportUtil {
     {
       if (device_tag == "gpu") {
         device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-        CHECK(device_num > 0) << "Can't build cuda placement because cuda is not compiled!";
+        CHECK(device_num > 0) << "Can't build cuda placement because no gpu is found!";
       } else {
         device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
       }
