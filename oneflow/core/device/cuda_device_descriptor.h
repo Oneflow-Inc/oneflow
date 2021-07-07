@@ -40,6 +40,7 @@ class CudaDeviceDescriptor : public DeviceDescriptor {
   int32_t ComputeCapabilityMinor() const;
   int32_t MemoryClockRateKHz() const;
   int32_t MemoryBusWidthBit() const;
+  const std::string& PCIBusID() const;
   void Serialize(std::string* serialized) const;
   static std::shared_ptr<const CudaDeviceDescriptor> Query(int32_t ordinal);
   static std::shared_ptr<const CudaDeviceDescriptor> Deserialize(const std::string& serialized);

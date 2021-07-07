@@ -66,17 +66,17 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 template<>
 /*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
                                                                   const TensorTuple& inputs,
-                                                                  const AttrMap& attrs) {
+                                                                  const OpExprInterpContext& ctx) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs));
+  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), ctx));
   return outputs;
 }
 
 template<>
 /*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                         const TensorTuple& inputs,
-                                                        const AttrMap& attrs) {
-  return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
+                                                        const OpExprInterpContext& ctx) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(

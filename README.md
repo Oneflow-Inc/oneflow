@@ -14,7 +14,13 @@
 
   ### System Requirements
 
-  - Python 3.6, 3.7, 3.8
+  - Python 3.6, 3.7, 3.8 (3.9 is available in nightly version)
+  - (**Highly recommended**) Upgrade pip
+
+    ```
+    python3 -m pip install --upgrade pip --user
+    ```
+
   - CUDA Toolkit Linux x86_64 Driver
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
@@ -113,7 +119,7 @@
   - Install dependencies
     - on Ubuntu 20.04, run:
       ```
-      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake
+      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
       ```
     - on macOS, run:
       ```

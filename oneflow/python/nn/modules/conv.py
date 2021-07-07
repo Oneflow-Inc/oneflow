@@ -17,8 +17,8 @@ import math
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import _pair
-from oneflow.python.nn.common_types import _size_2_t
+from oneflow.python.nn.modules.utils import _single, _pair
+from oneflow.python.nn.common_types import _size_1_t, _size_2_t
 from oneflow.python.nn import init
 
 
@@ -76,10 +76,195 @@ class ConvUtil(object):
         return result_list
 
 
+@oneflow_export("nn.Conv1d")
+@experimental_api
+class Conv1d(Module):
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
+    
+    Applies a 1D convolution over an input signal composed of several input
+    planes.
+
+    In the simplest case, the output value of the layer with input size
+    :math:`(N, C_{\text{in}}, L)` and output :math:`(N, C_{\text{out}}, L_{\text{out}})` can be
+    precisely described as:
+
+    .. math::
+        \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+        \sum_{k = 0}^{C_{in} - 1} \text{weight}(C_{\text{out}_j}, k)
+        \star \text{input}(N_i, k)
+
+    where :math:`\star` is the valid `cross-correlation`_ operator,
+    :math:`N` is a batch size, :math:`C` denotes a number of channels,
+    :math:`L` is a length of signal sequence.
+
+    * :attr:`stride` controls the stride for the cross-correlation, a single
+      number or a one-element tuple.
+
+    * :attr:`padding` controls the amount of padding applied to the input. It
+      can be either a string {{'valid', 'same'}} or a tuple of ints giving the
+      amount of implicit padding applied on both sides.
+
+    * :attr:`dilation` controls the spacing between the kernel points; also
+      known as the à trous algorithm. It is harder to describe, but this `link`_
+      has a nice visualization of what :attr:`dilation` does.
+
+    Note:
+        ``padding='valid'`` is the same as no padding. ``padding='same'`` pads
+        the input so the output has the shape as the input. However, this mode
+        doesn't support any stride values other than 1.
+
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution. Default: 1
+        padding (int, tuple or str, optional): Padding added to both sides of
+            the input. Default: 0
+        padding_mode (string, optional): ``'zeros'``, ``'reflect'``,
+            ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+        dilation (int or tuple, optional): Spacing between kernel
+            elements. Default: 1
+        groups (int, optional): Number of blocked connections from input
+            channels to output channels. Default: 1
+        bias (bool, optional): If ``True``, adds a learnable bias to the
+            output. Default: ``True``
+
+    Shape:
+        - Input: :math:`(N, C_{in}, L_{in})`
+        - Output: :math:`(N, C_{out}, L_{out})` where
+
+          .. math::
+              L_{out} = \left\lfloor\frac{L_{in} + 2 \times \text{padding} - \text{dilation}
+                        \times (\text{kernel\_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
+
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+            :math:`(\text{out\_channels},
+            \frac{\text{in\_channels}}{\text{groups}}, \text{kernel\_size})`.
+            The values of these weights are sampled from
+            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
+        bias (Tensor):   the learnable bias of the module of shape
+            (out_channels). If :attr:`bias` is ``True``, then the values of these weights are
+            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
+
+    For example: 
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> arr = np.random.randn(20, 16, 50)
+        >>> input = flow.Tensor(arr)
+        >>> m = nn.Conv1d(16, 33, 3, stride=2)
+        >>> output = m(input)
+
+    .. _cross-correlation:
+        https://en.wikipedia.org/wiki/Cross-correlation
+
+    .. _link:
+        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_1_t,
+        stride: _size_1_t = 1,
+        padding: _size_1_t = 0,
+        dilation: _size_1_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",  # TODO: refine this type
+    ):
+        super().__init__()
+
+        assert padding_mode == "zeros"
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride)
+        self.padding = _single(padding)
+        self.dilation = _single(dilation)
+        self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
+        self.out_channel_groups = out_channels // groups
+        self.bias = None
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x):
+        if x.device.type == "cpu" and self.groups > 1:
+            in_channel_axis = 1
+            weight_channel_axis = 0
+            bias_channel_axis = 0
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
+            out_list = []
+            for i in range(len(in_split_list)):
+                out_list.append(
+                    flow.F.conv1d(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation,
+                        groups=1,
+                    )
+                )
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+        else:
+            res = flow.F.conv1d(
+                x,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
+        return res
+
+
 @oneflow_export("nn.Conv2d")
 @experimental_api
 class Conv2d(Module):
-    r"""Applies a 2D convolution over an input signal composed of several input
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
+    
+    Applies a 2D convolution over an input signal composed of several input
     planes.
 
     In the simplest case, the output value of the layer with input size

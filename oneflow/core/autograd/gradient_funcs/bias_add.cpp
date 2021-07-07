@@ -68,8 +68,8 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
           JUST(OpInterpUtil::Dispatch<Tensor>(*backward_bias_op_, {out_grads.at(0)}, attrs));
     }
     if (ctx->input_requires_grad) {
-      in_grads->at(0) = JUST(
-          OpInterpUtil::Dispatch<Tensor>(*backward_input_op_, {out_grads.at(0)}, /*attrs=*/{}));
+      in_grads->at(0) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*backward_input_op_, {out_grads.at(0)}));
     }
     return Maybe<void>::Ok();
   }
