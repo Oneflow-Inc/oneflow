@@ -94,8 +94,15 @@ class ImageCodec(object):
 
 @oneflow_export("data.RawCodec")
 class RawCodec(object):
-    def __init__(self, auto_zero_padding: bool = False) -> None:
-        self.auto_zero_padding = auto_zero_padding
+    def __init__(
+        self, auto_truncating: bool = False, auto_zero_padding: bool = False
+    ) -> None:
+        if auto_zero_padding:
+            print(
+                """WARNING: auto_zero_padding has been deprecated, Please use auto_truncating instead.
+                """
+            )
+        self.auto_truncating = auto_truncating or auto_zero_padding
 
 
 @oneflow_export("data.NormByChannelPreprocessor")
@@ -183,7 +190,7 @@ class BlobConf(object):
                 blob_name=self.name,
                 shape=self.shape,
                 dtype=self.dtype,
-                auto_zero_padding=self.codec.auto_zero_padding,
+                auto_truncating=self.codec.auto_truncating,
             )
             return raw
         else:
