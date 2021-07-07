@@ -68,11 +68,9 @@ struct PlacementSymbolExportUtil {
   static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
       const std::string& device_type, const py::dict& machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
-    static const HashMap<std::string, std::string> type2device_tag{
-        {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
     CHECK_OR_RETURN(type2device_tag.find(device_type) != type2device_tag.end())
-        << "Invalid device_type: " << device_type
-        << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
+        << "Invalid device_type: " << device_type << ", device_type must be \"cpu\" or \"cuda\".";
     std::string device_tag = type2device_tag.at(device_type);
     std::vector<std::string> formated_machine_device_ids;
     for (const auto& pair : machine_device_ids) {
@@ -136,11 +134,9 @@ struct PlacementSymbolExportUtil {
 
   static Symbol<ParallelDesc> AllDevicePlacement(const std::string& device_type) {
     CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
-    static const HashMap<std::string, std::string> type2device_tag{
-        {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}};
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
     CHECK(type2device_tag.find(device_type) != type2device_tag.end())
-        << "Invalid device_type: " << device_type
-        << ", device_type must be oneof \"cpu\", \"cuda\" and \"gpu\".";
+        << "Invalid device_type: " << device_type << ", device_type must be \"cpu\" or \"cuda\".";
     std::string device_tag = type2device_tag.at(device_type);
     int64_t world_size = GlobalProcessCtx::WorldSize();
     int64_t device_num = 0;
@@ -236,6 +232,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            }),
            py::arg("device_type"), py::arg("machine_device_ids"),
            py::arg("hierarchy") = py::tuple())
+      .def_property_readonly("device_type",
+                             [](Symbol<ParallelDesc> p) {
+                               std::string device_type =
+                                   p->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+                               return device_type;
+                             })
+      .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
       .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
