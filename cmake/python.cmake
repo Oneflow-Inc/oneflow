@@ -13,7 +13,7 @@ if (NOT DEFINED Python3_EXECUTABLE)
 endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
-set(Python_EXECUTABLE /home/s1nh/.pyenv/versions/anaconda3-2020.11/bin/python)
+set(Python_EXECUTABLE ${Python3_EXECUTABLE})
 message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 
 message(STATUS "Installing necessary Python packages...")
