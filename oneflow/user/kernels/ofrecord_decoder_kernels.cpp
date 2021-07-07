@@ -54,7 +54,7 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
         CHECK_EQ(sample_elem_cnt, list.value_size());                                           \
       }                                                                                         \
     }                                                                                           \
-    CopyElem<CppT, T>(in_dptr, dptr, std::min(sample_elem_cnt, list.value_size()));             \
+    CopyElem<CppT, T>(in_dptr, dptr, std::min<int64_t>(sample_elem_cnt, list.value_size()));    \
     if (padding_elem_num > 0) {                                                                 \
       std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                     \
     }                                                                                           \
