@@ -58,7 +58,7 @@ def bernoulli(input, *, generator=None, out=None):
 
 
     """
-    return flow.F.bernoulli(input, flow.float32, None)
+    return flow.F.bernoulli(input, flow.float32, generator)
 
 
 if __name__ == "__main__":
