@@ -460,8 +460,37 @@ def get_ofrecord_handle(
 
 @oneflow_export("nn.image.flip")
 @experimental_api
-class ImageFlip(Module):
-    def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
+class Flip(Module):
+    r"""This operator flips the images.
+
+    The flip code corresponds to the different flip mode:
+    0 (0x00): Non Flip
+    1 (0x01): Horizontal Flip
+    16 (0x10): Vertical Flip
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        images: The input images.
+        flip_code: The flip code.
+
+    Returns:
+        The result image.
+
+    For example:
+    .. code-block:: python
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> arr = np.random.randn(2,2,2,3)
+        >>> image_tensors = flow.Tensor(arr)
+        >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
+        >>> m = nn.image.flip()
+        >>> output = m(image_tensor_buffer,flow.Tensor([1,1],dtype=flow.int8))
+    """
+
+    def __init__(self):
         super().__init__()
         self._op = (
             flow.builtin_op("image_flip")
@@ -471,8 +500,8 @@ class ImageFlip(Module):
                 .Build()
         )
 
-    def forward(self, image, flip_code):
-        return self._op([image], [flip_code])[0]
+    def forward(self, images, flip_codes):
+        return self._op(images, flip_codes)[0]
 
 
 @oneflow_export("nn.image.decode")
@@ -536,3 +565,9 @@ class COCOReader(Module):
     def forward(self):
         res = self._op()
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()  # raise_on_error=True)
