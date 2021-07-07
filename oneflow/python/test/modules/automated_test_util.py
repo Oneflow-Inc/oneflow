@@ -193,7 +193,7 @@ def test_against_pytorch(
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
 
     assert args == set(
-        annotations.keys() | extra_defaults.keys()
+        annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
     annotations.update({"input": torch.Tensor})
 
