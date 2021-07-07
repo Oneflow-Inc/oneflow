@@ -14,19 +14,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/output_kernel.h"
+#include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  if (GlobalProcessCtx::IsMultiClient()) {
+    const auto& job_name = this->job_desc().job_name();
+    const auto& op_name = this->op_conf().name();
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
+    std::shared_ptr<JobInstance> job_instance;
+    BufferStatus buffer_status = buffer->TryReceive(&job_instance);
+    CHECK_NE(buffer_status, kBufferStatusEmpty);
+    if (buffer_status == kBufferStatusSuccess) {
+      OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
+      job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+    }
+  } else {
+    BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  }
 }
 
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  if (GlobalProcessCtx::IsMultiClient()) {
+    // Do nothing.
+  } else {
+    BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  }
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kOutputConf, OutputKernel);

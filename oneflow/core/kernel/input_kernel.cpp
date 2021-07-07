@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -30,7 +33,21 @@ class InputKernel final : public KernelIf<device_type> {
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
   void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    if (GlobalProcessCtx::IsMultiClient()) {
+      const auto& job_name = this->job_desc().job_name();
+      const auto& op_name = this->op_conf().name();
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
+      std::shared_ptr<JobInstance> job_instance;
+      BufferStatus buffer_status = buffer->TryReceive(&job_instance);
+      CHECK_NE(buffer_status, kBufferStatusEmpty);
+      if (buffer_status == kBufferStatusSuccess) {
+        OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("out"));
+        job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+      }
+    }
+  }
   void ForwardHeader(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
 };
