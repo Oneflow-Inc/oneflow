@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _run_count_test(test_case, device_type, x_shape, dtype):

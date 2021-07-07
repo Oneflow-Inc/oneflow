@@ -77,7 +77,7 @@ def masked_select_op(x, mask):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -95,7 +95,7 @@ def masked_select_op(x, mask):
 def tensor_masked_select_op(x, mask):
     r"""
 
-    See :func:`oneflow.experimental.masked_select`
+    See :func:`oneflow.compatible.single_client.experimental.masked_select`
 
     """
     return MaskedSelect()(x, mask)

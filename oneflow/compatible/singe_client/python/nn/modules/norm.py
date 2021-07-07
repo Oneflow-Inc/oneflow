@@ -183,8 +183,8 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> from oneflow.compatible.single_client.experimental import linalg as LA
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
@@ -253,7 +253,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 @experimental_api
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
-    See :func:`oneflow.experimental.linalg.norm.`
+    See :func:`oneflow.compatible.single_client.experimental.linalg.norm.`
     """
     return Norm(ord, dim, keepdim)(input)
 

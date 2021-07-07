@@ -19,7 +19,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import unittest
 import os
 

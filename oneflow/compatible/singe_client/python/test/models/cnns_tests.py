@@ -44,7 +44,7 @@ class TestNetMixin:
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             self.num_iter = 3
         self.set_params()
-        oneflow.clear_default_session()
+        oneflow.compatible.single_client.clear_default_session()
 
     def set_params(self):
         pass

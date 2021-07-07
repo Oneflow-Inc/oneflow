@@ -85,7 +85,7 @@ def api_gpu_device_num(val: int) -> None:
         return enable_if.unique([gpu_device_num, do_nothing])(val)
     else:
         print(
-            "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
+            "INFO: for CPU-only OneFlow, oneflow.compatible.single_client.config.gpu_device_num is equivalent to oneflow.compatible.single_client.config.cpu_device_num"
         )
         print(traceback.format_stack()[-2])
         return enable_if.unique([cpu_device_num, do_nothing])(val)

@@ -79,7 +79,7 @@ def _mul(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         # element-wise multiply
@@ -163,7 +163,7 @@ def variance_op(input, dim=None, keepdim=False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> np_arr = np.random.randn(2,3,4,5)
@@ -216,7 +216,7 @@ def _sub(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         # element-wise subtract
@@ -290,7 +290,7 @@ def _div(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         # element-wise divide
@@ -352,7 +352,7 @@ def _reciprocal(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -404,7 +404,7 @@ def _add(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         # element-wise add
@@ -468,7 +468,7 @@ def asin_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
@@ -493,7 +493,7 @@ def asin_op(input):
 def asin_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asin`
+    See :func:`oneflow.compatible.single_client.experimental.asin`
     """
     return Asin()(input)
 
@@ -503,7 +503,7 @@ def asin_op_tensor(input):
 def arcsin_op(input):
     r"""
   
-    Alias for :func:`oneflow.experimental.asin`
+    Alias for :func:`oneflow.compatible.single_client.experimental.asin`
     """
     return Asin()(input)
 
@@ -513,7 +513,7 @@ def arcsin_op(input):
 def arcsin_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asin`
+    See :func:`oneflow.compatible.single_client.experimental.asin`
     """
     return Asin()(input)
 
@@ -542,7 +542,7 @@ def asinh_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution() 
         >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
@@ -569,7 +569,7 @@ def asinh_op(input):
 def arcsinh_op(input):
     r"""
   
-    Alias for :func:`oneflow.experimental.asinh`
+    Alias for :func:`oneflow.compatible.single_client.experimental.asinh`
     """
     return Asinh()(input)
 
@@ -579,7 +579,7 @@ def arcsinh_op(input):
 def asinh_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asinh`
+    See :func:`oneflow.compatible.single_client.experimental.asinh`
     """
     return Asinh()(input)
 
@@ -589,7 +589,7 @@ def asinh_op_tensor(input):
 def arcsinh_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asinh`
+    See :func:`oneflow.compatible.single_client.experimental.asinh`
     """
     return Asinh()(input)
 
@@ -619,7 +619,7 @@ def sin_op(tensor):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
@@ -643,7 +643,7 @@ def sin_op_tensor(tensor):
 
     sin() -> Tensor
 
-    See :func:`oneflow.experimental.sin`
+    See :func:`oneflow.compatible.single_client.experimental.sin`
     
     """
 
@@ -675,7 +675,7 @@ def cos_op(tensor):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
@@ -710,7 +710,7 @@ def atan_op(tensor):
 
     .. code-block:: python
     
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
@@ -727,7 +727,7 @@ def atan_op(tensor):
 def atan_op_tensor(tensor):
     r"""
 
-    See :func:`oneflow.experimental.atan`
+    See :func:`oneflow.compatible.single_client.experimental.atan`
     
     """
     return Atan()(tensor)
@@ -737,7 +737,7 @@ def atan_op_tensor(tensor):
 @experimental_api
 def arctan_op(tensor):
     r"""
-    Alias for :func:`oneflow.experimental.atan`
+    Alias for :func:`oneflow.compatible.single_client.experimental.atan`
     
     """
     return Atan()(tensor)
@@ -748,7 +748,7 @@ def arctan_op(tensor):
 def arctan_op_tensor(tensor):
     r"""
 
-    See :func:`oneflow.experimental.arctan`
+    See :func:`oneflow.compatible.single_client.experimental.arctan`
     
     """
     return Atan()(tensor)
@@ -779,7 +779,7 @@ def log_op(tensor):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> arr = np.random.randn(2, 3, 4, 5)
@@ -836,7 +836,7 @@ def rsqrt_op(input):
 
         .. code-block:: python
 
-            >>> import oneflow.experimental as flow
+            >>> import oneflow.compatible.single_client.experimental as flow
             >>> import numpy as np
             >>> flow.enable_eager_execution()
 
@@ -872,7 +872,7 @@ def sqrt_op(input):
 
         .. code-block:: python
 
-            >>> import oneflow.experimental as flow
+            >>> import oneflow.compatible.single_client.experimental as flow
             >>> import numpy as np
             >>> flow.enable_eager_execution()
 
@@ -909,7 +909,7 @@ def square_op(input):
 
         .. code-block:: python
 
-            >>> import oneflow.experimental as flow
+            >>> import oneflow.compatible.single_client.experimental as flow
             >>> import numpy as np
             >>> flow.enable_eager_execution()
 
@@ -983,7 +983,7 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -1034,7 +1034,7 @@ def pow_op(tensor, exponent):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -1107,7 +1107,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     For example:
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> input = flow.tensor(np.array([[1,2,4],[5,11,9.1]]))
         >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
@@ -1137,7 +1137,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
 @experimental_api
 def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     r"""
-    See :func:`oneflow.experimental.addmm`
+    See :func:`oneflow.compatible.single_client.experimental.addmm`
     """
     return Addmm()(input, mat1, mat2, alpha, beta)
 
@@ -1216,7 +1216,7 @@ def clamp_op(tensor, min=None, max=None):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
@@ -1245,7 +1245,7 @@ def clamp_op(tensor, min=None, max=None):
 @experimental_api
 def clamp_op_tensor(tensor, min=None, max=None):
     r"""
-    See :func:`oneflow.experimental.clamp`
+    See :func:`oneflow.compatible.single_client.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1254,7 +1254,7 @@ def clamp_op_tensor(tensor, min=None, max=None):
 @experimental_api
 def clip_op(tensor, min=None, max=None):
     r"""
-    Alias for :func:`oneflow.experimental.clamp`
+    Alias for :func:`oneflow.compatible.single_client.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1263,7 +1263,7 @@ def clip_op(tensor, min=None, max=None):
 @experimental_api
 def clip_op_tensor(tensor, min=None, max=None):
     r"""
-    See :func:`oneflow.experimental.clamp`
+    See :func:`oneflow.compatible.single_client.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1294,7 +1294,7 @@ def cosh_op(tensor):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
@@ -1325,16 +1325,16 @@ def erf_op(input):
             \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor   
+        oneflow.compatible.single_client.Tensor: The result Tensor   
                
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -1370,7 +1370,7 @@ def erf_op(input):
 @experimental_api
 def erf_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.erf`
+    See :func:`oneflow.compatible.single_client.experimental.erf`
     """
     return Erf()(input)
 
@@ -1395,16 +1395,16 @@ def erfc_op(input):
             \operatorname{erfc}(x)=1-\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -1440,7 +1440,7 @@ def erfc_op(input):
 @experimental_api
 def erfc_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.erfc`
+    See :func:`oneflow.compatible.single_client.experimental.erfc`
     """
     return Erfc()(input)
 
@@ -1465,17 +1465,17 @@ def ceil_op(x):
         \text{out}_{i} = \left\lceil \text{input}_{i} \right\rceil = \left\lfloor \text{input}_{i} \right\rfloor + 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        x (oneflow.compatible.single_client.Tensor): A Tensor.
     
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example: 
 
 
     .. code-block:: python 
         
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution() 
         
@@ -1518,7 +1518,7 @@ def ceil_op(x):
 @experimental_api
 def ceil_op_tensor(x):
     r"""
-    See :func:`oneflow.experimental.ceil`
+    See :func:`oneflow.compatible.single_client.experimental.ceil`
     """
 
     return Ceil()(x)
@@ -1545,16 +1545,16 @@ def expm1_op(x):
         y_{i} = e^{x_{i}} - 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        x (oneflow.compatible.single_client.Tensor): A Tensor.
     
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example: 
 
     .. code-block:: python 
         
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution() 
         
@@ -1596,7 +1596,7 @@ def expm1_op(x):
 @experimental_api
 def expm1_op_tensor(x):
     r"""
-    See :func:`oneflow.experimental.expm1`
+    See :func:`oneflow.compatible.single_client.experimental.expm1`
     """
 
     return Expm1()(x)
@@ -1651,20 +1651,20 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
     r"""Finds the values and indices of the k largest entries at specified axis.
 
     Args:
-        input (oneflow.Tensor): Input Tensor
+        input (oneflow.compatible.single_client.Tensor): Input Tensor
         dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
         largest (bool, optional): controls whether to return largest or smallest elements
         sorted (bool, optional): controls whether to return the elements in sorted order
 
     Returns:
-        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
+        Tuple(oneflow.compatible.single_client.Tensor, oneflow.compatible.single_client.Tensor(dtype=int32)): A tuple of (values, indices), where
         the indices are the indices of the elements in the original input tensor.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)

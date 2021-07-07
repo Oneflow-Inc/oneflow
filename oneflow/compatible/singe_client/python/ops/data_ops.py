@@ -205,10 +205,10 @@ def decode_ofrecord(
 ) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     print(
         "WARNING:",
-        "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
-        "    1)   ofrecord = oneflow.data.ofrecord_reader(...) to read ofrecord; \n",
-        "    2)   image = oneflow.data.ofrecord_image_decoder(...) to decode image; \n",
-        "    3)   raw = oneflow.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
+        "oneflow.compatible.single_client.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
+        "    1)   ofrecord = oneflow.compatible.single_client.data.ofrecord_reader(...) to read ofrecord; \n",
+        "    2)   image = oneflow.compatible.single_client.data.ofrecord_image_decoder(...) to decode image; \n",
+        "    3)   raw = oneflow.compatible.single_client.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
         traceback.format_stack()[-2],
     )
     assert not flow.eager_execution_enabled()
@@ -246,8 +246,8 @@ def ofrecord_loader(
 ) -> oneflow._oneflow_internal.BlobDesc:
     print(
         "WARNING:",
-        "oneflow.data.ofrecord_loader is deprecated, and NOT work in eager mode, please use: \n",
-        "    ofrecord = oneflow.data.ofrecord_reader(...) to read ofrecord; \n",
+        "oneflow.compatible.single_client.data.ofrecord_loader is deprecated, and NOT work in eager mode, please use: \n",
+        "    ofrecord = oneflow.compatible.single_client.data.ofrecord_reader(...) to read ofrecord; \n",
         traceback.format_stack()[-2],
     )
 
@@ -296,7 +296,7 @@ def ofrecord_reader(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 

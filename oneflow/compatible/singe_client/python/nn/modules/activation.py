@@ -77,7 +77,7 @@ class PReLU(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.PReLU()
@@ -120,7 +120,7 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> relu = flow.nn.ReLU()
@@ -164,7 +164,7 @@ class ReLU6(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -196,17 +196,17 @@ class Tanh(Module):
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
@@ -238,17 +238,17 @@ def tanh_op(x):
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
@@ -289,7 +289,7 @@ class ELU(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -321,17 +321,17 @@ class GELU(Module):
         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
 
     Args:
-        x (oneflow.Tensor): Input Tensor
+        x (oneflow.compatible.single_client.Tensor): Input Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.compatible.single_client.Tensor: A Tensor.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -363,17 +363,17 @@ def gelu_op(x):
         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
 
     Args:
-        x (oneflow.Tensor): Input Tensor
+        x (oneflow.compatible.single_client.Tensor): Input Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.compatible.single_client.Tensor: A Tensor.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -406,7 +406,7 @@ class Sigmoid(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
@@ -442,7 +442,7 @@ def sigmoid_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
@@ -479,7 +479,7 @@ class Hardsigmoid(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -552,7 +552,7 @@ def softmax_op(tensor, dim=None):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Softmax(dim = 2)
@@ -593,7 +593,7 @@ class LogSoftmax(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.LogSoftmax(dim=1)
@@ -656,7 +656,7 @@ class LogSigmoid(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -706,7 +706,7 @@ class Softplus(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -757,7 +757,7 @@ class Hardswish(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
@@ -816,7 +816,7 @@ class Hardtanh(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Hardtanh()
@@ -880,7 +880,7 @@ class LeakyReLU(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.LeakyReLU(0.1)
@@ -920,7 +920,7 @@ class Mish(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
@@ -951,7 +951,7 @@ def mish_op(x):
     .. note::
         See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
 
-    See :mod:`oneflow.experimental.nn.Mish`
+    See :mod:`oneflow.compatible.single_client.experimental.nn.Mish`
     """
 
     return Mish()(x)
@@ -962,7 +962,7 @@ def mish_op(x):
 def mish_op_tensor(x):
     r"""
     mish() -> Tensor
-    See :func:`oneflow.experimental.mish`
+    See :func:`oneflow.compatible.single_client.experimental.mish`
     """
 
     return Mish()(x)

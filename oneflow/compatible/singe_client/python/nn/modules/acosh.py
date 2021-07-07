@@ -44,7 +44,7 @@ def acosh_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
@@ -68,7 +68,7 @@ def acosh_op_tensor(x):
 
     acosh() -> Tensor
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.compatible.single_client.experimental.acosh`
 
     """
 
@@ -80,7 +80,7 @@ def acosh_op_tensor(x):
 def arccosh_op(x):
     r"""
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.compatible.single_client.experimental.acosh`
 
     """
 
@@ -94,7 +94,7 @@ def arccosh_op_tensor(x):
 
     arccosh() -> Tensor
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.compatible.single_client.experimental.acosh`
 
     """
 

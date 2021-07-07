@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 from scipy.special import erf, erfc, gammaln
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import os
 
 

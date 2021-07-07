@@ -69,7 +69,7 @@ class Dropout(_DropoutNd):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Dropout(p=0)

@@ -48,18 +48,18 @@ class L1Loss(Module):
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
-        input (oneflow.experimental.Tensor): The input Tensor.
-        target (oneflow.experimental.Tensor): The target Tensor.
+        input (oneflow.compatible.single_client.experimental.Tensor): The input Tensor.
+        target (oneflow.compatible.single_client.experimental.Tensor): The target Tensor.
         reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
 
     Returns:
-        oneflow.experimental.Tensor: The result Tensor.
+        oneflow.compatible.single_client.experimental.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -145,7 +145,7 @@ class CrossEntropyLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -256,20 +256,20 @@ class BCELoss(Module):
         out = -\sum_{i=1}^n(Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i))
 
     Args:
-        weight (oneflow.experimental.Tensor, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        weight (oneflow.compatible.single_client.experimental.Tensor, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
 
     Attention:
         The input value must be in the range of (0, 1). Or the loss function may return `nan` value.
 
     Returns:
-        oneflow.experimental.Tensor: The result Tensor.
+        oneflow.compatible.single_client.experimental.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
     
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -389,7 +389,7 @@ class NLLLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
 
@@ -553,7 +553,7 @@ class KLDivLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -657,7 +657,7 @@ class MSELoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -739,7 +739,7 @@ class MarginRankingLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
 
@@ -863,7 +863,7 @@ class CTCLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
         >>> log_probs = np.array(
@@ -1010,9 +1010,9 @@ class BCEWithLogitsLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
-        >>> import oneflow.typing as tp
+        >>> import oneflow.compatible.single_client.typing as tp
 
         >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
         >>> target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]], dtype=flow.float32)

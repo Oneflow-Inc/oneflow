@@ -17,7 +17,7 @@ import unittest
 from typing import Tuple
 
 import oneflow.experimental as flow
-import oneflow.typing as tp
+import oneflow.compatible.single_client.typing as tp
 
 
 @unittest.skipIf(

@@ -39,7 +39,7 @@ def assign(ref, value, dtype=None, name=None):
         name = id_util.UniqueStr("Assign_")
 
     op = (
-        oneflow.consistent_user_op_builder(name)
+        oneflow.compatible.single_client.consistent_user_op_builder(name)
         .Op("assign")
         .Input("ref", [ref])
         .Input("value", [value])
@@ -69,7 +69,7 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
     )
     if hierarchy is not None:
         hierarchy = tuple(hierarchy.dim())
-    with oneflow.scope.placement(device_tag, machine_device_ids, hierarchy):
+    with oneflow.compatible.single_client.scope.placement(device_tag, machine_device_ids, hierarchy):
         interpret_util.Forward(op_conf)
     return ref
 

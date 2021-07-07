@@ -17,7 +17,7 @@ import unittest
 import oneflow as flow
 import numpy as np
 import sys
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 flow.config.gpu_device_num(4)
 

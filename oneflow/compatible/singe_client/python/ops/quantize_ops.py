@@ -83,7 +83,7 @@ def min_max_observer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="predict", function_config=flow.FunctionConfig())
         def QuantizeJob(
@@ -197,7 +197,7 @@ def moving_average_min_max_observer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="predict", function_config=flow.FunctionConfig())
         def QuantizeJob(
@@ -320,7 +320,7 @@ def fake_quantization(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="predict", function_config=flow.FunctionConfig())
         def QuantizeJob(

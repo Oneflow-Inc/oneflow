@@ -69,7 +69,7 @@ class by_global_norm(ClipGradientConf):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -135,7 +135,7 @@ class constant(WarmupConf):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -191,7 +191,7 @@ class linear(WarmupConf):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -296,7 +296,7 @@ class CosineScheduler(LrScheduler):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -381,7 +381,7 @@ class PiecewiseConstantScheduler(LrScheduler):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -459,7 +459,7 @@ class PiecewiseScalingScheduler(LrScheduler):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -546,7 +546,7 @@ class PolynomialScheduler(LrScheduler):
         .. code-block:: python
 
             import oneflow as flow
-            import oneflow.typing as tp
+            import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
             def train_job(
@@ -614,9 +614,9 @@ class PolynomialSchduler(PolynomialScheduler):
     ):
         print(
             "WARNING:",
-            "oneflow.optimizer.PolynomialSchduler",
+            "oneflow.compatible.single_client.optimizer.PolynomialSchduler",
             "will be removed in the future, use {} instead.".format(
-                "oneflow.optimizer.PolynomialScheduler"
+                "oneflow.compatible.single_client.optimizer.PolynomialScheduler"
             ),
         )
         print(traceback.format_stack()[-2])
@@ -661,7 +661,7 @@ class LinearCosineScheduler(LrScheduler):
         .. code-block:: python
 
             import oneflow as flow
-            import oneflow.typing as tp
+            import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
             def train_job(
@@ -749,7 +749,7 @@ class ExponentialScheduler(LrScheduler):
         .. code-block::python
 
             import oneflow as flow
-            import oneflow.typing as tp
+            import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
             def train_job(
@@ -837,7 +837,7 @@ class InverseTimeScheduler(LrScheduler):
         .. code-block:: python
 
             import oneflow as flow
-            import oneflow.typing as tp
+            import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
             def train_job(
@@ -925,7 +925,7 @@ class NaturalExpScheduler(LrScheduler):
         .. code-block:: python
 
             import oneflow as flow
-            import oneflow.typing as tp
+            import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
             def train_job(
@@ -1101,7 +1101,7 @@ class SGD(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1199,7 +1199,7 @@ class SGDW(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1338,7 +1338,7 @@ class Adam(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1467,7 +1467,7 @@ class AdamW(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1606,7 +1606,7 @@ class RMSProp(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1700,7 +1700,7 @@ class LARS(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(
@@ -1822,7 +1822,7 @@ class LazyAdam(Optimizer):
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
         def train_job(

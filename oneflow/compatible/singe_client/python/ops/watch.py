@@ -58,7 +58,7 @@ def Watch(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -88,7 +88,7 @@ def Watch(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
         def watch_handler(y: tp.Numpy):
@@ -161,7 +161,7 @@ def LazyConsistentWatch(blob_watched, handler):
     setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
     op_conf.foreign_watch_conf.handler_uuid = handler_uuid
     device_name = blob_watched.parallel_conf.device_name(0)
-    with oneflow.scope.placement("cpu", "0:0"):
+    with oneflow.compatible.single_client.scope.placement("cpu", "0:0"):
         compile_context.CurJobAddOp(op_conf)
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
 
@@ -184,7 +184,7 @@ def WatchDiff(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         BATCH_SIZE = 20
@@ -237,7 +237,7 @@ def WatchDiff(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -283,7 +283,7 @@ def WatchDiff(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 

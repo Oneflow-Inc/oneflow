@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
@@ -72,7 +72,7 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
             assert isinstance(x, int)
             attribute_mutable_at_shape.add_dim(x)
     elif attr_type == user_op_attr_cfg.kAtDataType:
-        assert attr_value in oneflow.dtypes()
+        assert attr_value in flow.dtypes()
         attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
             attr_value
         )
@@ -100,7 +100,7 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
         assert isinstance(attr_value, (tuple, list))
         attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
         for x in attr_value:
-            assert x in oneflow.dtypes()
+            assert x in flow.dtypes()
             x = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(x)
             assert isinstance(x, int)
             attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))

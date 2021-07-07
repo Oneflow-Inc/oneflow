@@ -68,14 +68,14 @@ def CheckGlobalFunctionReturnAnnotation(cls):
     elif oft.OriginFrom(cls, oft.Callback):
         assert (
             cls.__args__ is not None
-        ), "T in oneflow.typing.Callback[T] cannot be omitted"
+        ), "T in oneflow.compatible.single_client.typing.Callback[T] cannot be omitted"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     elif oft.OriginFrom(cls, oft.Bundle):
         assert cls.__args__[0] in (
             oft.Numpy,
             oft.ListNumpy,
-        ), "T in oneflow.typing.Bundle[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy)"
+        ), "T in oneflow.compatible.single_client.typing.Bundle[T] must be one of (oneflow.compatible.single_client.typing.Numpy, oneflow.compatible.single_client.typing.ListNumpy)"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
@@ -173,8 +173,8 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
         ), "type(ret): %s" % type(ret)
         # TODO(chengcheng) oft.Numpy support dynamic.
         assert not ret.is_dynamic, (
-            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
-            "you can change annotation to oneflow.typing.ListNumpy "
+            "only fixed shaped blob compatible to oneflow.compatible.single_client.typing.Numpy. "
+            "you can change annotation to oneflow.compatible.single_client.typing.ListNumpy "
         )
     elif oft.OriginFrom(annotation, oft.ListNumpy):
         assert isinstance(
@@ -265,7 +265,7 @@ def CheckWatchCallbackParameterAnnotation(parameters):
     if not oft.OriginFrom(annotation, oft.PyStructCompatibleToBlob):
         raise NotImplementedError(
             ("invalid watch callback paremeter annotation %s found. " % annotation)
-            + "candidate annotations: oneflow.typing.Numpy, oneflow.typing.ListNumpy. "
+            + "candidate annotations: oneflow.compatible.single_client.typing.Numpy, oneflow.compatible.single_client.typing.ListNumpy. "
         )
 
 
@@ -275,8 +275,8 @@ def CheckWatchedBlobByAnnotation(blob, annotation):
     if oft.OriginFrom(annotation, oft.Numpy):
         # TODO(chengcheng) oft.Numpy support dynamic.
         assert not blob.is_dynamic, (
-            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
-            "you can change annotation to oneflow.typing.ListNumpy "
+            "only fixed shaped blob compatible to oneflow.compatible.single_client.typing.Numpy. "
+            "you can change annotation to oneflow.compatible.single_client.typing.ListNumpy "
         )
     elif oft.OriginFrom(annotation, oft.ListNumpy):
         pass

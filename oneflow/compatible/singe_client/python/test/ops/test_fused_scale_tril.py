@@ -23,7 +23,7 @@ from test_util import (
     type_name_to_flow_type,
     type_name_to_np_type,
 )
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import os
 
 

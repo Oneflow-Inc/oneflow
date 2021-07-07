@@ -48,19 +48,19 @@ def to_op(input, *args, **kwargs):
         Otherwise, the returned tensor is a copy of ``input`` with the desired.
 
     Args:
-        input (oneflow.Tensor): An input tensor.
-        *args (oneflow.Tensor or oneflow.device or oneflow.dtype): Positional arguments
-        **kwargs (oneflow.device or oneflow.dtype) : Key-value arguments
+        input (oneflow.compatible.single_client.Tensor): An input tensor.
+        *args (oneflow.compatible.single_client.Tensor or oneflow.compatible.single_client.device or oneflow.compatible.single_client.dtype): Positional arguments
+        **kwargs (oneflow.compatible.single_client.device or oneflow.compatible.single_client.dtype) : Key-value arguments
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.compatible.single_client.Tensor: A Tensor.
     
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))

@@ -76,7 +76,7 @@ parser.add_argument(
 )
 parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
 
-# TODO: add this interface to oneflow.layers
+# TODO: add this interface to oneflow.compatible.single_client.layers
 def _conv2d_layer(
     name,
     input,

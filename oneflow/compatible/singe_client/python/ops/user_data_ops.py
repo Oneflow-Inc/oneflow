@@ -108,7 +108,7 @@ def api_ofrecord_image_decoder_random_crop(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -227,7 +227,7 @@ def OFRecordImageDecoder(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -308,7 +308,7 @@ def api_image_resize(
         keep_aspect_ratio: A bool. If is false, indicate that image will be resized to fixed width and height, otherwise image will be resized keeping aspect ratio.
         resize_side: A str of "longer" or "shorter". Only works when `keep_aspect_ratio` is True. If `resize_side` is "longer", the longer side of image will be resized to `target_size`. If `resize_side` is "shorter", the shorter side of image will be resized to `target_size`.
         channels: An int. how many channels an image has
-        dtype: `oneflow.dtype`. Indicate output resized image data type.
+        dtype: `oneflow.compatible.single_client.dtype`. Indicate output resized image data type.
         interpolation_type: A str of "auto", "bilinear", "nearest_neighbor", "bicubic" or "area". Indicate interpolation method used to resize image.
         name: A str, optional. Name for the operation.
         color_space: Deprecated, a str of "RGB", "BGR" or "GRAY". Please use `channels` instead.
@@ -327,7 +327,7 @@ def api_image_resize(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -520,7 +520,7 @@ def api_image_target_resize(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
         import numpy as np
         import cv2
@@ -553,7 +553,7 @@ def api_image_target_resize(
             def image_target_resize_job(images_def: tp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=flow.float)
             ) -> Tuple[tp.ListListNumpy, tp.ListNumpy, tp.ListNumpy]:
                 # The input Blob type should be "kTensorBuffer"
-                # So we use oneflow.tensor_list_to_tensor_buffer to convert
+                # So we use oneflow.compatible.single_client.tensor_list_to_tensor_buffer to convert
                 images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
 
                 resized_images_buffer, size, scale = flow.image_target_resize(
@@ -660,7 +660,7 @@ def CropMirrorNormalize(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -716,7 +716,7 @@ def CropMirrorNormalize(
         op_type_name = "crop_mirror_normalize_from_uint8"
     else:
         print(
-            "ERROR! oneflow.data.crop_mirror_normalize op",
+            "ERROR! oneflow.compatible.single_client.data.crop_mirror_normalize op",
             " NOT support input data type : ",
             input_blob.dtype,
         )
@@ -769,7 +769,7 @@ def api_image_random_crop(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
         import cv2
 
@@ -801,7 +801,7 @@ def api_image_random_crop(
             def image_random_crop_job(images_def: tp.ListListNumpy.Placeholder(shape=image_static_shape, dtype=flow.float)
             ) -> tp.ListListNumpy:
                 # The input Blob type should be "kTensorBuffer"
-                # So we use oneflow.tensor_list_to_tensor_buffer to convert
+                # So we use oneflow.compatible.single_client.tensor_list_to_tensor_buffer to convert
                 images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
                 # Do the random crop
                 random_crop_buffer = flow.image.random_crop(
@@ -910,7 +910,7 @@ def api_coin_flip(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -1029,7 +1029,7 @@ def image_decode(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
         from PIL import Image
 
@@ -1121,7 +1121,7 @@ def image_batch_align(
         import cv2
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def _of_image_batch_align(images, input_shape, output_shape, alignment):
@@ -1220,7 +1220,7 @@ def image_normalize(
         import cv2
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def _of_image_normalize(images, image_shape, std, mean):
@@ -1323,7 +1323,7 @@ def image_flip(
         import cv2
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def _of_image_flip(images, image_shape, flip_code):
@@ -1432,7 +1432,7 @@ def object_bbox_flip(
 
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def _of_object_bbox_flip(bbox_list, image_size, flip_code):
@@ -1537,7 +1537,7 @@ def object_bbox_scale(
 
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
 
@@ -1680,7 +1680,7 @@ def object_segm_poly_flip(
 
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import cv2
 
 
@@ -1814,7 +1814,7 @@ def object_segm_poly_scale(
 
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
 
@@ -1960,7 +1960,7 @@ def object_segm_poly_to_mask(
 
         import numpy as np
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import cv2
         from typing import Tuple
 
@@ -2258,7 +2258,7 @@ def ofrecord_image_classification_reader(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 

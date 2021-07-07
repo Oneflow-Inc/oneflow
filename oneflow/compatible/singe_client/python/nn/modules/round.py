@@ -33,14 +33,14 @@ class Round(Module):
 def round_op(x):
     """This operator rounds the value of Blob to the nearest integer.
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
@@ -63,7 +63,7 @@ def round_op_tensor(x):
     r"""
     round() -> Tensor
 
-    See :func:`oneflow.experimental.round`
+    See :func:`oneflow.compatible.single_client.experimental.round`
 
     """
 

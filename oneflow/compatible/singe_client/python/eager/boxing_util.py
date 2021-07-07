@@ -31,7 +31,7 @@ import oneflow.python.eager.op_infer_util as op_infer_util
 from oneflow.python.eager.boxing_hob import BoxingHobContext
 import oneflow.python.eager.boxing_middle as boxing_middle
 import random
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
 import oneflow._oneflow_internal
@@ -742,7 +742,7 @@ def _AssignOpConf():
     op_conf.name = "assign"
     op_conf.assign_conf.ref = "assign/ref"
     op_conf.assign_conf.value = "assign/value"
-    device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+    device_tag = flow.current_scope().device_parallel_desc_symbol.device_tag
     op_conf.device_tag = device_tag
     return op_conf
 

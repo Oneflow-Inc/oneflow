@@ -18,7 +18,7 @@ import oneflow as flow
 import numpy as np
 import os
 import random
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 from collections import OrderedDict
 from test_util import (
     GenArgList,

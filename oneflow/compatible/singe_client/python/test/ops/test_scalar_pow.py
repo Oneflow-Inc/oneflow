@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 import numpy as np
-import oneflow.typing as tp
+import oneflow.compatible.single_client.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict

@@ -93,7 +93,7 @@ def api_oneflow_function(
 
     For instance::
 
-        @oneflow.global_function(flow.FunctionConfig())
+        @oneflow.compatible.single_client.global_function(flow.FunctionConfig())
         def train():
             # your model
 

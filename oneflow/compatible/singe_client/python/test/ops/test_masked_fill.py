@@ -25,7 +25,7 @@ from test_util import (
     type_name_to_flow_type,
     type_name_to_np_type,
 )
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _masked_fill_np_fw_bw(x, mask, y_diff, type_name, value=0):

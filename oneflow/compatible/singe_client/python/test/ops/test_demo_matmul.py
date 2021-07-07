@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 import oneflow as flow
-import oneflow.typing as tp
+import oneflow.compatible.single_client.typing as tp
 import numpy as np
 
 

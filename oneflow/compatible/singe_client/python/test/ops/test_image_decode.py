@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 from PIL import Image
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _of_image_decode(images):

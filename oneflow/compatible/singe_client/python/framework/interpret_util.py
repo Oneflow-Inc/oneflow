@@ -20,7 +20,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.gradient_util as gradient_util
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
@@ -28,7 +28,7 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 def Forward(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.current_scope()
+        scope_symbol = flow.current_scope()
     func = enable_if.unique([LazyInfer, EagerForward])
     return func(compile_ctx.CurJobAddOp, op_conf, scope_symbol)
 
@@ -40,7 +40,7 @@ def OpKernelForward(op_conf, opkernel_object):
 
 def ConsistentForward(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.current_scope()
+        scope_symbol = flow.current_scope()
     func = enable_if.unique([LazyInfer, EagerForward])
     return func(compile_ctx.CurJobAddConsistentOp, op_conf, scope_symbol)
 

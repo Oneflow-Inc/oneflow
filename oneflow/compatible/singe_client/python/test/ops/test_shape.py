@@ -19,7 +19,7 @@ import numpy as np
 import os
 import random
 
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 @flow.unittest.skip_unless_1n2d()

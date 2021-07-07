@@ -103,7 +103,7 @@ def eager_checkpoint_save(path):
 
 @enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
 def eager_checkpoint_init():
-    # eager variables are initialized in oneflow.get_variable()
+    # eager variables are initialized in oneflow.compatible.single_client.get_variable()
     pass
 
 

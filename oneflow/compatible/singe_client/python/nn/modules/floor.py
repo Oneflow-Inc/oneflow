@@ -49,7 +49,7 @@ def floor_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
@@ -76,7 +76,7 @@ def floor_op(x):
 @experimental_api
 def floor_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.floor`
+    See :func:`oneflow.compatible.single_client.experimental.floor`
     """
     return Floor()(input)
 

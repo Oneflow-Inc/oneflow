@@ -51,8 +51,8 @@ def ne_op(input, other):
     The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
 
     Args:
-        input (oneflow.Tensor): the tensor to compare
-        other (oneflow.Tensor, float or int): the target to compare
+        input (oneflow.compatible.single_client.Tensor): the tensor to compare
+        other (oneflow.compatible.single_client.Tensor, float or int): the target to compare
 
     Returns:
 
@@ -62,7 +62,7 @@ def ne_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

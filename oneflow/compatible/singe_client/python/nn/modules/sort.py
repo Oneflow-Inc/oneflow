@@ -58,12 +58,12 @@ def sort_op(input, dim: int = -1, descending: bool = False):
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.compatible.single_client.Tensor): The input Tensor.
         dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
         descending (bool, optional): controls the sorting order (ascending or descending).
 
     Returns:
-        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
+        Tuple(oneflow.compatible.single_client.Tensor, oneflow.compatible.single_client.Tensor(dtype=int32)): A tuple of (values, indices), where
         where the values are the sorted values and the indices are the indices of the elements
         in the original input tensor.
 
@@ -71,7 +71,7 @@ def sort_op(input, dim: int = -1, descending: bool = False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

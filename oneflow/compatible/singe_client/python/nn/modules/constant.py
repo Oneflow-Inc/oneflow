@@ -86,7 +86,7 @@ def ones_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> y = flow.ones(5)
@@ -125,7 +125,7 @@ def zeros_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> y = flow.zeros(5)
@@ -158,7 +158,7 @@ def zeros_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow.compatible.single_client.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))
@@ -191,7 +191,7 @@ def ones_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow.compatible.single_client.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))
@@ -271,7 +271,7 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.ones((1, 2, 3)))

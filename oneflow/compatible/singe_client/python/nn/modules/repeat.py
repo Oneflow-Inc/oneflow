@@ -68,17 +68,17 @@ def repeat_op(x, sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        x (oneflow.compatible.single_client.Tensor): The input Tensor.
         size (Sequence[int]): The number of times to repeat this tensor along each dimension
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        oneflow.compatible.single_client.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

@@ -33,8 +33,8 @@ class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
-        @oneflow.global_function()
-        def foo() -> oneflow.typing.Numpy:
+        @oneflow.compatible.single_client.global_function()
+        def foo() -> oneflow.compatible.single_client.typing.Numpy:
             loss = ... # your network
             return loss
 
@@ -42,14 +42,14 @@ class Numpy(PyStructCompatibleToBlob):
         print(loss)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=oneflow.float):
+    def Placeholder(shape: Sequence[int], dtype=oneflow.compatible.single_client.float):
         """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have an identical shape.
         For instance::
 
-            @oneflow.global_function()
+            @oneflow.compatible.single_client.global_function()
             def foo(
-                image_blob: oneflow.typing.Numpy.Placeholder(
+                image_blob: oneflow.compatible.single_client.typing.Numpy.Placeholder(
                     (2, 255, 255, 3), dtype=flow.float32
                 )
             ):
@@ -67,8 +67,8 @@ class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
 
-        @oneflow.global_function()
-        def foo() -> oneflow.typing.ListNumpy:
+        @oneflow.compatible.single_client.global_function()
+        def foo() -> oneflow.compatible.single_client.typing.ListNumpy:
             mirrored_tensors = ... # your network
             return mirrored_tensors
 
@@ -77,14 +77,14 @@ class ListNumpy(PyStructCompatibleToBlob):
             print(mirrored_tensors)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=oneflow.float):
+    def Placeholder(shape: Sequence[int], dtype=oneflow.compatible.single_client.float):
         """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `list` of `numpy.ndarray` takes a `ListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
 
-            @oneflow.global_function()
+            @oneflow.compatible.single_client.global_function()
             def foo(
-                image_blob: oneflow.typing.ListNumpy.Placeholder(
+                image_blob: oneflow.compatible.single_client.typing.ListNumpy.Placeholder(
                     (2, 255, 255, 3), dtype=flow.float32
                 )
             ):

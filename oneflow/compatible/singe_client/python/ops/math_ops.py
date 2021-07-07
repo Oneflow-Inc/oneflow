@@ -58,7 +58,7 @@ def add(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def addJob(x: tp.Numpy.Placeholder((3, )),
@@ -130,7 +130,7 @@ def add_n(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def add_n_Job(x: tp.Numpy.Placeholder((3, )),
@@ -176,7 +176,7 @@ def subtract(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def subtractJob(x: tp.Numpy.Placeholder((3, )),
@@ -231,7 +231,7 @@ def multiply(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def multiplyJob(x: tp.Numpy.Placeholder((3, )),
@@ -287,7 +287,7 @@ def divide(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def divideJob(x: tp.Numpy.Placeholder((3, )),
@@ -350,7 +350,7 @@ def floor_mod(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def modJob(x: tp.Numpy.Placeholder((3, )),
@@ -546,7 +546,7 @@ def gelu(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def geluJob(x: tp.Numpy.Placeholder((3, ))
@@ -594,7 +594,7 @@ def relu(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def reluJob(x: tp.Numpy.Placeholder((3, ))
@@ -643,7 +643,7 @@ def sigmoid(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def sigmoidJob(x: tp.Numpy.Placeholder((3, ))
@@ -716,7 +716,7 @@ def unsorted_segment_sum(
         # Example 1:
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
@@ -737,7 +737,7 @@ def unsorted_segment_sum(
         # Example 2
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
@@ -797,7 +797,7 @@ def unsorted_segment_sum_like(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def unsorted_segment_sum_like_Job(data: tp.Numpy.Placeholder((3, 4)),
@@ -865,7 +865,7 @@ def unsorted_batch_segment_sum(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def unsorted_batch_segment_sum_Job(data: tp.Numpy.Placeholder((3, 4)),
@@ -924,7 +924,7 @@ def cast(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def cast_Job(x: tp.Numpy.Placeholder((3, ), dtype=flow.float32)
@@ -976,7 +976,7 @@ def equal(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def equal_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1016,7 +1016,7 @@ def not_equal(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def not_equal_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1056,7 +1056,7 @@ def less(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def less_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1096,7 +1096,7 @@ def less_equal(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def less_equal_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1136,7 +1136,7 @@ def greater(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def greater_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1176,7 +1176,7 @@ def greater_equal(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def greater_equal_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1221,7 +1221,7 @@ def logical_and(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def logical_and_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1261,7 +1261,7 @@ def minimum(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def minimum_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1313,7 +1313,7 @@ def maximum(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def maximum_Job(x: tp.Numpy.Placeholder((3, )),
@@ -1368,7 +1368,7 @@ def elem_cnt(
         # Example 1:
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
@@ -1383,7 +1383,7 @@ def elem_cnt(
         # Example 2:
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
@@ -1465,7 +1465,7 @@ def top_k(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def topk_Job(x: tp.Numpy.Placeholder((5, ))
@@ -1529,7 +1529,7 @@ def argmax(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def argmax_Job(x: tp.Numpy.Placeholder((2, 5))
@@ -1584,7 +1584,7 @@ def broadcast_to_compatible_with(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def broadcast_to_compatible_with_Job(x: tp.Numpy.Placeholder((4, 1, 1))
@@ -1655,7 +1655,7 @@ def clip_by_value(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def clip_by_value_Job(x: tp.Numpy.Placeholder((4, ))
@@ -1749,7 +1749,7 @@ def l2_normalize(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def l2_normalize_Job(x: tp.Numpy.Placeholder((4, ))
@@ -1805,7 +1805,7 @@ def squared_difference(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def squared_difference_Job(x: tp.Numpy.Placeholder((4, )),
@@ -1876,7 +1876,7 @@ def tril(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         @flow.global_function()
         def tril_Job(x: tp.Numpy.Placeholder((4, 4))
         )->tp.Numpy:
@@ -2019,7 +2019,7 @@ def polyval(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def polyval_Job(
@@ -2071,7 +2071,7 @@ def in_top_k(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def intopk_Job(
@@ -2105,14 +2105,14 @@ def in_top_k(
 def range(
     start, limit=None, delta=1, dtype=None, name="range"
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates
+    r"""This operator is similar to python `range`, the difference is that `oneflow.compatible.single_client.range` generates
     a Blob.
 
     Args:
         start ([type]): The start of interval. Its type should be `int`.
         limit ([type], optional): The limit of interval. Its type should be `int`.
         delta (int, optional): The numerical spacing between elements. Defaults to 1.
-        dtype ([type], optional): The output's data type. Currently we only support `oneflow.int64`. Defaults to None.
+        dtype ([type], optional): The output's data type. Currently we only support `oneflow.compatible.single_client.int64`. Defaults to None.
         name (str, optional): The name for the operation. Defaults to "range".
 
     Returns:
@@ -2125,7 +2125,7 @@ def range(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2144,7 +2144,7 @@ def range(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

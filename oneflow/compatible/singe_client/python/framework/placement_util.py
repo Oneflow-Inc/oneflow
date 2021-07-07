@@ -31,9 +31,9 @@ import oneflow._oneflow_internal
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
-        "oneflow.device_prior_placement/oneflow.fixed_placement",
+        "oneflow.compatible.single_client.device_prior_placement/oneflow.compatible.single_client.fixed_placement",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.placement"
+            "oneflow.compatible.single_client.scope.placement"
         ),
     )
     print(traceback.format_stack()[-2])

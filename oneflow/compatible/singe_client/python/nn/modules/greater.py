@@ -41,18 +41,18 @@ def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
     Args:
-        x (oneflow.Tensor): A Tensor
-        y (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
+        y (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.compatible.single_client.Tensor: A Tensor with int8 type.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
@@ -73,7 +73,7 @@ def greater_op_tensor(x, y):
 
     gt() -> Tensor
 
-    See :func:`oneflow.experimental.gt`
+    See :func:`oneflow.compatible.single_client.experimental.gt`
 
     """
     return Greater()(x, y)

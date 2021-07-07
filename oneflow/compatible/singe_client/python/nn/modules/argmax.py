@@ -60,19 +60,19 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
-        input (oneflow.Tensor): Input Tensor
+        input (oneflow.compatible.single_client.Tensor): Input Tensor
         dim (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         keepdim (bool optional):  whether the output tensor has dim retained or not. Ignored if dim=None.
 
     Returns:
-        oneflow.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
+        oneflow.compatible.single_client.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([[1, 3, 8, 7, 2],

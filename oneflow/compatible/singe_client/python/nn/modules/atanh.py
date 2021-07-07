@@ -42,7 +42,7 @@ def atanh_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
@@ -61,7 +61,7 @@ def atanh_op(input):
 def atanh_op_tensor(x):
     r"""
     atanh() -> Tensor
-    See :func:`oneflow.experimental.atanh`
+    See :func:`oneflow.compatible.single_client.experimental.atanh`
 
     """
 
@@ -73,7 +73,7 @@ def atanh_op_tensor(x):
 def arctanh_op(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.compatible.single_client.experimental.atanh`
     """
 
     return Atanh()(input)
@@ -84,7 +84,7 @@ def arctanh_op(input):
 def arctanh_op_tensor(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.compatible.single_client.experimental.atanh`
     """
 
     return Atanh()(input)

@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _check(test_case, x, y, shared_axes):

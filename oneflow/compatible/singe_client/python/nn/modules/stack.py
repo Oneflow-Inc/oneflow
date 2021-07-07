@@ -60,7 +60,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
     applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
 
     Args:
-        inputs (List[oneflow.Tensor]): the list of input tensors. Each tensor should have the same shape.
+        inputs (List[oneflow.compatible.single_client.Tensor]): the list of input tensors. Each tensor should have the same shape.
         dim (int): the index at which to insert the concatenated dimension.
 
     Returns:
@@ -70,7 +70,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))

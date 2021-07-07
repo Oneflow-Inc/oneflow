@@ -40,17 +40,17 @@ def exp_op(x):
         out = e^x
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))

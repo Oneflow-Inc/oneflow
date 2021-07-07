@@ -49,7 +49,7 @@ def categorical_ordinal_encode(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def categorical_ordinal_encode_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)
@@ -109,7 +109,7 @@ def categorical_ordinal_encoder(
     hash_precomputed: bool = True,
     name: str = "CategoricalOrdinalEncoder",
 ) -> oneflow._oneflow_internal.BlobDesc:
-    """This operator uses `oneflow.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.categorical_ordinal_encode`
+    """This operator uses `oneflow.compatible.single_client.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.compatible.single_client.categorical_ordinal_encode`
 
     Args:
         input_tensor (oneflow._oneflow_internal.BlobDesc): The input Blob.
@@ -126,7 +126,7 @@ def categorical_ordinal_encoder(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def categorical_ordinal_encoder_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)

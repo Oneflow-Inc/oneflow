@@ -119,8 +119,8 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
             blob = oneflow._oneflow_internal.EagerConsistentBlob(
                 lbi, blob_object, blob_register
             )
-            with oneflow.scope.consistent_view():
-                return oneflow.identity(blob)
+            with oneflow.compatible.single_client.scope.consistent_view():
+                return oneflow.compatible.single_client.identity(blob)
 
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
         get_blob = oneflow._oneflow_internal.EagerMirroredBlob
@@ -135,7 +135,7 @@ def _MakeInputBlobObject(arg_blob_def):
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
-        scope = oneflow.current_scope()
+        scope = oneflow.compatible.single_client.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)

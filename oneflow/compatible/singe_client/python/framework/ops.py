@@ -43,9 +43,9 @@ def api_repeat(
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def repeat(input, repeat_num, name=None):
-    assert not oneflow.eager_execution_enabled()
+    assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.user_op_builder(
+        oneflow.compatible.single_client.user_op_builder(
             name if name is not None else id_util.UniqueStr("Repeat_")
         )
         .Op("repeat")
@@ -70,9 +70,9 @@ def api_acc(
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def acc(one, max_acc_num, name=None):
-    assert not oneflow.eager_execution_enabled()
+    assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
+        oneflow.compatible.single_client.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
         .Op("acc")
         .Input("in", [one])
         .Output("out")
@@ -95,9 +95,9 @@ def api_unpack(
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def unpack(input, unpack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
+    assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.user_op_builder(
+        oneflow.compatible.single_client.user_op_builder(
             name if name is not None else id_util.UniqueStr("Unpack_")
         )
         .Op("unpack")
@@ -120,9 +120,9 @@ def api_pack(
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def pack(input, pack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
+    assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.user_op_builder(
+        oneflow.compatible.single_client.user_op_builder(
             name if name is not None else id_util.UniqueStr("Pack_")
         )
         .Op("pack")
@@ -170,7 +170,7 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     sbp_parallel = distribute_to_str(distribute)
     grad_sbp_parallel = distribute_to_str(gradient_distribute)
     op = (
-        oneflow.user_op_builder(name)
+        oneflow.compatible.single_client.user_op_builder(name)
         .Op("parallel_cast")
         .Input("in", [input])
         .Output("out")
@@ -219,7 +219,7 @@ def hierarchical_parallel_cast(
             raise ValueError("unsupported distribute")
 
     op = (
-        oneflow.user_op_builder(name)
+        oneflow.compatible.single_client.user_op_builder(name)
         .Op("hierarchical_parallel_cast")
         .Input("in", [input])
         .Output("out")

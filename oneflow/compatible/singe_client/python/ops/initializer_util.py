@@ -60,7 +60,7 @@ def constant_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -91,7 +91,7 @@ def constant_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -150,7 +150,7 @@ def zeros_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -181,7 +181,7 @@ def zeros_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -228,7 +228,7 @@ def ones_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -259,7 +259,7 @@ def ones_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -311,7 +311,7 @@ def random_uniform_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -342,7 +342,7 @@ def random_uniform_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -411,7 +411,7 @@ def random_normal_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -442,7 +442,7 @@ def random_normal_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -499,7 +499,7 @@ def truncated_normal_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -530,7 +530,7 @@ def truncated_normal_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -568,7 +568,7 @@ def glorot_uniform_initializer(
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates a Xavier uniform distribution. 
     
-    It also can be called as `oneflow.glorot_uniform_initializer`.  
+    It also can be called as `oneflow.compatible.single_client.glorot_uniform_initializer`.  
 
     The equation is: 
 
@@ -593,7 +593,7 @@ def glorot_uniform_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -626,7 +626,7 @@ def glorot_uniform_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -660,7 +660,7 @@ def glorot_normal_initializer(
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates a Xavier normal distribution. 
     
-    It also can be called as `oneflow.glorot_normal_initializer`.  
+    It also can be called as `oneflow.compatible.single_client.glorot_normal_initializer`.  
 
     The equation is: 
 
@@ -685,7 +685,7 @@ def glorot_normal_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -718,7 +718,7 @@ def glorot_normal_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -785,7 +785,7 @@ def variance_scaling_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -818,7 +818,7 @@ def variance_scaling_initializer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -915,7 +915,7 @@ def kaiming_initializer(
     .. code-block:: python 
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -950,7 +950,7 @@ def kaiming_initializer(
     
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

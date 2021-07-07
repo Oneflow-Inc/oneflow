@@ -17,7 +17,7 @@ from collections import OrderedDict
 
 import oneflow as flow
 import numpy as np
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import test_global_storage
 from test_util import GenArgDict
 

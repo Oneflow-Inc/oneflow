@@ -18,7 +18,7 @@ import numpy as np
 import tensorflow as tf
 import oneflow as flow
 from collections import OrderedDict
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 import test_global_storage
 from test_util import (

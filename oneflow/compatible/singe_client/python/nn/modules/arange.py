@@ -89,7 +89,7 @@ def arange_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> y = flow.arange(0, 5)

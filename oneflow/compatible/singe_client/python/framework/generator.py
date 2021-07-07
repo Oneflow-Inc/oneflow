@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 from oneflow.python.oneflow_export import oneflow_export
 

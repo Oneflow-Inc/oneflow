@@ -64,7 +64,7 @@ class GroupNorm(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -158,7 +158,7 @@ class LayerNorm(Module):
     evaluation modes.
 
     Args:
-        normalized_shape (int or list or oneflow.Size): input shape from an expected input of size
+        normalized_shape (int or list or oneflow.compatible.single_client.Size): input shape from an expected input of size
 
             .. math::
                 [* \times \text{normalized_shape}[0] \times \text{normalized_shape}[1] \times \ldots \times \text{normalized_shape}[-1]]
@@ -181,7 +181,7 @@ class LayerNorm(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input_arr = np.array(

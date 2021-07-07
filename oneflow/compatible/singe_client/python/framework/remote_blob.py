@@ -89,7 +89,7 @@ def LazyRemoteBlob(lbi, **kw):
 @property
 def dtype(self):
     ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-    assert isinstance(ret, oneflow.dtype)
+    assert isinstance(ret, oneflow.compatible.single_client.dtype)
     return ret
 
 
@@ -102,11 +102,11 @@ def with_distribute(self, distribute):
 
 
 def with_gradient_distribute(self, distribute):
-    return oneflow.parallel_cast(self, gradient_distribute=distribute)
+    return oneflow.compatible.single_client.parallel_cast(self, gradient_distribute=distribute)
 
 
 def get_lazy_shape_log_warning(self):
-    if oneflow.scope.mirrored_view_enabled():
+    if oneflow.compatible.single_client.scope.mirrored_view_enabled():
         return ("%s\n%s\n%s") % (
             "WARNING:",
             "You access a consistent blob shape in mirrored view, there may be problems,",
@@ -117,7 +117,7 @@ def get_lazy_shape_log_warning(self):
 
 
 def get_mirror_shape_log_warning(self):
-    if oneflow.scope.consistent_view_enabled():
+    if oneflow.compatible.single_client.scope.consistent_view_enabled():
         return ("%s\n%s\n%s") % (
             "WARNING:",
             "You access a mirrored blob shape in consistent view, there may be problems,",
@@ -179,7 +179,7 @@ def BlobObjectNumpy(blob_object, tmp_name=None):
                 str(blob_object.op_arg_parallel_attr.sbp_parallel),
                 str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
             )
-            with oneflow.scope.placement(
+            with oneflow.compatible.single_client.scope.placement(
                 parallel_conf.device_tag(), list(parallel_conf.device_name()),
             ):
                 tmp_blob_object = boxing_util.BoxingTo(

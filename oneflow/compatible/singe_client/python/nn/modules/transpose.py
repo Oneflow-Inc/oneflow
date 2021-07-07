@@ -67,7 +67,7 @@ def transpose_op(tensor, dim0, dim1):
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
 
     Args:
-        tensor (oneflow.Tensor): The input tensor.
+        tensor (oneflow.compatible.single_client.Tensor): The input tensor.
         dim0 (int): the first dimension to be transposed.
         dim1 (int): the second dimension to be transposed.
     Returns:
@@ -78,7 +78,7 @@ def transpose_op(tensor, dim0, dim1):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

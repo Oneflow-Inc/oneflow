@@ -49,7 +49,7 @@ def atan2_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
 
         >>> x1 = flow.Tensor(np.array([1,2,3]))
@@ -78,7 +78,7 @@ def atan2_op_tensor(input, other):
 
     atan2(other) -> Tensor
 
-    See :func:`oneflow.experimental.atan2`
+    See :func:`oneflow.compatible.single_client.experimental.atan2`
     """
     return Atan2()(input, other)
 

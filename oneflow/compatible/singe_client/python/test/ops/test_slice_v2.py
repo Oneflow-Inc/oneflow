@@ -15,7 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
-import oneflow.typing as otp
+import oneflow.compatible.single_client.typing as otp
 import test_util
 import typing as tp
 import collections

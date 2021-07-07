@@ -34,7 +34,7 @@ import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 from google.protobuf import text_format
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import numpy as np
 import os
@@ -251,7 +251,7 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
 
 def EagerInitVariableBlob(sess, var_op_conf, var_blob):
     snapshot_path = sess.snapshot_mgr.get_snapshot_path(var_op_conf.name)
-    with oneflow.scope.placement("cpu", "0:0"):
+    with flow.scope.placement("cpu", "0:0"):
         if snapshot_path is None:
             blob_object = _EagerRunModelInit(var_op_conf)
         else:
@@ -262,7 +262,7 @@ def EagerInitVariableBlob(sess, var_op_conf, var_blob):
 
 def EagerSaveVariableBlob(snapshot_path):
     var_blobs = session_ctx.GetDefaultSession().var_name2var_blob.values()
-    with oneflow.scope.placement("cpu", "0:0"):
+    with flow.scope.placement("cpu", "0:0"):
         _EagerRunModelSave(var_blobs, snapshot_path)
 
 
@@ -294,10 +294,10 @@ def _EagerRunModelInit(var_op_conf):
 
     def BuildModelInitInstruction(builder):
         upstream_signature = op_node_signature_pb.OpNodeSignature()
-        op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
+        op_conf.scope_symbol_id = flow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         parallel_conf = (
-            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+            flow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
@@ -317,7 +317,7 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
     def BuildModelIOPathInputInstruction(builder):
         op_attribute = op_infer_util.Infer(op_conf, ibn2blob_object={})
         parallel_conf = (
-            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+            flow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
@@ -472,7 +472,7 @@ def _GenModelIOPathInputOpConfAndRetLbi():
     blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
     blob_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
-        oneflow.int8
+        flow.int8
     )
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
