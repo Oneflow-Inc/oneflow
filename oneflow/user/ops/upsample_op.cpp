@@ -70,6 +70,36 @@ REGISTER_USER_OP("upsample_nearest_1d")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("upsample_bicubic_2d")
+    .Input("x")
+    .Output("y")
+    .Attr<float>("height_scale")
+    .Attr<float>("width_scale")
+    .Attr<bool>("align_corners")
+    .Attr<std::string>("data_format")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+      const float height_scale = ctx->Attr<float>("height_scale");
+      const float width_scale = ctx->Attr<float>("width_scale");
+      if (ctx->Attr<std::string>("data_format") != "channels_first"
+          || x_desc->shape().NumAxes() != 4) {
+        LOG(FATAL) << "upsample_bicubic_2d only supports NCHW";
+      }
+      *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
+                                    static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
+                                    static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("upsample")
     .Input("x")
     .Output("y")
@@ -150,6 +180,34 @@ REGISTER_USER_OP("upsample_nearest_1d_grad")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("upsample_bicubic_2d")
+    .Input("dy")
+    .Input("x")
+    .Output("dx")
+    .Attr<float>("height_scale")
+    .Attr<float>("width_scale")
+    .Attr<bool>("align_corners")
+    .Attr<std::string>("data_format")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      const float height_scale = ctx->Attr<float>("height_scale");
+      const float width_scale = ctx->Attr<float>("width_scale");
+      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
+        LOG(FATAL) << "upsample_bicubic_2d only supports NCHW";
+      }
+      *dx_shape = ctx->InputShape("x", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("upsample_grad")
     .Input("dy")
     .Input("x")
@@ -207,6 +265,25 @@ REGISTER_USER_OP_GRAD("upsample_nearest_1d")
                 .Input("x", op.input("x", 0))
                 .Output("dx")
                 .Attr("scale_factor", op.attr<float>("scale_factor"))
+                .Attr("data_format", op.attr<std::string>("data_format"))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+    });
+
+REGISTER_USER_OP_GRAD("upsample_bicubic_2d")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("upsample_bicubic_2d_grad")
+                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                .Input("x", op.input("x", 0))
+                .Output("dx")
+                .Attr("height_scale", op.attr<float>("height_scale"))
+                .Attr("width_scale", op.attr<float>("width_scale"))
+                .Attr("align_corners", op.attr<bool>("align_corners"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
