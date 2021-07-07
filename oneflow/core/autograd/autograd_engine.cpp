@@ -128,8 +128,8 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   }
   JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
   for (int i = 0; i < input_meta_datas_.size(); ++i) {
-    if (input_meta_datas_.at(i)) {
-      CHECK_NOTNULL_OR_RETURN(input_grads.at(i));
+    if (input_grads.at(i)) {
+      CHECK_NOTNULL_OR_RETURN(input_meta_datas_.at(i));
       JUST(input_meta_datas_.at(i)->now_grad_arg()->PushPartialTensor(input_grads.at(i)));
     }
   }
