@@ -177,7 +177,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   std::vector<bool> ori_retain_grad(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-    inputs.at(i)->set_retain_grad(true);
+    JUST(inputs.at(i)->set_retain_grad(true));
   }
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
@@ -196,8 +196,8 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   for (int i = 0; i < inputs.size(); ++i) {
     input_now_grads->at(i) = JUST(inputs.at(i)->acc_grad());
     if (!ori_retain_grad.at(i)) {
-      inputs.at(i)->set_acc_grad(nullptr);
-      inputs.at(i)->set_retain_grad(false);
+      JUST(inputs.at(i)->set_acc_grad(nullptr));
+      JUST(inputs.at(i)->set_retain_grad(false));
     }
   }
   if (!retain_graph) { ClearEngine(); }
@@ -396,7 +396,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   std::vector<bool> ori_retain_grad(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-    inputs.at(i)->set_retain_grad(true);
+    JUST(inputs.at(i)->set_retain_grad(true));
   }
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
@@ -409,8 +409,8 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   for (int i = 0; i < inputs.size(); ++i) {
     input_now_grads->at(i) = JUST(inputs.at(i)->acc_grad());
     if (!ori_retain_grad.at(i)) {
-      inputs.at(i)->set_acc_grad(nullptr);
-      inputs.at(i)->set_retain_grad(false);
+      JUST(inputs.at(i)->set_acc_grad(nullptr));
+      JUST(inputs.at(i)->set_retain_grad(false));
     }
   }
   return input_now_grads;
