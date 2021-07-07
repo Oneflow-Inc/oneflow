@@ -486,8 +486,8 @@ class Flip(Module):
         >>> arr = np.random.randn(2,2,2,3)
         >>> image_tensors = flow.Tensor(arr)
         >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
-        >>> m = nn.image.flip()
-        >>> output = m(image_tensor_buffer,flow.Tensor([1,1],dtype=flow.int8))
+        >>> flip_codes = flow.Tensor([1,1],dtype=flow.int8)
+        >>> output = nn.image.flip()(image_tensor_buffer, flip_codes)
     """
 
     def __init__(self):
