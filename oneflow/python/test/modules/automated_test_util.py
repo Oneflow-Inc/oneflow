@@ -111,7 +111,7 @@ def random(low, high):
                 raise NotImplementedError(
                     f"Not implemented annotation {annotation} in random, type(annotation.__origin__) is {type(annotation.__origin__)}"
                 )
-        
+
         if annotation == int:
             val = int(rng.integers(low, high))
         elif annotation == float:
@@ -167,31 +167,33 @@ def test_against_pytorch(
             return True
         except Exception:
             return False
-    
+
     if api_flag == TEST_TENSOR:
         pytorch_tensor = torch.Tensor(1)
         pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
-    else:    
+    else:
         pytorch_call = eval(f"torch.{pytorch_callable_name}")
-    
+
     if has_full_args_spec(pytorch_call):
         spec = inspect.getfullargspec(pytorch_call)
     else:
-        Spec = namedtuple('spec', 'args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations')
-        spec = Spec([], None, None, [], [],  {}, {})
-    
+        Spec = namedtuple(
+            "spec",
+            "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+        )
+        spec = Spec([], None, None, [], [], {}, {})
+
     annotations = spec.annotations
     annotations.update(extra_annotations)
     annotations.update(extra_defaults)
 
     if "return" in annotations:
         del annotations["return"]
-    
 
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
     if not has_full_args_spec(args):
         args = set(annotations.keys())
-    
+
     assert args == set(
         annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
@@ -238,6 +240,7 @@ def test_against_pytorch(
             else:
                 torch_tensor_xxx_func = eval(f"torch_input.{pytorch_callable_name}")
                 torch_res = torch_tensor_xxx_func(**torch_attr_dict)
+
             loss = torch_res.sum()
             loss.backward()
             if api_flag == TEST_MODULE:
@@ -283,7 +286,7 @@ def test_against_pytorch(
 
         allclose_or_fail(flow_res, torch_res)
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
-        if api_flag == 0:
+        if api_flag == TEST_MODULE:
             flow_parameters = dict(flow_module.named_parameters())
             for name, torch_param in torch_module.named_parameters():
                 flow_param = flow_parameters[name]
