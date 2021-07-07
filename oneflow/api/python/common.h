@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/random_mask_generator.h"
+
+#ifndef ONEFLOW_API_PYTHON_COMMON_H_
+#define ONEFLOW_API_PYTHON_COMMON_H_
+
+#include <string>
+
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-void RandomMaskGenerator<DeviceType::kCPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
-                                                     const float rate, int8_t* mask) {
-  CHECK_GE(n, 0);
-  std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
-                                                            GetOneVal<float>());
-  for (int64_t i = 0; i < n; ++i) { mask[i] = random_distribution(generator_->engine()) > rate; }
-}
-
-template class RandomMaskGenerator<DeviceType::kCPU>;
+Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_name,
+                             int* device_index);
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_COMMON_H_

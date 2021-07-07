@@ -33,6 +33,16 @@ import oneflow._oneflow_internal
 import traceback
 
 
+@oneflow_export("env.all_device_placement")
+def api_all_device_placement(device_type: str) -> None:
+    r"""Return a placement containing all devices of all machines under env.
+
+    Args:
+        device_type (str): cuda or cpu
+    """
+    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+
+
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
     r"""If True, job will execute in eager mode, else use lazy mode(static graph).
