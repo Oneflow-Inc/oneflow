@@ -134,6 +134,7 @@ class AutoGeneratorImpl : public GeneratorImpl {
   virtual ~AutoGeneratorImpl() = default;
 
   void set_current_seed(uint64_t seed) override {
+    std::lock_guard<std::mutex> lock(mutex_);
     seed_ = seed;
     for (const auto& it : generators_) { it.second->set_current_seed(seed); }
   }
