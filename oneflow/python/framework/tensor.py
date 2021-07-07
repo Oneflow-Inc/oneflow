@@ -32,7 +32,6 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 from oneflow._oneflow_internal.one import CastToConsistentOpExpr
-from oneflow._oneflow_internal.sbp import SbpSymbol
 
 
 def register_local_tensor_method(name=None):
@@ -831,7 +830,7 @@ class UndeterminedTensor:
 
     def to_consistent(self, sbp, placement):
         assert sbp is not None
-        if isinstance(sbp, SbpSymbol):
+        if isinstance(sbp, oneflow._oneflow_internal.sbp.sbp):
             assert len(placement.hierarchy) == 1
             parallel_distribution = [sbp]
         else:
@@ -840,7 +839,7 @@ class UndeterminedTensor:
             )
             for sbp_elem in sbp:
                 assert isinstance(
-                    sbp, SbpSymbol
+                    sbp, oneflow._oneflow_internal.sbp.sbp
                 ), "sbp must be sbp obj or list of sbp obj, please get sbp obj via oneflow.broadcast/oneflow.partial_sum/oneflow.split(axis=x)"
             parallel_distribution = list(sbp)
         return _convert_tensor_to_consistent(self, parallel_distribution, placement)
