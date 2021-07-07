@@ -59,9 +59,9 @@ def api_current_scope():
 def deprecated_current_scope(*args, **kwargs):
     print(
         "WARNING:",
-        "oneflow.scope.current_scope",
+        "oneflow.compatible.single_client.scope.current_scope",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.current_scope"
+            "oneflow.compatible.single_client.current_scope"
         ),
     )
     print(traceback.format_stack()[-2])

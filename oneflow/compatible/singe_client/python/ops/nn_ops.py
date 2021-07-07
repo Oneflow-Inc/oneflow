@@ -280,7 +280,7 @@ def conv1d(
 
     Note:
 
-        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv1d`
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.compatible.single_client.layers.conv1d`
 
     For example:
 
@@ -288,7 +288,7 @@ def conv1d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def conv1d(input, filters, kernel_size, strides, padding, name):
@@ -466,7 +466,7 @@ def conv2d(
 
     Note:
 
-        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv2d`.
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.compatible.single_client.layers.conv2d`.
 
     For example:
 
@@ -474,7 +474,7 @@ def conv2d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def conv2d(input, filters, kernel_size, strides, padding, name):
@@ -665,7 +665,7 @@ def conv3d(
 
     Note:
 
-        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.conv3d`
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.compatible.single_client.layers.conv3d`
 
     For example:
 
@@ -673,7 +673,7 @@ def conv3d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def conv3d(input, filters, kernel_size, strides, padding, name):
@@ -856,7 +856,7 @@ def moments(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import Tuple
 
 
@@ -910,7 +910,7 @@ def group_normalization(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def group_norm_Job(x: tp.Numpy.Placeholder((4, 4, 32, 32))
@@ -990,7 +990,7 @@ def instance_normalization1d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32))
@@ -1060,7 +1060,7 @@ def instance_normalization2d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32, 32))
@@ -1116,7 +1116,7 @@ def instance_normalization3d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32, 32, 32))
@@ -1176,7 +1176,7 @@ def batch_normalization(
 
     Note:
 
-        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.layers.batch_normalization`
+        This api is more flexible, if you're new to OneFlow, it's more recommend to use `oneflow.compatible.single_client.layers.batch_normalization`
 
     For example:
 
@@ -1184,7 +1184,7 @@ def batch_normalization(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1301,7 +1301,7 @@ def layer_norm(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1426,7 +1426,7 @@ def tf_conv2d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def conv2d(input, filters, kernel_size, strides, padding, name):
@@ -1499,7 +1499,7 @@ def bias_add(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1577,7 +1577,7 @@ def fused_bias_add_gelu(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1660,7 +1660,7 @@ def fused_bias_add_dropout(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1821,7 +1821,7 @@ def max_pool2d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1898,7 +1898,7 @@ def avg_pool2d(
     .. code-block:: python
 
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1976,7 +1976,7 @@ def max_pool3d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2054,7 +2054,7 @@ def avg_pool3d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2151,7 +2151,7 @@ def softmax(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2223,7 +2223,7 @@ def logsoftmax(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2309,7 +2309,7 @@ def sparse_cross_entropy(
 
     Note:
 
-        The labels data type should be `oneflow.int32`.
+        The labels data type should be `oneflow.compatible.single_client.int32`.
 
     For example:
 
@@ -2317,7 +2317,7 @@ def sparse_cross_entropy(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2403,7 +2403,7 @@ def softmax_cross_entropy_with_logits(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2470,7 +2470,7 @@ def sparse_softmax_cross_entropy_with_logits(
 
     Note:
 
-        The labels data type should be `oneflow.int32`.
+        The labels data type should be `oneflow.compatible.single_client.int32`.
 
     For example:
 
@@ -2478,7 +2478,7 @@ def sparse_softmax_cross_entropy_with_logits(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2605,7 +2605,7 @@ def sigmoid_cross_entropy_with_logits(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2694,7 +2694,7 @@ def random_mask_like(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2908,7 +2908,7 @@ def deconv2d(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def deconv2d(input, filters, kernel_size, strides, padding, name):
@@ -3227,7 +3227,7 @@ def leaky_relu(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -3280,7 +3280,7 @@ def elu(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3338,7 +3338,7 @@ def hard_sigmoid(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3391,7 +3391,7 @@ def mish(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3437,7 +3437,7 @@ def swish(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3487,7 +3487,7 @@ def hardswish(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3544,7 +3544,7 @@ def hardtanh(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
         @flow.global_function()
@@ -3610,7 +3610,7 @@ def relu6(
     .. code-block::
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3684,7 +3684,7 @@ def l1_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3708,7 +3708,7 @@ def l1_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3792,7 +3792,7 @@ def bce_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -3902,7 +3902,7 @@ def bce_with_logits_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4042,7 +4042,7 @@ def mse_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4064,7 +4064,7 @@ def mse_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4148,7 +4148,7 @@ def margin_ranking_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4253,7 +4253,7 @@ def triplet_margin_loss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4384,7 +4384,7 @@ def pixel_shuffle(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4417,9 +4417,9 @@ def pixel_shufflev2(
     w_upscale_factor: int,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in
-    `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in
-    `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width.
+    """This operator is similar to `oneflow.compatible.single_client.nn.PixelShuffle`. The difference is that in
+    `oneflow.compatible.single_client.nn.PixelShuffle`, the upscale factor of height and width is the same. But in
+    `oneflow.compatible.single_client.nn.PixelShufflev2`, you can set different upscale factor for height and width.
 
     Args:
         input (oneflow._oneflow_internal.BlobDesc): The input Blob.
@@ -4432,7 +4432,7 @@ def pixel_shufflev2(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -4518,7 +4518,7 @@ def kldivloss(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 

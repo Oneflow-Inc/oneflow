@@ -59,19 +59,19 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
     """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.compatible.single_client.Tensor): The input Tensor.
         dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
         descending (bool, optional): controls the sorting order (ascending or descending).
 
     Returns:
-        oneflow.Tensor: The indices of the sorted Tensor.
+        oneflow.compatible.single_client.Tensor: The indices of the sorted Tensor.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.array([[10, 2, 9, 3, 7],

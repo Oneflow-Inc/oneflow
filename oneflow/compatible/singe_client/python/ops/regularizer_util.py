@@ -39,7 +39,7 @@ def l1_l2_regularizer(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -86,7 +86,7 @@ def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -130,7 +130,7 @@ def l2_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

@@ -15,7 +15,7 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import test_global_storage
 import random
 import math

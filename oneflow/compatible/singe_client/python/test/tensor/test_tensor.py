@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 @flow.unittest.skip_unless_1n1d()

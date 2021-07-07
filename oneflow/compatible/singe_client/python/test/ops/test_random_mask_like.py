@@ -22,7 +22,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def of_run(device_type, x_shape, rate, seed):

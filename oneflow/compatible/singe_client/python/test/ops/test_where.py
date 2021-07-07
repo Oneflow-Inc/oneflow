@@ -21,7 +21,7 @@ import os
 
 from collections import OrderedDict
 from test_util import GenArgDict
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:

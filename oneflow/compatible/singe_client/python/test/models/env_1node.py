@@ -17,4 +17,4 @@ import oneflow
 
 
 def Init():
-    oneflow.env.init()
+    oneflow.compatible.single_client.env.init()

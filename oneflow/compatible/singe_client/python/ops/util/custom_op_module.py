@@ -175,4 +175,4 @@ class CustomOpModule(object):
             self.got_so_ = True
             self.so_path_ = self.out_prefix_ + ".so"
 
-        oneflow.config.load_library_now(self.so_path_)
+        oneflow.compatible.single_client.config.load_library_now(self.so_path_)

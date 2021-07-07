@@ -18,23 +18,23 @@ from __future__ import absolute_import
 import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 
 
 _dtypes = [
-    oneflow.char,
-    oneflow.float,
-    oneflow.float32,
-    oneflow.double,
-    oneflow.float64,
-    oneflow.float16,
-    oneflow.int8,
-    oneflow.int32,
-    oneflow.int64,
-    oneflow.uint8,
-    oneflow.record,
-    oneflow.tensor_buffer,
+    flow.char,
+    flow.float,
+    flow.float32,
+    flow.double,
+    flow.float64,
+    flow.float16,
+    flow.int8,
+    flow.int32,
+    flow.int64,
+    flow.uint8,
+    flow.record,
+    flow.tensor_buffer,
 ]
 
 
@@ -49,21 +49,21 @@ def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     # could be np.ubyte on some platform
-    oneflow.char: np.byte,
-    oneflow.float: np.float32,
-    oneflow.float16: np.float16,
-    oneflow.float32: np.float32,
-    oneflow.float64: np.double,
-    oneflow.double: np.double,
-    oneflow.int8: np.int8,
-    oneflow.int32: np.int32,
-    oneflow.int64: np.int64,
-    oneflow.uint8: np.uint8,
+    flow.char: np.byte,
+    flow.float: np.float32,
+    flow.float16: np.float16,
+    flow.float32: np.float32,
+    flow.float64: np.double,
+    flow.double: np.double,
+    flow.int8: np.int8,
+    flow.int32: np.int32,
+    flow.int64: np.int64,
+    flow.uint8: np.uint8,
 }
 
 
 @oneflow_export("convert_oneflow_dtype_to_numpy_dtype")
-def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: oneflow.dtype):
+def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: flow.dtype):
     if oneflow_dtype not in _ONEFLOW_DTYPE_TO_NUMPY_DTYPE:
         raise NotImplementedError
     return _ONEFLOW_DTYPE_TO_NUMPY_DTYPE[oneflow_dtype]

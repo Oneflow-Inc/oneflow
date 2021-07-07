@@ -44,7 +44,7 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[oneflow.dtype] = oneflow.float32,
+    dtype: Optional[oneflow.compatible.single_client.dtype] = oneflow.compatible.single_client.float32,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
@@ -66,7 +66,7 @@ def api_get_variable(
         name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by default
         shape: Shape of the variable. `None` by default
         dtype: Data type of the variable. `None` by default
-        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by default
+        initializer: A initializer object. For instance, a :func:`~oneflow.compatible.single_client.ones_initializer`. `None` by default
         trainable: A `bool` to indicate if this variable is trainable. `True` by default
         model_name: A `string`. `'weight'` or `'bias'`. `None` by default
         random_seed: Random seed for random initializers. `None` by default
@@ -78,7 +78,7 @@ def api_get_variable(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def watch_handler(y: tp.Numpy):
@@ -116,7 +116,7 @@ def api_get_variable(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         def conv2d(input, filters, kernel_size, strides, padding, name):
@@ -381,7 +381,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
 
     def BuildInstruction(builder):
         parallel_conf = (
-            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+            oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.parallel_conf
         )
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)

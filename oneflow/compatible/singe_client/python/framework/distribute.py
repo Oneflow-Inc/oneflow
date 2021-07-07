@@ -32,9 +32,9 @@ import traceback
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
-        "oneflow.distribute.mirrored_strategy",
+        "oneflow.compatible.single_client.distribute.mirrored_strategy",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.mirrored_view"
+            "oneflow.compatible.single_client.scope.mirrored_view"
         ),
     )
     print(traceback.format_stack()[-2])
@@ -46,7 +46,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
-        with oneflow.scope.mirrored_view():
+        with oneflow.compatible.single_client.scope.mirrored_view():
             ...
 
     """
@@ -60,9 +60,9 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 def deprecated_mirrored_strategy_enabled():
     print(
         "WARNING:",
-        "oneflow.distribute.mirrored_strategy_enabled",
+        "oneflow.compatible.single_client.distribute.mirrored_strategy_enabled",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.mirrored_view_enabled"
+            "oneflow.compatible.single_client.scope.mirrored_view_enabled"
         ),
     )
     print(traceback.format_stack()[-2])
@@ -85,9 +85,9 @@ def MirroredStrategyEnabled() -> bool:
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
-        "oneflow.distribute.consistent_strategy",
+        "oneflow.compatible.single_client.distribute.consistent_strategy",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.consistent_view"
+            "oneflow.compatible.single_client.scope.consistent_view"
         ),
     )
     print(traceback.format_stack()[-2])
@@ -100,7 +100,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
     Usage::
 
-        with oneflow.scope.consistent_view():
+        with oneflow.compatible.single_client.scope.consistent_view():
             ...
 
     """
@@ -114,9 +114,9 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 def deprecated_consistent_strategy_enabled():
     print(
         "WARNING:",
-        "oneflow.distribute.consistent_strategy_enabled",
+        "oneflow.compatible.single_client.distribute.consistent_strategy_enabled",
         "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.consistent_view_enabled"
+            "oneflow.compatible.single_client.scope.consistent_view_enabled"
         ),
     )
     print(traceback.format_stack()[-2])
@@ -142,7 +142,7 @@ def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
         axis (int): At `axis` the op will be splitted.
 
     Returns:
-        SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.compatible.single_client.get_variable`.
 
     Example::
         weight = weight.with_distribute(distribute.split(1))
@@ -157,7 +157,7 @@ def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
-        BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.compatible.single_client.get_variable`.
 
     Example::
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
@@ -171,7 +171,7 @@ def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
-        AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.compatible.single_client.get_variable`.
 
     """
     return oneflow._oneflow_internal.distribute.auto()
@@ -184,7 +184,7 @@ def assert_is_valid_distribute(
     assert isinstance(
         distribute, oneflow._oneflow_internal.distribute.Distribute
     ), """not a valid distribute policy.
-           expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
+           expected: 1) oneflow.compatible.single_client.distribute.split(axis); 2) oneflow.compatible.single_client.distribute.broadcast(); 3) oneflow.compatible.single_client.distribute.auto()"""
 
 
 @oneflow_export("distributed.get_local_rank")

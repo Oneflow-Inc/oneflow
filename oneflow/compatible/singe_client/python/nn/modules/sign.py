@@ -47,7 +47,7 @@ def sign_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-2, 0, 2]).astype(np.float32))
@@ -70,7 +70,7 @@ def sign_op_tensor(x):
 
     sign() -> Tensor
 
-    See :func:`oneflow.experimental.sign`
+    See :func:`oneflow.compatible.single_client.experimental.sign`
 
     """
 

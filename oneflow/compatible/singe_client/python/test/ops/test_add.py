@@ -20,7 +20,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

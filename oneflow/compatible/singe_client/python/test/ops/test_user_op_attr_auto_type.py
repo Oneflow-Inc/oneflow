@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _test_user_op_attr_auto_type(input, attr1, attr2):

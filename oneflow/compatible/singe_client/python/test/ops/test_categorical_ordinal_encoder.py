@@ -16,7 +16,7 @@ limitations under the License.
 import sys
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import typing
 import unittest
 import os

@@ -72,7 +72,7 @@ class Upsample(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
@@ -184,7 +184,7 @@ class UpsamplingNearest2d(Upsample):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
@@ -241,7 +241,7 @@ class UpsamplingBilinear2d(Upsample):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)

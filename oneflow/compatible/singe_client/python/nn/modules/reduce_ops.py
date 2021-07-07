@@ -64,7 +64,7 @@ def _sum(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.sum(input)
@@ -117,7 +117,7 @@ def _mean(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.mean(input)
@@ -159,7 +159,7 @@ def _min(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
@@ -201,7 +201,7 @@ def _max(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)

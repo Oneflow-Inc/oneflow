@@ -51,7 +51,7 @@ class UserOp(object):
         self.op_conf_.name = op_name
         if op_type_name is not None:
             self.op_conf_.user_conf.op_type_name = op_type_name
-        device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+        device_tag = oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.device_tag
         self.op_conf_.device_tag = device_tag
         self.output_arg_key_list_ = []
 
@@ -361,7 +361,7 @@ class UserOpConfBuilder(object):
                 assert isinstance(x, int)
                 attribute_mutable_at_shape.add_dim(x)
         elif attr_type == user_op_attr_cfg.kAtDataType:
-            assert attr_value in oneflow.dtypes()
+            assert attr_value in oneflow.compatible.single_client.dtypes()
             attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
                 attr_value
             )
@@ -389,7 +389,7 @@ class UserOpConfBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
             for x in attr_value:
-                assert x in oneflow.dtypes()
+                assert x in oneflow.compatible.single_client.dtypes()
                 x = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
                 attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))

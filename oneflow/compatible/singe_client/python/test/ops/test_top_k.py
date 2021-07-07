@@ -20,7 +20,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import os
 from oneflow.compatible.single_client.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,

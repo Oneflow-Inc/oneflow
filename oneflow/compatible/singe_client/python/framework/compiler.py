@@ -165,7 +165,7 @@ def _CloneArgBlobDef(args):
     if isinstance(args, dict):
         return {k: _CloneArgBlobDef(v) for k, v in args}
     raise NotImplementedError(
-        "oneflow.global_function only accepts nested input blob defs"
+        "oneflow.compatible.single_client.global_function only accepts nested input blob defs"
     )
 
 
@@ -177,7 +177,7 @@ def _RecursiveMakeInputBlobs(input_blob_def):
     if isinstance(input_blob_def, dict):
         return {k: _RecursiveMakeInputBlobs(v) for k, v in input_blob_def.items()}
     raise NotImplementedError(
-        "oneflow.global_function accepts "
+        "oneflow.compatible.single_client.global_function accepts "
         + "ArgBlobDefs or list/tuple/dict nested ArgBlobDefs as argument"
     )
 
@@ -198,8 +198,8 @@ def _RecusiveMakeInputBlobDef(cls):
         raise NotImplementedError(
             ("\nannotation %s" % cls)
             + "not supported"
-            + "\nonly support oneflow.typing.Numpy.Placeholder, "
-            "oneflow.typing.ListNumpy.Placeholder"
+            + "\nonly support oneflow.compatible.single_client.typing.Numpy.Placeholder, "
+            "oneflow.compatible.single_client.typing.ListNumpy.Placeholder"
         )
 
 
@@ -217,6 +217,6 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
             k: _RecursiveMakeRetRemoteBlobs(v, **kwarg) for k, v in remote_blobs.items()
         }
     raise NotImplementedError(
-        "oneflow.global_function returns "
+        "oneflow.compatible.single_client.global_function returns "
         + "RemoteBlob or list/tuple/dict nested RemoteBlob only"
     )

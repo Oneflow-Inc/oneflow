@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
 import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow
+import oneflow.compatible.single_client as flow
 from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
     bool_functor,
 )
@@ -77,9 +77,9 @@ def is_current_machine_master(ctx):
 
 @bool_functor("Consistent view enabled")
 def consistent_view_enabled(ctx):
-    return oneflow.scope.consistent_view_enabled()
+    return flow.scope.consistent_view_enabled()
 
 
 @bool_functor("Mirrored view enabled")
 def mirrored_view_enabled(ctx):
-    return oneflow.scope.mirrored_view_enabled()
+    return flow.scope.mirrored_view_enabled()

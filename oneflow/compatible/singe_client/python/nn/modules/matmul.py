@@ -54,17 +54,17 @@ def matmul_op(a, b):
     r"""This operator applies matrix multiplication to two Tensor.
 
     Args:
-        a (oneflow.Tensor): A Tensor
-        b (oneflow.Tensor): A Tensor
+        a (oneflow.compatible.single_client.Tensor): A Tensor
+        b (oneflow.compatible.single_client.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.compatible.single_client.Tensor: The result Tensor
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)

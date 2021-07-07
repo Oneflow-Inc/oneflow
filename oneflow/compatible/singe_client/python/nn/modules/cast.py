@@ -38,17 +38,17 @@ def cast_op(x, dtype):
     r"""The operation takes input tensor `x` and casts it to the output with `dtype`
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        x (oneflow.compatible.single_client.Tensor): A Tensor
         dtype (flow.dtype): Data type of the output tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with specific dtype.
+        oneflow.compatible.single_client.Tensor: A Tensor with specific dtype.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

@@ -41,7 +41,7 @@ def type_as_op(input, target):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -75,7 +75,7 @@ def long_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

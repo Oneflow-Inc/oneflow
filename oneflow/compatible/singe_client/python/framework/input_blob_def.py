@@ -21,7 +21,7 @@ from typing import Any, Optional, Sequence, Union
 
 import numpy as np
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
@@ -148,7 +148,7 @@ class FixedTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: oneflow.dtype = oneflow.float,
+        dtype: flow.dtype = flow.float,
         name: Optional[str] = None,
     ) -> None:
         ArgBlobDef.__init__(
@@ -163,7 +163,7 @@ class FixedTensorDef(ArgBlobDef):
         return compile_context.CurJobAddConsistentOp(op_conf)
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
+        parallel_symbol = flow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
             and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
@@ -174,7 +174,7 @@ class FixedTensorDef(ArgBlobDef):
         else:
             device_tag = "cpu"
             device_ids = "@0:0"
-        with oneflow.scope.placement(device_tag, device_ids):
+        with flow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
     def _CheckNdarray(self, ndarray: np.ndarray) -> None:
@@ -189,7 +189,7 @@ class MirroredTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: oneflow.dtype = oneflow.float,
+        dtype: flow.dtype = flow.float,
         name: Optional[str] = None,
     ) -> None:
         assert type(shape) is tuple
@@ -268,13 +268,13 @@ class DeprecatedFixedTensorDef(FixedTensorDef):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
         if not running_script.endswith('input_blob_def.py"'):
             print(
-                "WARNING: oneflow.FixedTensorDef has been deprecated. "
-                "Please use oneflow.typing.Numpy.Placeholder instead."
+                "WARNING: oneflow.compatible.single_client.FixedTensorDef has been deprecated. "
+                "Please use oneflow.compatible.single_client.typing.Numpy.Placeholder instead."
             )
             print(
                 """For instance:
-            - def job_func(images=oneflow.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))
-            + def job_func(images:oneflow.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            - def job_func(images=oneflow.compatible.single_client.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.compatible.single_client.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
             )
             print(traceback.format_stack()[-2])
 
@@ -287,13 +287,13 @@ class DeprecatedMirroredTensorDef(MirroredTensorDef):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
         if not running_script.endswith('input_blob_def.py"'):
             print(
-                "WARNING: oneflow.MirroredTensorDef has been deprecated. "
-                "Please use oneflow.typing.ListNumpy.Placeholder instead."
+                "WARNING: oneflow.compatible.single_client.MirroredTensorDef has been deprecated. "
+                "Please use oneflow.compatible.single_client.typing.ListNumpy.Placeholder instead."
             )
             print(
                 """For instance:
-            - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
-            + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            - def job_func(images=oneflow.compatible.single_client.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.compatible.single_client.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
             )
             print(traceback.format_stack()[-2])
 

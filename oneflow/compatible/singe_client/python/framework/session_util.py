@@ -114,7 +114,7 @@ class Session(object):
     @property
     def resource(self):
         if self.resource_ is None:
-            return oneflow.env.current_resource()
+            return oneflow.compatible.single_client.env.current_resource()
         else:
             return self.resource_
 
@@ -198,7 +198,7 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
         if not oneflow._oneflow_internal.IsEnvInited():
-            oneflow.env.init()
+            oneflow.compatible.single_client.env.init()
         _TryCompleteConfigProto(self.config_proto)
         self.resource_ = self.config_proto.resource
         if not oneflow._oneflow_internal.EagerExecutionEnabled():
@@ -350,7 +350,7 @@ class Session(object):
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
-        if oneflow.eager_execution_enabled():
+        if oneflow.compatible.single_client.eager_execution_enabled():
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
             self.interface_op_name2job_name_[
                 interface_op_name
@@ -450,7 +450,7 @@ def api_find_or_create_module(
 def find_or_create_module(module_name, create, reuse=False):
     assert callable(create)
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow.current_global_function_desc().job_config_proto.job_name()
+    job_name = oneflow.compatible.single_client.current_global_function_desc().job_config_proto.job_name()
     if job_name not in sess.job_name2module_name2module_:
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]

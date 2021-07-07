@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
 import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
 import oneflow.compatible.single_client.python.framework.distribute_context as distribute_ctx
@@ -26,7 +26,6 @@ import oneflow.compatible.single_client.python.framework.session_context as sess
 import oneflow.compatible.single_client.python.framework.hob as hob
 import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
 import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
-import oneflow
 import oneflow._oneflow_internal
 
 
@@ -60,7 +59,7 @@ def CurJobAddOp(op_conf, scope_symbol=None):
 
 def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     if scope_symbol is None:
-        scope_symbol = oneflow.current_scope()
+        scope_symbol = flow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag
@@ -75,7 +74,7 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
 def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     assert not hob.consistent_view_enabled(None)
     if scope_symbol is None:
-        scope_symbol = oneflow.current_scope()
+        scope_symbol = flow.current_scope()
     op_conf.scope_symbol_id = scope_symbol.symbol_id
     if not op_conf.HasField("device_tag"):
         device_tag = scope_symbol.device_parallel_desc_symbol.device_tag

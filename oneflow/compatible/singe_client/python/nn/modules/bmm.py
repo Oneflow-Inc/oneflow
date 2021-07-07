@@ -44,14 +44,14 @@ def bmm_op(x, y):
     If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
 
     Args:
-        input(oneflow.Tensor):  the first batch of matrices to be multiplied
-        mat2(oneflow.Tensor): the second batch of matrices to be multiplied
+        input(oneflow.compatible.single_client.Tensor):  the first batch of matrices to be multiplied
+        mat2(oneflow.compatible.single_client.Tensor): the second batch of matrices to be multiplied
     
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
@@ -70,7 +70,7 @@ def bmm_op_tensor(x, y):
 
     bmm() -> Tensor
 
-    See :func:`oneflow.experimental.bmm`
+    See :func:`oneflow.compatible.single_client.experimental.bmm`
 
     """
     return BMM()(x, y)

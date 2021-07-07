@@ -45,7 +45,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     The amount of element in return value is the same as Tensor `input`.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.compatible.single_client.Tensor): The input Tensor.
         dim (Optional[Sequence[int]]): The dim. Defaults to None.
 
     Returns:
@@ -55,7 +55,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

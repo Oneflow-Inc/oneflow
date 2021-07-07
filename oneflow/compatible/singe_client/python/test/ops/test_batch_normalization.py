@@ -21,7 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 import unittest
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

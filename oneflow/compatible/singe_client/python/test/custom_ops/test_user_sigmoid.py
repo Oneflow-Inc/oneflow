@@ -19,7 +19,7 @@ import numpy as np
 import math
 
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 func_config = flow.FunctionConfig()

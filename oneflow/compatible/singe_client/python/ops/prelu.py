@@ -63,7 +63,7 @@ def prelu(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         BATCH_SIZE = 100
 

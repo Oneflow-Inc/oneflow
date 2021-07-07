@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _gen_test_data(params_shape, indices_shape, axis):

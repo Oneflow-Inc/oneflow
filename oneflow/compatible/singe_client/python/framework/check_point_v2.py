@@ -18,7 +18,7 @@ import os
 import numpy as np
 from google.protobuf import text_format
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.compatible.single_client.python.framework.config_util as config_util
@@ -59,7 +59,7 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def sync_default_session_if_normal():
     # TODO merge with same function in experimental/interface_op_read_and_write.py
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        oneflow.sync_default_session()
+        flow.sync_default_session()
     else:
         # do nothing
         pass
@@ -69,7 +69,7 @@ class FileBackendVariableBlob:
     def __init__(
         self,
         var_dir: str,
-        dtype: Optional[oneflow.dtype] = None,
+        dtype: Optional[flow.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         data_path = os.path.join(var_dir, DATA_FILENAME)
@@ -119,7 +119,7 @@ class FileBackendVariableBlob:
         raise NotImplementedError()
 
     @property
-    def dtype(self) -> oneflow.dtype:
+    def dtype(self) -> flow.dtype:
         return self.dtype_
 
     def numpy(self) -> np.ndarray:
@@ -132,7 +132,7 @@ class FileBackendVariableBlob:
 
 
 ValueContainer = Union[
-    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"
+    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.compatible.single_client.Tensor"
 ]
 
 
@@ -218,7 +218,7 @@ def _ReadSlice(
     Return a generator which iterates over the input blob or array and yields
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
-    if isinstance(container, oneflow.Tensor):
+    if isinstance(container, flow.Tensor):
 
         def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
             start_nd_idx = list(map(int, start_nd_idx))
@@ -348,7 +348,7 @@ def _LogicalSlice(
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
             # device_tag doesn't matter for logical_slice op
-            device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+            device_tag = flow.current_scope().device_parallel_desc_symbol.device_tag
             op_conf.device_tag = device_tag
             op_conf.name = op_name
             op_conf.user_conf.op_type_name = "logical_slice"
@@ -395,7 +395,7 @@ def _LogicalSlice(
 
 
 def _GetCpu0VariableBlobFromNumpy(
-    np_array: np.ndarray, dtype: oneflow.dtype
+    np_array: np.ndarray, dtype: flow.dtype
 ) -> oneflow._oneflow_internal.EagerConsistentBlob:
     """
     Add a variable on cpu 0, and feed the value of `np_array`
@@ -406,7 +406,7 @@ def _GetCpu0VariableBlobFromNumpy(
     numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))
     may be flow.char
     """
-    with oneflow.scope.placement("cpu", "0:0"):
+    with flow.scope.placement("cpu", "0:0"):
         op_name = id_util.UniqueStr(OP_PREFIX)
         op_conf = get_variable.GenerateVariableOpConf(
             name=op_name,
@@ -415,7 +415,7 @@ def _GetCpu0VariableBlobFromNumpy(
             initializer=initializer_util.zeros_initializer(dtype=dtype),
             trainable=False,
         )
-        current_parallel_desc_sym = oneflow.current_scope().device_parallel_desc_symbol
+        current_parallel_desc_sym = flow.current_scope().device_parallel_desc_symbol
         device_tag = current_parallel_desc_sym.device_tag
         op_conf.device_tag = device_tag
         op_attribute = op_infer_util.Infer(op_conf, {})
@@ -443,7 +443,7 @@ def _LogicalSliceAssign(
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
         # device_tag doesn't matter for logical_slice_assign op
-        device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+        device_tag = flow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
         op_name = id_util.UniqueStr(OP_PREFIX)
         op_conf.name = op_name
@@ -472,7 +472,7 @@ def _LogicalSliceAssign(
 
 
 def FeedValueToVariable(
-    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, "oneflow.Tensor"],
+    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, "oneflow.compatible.single_client.Tensor"],
     value: ValueContainer,
     scope_symbol_id: Optional[int],
 ) -> None:
@@ -480,7 +480,7 @@ def FeedValueToVariable(
     Feed the value of `value` to the variable `var_blob`
     """
     assert isinstance(
-        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
+        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, flow.Tensor)
     ), "Unknown value type: {}".format(type(value).__name__)
 
     if isinstance(value, FileBackendVariableBlob):
@@ -497,7 +497,7 @@ def FeedValueToVariable(
         var_blob.dtype, value_flow_dtype
     )
 
-    if isinstance(var_blob, oneflow.Tensor):
+    if isinstance(var_blob, flow.Tensor):
         raise ValueError("Tensor object arguments are not supported")
     else:
         assert isinstance(var_blob, EagerBlobTrait)
@@ -549,7 +549,7 @@ def _ForEachSlice(
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
     assert isinstance(
-        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
+        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, flow.Tensor)
     ), "Unknown type: {}".format(type(container).__name__)
     assert container.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
@@ -591,7 +591,7 @@ def generate_values_by_initializer(initializer, shape, dtype):
 
 
 def init_by_initializer_conf(
-    var_blob: Union[EagerBlobTrait, "oneflow.Tensor"],
+    var_blob: Union[EagerBlobTrait, "oneflow.compatible.single_client.Tensor"],
     initializer_conf: initializer_conf_util.InitializerConf,
     sync_between_multi_machine: bool,
     scope_symbol_id: Optional[int],
@@ -608,7 +608,7 @@ def init_by_initializer_conf(
         shape = np.array(stop_nd_idx) - np.array(start_nd_idx)
         vals = generate_values_by_initializer(initializer, shape, var_blob.dtype)
 
-        if isinstance(var_blob, oneflow.Tensor):
+        if isinstance(var_blob, flow.Tensor):
             raise ValueError("Tensor object arguments are not supported")
         else:
             assert isinstance(var_blob, EagerBlobTrait)

@@ -68,7 +68,7 @@ def atan2(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -119,7 +119,7 @@ def pow(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -139,7 +139,7 @@ def pow(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -195,7 +195,7 @@ def floordiv(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -236,7 +236,7 @@ def xdivy(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -278,7 +278,7 @@ def xlogy(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

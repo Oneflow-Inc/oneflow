@@ -46,7 +46,7 @@ def sinh_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
 
         >>> x1 = flow.Tensor(np.array([1, 2, 3]))
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
@@ -72,7 +72,7 @@ def sinh_op_tensor(x):
 
     sinh() -> Tensor
 
-    See :func:`oneflow.experimental.sinh`
+    See :func:`oneflow.compatible.single_client.experimental.sinh`
 
     """
 

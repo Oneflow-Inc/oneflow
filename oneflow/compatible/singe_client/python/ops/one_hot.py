@@ -50,7 +50,7 @@ def one_hot(
         on_value (Union[int, float], optional): The fill value when `indices[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `indice[i] != i`. Defaults to 0.
         axis (int, optional): The specified dimension that the new axis is generated on. Defaults to -1.
-        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
+        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.compatible.single_client.int32", "oneflow.compatible.single_client.int64", "oneflow.compatible.single_client.float", "oneflow.compatible.single_client.double". Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Note:
@@ -64,7 +64,7 @@ def one_hot(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -90,7 +90,7 @@ def one_hot(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 

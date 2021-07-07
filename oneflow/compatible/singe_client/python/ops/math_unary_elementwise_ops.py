@@ -63,7 +63,7 @@ def abs(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -100,7 +100,7 @@ def acos(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -145,7 +145,7 @@ def acosh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -182,7 +182,7 @@ def asin(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -227,7 +227,7 @@ def asinh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -263,7 +263,7 @@ def atan(
     .. code-block:: python
 
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -308,7 +308,7 @@ def atanh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -345,7 +345,7 @@ def ceil(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -381,7 +381,7 @@ def cos(
     .. code-block:: python
 
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -424,7 +424,7 @@ def cosh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -467,7 +467,7 @@ def erf(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -505,7 +505,7 @@ def erfc(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -547,7 +547,7 @@ def exp(
     .. code-block:: python
 
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -584,7 +584,7 @@ def expm1(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -621,7 +621,7 @@ def floor(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -664,7 +664,7 @@ def lgamma(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -701,7 +701,7 @@ def log(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -738,7 +738,7 @@ def log1p(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -781,7 +781,7 @@ def log_sigmoid(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -818,7 +818,7 @@ def negative(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -861,7 +861,7 @@ def reciprocal(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -899,7 +899,7 @@ def reciprocal_no_nan(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -936,7 +936,7 @@ def rint(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -973,7 +973,7 @@ def round(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1016,7 +1016,7 @@ def rsqrt(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1059,7 +1059,7 @@ def sigmoid_v2(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1095,7 +1095,7 @@ def sign(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1132,7 +1132,7 @@ def sin(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1175,7 +1175,7 @@ def sinh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1218,7 +1218,7 @@ def softplus(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1255,7 +1255,7 @@ def sqrt(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1292,7 +1292,7 @@ def square(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1329,7 +1329,7 @@ def tan(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1372,7 +1372,7 @@ def tanh(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

@@ -49,7 +49,7 @@ class ZeroPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)

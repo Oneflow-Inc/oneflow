@@ -17,7 +17,7 @@ import unittest
 import cv2
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _of_image_batch_align(images, input_shape, output_shape, alignment):

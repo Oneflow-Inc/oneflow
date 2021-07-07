@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+import oneflow.compatible.single_client
 import oneflow._oneflow_internal
 from contextlib import contextmanager
 

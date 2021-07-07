@@ -46,7 +46,7 @@ def tan_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
@@ -65,7 +65,7 @@ def tan_op(input):
 def tan_op_tensor(input):
     r"""
     tan() -> Tensor
-    See :func:`oneflow.experimental.tan`
+    See :func:`oneflow.compatible.single_client.experimental.tan`
 
     """
 

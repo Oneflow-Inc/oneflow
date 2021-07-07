@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+import oneflow.compatible.single_client as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.compatible.single_client.python.framework.interpret_util as interpret_util
@@ -43,7 +43,7 @@ def distribute_clone(x, name=None):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.distribute_clone_conf, "in", x.unique_name)
-    parallel_size = oneflow.current_scope().device_parallel_desc_symbol.parallel_num
+    parallel_size = flow.current_scope().device_parallel_desc_symbol.parallel_num
     op_conf.distribute_clone_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
@@ -68,7 +68,7 @@ def api_distribute_add(
 
 @enable_if.condition(hob.in_global_mode)
 def distribute_add(xs, name=None):
-    assert oneflow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
+    assert flow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeAdd_")
     op_conf = op_conf_util.OperatorConf()
@@ -100,7 +100,7 @@ def distribute_split(x, axis=0, name=None):
     op_conf.name = name
     setattr(op_conf.distribute_split_conf, "in", x.unique_name)
     op_conf.distribute_split_conf.axis = axis
-    parallel_size = oneflow.current_scope().device_parallel_desc_symbol.parallel_num
+    parallel_size = flow.current_scope().device_parallel_desc_symbol.parallel_num
     op_conf.distribute_split_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
@@ -127,7 +127,7 @@ def api_distribute_concat(
 
 @enable_if.condition(hob.in_global_mode)
 def distribute_concat(xs, axis=0, name=None):
-    assert oneflow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
+    assert flow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeConcat_")
     op_conf = op_conf_util.OperatorConf()
@@ -164,13 +164,13 @@ def distribute_map(xs, f, axis=0):
     _AssertInputOrOutput(xs)
     if isinstance(xs, (list, tuple)) == False:
         xs = [xs]
-    splitted_xs = [oneflow.advanced.distribute_split(x, axis=axis) for x in xs]
+    splitted_xs = [flow.advanced.distribute_split(x, axis=axis) for x in xs]
     results = [_UnderSingleDevicePlacementScope(f, *x) for x in zip(*splitted_xs)]
     output_is_not_container = all(
         [isinstance(x, oneflow._oneflow_internal.ConsistentBlob) for x in results]
     )
     results = [_TryWrapTuple(x) for x in results]
-    result = [oneflow.advanced.distribute_concat(x, axis=axis) for x in zip(*results)]
+    result = [flow.advanced.distribute_concat(x, axis=axis) for x in zip(*results)]
     if output_is_not_container:
         return result[0]
     return tuple(result)
@@ -182,12 +182,12 @@ def cast_to_current_logical_view(
 ) -> oneflow._oneflow_internal.BlobDesc:
     if (
         isinstance(x, oneflow._oneflow_internal.ConsistentBlob)
-        and oneflow.scope.mirrored_view_enabled()
+        and flow.scope.mirrored_view_enabled()
     ) or (
         isinstance(x, oneflow._oneflow_internal.MirroredBlob)
-        and oneflow.scope.consistent_view_enabled()
+        and flow.scope.consistent_view_enabled()
     ):
-        x = oneflow.identity(x)
+        x = flow.identity(x)
     return x
 
 
@@ -217,10 +217,10 @@ def _TryWrapTuple(ys):
 
 
 def _UnderSingleDevicePlacementScope(f, *args):
-    parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
+    parallel_desc_symbol = flow.current_scope().device_parallel_desc_symbol
     for machine_id, device_id in _EachMachineIdAndDeviceId(parallel_desc_symbol):
         mch_dev_str = "@%d:%d" % (machine_id, device_id)
-        with oneflow.scope.placement(parallel_desc_symbol.device_tag, mch_dev_str):
+        with flow.scope.placement(parallel_desc_symbol.device_tag, mch_dev_str):
             return f(*args)
 
 

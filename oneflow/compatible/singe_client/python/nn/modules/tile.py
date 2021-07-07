@@ -68,14 +68,14 @@ def tile_op(x, reps):
         This function is similar to NumPy’s tile function.
 
     Args:
-        input (oneflow.Tensor): the tensor whose elements to repeat.
+        input (oneflow.compatible.single_client.Tensor): the tensor whose elements to repeat.
         reps (tuple): the number of repetitions per dimension.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

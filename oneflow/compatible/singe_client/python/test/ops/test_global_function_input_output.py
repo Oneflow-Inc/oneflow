@@ -19,7 +19,7 @@ import numpy as np
 import os
 import random
 
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _test_input_ndarray_not_contiguous(test_case, shape):

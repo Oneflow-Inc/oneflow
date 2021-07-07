@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):

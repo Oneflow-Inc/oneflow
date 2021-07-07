@@ -50,19 +50,19 @@ def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[in
     for more about TensorBuffer.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        x (oneflow.compatible.single_client.Tensor): The input Tensor.
         dtype (flow.dtype): The data dtype.
         instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        oneflow.compatible.single_client.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)
@@ -100,18 +100,18 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
     for more about TensorBuffer.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        x (oneflow.compatible.single_client.Tensor): The input Tensor.
         instance_dims (int): The dimensions of dynamic tensor instance.
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        oneflow.compatible.single_client.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)

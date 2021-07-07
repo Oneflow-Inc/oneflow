@@ -35,8 +35,8 @@ import subprocess
 
 class _ClearDefaultSession(object):
     def setUp(self):
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(False)
+        oneflow.compatible.single_client.clear_default_session()
+        oneflow.compatible.single_client.enable_eager_execution(False)
 
 
 @oneflow_export("unittest.register_test_cases")
@@ -225,12 +225,12 @@ class TestCase(unittest.TestCase):
             if _unittest_worker_initilized == False:
                 master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
                 assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
-                oneflow.env.ctrl_port(int(master_port))
+                oneflow.compatible.single_client.env.ctrl_port(int(master_port))
                 data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                 if data_port:
-                    oneflow.env.data_port(int(data_port))
+                    oneflow.compatible.single_client.env.data_port(int(data_port))
                 if enable_init_by_host_list():
-                    oneflow.env.machine(node_list())
+                    oneflow.compatible.single_client.env.machine(node_list())
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                     print("initializing worker...")
                     for machine in env_util.default_env_proto.machine:
@@ -256,7 +256,7 @@ class TestCase(unittest.TestCase):
                     if env_node_size:
                         config_node_size = int(env_node_size)
 
-                    bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                    bootstrap_conf_list = oneflow.compatible.single_client.env.init_bootstrap_confs(
                         node_list(),
                         int(master_port),
                         config_world_size,
@@ -278,9 +278,9 @@ class TestCase(unittest.TestCase):
                 _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()
-            oneflow.env.ctrl_port(master_port)
+            oneflow.compatible.single_client.env.ctrl_port(master_port)
             config_world_size = device_num()
-            bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+            bootstrap_conf_list = oneflow.compatible.single_client.env.init_bootstrap_confs(
                 ["127.0.0.1"], master_port, config_world_size
             )
             env_proto = env_util.default_env_proto
@@ -337,20 +337,20 @@ class TestCase(unittest.TestCase):
                 )
                 os.remove(env_file.name)
             atexit.register(
-                oneflow.deprecated.delete_worker_of_multi_process, run_dir=run_dir
+                oneflow.compatible.single_client.deprecated.delete_worker_of_multi_process, run_dir=run_dir
             )
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:
-            oneflow.env.log_dir(log_dir)
+            oneflow.compatible.single_client.env.log_dir(log_dir)
 
         if _unittest_env_initilized == False:
-            oneflow.env.init()
+            oneflow.compatible.single_client.env.init()
             _unittest_env_initilized = True
 
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(eager_execution_enabled())
-        oneflow.experimental.enable_typing_check(typing_check_enabled())
+        oneflow.compatible.single_client.clear_default_session()
+        oneflow.compatible.single_client.enable_eager_execution(eager_execution_enabled())
+        oneflow.compatible.single_client.experimental.enable_typing_check(typing_check_enabled())
 
 
 def skip_unless(n, d):

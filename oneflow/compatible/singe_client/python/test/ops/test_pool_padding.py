@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:

@@ -20,7 +20,7 @@ import random
 import cv2
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _random_sample_images(anno_file, image_dir, batch_size):

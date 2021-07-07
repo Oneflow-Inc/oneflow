@@ -62,7 +62,7 @@ def gather(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -92,7 +92,7 @@ def gather(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -184,7 +184,7 @@ def flatten(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def flatten_Job(input: tp.Numpy.Placeholder(shape=(4, 4, 3, 2), dtype=flow.float32)
@@ -251,7 +251,7 @@ def reshape(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -328,7 +328,7 @@ def reshape_like(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -387,7 +387,7 @@ def dynamic_reshape(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def dynamic_reshape_Job(x: tp.Numpy.Placeholder(shape=(1, 3, 64, 64), dtype=flow.float32)
@@ -458,7 +458,7 @@ def transpose(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -522,7 +522,7 @@ def slice(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -660,7 +660,7 @@ def slice_v2(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         @flow.global_function()
         def slicev2_Job(x: tp.Numpy.Placeholder(shape=(3, 6, 9), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -715,7 +715,7 @@ def api_slice_update(
     .. code-block:: python 
 
         import oneflow as flow 
-        import oneflow.typing as tp 
+        import oneflow.compatible.single_client.typing as tp 
         import numpy as np 
 
 
@@ -897,7 +897,7 @@ def reverse(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -971,7 +971,7 @@ def concat(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1079,7 +1079,7 @@ def gather_nd(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1106,7 +1106,7 @@ def gather_nd(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1132,7 +1132,7 @@ def gather_nd(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1192,7 +1192,7 @@ def scatter_nd(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1217,7 +1217,7 @@ def scatter_nd(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1281,7 +1281,7 @@ def tensor_scatter_nd_update(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1350,7 +1350,7 @@ def tensor_scatter_nd_add(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1419,7 +1419,7 @@ def argwhere(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1490,7 +1490,7 @@ def where(
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the elements where condition is larger than 0.
 
-    If `x` and `y` is None, this operator is equal to `oneflow.argwhere`.
+    If `x` and `y` is None, this operator is equal to `oneflow.compatible.single_client.argwhere`.
 
     If `x` and `y` both are not None, If the element in condition is larger than 0,
     it will take the `x` element, else it will take the `y` element.
@@ -1515,7 +1515,7 @@ def where(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1541,7 +1541,7 @@ def where(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1609,7 +1609,7 @@ def elem_cnt(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1664,7 +1664,7 @@ def sync_dynamic_resize(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1723,7 +1723,7 @@ def stack(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
 
@@ -1796,7 +1796,7 @@ def generate_random_batch_permutation_indices(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1855,7 +1855,7 @@ def shuffle(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1897,7 +1897,7 @@ def identity(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -1928,7 +1928,7 @@ def identity(
 def identity_n(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
 ) -> List[oneflow._oneflow_internal.BlobDesc]:
-    """This operator is similar to `oneflow.identity`. The difference is that the input and output
+    """This operator is similar to `oneflow.compatible.single_client.identity`. The difference is that the input and output
     of `identity_n` is `List`.
 
     Args:
@@ -1944,7 +1944,7 @@ def identity_n(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
         from typing import List
 
 
@@ -1998,7 +1998,7 @@ def cast_to_static_shape(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def cast_to_static_shape_func(
@@ -2061,7 +2061,7 @@ def squeeze(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2081,7 +2081,7 @@ def squeeze(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2146,7 +2146,7 @@ def expand(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def expandJob(x: tp.Numpy.Placeholder(shape=(1, 3, 1, 2), dtype=flow.int32),
@@ -2232,7 +2232,7 @@ def expand_dims(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2296,7 +2296,7 @@ def broadcast_like(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2325,7 +2325,7 @@ def broadcast_like(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2399,7 +2399,7 @@ def masked_fill(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ),
@@ -2461,7 +2461,7 @@ def dim_gather(
 
         import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function()
         def dim_gather_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64),
@@ -2547,7 +2547,7 @@ def zeros(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()
@@ -2592,7 +2592,7 @@ def ones(
     .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp
+        import oneflow.compatible.single_client.typing as tp
 
 
         @flow.global_function()

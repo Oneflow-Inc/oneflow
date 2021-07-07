@@ -123,7 +123,7 @@ def where_op(condition, x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(

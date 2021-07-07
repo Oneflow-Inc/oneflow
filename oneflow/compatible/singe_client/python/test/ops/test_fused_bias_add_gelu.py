@@ -24,7 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type
 
 import test_global_storage
 from test_util import Args, GenArgDict
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def compare_with_not_fused(test_case, device_type, x_shape, data_type, data_format):

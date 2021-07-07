@@ -136,7 +136,7 @@ def api_machine(*val: list) -> None:
 
     For instance:
 
-        oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
+        oneflow.compatible.single_client.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
     Args:
         val:  `list`, `tuple` or multiple arguments of `dict`. First in the list is the master machine.
@@ -196,7 +196,7 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
     """
     print(
         "WARNING:",
-        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
+        "oneflow.compatible.single_client.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
         traceback.format_stack()[-2],
     )
     return None
@@ -265,7 +265,7 @@ def CompleteEnvProto(env_proto, is_multi_client):
             env_proto.ctrl_port = _FindFreePort()
         else:
             raise ValueError(
-                "a ctrl_port is required if running multi-node, set it with 'oneflow.env.ctrl_port([YOUR PORT])'"
+                "a ctrl_port is required if running multi-node, set it with 'oneflow.compatible.single_client.env.ctrl_port([YOUR PORT])'"
             )
 
 

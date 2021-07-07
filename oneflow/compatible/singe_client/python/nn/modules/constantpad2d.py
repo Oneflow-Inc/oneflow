@@ -51,7 +51,7 @@ class ConstantPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)

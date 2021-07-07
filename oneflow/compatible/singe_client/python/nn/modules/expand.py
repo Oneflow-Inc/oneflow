@@ -79,17 +79,17 @@ def expand_op(x, *sizes):
     For the new dimensions, the size cannot be set to -1.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        x (oneflow.compatible.single_client.Tensor): The input Tensor.
         *sizes  (flow.Size or int): The desired expanded size.
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        oneflow.compatible.single_client.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

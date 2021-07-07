@@ -18,7 +18,7 @@ import random
 
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.compatible.single_client.typing as oft
 
 
 def _of_object_segm_poly_flip(poly_list, image_size, flip_code):

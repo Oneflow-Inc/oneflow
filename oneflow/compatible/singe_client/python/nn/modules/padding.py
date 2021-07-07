@@ -47,7 +47,7 @@ class ReplicationPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
@@ -140,7 +140,7 @@ class ReflectionPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
