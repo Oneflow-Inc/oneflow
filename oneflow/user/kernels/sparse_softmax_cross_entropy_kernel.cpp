@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/user/kernels/softmax_kernel_util.h"
+#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
@@ -58,12 +58,10 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
-    SoftmaxKernelUtil<device_type, T>::ComputeProb(
-        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
-        tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt());
-    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prob->dptr<T>(),
-        label->dptr<K>(), out->mut_dptr<T>());
+    SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::Compute(
+        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
+        prob->mut_dptr<T>(), label->dptr<K>(), out->mut_dptr<T>(), tmp_buffer->mut_dptr(),
+        tmp_buffer->shape().elem_cnt(), prob->mem_case(), tmp_buffer->mem_case());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -93,8 +91,10 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SoftmaxKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>::                  \
-            GetComputeProbTempStorageSizeInBytes(num_instances, num_classes);                    \
+        return SparseSoftmaxCrossEntropyKernelUtil<                                              \
+            device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                                         \
+            OF_PP_PAIR_FIRST(ltype_pair)>::GetComputeTempStorageSizeInBytes(num_instances,       \
+                                                                            num_classes);        \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
@@ -132,9 +132,12 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
-    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
+    SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+    // SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
+    //     ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+    //     prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -179,9 +182,12 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
+    SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
+    // SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
+    //     ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+    //     prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
