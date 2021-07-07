@@ -18,7 +18,11 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
-from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+from oneflow.python.oneflow_export import (
+    oneflow_export,
+    oneflow_deprecate,
+    oneflow_export_value,
+)
 import oneflow._oneflow_internal
 import traceback
 
@@ -213,3 +217,51 @@ def get_world_size():
 @oneflow_export("distributed.is_multi_client")
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
+
+
+@oneflow_export("sbp.split")
+def split_sbp(
+    axis: int,
+) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a split scheme in which op will be splitted at `axis`.
+
+    Args:
+        axis (int): At `axis` the op will be splitted.
+
+    Returns:
+        SbpParallel: Split scheme object, often required by `to_consistent` method of `Tensor`
+
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.split(0), placement=("cuda", {0: [0, 1, 2, 3]}))
+
+    """
+    assert type(axis) is int
+    return oneflow._oneflow_internal.sbp.split(axis)
+
+
+@oneflow_export_value("sbp.broadcast")
+def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a broadcast scheme.
+    Returns:
+        SbpParallel: Broadcast scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.broadcast, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.broadcast()
+
+
+@oneflow_export_value("sbp.partial_sum")
+def partial_sum_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a partial_sum scheme.
+    Returns:
+        SbpParallel: PartialSum scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.partial_sum, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.partial_sum()
