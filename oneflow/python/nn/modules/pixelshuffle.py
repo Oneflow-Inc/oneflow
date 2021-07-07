@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional
+
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -76,8 +78,10 @@ class PixelShufflev2(Module):
         https://arxiv.org/abs/1609.05158
     """
 
-    def __init__(self, h_upscale_factor: int, w_upscale_factor: int) -> None:
+    def __init__(self, h_upscale_factor: int, w_upscale_factor: Optional[int] = None) -> None:
         super().__init__()
+        if w_upscale_factor is None:
+            w_upscale_factor = h_upscale_factor
         assert (
             h_upscale_factor > 0 and w_upscale_factor > 0
         ), "The scale factor of height and width must larger than zero"
