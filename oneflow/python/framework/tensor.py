@@ -255,8 +255,8 @@ class Tensor:
         else:
             return None
 
-    @_auto_determine
     @grad.setter
+    @_auto_determine
     def grad(self, new_grad):
         def check_grad(grad, new_grad):
             assert grad.shape == new_grad.shape, "Shape of new grad is not equal"
