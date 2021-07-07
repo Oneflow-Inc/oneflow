@@ -91,7 +91,8 @@ class Graph(object):
             self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
                 state
             )
-        # TODO(xuxiaoyu)
+
+        # TODO(xuxiaoyu): start MultiClientSession
         # sess = session_ctx.GetDefaultSession()
         # sess.TryInit()
 
