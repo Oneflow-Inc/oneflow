@@ -24,10 +24,10 @@ namespace {
 
 template<typename T>
 static void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
-                                     NdIndexOffsetHelper<int64_t, 5> in_helper,
-                                     NdIndexOffsetHelper<int64_t, 5> out_helper,
-                                     const int64_t in_height, const int64_t in_width,
-                                     const float scale_h, const float scale_w, T* out_dptr) {
+                                       NdIndexOffsetHelper<int64_t, 5> in_helper,
+                                       NdIndexOffsetHelper<int64_t, 5> out_helper,
+                                       const int64_t in_height, const int64_t in_width,
+                                       const float scale_h, const float scale_w, T* out_dptr) {
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     out_helper.OffsetToNdIndex(index, n, c, d, h, w);
@@ -39,10 +39,10 @@ static void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
 
 template<typename T>
 static void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr,
-                                      NdIndexOffsetHelper<int64_t, 5> dy_helper,
-                                      NdIndexOffsetHelper<int64_t, 5> dx_helper,
-                                      const int64_t in_height, const int64_t in_width,
-                                      const float scale_h, const float scale_w, T* dx_dptr) {
+                                        NdIndexOffsetHelper<int64_t, 5> dy_helper,
+                                        NdIndexOffsetHelper<int64_t, 5> dx_helper,
+                                        const int64_t in_height, const int64_t in_width,
+                                        const float scale_h, const float scale_w, T* dx_dptr) {
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
@@ -74,8 +74,8 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
                                                y_blob->shape().At(2), y_blob->shape().At(3),
                                                y_blob->shape().At(4));
     UpsampleTrilinear3DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
-                                x_blob->shape().At(3), x_blob->shape().At(4), 1.f / height_scale,
-                                1.f / width_scale, y_blob->mut_dptr<T>());
+                                  x_blob->shape().At(3), x_blob->shape().At(4), 1.f / height_scale,
+                                  1.f / width_scale, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -103,18 +103,18 @@ class UpsampleLinearGrad3DCPUKernel final : public user_op::OpKernel {
                                               dx_blob->shape().At(2), dx_blob->shape().At(3),
                                               dx_blob->shape().At(4));
     UpsampleTrilinear3DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
-                                 dx_blob->shape().At(3), dx_blob->shape().At(4), 1.f / height_scale,
-                                 1.f / width_scale, dx_blob->mut_dptr<T>());
+                                   dx_blob->shape().At(3), dx_blob->shape().At(4),
+                                   1.f / height_scale, 1.f / width_scale, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_UPSAMPNEAREST3D_CPU_KERNEL(dtype)                                     \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                          \
-      .SetCreateFn<UpsampleTrilinear3DCPUKernel<dtype>>()                                \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                        \
+      .SetCreateFn<UpsampleTrilinear3DCPUKernel<dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                     \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                   \
       .SetCreateFn<UpsampleLinearGrad3DCPUKernel<dtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
