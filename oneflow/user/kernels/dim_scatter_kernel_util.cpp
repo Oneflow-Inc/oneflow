@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
-// #include "oneflow/core/kernel/util/cuda_kernel_util.h"
+
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/dim_gather_kernel_util.h"
+#include "oneflow/user/kernels/dim_gather_scatter_util.h"
+#include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
-
 namespace user_op {
 
-IMPLEMENT_DIMGATHER_GPUFUNCTOR(Update);
-INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Update);
+IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Add);
+IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Update);
 
+INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Add);
+INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Update);
 }  // namespace user_op
 }  // namespace oneflow
-
-#endif  // WITH_CUDA

@@ -2647,3 +2647,121 @@ def nvtx_end(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+def _check_scatter_blobs(input, dim, index, like_or_src):
+    assert dim < len(index.shape), ValueError(
+        "Value of dim is out of range(dim should be less than len(index.shape))"
+    )
+
+    assert len(input.shape) == len(index.shape) and len(input.shape) == len(
+        like_or_src.shape
+    ), ValueError("Number of dimensions of input, index and like/src should equal")
+
+    for i in range(0, len(input.shape)):
+        assert input.shape[i] == index.shape[i], ValueError(
+            "Shape of input and index should be same"
+        )
+        assert input.shape[i] <= like_or_src.shape[i], ValueError(
+            "Shape like/src blob should be larger than input"
+        )
+
+
+@oneflow_export("dim_scatter_update_like")
+@stable_api
+def dim_scatter_update_like(
+    input: oneflow._oneflow_internal.BlobDesc,
+    dim: int,
+    index: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    _check_scatter_blobs(input, dim, index, like)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterUpdateLike_")
+        )
+        .Op("dim_scatter_update_like")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Input("like", [like])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+@oneflow_export("dim_scatter_update")
+@stable_api
+def dim_scatter_update(
+    input: oneflow._oneflow_internal.BlobDesc,
+    dim: int,
+    index: oneflow._oneflow_internal.BlobDesc,
+    src: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterUpdate_")
+        )
+        .Op("dim_scatter_update")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Input("src", [src])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("dim_scatter_add_like")
+@stable_api
+def dim_scatter_add_like(
+    input: oneflow._oneflow_internal.BlobDesc,
+    dim: int,
+    index: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
+        )
+        .Op("dim_scatter_add_like")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Input("like", [like])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("dim_scatter_add")
+@stable_api
+def dim_scatter_add(
+    input: oneflow._oneflow_internal.BlobDesc,
+    dim: int,
+    index: oneflow._oneflow_internal.BlobDesc,
+    src: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterAdd_")
+        )
+        .Op("dim_scatter_add")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Input("src", [src])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

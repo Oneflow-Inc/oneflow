@@ -16,14 +16,16 @@ limitations under the License.
 #ifdef WITH_CUDA
 // #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/dim_gather_kernel_util.h"
+#include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
-
 namespace user_op {
 
-IMPLEMENT_DIMGATHER_GPUFUNCTOR(Update);
-INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Update);
+IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Add);
+IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Update);
+
+INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Add);
+INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Update);
 
 }  // namespace user_op
 }  // namespace oneflow
