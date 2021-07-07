@@ -141,7 +141,7 @@ class ReLU(Module):
                 raise RuntimeError(
                     "a leaf Variable that requires grad is being used in an in-place operation."
                 )
-            return flow.F.relu(x, True)
+            return flow.F.relu(x, inplace=True)
         return flow.F.relu(x)
 
 
