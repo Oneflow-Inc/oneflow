@@ -180,7 +180,7 @@ REGISTER_USER_OP("upsample_nearest_1d_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("upsample_bicubic_2d")
+REGISTER_USER_OP("upsample_bicubic_2d_grad")
     .Input("dy")
     .Input("x")
     .Output("dx")
