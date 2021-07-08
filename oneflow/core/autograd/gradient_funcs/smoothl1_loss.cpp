@@ -38,16 +38,14 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(SmoothL1LossInterpState* ctx,
-                      const TensorTuple& inputs,
-                      const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(SmoothL1LossInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    ctx->requires_grad = inputs.at(0)->requires_grad(); // prediction
+    ctx->requires_grad = inputs.at(0)->requires_grad();  // prediction
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    ctx->prediction_index = ctx->SaveTensorForBackward(inputs.at(0)); // prediction
-    ctx->label_index = ctx->SaveTensorForBackward(inputs.at(1)); // label
+    ctx->prediction_index = ctx->SaveTensorForBackward(inputs.at(0));  // prediction
+    ctx->label_index = ctx->SaveTensorForBackward(inputs.at(1));       // label
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
@@ -62,7 +60,8 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
     if (ctx->requires_grad) {
       const auto& prediction = ctx->SavedTensors().at(ctx->prediction_index);
       const auto& label = ctx->SavedTensors().at(ctx->label_index);
-      in_grads->at(0) = JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, ctx->beta));
+      in_grads->at(0) =
+          JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, ctx->beta));
     }
     return Maybe<void>::Ok();
   }
@@ -71,7 +70,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("smooth_l1_loss", SmoothL1Loss); //todo: name
+REGISTER_OP_EXPR_GRAD_FUNCTION("smooth_l1_loss", SmoothL1Loss);  // todo: name
 
 }  // namespace one
 }  // namespace oneflow

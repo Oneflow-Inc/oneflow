@@ -265,11 +265,8 @@ class SparseSoftmaxCrossEntropyFunctor {
 class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss")
-                         .Input("prediction")
-                         .Input("label")
-                         .Output("loss")
-                         .Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("smooth_l1_loss").Input("prediction").Input("label").Output("loss").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
                            const std::shared_ptr<one::Tensor>& label, const float& beta) const {

@@ -154,7 +154,12 @@ class PoolNdGradFunctor {
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad").Input("loss_grad").Input("prediction").Input("label").Output("prediction_grad").Build());
+    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad")
+                         .Input("loss_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("prediction_grad")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
                            const std::shared_ptr<one::Tensor>& prediction,
