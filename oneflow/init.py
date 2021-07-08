@@ -69,9 +69,13 @@ import oneflow.python.framework.env_util as env_util
 
 
 if env_util.HasAllMultiClientEnvVars():
-    env_util.env_init(True)
+    oneflow._oneflow_internal.SetIsMultiClient(True)
+    env_util.api_env_init()
 else:
+    oneflow._oneflow_internal.SetIsMultiClient(False)
     env_util.init_default_physical_env()
+
+del env_util
 
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
@@ -100,7 +104,7 @@ atexit.register(
 )
 del atexit
 
-if not env_util.HasAllMultiClientEnvVars():
+if not oneflow._oneflow_internal.IsMultiClient():
     import sys
 
     __original_exit__ = sys.exit
@@ -117,6 +121,5 @@ if not env_util.HasAllMultiClientEnvVars():
     del custom_exit
     del sys
 
-del env_util
 del absolute_import
 del oneflow
