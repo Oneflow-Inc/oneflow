@@ -36,9 +36,16 @@ class _InstanceCreationError(Exception):
 class _RememberInstanceCreationInfo:
     def __init__(self):
         for frame, line in traceback.walk_stack(None):
+            print("frame ", frame, " line ", line)
             varnames = frame.f_code.co_varnames
+            print("varnames ", varnames)
             if varnames is ():
                 break
+            print("frame.f_locals type ", type(frame.f_locals.items()))
+            for k, _ in frame.f_locals.items():
+                print(k)
+            print()
+            
             if frame.f_locals[varnames[0]] not in (self, self.__class__):
                 break
                 # if the frame is inside a method of this instance,
@@ -46,8 +53,9 @@ class _RememberInstanceCreationInfo:
                 #  its class
                 # we want to find the first frame, where this is not the case
         else:
-            raise InstanceCreationError("No suitable outer frame found.")
-        self._outer_frame = frame
+            raise _InstanceCreationError("No suitable outermost frame found.")
+
+        self._outermost_frame = frame
         self.creation_module = frame.f_globals["__name__"]
         (
             self.creation_file,
@@ -60,7 +68,7 @@ class _RememberInstanceCreationInfo:
         threading.Thread(target=self._check_existence_after_creation).start()
 
     def _check_existence_after_creation(self):
-        while self._outer_frame.f_lineno == self.creation_line:
+        while self._outermost_frame.f_lineno == self.creation_line:
             time.sleep(0.01)
         # this is executed as soon as the line number changes
         # now we can be sure the instance was actually created
@@ -77,11 +85,11 @@ class _RememberInstanceCreationInfo:
         )
         nameparts = self.creation_name.split(".")
         try:
-            var = self._outer_frame.f_locals[nameparts[0]]
+            var = self._outermost_frame.f_locals[nameparts[0]]
         except KeyError:
             raise error
         finally:
-            del self._outer_frame
+            del self._outermost_frame
         # make sure we have no permament inter frame reference
         # which could hinder garbage collection
         try:
@@ -115,16 +123,19 @@ class _RememberInstanceCreationInfo:
 @oneflow_export("nn.Graph", "nn.graph.Graph")
 @experimental_api
 class Graph(_RememberInstanceCreationInfo):
+    _graph_cnt = 0
     def __init__(self):
         super().__init__()
         self.config = GraphConfig()
-        self._name = self.creation_name
+        self._name = self.creation_name + "_Graph" + str(Graph._graph_cnt)
+        Graph._graph_cnt += 1
         self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
         self._state_tensortuple = None
         self.train(True)
+    
 
     @property
     def name(self):
