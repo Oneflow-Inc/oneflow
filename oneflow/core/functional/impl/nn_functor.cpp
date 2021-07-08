@@ -262,6 +262,26 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SmoothL1LossFunctor {
+ public:
+  SmoothL1LossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("loss")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("beta", beta));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -405,6 +425,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");

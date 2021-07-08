@@ -151,6 +151,23 @@ class PoolNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+class SmoothL1LossGradFunctor {
+ public:
+  SmoothL1LossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad").Input("loss_grad").Input("prediction").Input("label").Output("prediction_grad").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
+                           const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("beta", beta));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {loss_grad, prediction, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -202,6 +219,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+  m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
 };
 
