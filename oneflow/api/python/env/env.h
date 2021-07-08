@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/base.h"
 
 namespace oneflow {
 
@@ -69,7 +70,7 @@ inline Maybe<void> DestroyDefaultEnv() {
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   if (JUST(IsMultiClient())) {
-    ClusterInstruction::HaltBarrier();
+    OF_ENV_BARRIER();
   } else {
     if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
   }
