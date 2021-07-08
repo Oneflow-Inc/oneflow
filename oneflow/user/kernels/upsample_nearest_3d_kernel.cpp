@@ -68,9 +68,9 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const float depth_scale = ctx->Attr<float>("depth_scale");
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
-    const float depth_scale = ctx->Attr<float>("depth_scale");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2), x_blob->shape().At(3),
@@ -99,9 +99,9 @@ class UpsampleLinearGrad3DCPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const float depth_scale = ctx->Attr<float>("depth_scale");
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
-    const float depth_scale = ctx->Attr<float>("depth_scale");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2), dy_blob->shape().At(3),
