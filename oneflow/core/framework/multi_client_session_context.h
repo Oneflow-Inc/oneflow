@@ -28,13 +28,10 @@ class MultiClientSessionContext {
   MultiClientSessionContext() : is_inited_(false) {}
   ~MultiClientSessionContext();
 
-  Maybe<void> LazyInitOnlyOnce(const ConfigProto& config_proto);
-
-  Maybe<int64_t> GetJobNameId(const std::string& job_class_name);
+  Maybe<void> TryInit(const ConfigProto& config_proto);
 
  private:
   bool is_inited_;
-  HashMap<std::string, int64_t> job_class_name2id_;
 };
 
 }  // namespace oneflow

@@ -60,7 +60,7 @@ MultiClientSessionContext::~MultiClientSessionContext() {
   }
 }
 
-Maybe<void> MultiClientSessionContext::LazyInitOnlyOnce(const ConfigProto& config_proto) {
+Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
     CHECK_OR_RETURN(GlobalProcessCtx::IsMultiClient());
     DumpVersionInfo();
@@ -98,10 +98,6 @@ Maybe<void> MultiClientSessionContext::LazyInitOnlyOnce(const ConfigProto& confi
     is_inited_ = true;
   }
   return Maybe<void>::Ok();
-}
-
-Maybe<int64_t> MultiClientSessionContext::GetJobNameId(const std::string& job_class_name) {
-  return job_class_name2id_[job_class_name]++;
 }
 
 }  // namespace oneflow
