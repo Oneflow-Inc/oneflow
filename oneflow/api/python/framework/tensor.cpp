@@ -215,6 +215,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   api->def("zeros_", &ApiEagerMirroredTensorZeros);
   api->def("_register_hook",
            [](const std::shared_ptr<MirroredTensor>& self, const AutogradMeta::Hook& hook) -> void {
+             if (!self->grad_fn_node()) { CHECK_JUST(AddAccumulateFunctionNode(self)); }
              self->mut_autograd_meta()->add_hook(hook);
            });
 }
@@ -256,9 +257,10 @@ void ExportTensor(py::module& m, const char* name) {
       // Methods of pytorch
       .def("retain_grad",
            [](T& t) {
-             if (!t.is_leaf()) { t.set_retain_grad(true); }
+             if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
            })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
+      .def("clone", [](const T& t) { return t.api_clone().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent);
