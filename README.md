@@ -18,7 +18,7 @@
   - (**Highly recommended**) Upgrade pip
 
     ```
-    python3 -m pip install --upgrade pip --user
+    python3 -m pip install --upgrade pip
     ```
 
   - CUDA Toolkit Linux x86_64 Driver
@@ -32,22 +32,22 @@
   - To install latest stable release of OneFlow with CUDA support:
 
     ```bash
-    python3 -m pip install -f https://release.oneflow.info oneflow==0.4.0+cu102 --user
+    python3 -m pip install -f https://release.oneflow.info oneflow==0.4.0+cu102
     ```
 
   - To install nightly release of OneFlow with CUDA support:
     ```bash
-    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
+    python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/cu102
     ```
 
   - To install other available builds for different variants:
     - Stable
       ```bash
-      python3 -m pip install --find-links https://release.oneflow.info oneflow==0.4.0+[PLATFORM] --user
+      python3 -m pip install --find-links https://release.oneflow.info oneflow==0.4.0+[PLATFORM]
       ```
     - Nightly
       ```
-      python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
+      python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
       ```
     - All available `[PLATFORM]`:
       | Platform |CUDA Driver Version| Supported GPUs |
@@ -175,7 +175,7 @@
     ```
     python3 -m oneflow --doctor
     ```
-</details>
+  </details>
 
 ### Troubleshooting
 
