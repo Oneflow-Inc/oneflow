@@ -322,7 +322,7 @@ class Block(object):
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
-        self._train(True)
+        self._train(False)
 
     @property
     def proto(self):
