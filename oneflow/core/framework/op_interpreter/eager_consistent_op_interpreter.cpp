@@ -33,11 +33,11 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                      TensorTuple* outputs, const AttrMap& attrs) {
+                      TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New());
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
-  JUST(infer_args->Init(inputs, placement_scope, attrs));
+  const auto& infer_args =
+      JUST(ConsistentTensorMetaInferArgs::New(inputs, placement_scope, ctx.attrs));
   const auto& result =
       JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   const auto& output_tensor_metas = result->output_tensor_metas();
@@ -72,56 +72,56 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      attrs, parallel_desc, instr_type_name);
+                                      ctx, parallel_desc, instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
-  return Interpret(op_expr, inputs, outputs, attrs);
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrMap& attrs) const {
+                                                  const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 

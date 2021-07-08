@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
@@ -48,13 +49,15 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                    const one::EagerBlobObjectListPtr& inputs,
-                                   const one::EagerBlobObjectListPtr& outputs, const AttrMap& attrs)
-      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs) {}
+                                   const one::EagerBlobObjectListPtr& outputs,
+                                   const one::OpExprInterpContext& op_interp_ctx_)
+      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), op_interp_ctx_(op_interp_ctx_) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
-  const AttrMap& attrs() const { return attrs_; }
+  const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
+  const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
 
   one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
 
@@ -84,7 +87,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
-  const AttrMap attrs_;
+  const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
 };
 

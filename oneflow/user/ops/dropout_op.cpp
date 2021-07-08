@@ -109,7 +109,7 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
   return Maybe<void>::Ok();
 });
 
-REGISTER_USER_OP("random_mask_like")
+REGISTER_NO_GRAD_USER_OP("random_mask_like")
     .Input("like")
     .Output("out")
     .Attr<float>("rate")

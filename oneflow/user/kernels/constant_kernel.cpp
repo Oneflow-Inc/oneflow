@@ -50,8 +50,12 @@ class ConstantKernel final : public OpKernel {
 #define REGISTER_CONSTANT_KERNEL(device, dtype_pair) \
   REGISTER_CONSTANT_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+#define DATA_TYPE_SEQ    \
+  FLOATING_DATA_TYPE_SEQ \
+  INT_DATA_TYPE_SEQ      \
+  UNSIGNED_INT_DATA_TYPE_SEQ
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CONSTANT_KERNEL, DEVICE_TYPE_SEQ, DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow
