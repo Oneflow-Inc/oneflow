@@ -29,6 +29,17 @@ def _test_bernoulli(test_case, shape):
     test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
 
+def _test_bernoulli_with_generator(test_case, shape):
+    generator = flow.Generator()
+    generator.manual_seed(0)
+    x = flow.Tensor(np.random.rand(*shape), device=flow.device("cpu"))
+    y_1 = flow.bernoulli(x, generator=generator)
+    y_1.numpy()  # sync
+    generator.manual_seed(0)
+    y_2 = flow.bernoulli(x, generator=generator)
+    test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
