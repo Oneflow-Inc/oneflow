@@ -115,7 +115,7 @@ class TestGraph(flow.unittest.TestCase):
         g = CustomGraph()
 
         # check default training is True
-        test_case.assertEqual(g.config.training, True)
+        test_case.assertEqual(g.config.training, False)
 
         # set graph config
         g.config.enable_fuse_add_to_output(True)
