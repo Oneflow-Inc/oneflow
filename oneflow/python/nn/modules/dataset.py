@@ -460,7 +460,7 @@ def get_ofrecord_handle(
 
 @oneflow_export("nn.image.flip")
 @experimental_api
-class Flip(Module):
+class ImageFlip(Module):
     r"""This operator flips the images.
 
     The flip code corresponds to the different flip mode:
@@ -496,18 +496,19 @@ class Flip(Module):
     def __init__(self, flip_code):
         super().__init__()
         self.flip_code = flip_code
-        self._op = (
-            flow.builtin_op("image_flip")
-            .Input("in")
-            .Input("flip_code")
-            .Output("out")
-            .Build()
-        )
+        # self._op = (
+        #     flow.builtin_op("image_flip")
+        #     .Input("in")
+        #     .Input("flip_code")
+        #     .Output("out")
+        #     .Build()
+        # )
 
     def forward(self, images):
         flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
+        # return flow.F.triu(x, self.diagonal)
 
-        return self._op(images, flip_codes)[0]
+        return flow.F.image_flip(images, flip_codes)[0]
 
 
 @oneflow_export("nn.image.decode")
@@ -613,4 +614,4 @@ class ImageBatchAlign(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
