@@ -38,6 +38,7 @@ class Generator;
 
 namespace functional {
 class Scalar;
+class TensorIndex;
 }  // namespace functional
 }  // namespace one
 
