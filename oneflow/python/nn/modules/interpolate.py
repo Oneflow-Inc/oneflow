@@ -72,7 +72,7 @@ class INTERPOLATE(Module):
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
     def forward(self, x):
-        dim = len(x.shape()) - 2
+        dim = len(x.shape) - 2
         if self.size is not None and self.scale_factor is not None:
             raise ValueError("only one of size or scale_factor should be defined")
         elif self.size is not None:
@@ -104,10 +104,10 @@ class INTERPOLATE(Module):
         else:
             raise ValueError("either size or scale_factor should be defined")
 
-        if len(x.shape()) == 3 and self.mode == "nearest":
+        if len(x.shape) == 3 and self.mode == "nearest":
             return flow.F.upsample_nearest_1d(x, scale_factor=scale_factors[0])
-        
-        if len(x.shape()) == 4 and self.mode == "nearest":
+
+        if len(x.shape) == 4 and self.mode == "nearest":
             flow.F.upsample(
                 x,
                 height_scale=scale_factors[0],
@@ -115,27 +115,27 @@ class INTERPOLATE(Module):
                 align_corners=self.align_corners,
                 interpolation=self.mode,
             )
-        
-        if len(x.shape()) == 5 and self.mode == "nearest":
-            return flow.F.upsample_nearest_3d(x, 
+
+        if len(x.shape) == 5 and self.mode == "nearest":
+            return flow.F.upsample_nearest_3d(
+                x,
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
-                )
-        
+            )
+
         # TODO(zxy) Add adaptive_avg_pool op
 
         if self.mode == "area":
             raise NotImplementedError("adaptive_avg_pool1d not impleted now!")
-        
 
-        if len(x.shape()) == 3 and self.mode == "linear":
+        if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None
             return flow.F.upsample_linear_1d(
                 x, scale_factor=scale_factors[0], align_corners=self.align_corners
             )
 
-        if len(x.shape()) == 4 and self.mode == "bilinear":
+        if len(x.shape) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
             return flow.F.upsample(
                 x,
@@ -145,7 +145,7 @@ class INTERPOLATE(Module):
                 interpolation=self.mode,
             )
 
-        if len(x.shape()) == 5 and self.mode == "trilinear":
+        if len(x.shape) == 5 and self.mode == "trilinear":
             assert self.align_corners is not None
             return flow.F.UpsampleTrilinear3DFunctor(
                 x,
