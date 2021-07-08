@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
 #include <curand_kernel.h>
@@ -32,13 +33,15 @@ template<>
 class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(int64_t seed) : mt19937_generator_(seed) {}
-  ~RandomMaskGenerator() {}
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
+    generator_ = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+  }
+  ~RandomMaskGenerator() = default;
 
   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
  private:
-  std::mt19937 mt19937_generator_;
+  std::shared_ptr<one::CPUGeneratorImpl> generator_;
 };
 
 #ifdef WITH_CUDA
@@ -46,15 +49,15 @@ template<>
 class RandomMaskGenerator<DeviceType::kGPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(int64_t seed);
-  ~RandomMaskGenerator();
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
+    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+  }
+  ~RandomMaskGenerator() = default;
 
   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
  private:
-  curandState* curand_states_;
-  int32_t block_num_;
-  int32_t thread_num_;
+  std::shared_ptr<one::CUDAGeneratorImpl> generator_;
 };
 #endif
 
