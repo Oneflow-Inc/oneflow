@@ -30,7 +30,7 @@ namespace impl {
 class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y) const {
+                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;

@@ -369,7 +369,7 @@ def _reciprocal(x):
 
 
 class ScalarAddByTensor(Module):
-    def __init__(self, inplace) -> None:
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
         self.inplace = inplace
 
