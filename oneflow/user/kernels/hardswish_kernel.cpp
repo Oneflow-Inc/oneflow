@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuHardSwishKernel final : public user_op::OpKernel {
+class CpuHardSwishKernel final : public OpKernel {
  public:
   CpuHardSwishKernel() = default;
   ~CpuHardSwishKernel() = default;
@@ -58,7 +58,7 @@ REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, float)
 REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, double)
 
 template<DeviceType device_type, typename T>
-class CpuHardSwishGradKernel final : public user_op::OpKernel {
+class CpuHardSwishGradKernel final : public OpKernel {
  public:
   CpuHardSwishGradKernel() = default;
   ~CpuHardSwishGradKernel() = default;

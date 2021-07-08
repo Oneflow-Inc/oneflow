@@ -39,7 +39,7 @@ struct ScalarPowGradFunctor {
 };
 
 template<DeviceType device_type, typename T>
-class GpuScalarPowKernel final : public user_op::OpKernel {
+class GpuScalarPowKernel final : public OpKernel {
  public:
   GpuScalarPowKernel() = default;
   ~GpuScalarPowKernel() = default;
@@ -71,7 +71,7 @@ REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuScalarPowGradKernel final : public user_op::OpKernel {
+class GpuScalarPowGradKernel final : public OpKernel {
  public:
   GpuScalarPowGradKernel() = default;
   ~GpuScalarPowGradKernel() = default;

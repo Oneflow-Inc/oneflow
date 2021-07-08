@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuScalarPowKernel final : public user_op::OpKernel {
+class CpuScalarPowKernel final : public OpKernel {
  public:
   CpuScalarPowKernel() = default;
   ~CpuScalarPowKernel() = default;
@@ -51,7 +51,7 @@ REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuScalarPowGradKernel final : public user_op::OpKernel {
+class CpuScalarPowGradKernel final : public OpKernel {
  public:
   CpuScalarPowGradKernel() = default;
   ~CpuScalarPowGradKernel() = default;

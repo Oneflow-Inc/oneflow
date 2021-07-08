@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuHardsigmoidKernel final : public user_op::OpKernel {
+class CpuHardsigmoidKernel final : public OpKernel {
  public:
   CpuHardsigmoidKernel() = default;
   ~CpuHardsigmoidKernel() = default;
@@ -58,7 +58,7 @@ REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuHardsigmoidGradKernel final : public user_op::OpKernel {
+class CpuHardsigmoidGradKernel final : public OpKernel {
  public:
   CpuHardsigmoidGradKernel() = default;
   ~CpuHardsigmoidGradKernel() = default;

@@ -61,7 +61,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T>
-class ReflectionPad2dKernel final : public user_op::OpKernel {
+class ReflectionPad2dKernel final : public OpKernel {
  public:
   ReflectionPad2dKernel() = default;
   ~ReflectionPad2dKernel() = default;
@@ -103,7 +103,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename IN_T>
-class ReflectionPad2dGradKernel final : public user_op::OpKernel {
+class ReflectionPad2dGradKernel final : public OpKernel {
  public:
   ReflectionPad2dGradKernel() = default;
   ~ReflectionPad2dGradKernel() = default;
@@ -169,7 +169,7 @@ REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
-class ReplicationPad2dKernel final : public user_op::OpKernel {
+class ReplicationPad2dKernel final : public OpKernel {
  public:
   ReplicationPad2dKernel() = default;
   ~ReplicationPad2dKernel() = default;
@@ -211,7 +211,7 @@ class ReplicationPad2dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename IN_T>
-class ReplicationPad2dGradKernel final : public user_op::OpKernel {
+class ReplicationPad2dGradKernel final : public OpKernel {
  public:
   ReplicationPad2dGradKernel() = default;
   ~ReplicationPad2dGradKernel() = default;
@@ -277,7 +277,7 @@ REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 template<DeviceType device_type, typename IN_T>
-class ConstantPad2dKernel final : public user_op::OpKernel {
+class ConstantPad2dKernel final : public OpKernel {
  public:
   ConstantPad2dKernel() = default;
   ~ConstantPad2dKernel() = default;
@@ -321,7 +321,7 @@ class ConstantPad2dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename IN_T>
-class ConstantPad2dGradKernel final : public user_op::OpKernel {
+class ConstantPad2dGradKernel final : public OpKernel {
  public:
   ConstantPad2dGradKernel() = default;
   ~ConstantPad2dGradKernel() = default;

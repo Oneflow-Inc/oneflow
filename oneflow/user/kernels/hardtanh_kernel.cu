@@ -50,7 +50,7 @@ struct HardtanhGradFunctor {
 };
 
 template<DeviceType device_type, typename T>
-class GpuHardtanhKernel final : public user_op::OpKernel {
+class GpuHardtanhKernel final : public OpKernel {
  public:
   GpuHardtanhKernel() = default;
   ~GpuHardtanhKernel() = default;
@@ -89,7 +89,7 @@ REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuHardtanhGradKernel final : public user_op::OpKernel {
+class GpuHardtanhGradKernel final : public OpKernel {
  public:
   GpuHardtanhGradKernel() = default;
   ~GpuHardtanhGradKernel() = default;

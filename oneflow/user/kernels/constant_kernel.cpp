@@ -20,7 +20,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class ConstantKernel final : public user_op::OpKernel {
+class ConstantKernel final : public OpKernel {
  public:
   ConstantKernel() = default;
   ~ConstantKernel() = default;

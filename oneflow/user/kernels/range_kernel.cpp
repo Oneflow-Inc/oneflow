@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
-class RangeKernel final : public user_op::OpKernel {
+class RangeKernel final : public OpKernel {
  public:
   RangeKernel() = default;
   ~RangeKernel() = default;

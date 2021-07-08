@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuEluKernel final : public user_op::OpKernel {
+class CpuEluKernel final : public OpKernel {
  public:
   CpuEluKernel() = default;
   ~CpuEluKernel() = default;
@@ -53,7 +53,7 @@ REGISTER_CPU_ELU_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_ELU_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuEluGradKernel final : public user_op::OpKernel {
+class CpuEluGradKernel final : public OpKernel {
  public:
   CpuEluGradKernel() = default;
   ~CpuEluGradKernel() = default;

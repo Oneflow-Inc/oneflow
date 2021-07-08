@@ -65,7 +65,7 @@ struct HardswishGradFunctor<half> {
 };
 
 template<DeviceType device_type, typename T>
-class GpuHardswishKernel final : public user_op::OpKernel {
+class GpuHardswishKernel final : public OpKernel {
  public:
   GpuHardswishKernel() = default;
   ~GpuHardswishKernel() = default;
@@ -96,7 +96,7 @@ REGISTER_GPU_HARDSWISH_KERNEL(DeviceType::kGPU, float)
 REGISTER_GPU_HARDSWISH_KERNEL(DeviceType::kGPU, double)
 
 template<DeviceType device_type, typename T>
-class GpuHardswishGradKernel final : public user_op::OpKernel {
+class GpuHardswishGradKernel final : public OpKernel {
  public:
   GpuHardswishGradKernel() = default;
   ~GpuHardswishGradKernel() = default;

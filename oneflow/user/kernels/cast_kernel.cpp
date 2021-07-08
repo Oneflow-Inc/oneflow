@@ -68,7 +68,7 @@ struct CastUtil final {
 };
 
 template<DeviceType device_type>
-class CastKernel final : public user_op::OpKernel {
+class CastKernel final : public OpKernel {
  public:
   CastKernel() = default;
   ~CastKernel() = default;

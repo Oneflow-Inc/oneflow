@@ -58,7 +58,7 @@ struct HardsigmoidGradFunctor<half> {
 };
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidKernel final : public user_op::OpKernel {
+class GpuHardsigmoidKernel final : public OpKernel {
  public:
   GpuHardsigmoidKernel() = default;
   ~GpuHardsigmoidKernel() = default;
@@ -88,7 +88,7 @@ REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidGradKernel final : public user_op::OpKernel {
+class GpuHardsigmoidGradKernel final : public OpKernel {
  public:
   GpuHardsigmoidGradKernel() = default;
   ~GpuHardsigmoidGradKernel() = default;

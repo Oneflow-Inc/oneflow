@@ -20,7 +20,7 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class EmptyKernel final : public user_op::OpKernel {
+class EmptyKernel final : public OpKernel {
  public:
   EmptyKernel() = default;
   ~EmptyKernel() = default;

@@ -114,7 +114,7 @@ class GPTDataLoader final : public OpKernelState {
 };
 
 template<typename T>
-class GPTDataLoaderKernel final : public user_op::OpKernel {
+class GPTDataLoaderKernel final : public OpKernel {
  public:
   GPTDataLoaderKernel() = default;
   ~GPTDataLoaderKernel() = default;

@@ -61,7 +61,7 @@ struct EluGradFunctor<half> {
 };
 
 template<DeviceType device_type, typename T>
-class GpuEluKernel final : public user_op::OpKernel {
+class GpuEluKernel final : public OpKernel {
  public:
   GpuEluKernel() = default;
   ~GpuEluKernel() = default;
@@ -91,7 +91,7 @@ REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuEluGradKernel final : public user_op::OpKernel {
+class GpuEluGradKernel final : public OpKernel {
  public:
   GpuEluGradKernel() = default;
   ~GpuEluGradKernel() = default;

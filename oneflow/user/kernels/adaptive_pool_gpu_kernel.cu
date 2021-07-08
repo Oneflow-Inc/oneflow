@@ -124,7 +124,7 @@ struct GpuAdaptiveAvgpool2dGradFunctor final {
 };
 
 template<DeviceType device_type, typename T>
-class GpuAdaptiveAvgPool2dKernel final : public user_op::OpKernel {
+class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
  public:
   GpuAdaptiveAvgPool2dKernel() = default;
   ~GpuAdaptiveAvgPool2dKernel() = default;
@@ -167,7 +167,7 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuAdaptiveAvgPool2dGradKernel final : public user_op::OpKernel {
+class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
  public:
   GpuAdaptiveAvgPool2dGradKernel() = default;
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
