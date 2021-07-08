@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-REGISTER_USER_OP("range")
+REGISTER_NO_GRAD_USER_OP("range")
     .Output("out")
     .Attr<int64_t>("start")
     .Attr<int64_t>("delta")

@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("reduce_sum_like")
+REGISTER_NO_GRAD_USER_OP("reduce_sum_like")
     .Input("x")
     .Input("like")
     .Output("y")

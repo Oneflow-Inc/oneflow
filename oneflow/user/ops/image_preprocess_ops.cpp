@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -79,7 +79,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
+REGISTER_NO_GRAD_USER_OP("crop_mirror_normalize_from_uint8")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -145,7 +145,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("coin_flip")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
     .Output("out")
     .Attr<float>("probability", 0.5)
     .Attr<int64_t>("batch_size")
@@ -180,7 +180,7 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("image_random_crop")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_random_crop")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("num_attempts", 10)

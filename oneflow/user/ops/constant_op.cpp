@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-REGISTER_USER_OP("constant")
+REGISTER_NO_GRAD_USER_OP("constant")
     .Output("out")
     .SetOutputBufferNum(1)
     .Attr<double>("floating_value")

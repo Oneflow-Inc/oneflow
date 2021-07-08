@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("arg_sort")
+REGISTER_NO_GRAD_USER_OP("arg_sort")
     .Input("in")
     .Output("out")
     .Attr<std::string>("direction")

@@ -132,7 +132,7 @@ def _conv2d(
         trainable=g_trainable,
     )
     return flow.nn.conv2d(
-        input, weight, strides, padding, data_format, dilations, name=name
+        input, weight, strides, padding, None, data_format, dilations, name=name
     )
 
 

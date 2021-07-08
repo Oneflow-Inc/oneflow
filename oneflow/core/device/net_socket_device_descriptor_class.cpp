@@ -78,10 +78,7 @@ class NetSocketDeviceDescriptorClass : public DeviceDescriptorClass {
         std::vector<std::shared_ptr<const DeviceDescriptor>>{devices.begin(), devices.end()});
   }
 
-  const std::string& Name() const override {
-    static const std::string name = kNetSocketDeviceDescriptorClassName;
-    return name;
-  }
+  std::string Name() const override { return kNetSocketDeviceDescriptorClassName; }
 
   void SerializeDeviceDescriptorList(const std::shared_ptr<const DeviceDescriptorList>& list,
                                      std::string* serialized) const override {

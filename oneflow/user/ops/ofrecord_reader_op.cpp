@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
     .Output("out")
     .Attr<std::string>("data_dir")
     .Attr<int32_t>("data_part_num")

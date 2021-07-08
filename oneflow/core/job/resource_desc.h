@@ -46,9 +46,6 @@ class ResourceDesc final {
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
   bool use_rdma() const { return resource_.use_rdma(); }
-  bool enable_numa_aware_cuda_malloc_host() const {
-    return resource_.enable_numa_aware_cuda_malloc_host();
-  }
   bool thread_enable_local_message_queue() const {
     return resource_.thread_enable_local_message_queue();
   }

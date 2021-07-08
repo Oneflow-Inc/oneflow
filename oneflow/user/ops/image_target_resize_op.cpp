@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("image_target_resize")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_target_resize")
     .Input("in")
     .Output("out")
     .Output("size")
