@@ -146,7 +146,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
         learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -289,7 +289,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
         weight_decay_, learning_rate_val_, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
@@ -433,7 +433,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         epsilon, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -605,7 +605,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
         weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
         v->mut_dptr<T>(), tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -651,7 +651,7 @@ class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
     AdamBiasCorrectionLearningRateKernelUtil<device_type>::AdamBiasCorrectionLearningRate(
         ctx->device_ctx(), beta1, beta2, learning_rate->dptr<float>(), train_step->dptr<int64_t>(),
         out->mut_dptr<float>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -712,7 +712,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
         epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
         mean_gradient_ptr);
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -806,7 +806,7 @@ class LarsUpdateKernel final : public user_op::OpKernel {
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
         tlm.DataTmpPtr(), tlm.ModelDiffPtr());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

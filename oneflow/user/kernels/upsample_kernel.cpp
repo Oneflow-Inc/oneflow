@@ -124,7 +124,7 @@ class UpsampleNearestCPUKernel final : public user_op::OpKernel {
     UpsampleNearestForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
                               x_blob->shape().At(2), x_blob->shape().At(3), 1.f / height_scale,
                               1.f / width_scale, y_blob->mut_dptr<T>());
-                              return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -152,7 +152,7 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
     UpsampleNearestBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
                                dx_blob->shape().At(2), dx_blob->shape().At(3), 1.f / height_scale,
                                1.f / width_scale, dx_blob->mut_dptr<T>());
-                               return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -202,7 +202,7 @@ class UpsampleBilinearCPUKernel final : public user_op::OpKernel {
     UpsampleBilinearForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
                                in_width, scale_height, scale_width, align_corners,
                                y_blob->mut_dptr<T>());
-                               return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -238,7 +238,7 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
     UpsampleBilinearBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
                                 in_width, scale_height, scale_width, align_corners,
                                 dx_blob->mut_dptr<T>());
-                                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

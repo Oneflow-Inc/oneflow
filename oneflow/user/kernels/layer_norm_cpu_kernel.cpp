@@ -25,7 +25,10 @@ class LayerNormCpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override { TODO(); return Maybe<void>::Ok();};
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
+    TODO();
+    return Maybe<void>::Ok();
+  };
 };
 
 #define REGISTER_LAYER_NORM_CPU_KERNEL(dtype)             \
@@ -45,7 +48,10 @@ class LayerNormGradCpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override { TODO();return Maybe<void>::Ok();};
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
+    TODO();
+    return Maybe<void>::Ok();
+  };
 };
 
 #define REGISTER_LAYER_NORM_GRAD_CPU_KERNEL(dtype)        \
@@ -65,7 +71,10 @@ class LayerNormParamGradCpuKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override { TODO(); return Maybe<void>::Ok();};
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
+    TODO();
+    return Maybe<void>::Ok();
+  };
 };
 
 #define REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(dtype)  \

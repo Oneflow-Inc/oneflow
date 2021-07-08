@@ -39,7 +39,7 @@ class ReduceKernel final : public user_op::OpKernel {
         ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

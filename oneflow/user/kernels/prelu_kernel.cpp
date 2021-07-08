@@ -96,7 +96,7 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
         ctx->device_ctx(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

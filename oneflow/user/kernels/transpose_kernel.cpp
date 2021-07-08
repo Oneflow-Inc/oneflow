@@ -37,7 +37,7 @@ class TransposeKernel final : public user_op::OpKernel {
     NewKernelUtil<device_type>::Transpose(ctx->device_ctx(), in_shape.NumAxes(), in_shape,
                                           out_shape, perm, in_shape.elem_cnt(),
                                           tensor_in->dptr<T>(), tensor_out->mut_dptr<T>());
-                                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

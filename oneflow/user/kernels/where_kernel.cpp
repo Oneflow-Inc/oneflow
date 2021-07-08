@@ -33,7 +33,7 @@ class WhereKernel final : public user_op::OpKernel {
     WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
                                                   cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
                                                   out->mut_dptr<T>());
-                                                  return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

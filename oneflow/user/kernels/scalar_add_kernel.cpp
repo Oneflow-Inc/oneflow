@@ -41,7 +41,7 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
 
     NewKernelUtil<device_type>::AddByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
                                             scalar_operand, out_ptr);
-                                            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

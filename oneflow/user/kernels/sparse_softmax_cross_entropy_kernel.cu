@@ -64,7 +64,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prob->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

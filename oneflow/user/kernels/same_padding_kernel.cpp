@@ -43,7 +43,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
       JUST(CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large));
+                           strides.at(i), &padding_small, &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -77,7 +77,7 @@ class SamePaddingKernel final : public user_op::OpKernel {
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->CopyElem<T>(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                       reduced_memory_copy_nd_desc);
-                                      return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -125,7 +125,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
       JUST(CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large));
+                           strides.at(i), &padding_small, &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -156,7 +156,7 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
     device_memory_copier->CopyElem<T>(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
                                       reduced_memory_copy_nd_desc);
-                                      return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

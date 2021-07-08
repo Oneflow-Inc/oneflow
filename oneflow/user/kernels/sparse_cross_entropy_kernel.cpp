@@ -57,7 +57,7 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -164,7 +164,7 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -197,7 +197,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

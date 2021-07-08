@@ -69,7 +69,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
     ElemwiseSigmoidCrossEntropyFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->device_ctx(), n, loss->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -99,7 +99,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
     ElemwiseSigmoidCrossEntropyGradFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->device_ctx(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
         label->dptr<LabelT>(), loss_diff->dptr<PredT>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

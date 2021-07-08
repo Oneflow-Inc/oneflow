@@ -79,7 +79,7 @@ class ReduceDeviceStageKernel final : public user_op::OpKernel {
         ctx->device_ctx(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
         XpuVarNdarray<int32_t>(mask->shape(), reduce_sum_tmp_buf));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -137,7 +137,7 @@ class ReduceDeviceStageGradKernel final : public user_op::OpKernel {
     TwoStageReduceKernelUtil<device_type, T, int8_t>::Mask(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr,
         mask->dptr<int8_t>(), in_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -191,7 +191,7 @@ class ReduceGlobalStageKernel final : public user_op::OpKernel {
         ctx->device_ctx(), XpuVarNdarray<int8_t>(in->shape(), mask->mut_dptr<int8_t>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -269,7 +269,7 @@ class ReduceGlobalStageGradKernel final : public user_op::OpKernel {
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
         ctx->device_ctx(), in_diff->shape().elem_cnt(), broadcasted_divided_buf_ptr,
         device_count_with_mask, in_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -65,7 +65,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     SquareSumKernelUtil<device_type, T>::MultiSquareSum(ctx->device_ctx(), params,
                                                         y->mut_dptr<T>());
-                                                        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

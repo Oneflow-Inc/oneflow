@@ -64,7 +64,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
 
@@ -78,6 +78,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
 
     UnaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA>()(
         ctx->device_ctx(), elem_cnt, out_ptr, input_a_ptr, FunctorCreateFn(ctx));
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -105,7 +106,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
@@ -123,6 +124,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
 
     BinaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA, InputB>()(
         ctx->device_ctx(), elem_cnt, out_ptr, input_a_ptr, input_b_ptr, FunctorCreateFn(ctx));
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

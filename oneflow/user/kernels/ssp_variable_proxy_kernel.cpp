@@ -38,7 +38,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
     CHECK_EQ(value->data_type(), in_data_type);
     Memcpy<device_type>(ctx->device_ctx(), value->mut_dptr<void>(), ref->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
-                        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -39,7 +39,7 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
   ~CTCGreedyDecoderKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* log_probs = ctx->Tensor4ArgNameAndIndex("log_probs", 0);
     const user_op::Tensor* input_lengths = ctx->Tensor4ArgNameAndIndex("input_lengths", 0);
     user_op::Tensor* decoded = ctx->Tensor4ArgNameAndIndex("decoded", 0);
@@ -57,6 +57,7 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
     CTCGreedyDecoderFunctor<device_type, T>()(ctx->device_ctx(), decoded_ptr, neg_sum_logits_ptr,
                                               log_probs_ptr, input_lengths_ptr, merge_repeated,
                                               max_input_length, batch_size, num_labels);
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

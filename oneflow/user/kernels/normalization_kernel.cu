@@ -738,7 +738,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
         1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon,
         mean->mut_dptr(), inv_variance->mut_dptr(), activation_desc.Get(), tmp_buffer->mut_dptr(),
         workspace_size, reserve_space->mut_dptr(), reserve_space_size));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -830,7 +830,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
         beta_diff->mut_dptr(), epsilon, mean->dptr(), inv_variance->dptr(), activation_desc.Get(),
         tmp_buffer->mut_dptr(), workspace_size, const_cast<void*>(reserve_space->dptr()),
         reserve_space_size));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

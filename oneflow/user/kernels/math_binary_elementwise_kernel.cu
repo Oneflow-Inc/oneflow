@@ -55,7 +55,7 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
     MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_z->mut_dptr<T>());
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -78,7 +78,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
             tensor_dx->mut_dptr<T>());
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -101,7 +101,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
             tensor_dy->mut_dptr<T>());
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -149,7 +149,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     MathBinaryElementwiseForwardGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, z);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -176,7 +176,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, dz, dx);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -203,7 +203,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y, dz, dy);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

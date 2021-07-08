@@ -36,7 +36,7 @@ class MultiplyKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape().elem_cnt(), elem_cnt);
     KernelUtil<device_type, T>::Mul(ctx->device_ctx(), elem_cnt, x->dptr<T>(), y->dptr<T>(),
                                     out->mut_dptr<T>());
-                                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

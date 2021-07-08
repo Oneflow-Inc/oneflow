@@ -42,7 +42,7 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
         ctx->device_ctx(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
         num_unique->mut_dptr<int64_t>(), y_indices->mut_dptr<K>(), y_values->mut_dptr<T>(), tmp_ptr,
         tmp_size);
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

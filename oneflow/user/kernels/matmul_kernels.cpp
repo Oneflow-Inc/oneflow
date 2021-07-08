@@ -66,7 +66,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     }
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
-                                       return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -123,7 +123,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                             a->dptr<float16>(), b->dptr<float16>(), beta,
                                             out->mut_dptr<float16>());
-                                            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -180,7 +180,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     NewKernelUtil<device_type>::OFBatchedGemm(ctx->device_ctx(), trans_a, trans_b, batch_size, m, n,
                                               k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
                                               out->mut_dptr<T>());
-                                              return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -239,7 +239,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
         ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, alpha, a->dptr<float16>(),
         b->dptr<float16>(), beta, out->mut_dptr<float16>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -303,7 +303,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel {
     CBLAS_TRANSPOSE trans_b = transpose_b ? CblasTrans : CblasNoTrans;
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
-                                       return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 
@@ -340,7 +340,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
 
     NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasTrans, CblasNoTrans, m, n, k, alpha,
                                        a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
-                                       return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 };
 

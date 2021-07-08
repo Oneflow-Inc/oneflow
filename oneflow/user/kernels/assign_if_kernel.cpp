@@ -29,10 +29,16 @@ class AssignIfCPUKernel final : public user_op::OpKernel {
  private:
   Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
-    if ((assign_if == (*condition->dptr<C>() == 0))) { return Maybe<void>::Ok();; }
+    if ((assign_if == (*condition->dptr<C>() == 0))) {
+      return Maybe<void>::Ok();
+      ;
+    }
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    if (value->dptr() == ref->dptr()) { return Maybe<void>::Ok();; }
+    if (value->dptr() == ref->dptr()) {
+      return Maybe<void>::Ok();
+      ;
+    }
     CHECK_EQ(value->shape(), ref->shape());
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t tensor_bytes_size = ref->shape().elem_cnt() * GetSizeOfDataType(ref->data_type());

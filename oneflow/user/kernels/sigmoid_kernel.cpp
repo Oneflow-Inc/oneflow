@@ -32,7 +32,7 @@ class SigmoidKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     NewKernelUtil<device_type>::Sigmoid(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
                                         y->mut_dptr<T>());
-                                        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,7 +70,7 @@ class SigmoidGradKernel final : public user_op::OpKernel {
     NewKernelUtil<device_type>::SigmoidBackward(ctx->device_ctx(), y_blob->shape().elem_cnt(),
                                                 y_blob->dptr<T>(), y_blob->dptr<T>(),
                                                 dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
-                                                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

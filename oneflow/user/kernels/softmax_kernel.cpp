@@ -38,7 +38,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     SoftmaxKernelUtil<device_type, T>::ComputeProb(ctx->device_ctx(), num_instances, num_classes,
                                                    in->dptr<T>(), out->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
-                                                   return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -85,7 +85,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     SoftmaxKernelUtil<device_type, T>::ComputeDiff(ctx->device_ctx(), num_instances, num_classes,
                                                    dy->dptr<T>(), y->dptr<T>(), dx->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
-                                                   return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -104,7 +104,7 @@ class GpuRadixSortTopKKernel final : public user_op::OpKernel {
                                     buf_manager.SortedIndicesPtr(), instance_size * sizeof(int32_t),
                                     k * sizeof(int32_t), instance_num, cudaMemcpyDefault,
                                     ctx->device_ctx()->cuda_stream()));
-                                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

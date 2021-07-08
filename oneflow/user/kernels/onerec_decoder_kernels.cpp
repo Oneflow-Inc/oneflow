@@ -259,7 +259,7 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
 
     DecodeField(records, record_num, key, data_type, static_shape, is_dynamic, has_reshape, reshape,
                 has_batch_padding, batch_padding, out_blob);
-                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

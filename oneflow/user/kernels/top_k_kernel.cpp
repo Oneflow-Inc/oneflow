@@ -92,7 +92,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
     CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->Attr<bool>("sorted"), out->mut_dptr<int32_t>());
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

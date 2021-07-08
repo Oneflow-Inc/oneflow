@@ -36,7 +36,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     cuda::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
     cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -71,7 +71,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
                                        ComputeType>(ctx->device_ctx()->cuda_stream(), load_y,
                                                     load_dy, store, rows, cols);
-                                                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

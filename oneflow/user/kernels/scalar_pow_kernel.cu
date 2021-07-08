@@ -56,7 +56,7 @@ class GpuScalarPowKernel final : public OpKernel {
     OF_CUDA_CHECK(
         (oneflow::cuda::elementwise::Unary(ScalarPowFunctor<T>(exponent), elem_cnt, out_ptr, in_ptr,
                                            ctx->device_ctx()->cuda_stream())));
-                                           return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -90,7 +90,7 @@ class GpuScalarPowGradKernel final : public OpKernel {
     OF_CUDA_CHECK(
         (oneflow::cuda::elementwise::Binary(ScalarPowGradFunctor<T>(exponent), elem_cnt, dx_ptr,
                                             x_ptr, dy_ptr, ctx->device_ctx()->cuda_stream())));
-                                            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

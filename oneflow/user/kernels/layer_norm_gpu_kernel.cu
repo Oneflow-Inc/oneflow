@@ -511,7 +511,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
         reinterpret_cast<BNParamT*>(cudnn_bn_scale_diff_buf_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_bias_diff_buf_dptr), epsilon, mean->dptr(),
         inv_variance->dptr()));
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   };
 };
 

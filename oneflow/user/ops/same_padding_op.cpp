@@ -20,31 +20,30 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-Maybe<void>SetTensorDescInferFunction (user_op::InferContext* ctx) {
-      const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
-      *y_desc->mut_shape() = x_desc->shape();
-      *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
-      const std::string& data_format = ctx->Attr<std::string>("data_format");
-      const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-      const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
-      const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-      const size_t idx_offset = IdxOffset(data_format);
-      const int32_t num_spatial_dims = x_desc->shape().NumAxes() - 2;
-      CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size());
-      CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size());
-      CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size());
-      DimVector y_dim_vec(x_desc->shape().dim_vec());
-      for (int32_t i = 0; i < num_spatial_dims; ++i) {
-        int32_t padding_small = 0;
-        int32_t padding_large = 0;
-        JUST(CalcSamePadding(x_desc->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                        strides.at(i), &padding_small, &padding_large));
-        y_dim_vec[idx_offset + i] =
-            x_desc->shape().At(idx_offset + i) + padding_small + padding_large;
-      }
-      *y_desc->mut_shape() = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
+Maybe<void> SetTensorDescInferFunction(user_op::InferContext* ctx) {
+  const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  *y_desc->mut_shape() = x_desc->shape();
+  *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+  const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+  const size_t idx_offset = IdxOffset(data_format);
+  const int32_t num_spatial_dims = x_desc->shape().NumAxes() - 2;
+  CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size());
+  CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size());
+  CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size());
+  DimVector y_dim_vec(x_desc->shape().dim_vec());
+  for (int32_t i = 0; i < num_spatial_dims; ++i) {
+    int32_t padding_small = 0;
+    int32_t padding_large = 0;
+    JUST(CalcSamePadding(x_desc->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                         strides.at(i), &padding_small, &padding_large));
+    y_dim_vec[idx_offset + i] = x_desc->shape().At(idx_offset + i) + padding_small + padding_large;
+  }
+  *y_desc->mut_shape() = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_USER_OP("same_padding")

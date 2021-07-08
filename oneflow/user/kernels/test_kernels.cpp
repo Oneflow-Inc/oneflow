@@ -36,7 +36,7 @@ class ReluKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(tmp);
     NewKernelUtil<DeviceType::kGPU>::Relu(ctx->device_ctx(), in_blob->shape().elem_cnt(),
                                           in_blob->dptr<float>(), out_blob->mut_dptr<float>());
-                                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -54,7 +54,7 @@ class ReluGradKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::ReluBackward(
         ctx->device_ctx(), dx_blob->shape().elem_cnt(), y_blob->dptr<float>(),
         y_blob->dptr<float>(), dy_blob->dptr<float>(), dx_blob->mut_dptr<float>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -85,7 +85,7 @@ class TestReshapeKernel final : public user_op::OpKernel {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
-                             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -105,7 +105,7 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              in_blob->shape().elem_cnt() * sizeof(float));
-                             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -118,7 +118,9 @@ class TestSourceGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {return Maybe<void>::Ok();}
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
+    return Maybe<void>::Ok();
+  }
 };
 
 REGISTER_USER_KERNEL("TestSource")
@@ -140,7 +142,7 @@ class TestMultiOutputOrderKernel final : public user_op::OpKernel {
                              in_blob->shape().elem_cnt() * sizeof(float));
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), out2_blob->shape().elem_cnt(), 0.0,
                                           out2_blob->mut_dptr<float>());
-                                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -161,7 +163,7 @@ class TestMultiInputFwKernel final : public user_op::OpKernel {
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<char>(), x1_blob->dptr<char>(),
                              x1_blob->shape().elem_cnt() * sizeof(float));
-                             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -184,7 +186,7 @@ class TestMultiInputBwKernel final : public user_op::OpKernel {
                                           x1_diff_blob->mut_dptr<float>());
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), x2_diff_blob->shape().elem_cnt(), 2.0,
                                           x2_diff_blob->mut_dptr<float>());
-                                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -208,7 +210,7 @@ class ReluCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     NewKernelUtil<DeviceType::kCPU>::Relu(ctx->device_ctx(), in->shape().elem_cnt(), in->dptr<T>(),
                                           out->mut_dptr<T>());
-                                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -316,7 +318,7 @@ class TestDataTypeAttrKernel final : public user_op::OpKernel {
   Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     CHECK_EQ(ctx->Attr<DataType>("output_type"),
              ctx->Tensor4ArgNameAndIndex("out", 0)->data_type());
-             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -357,7 +359,10 @@ class TestUserOpAttrAutoTypeKernel final : public user_op::OpKernel {
   ~TestUserOpAttrAutoTypeKernel() override = default;
 
  private:
-  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override { return Maybe<void>::Ok();; }
+  Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
+    return Maybe<void>::Ok();
+    ;
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

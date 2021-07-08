@@ -131,7 +131,7 @@ class UpsampleNearestGPUKernel final : public user_op::OpKernel {
                     x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
                     x_blob->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                     y_blob->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -160,7 +160,7 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
                     dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
                     dx_blob->shape().At(3), 1.f / height_scale, 1.f / width_scale,
                     dx_blob->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -210,7 +210,7 @@ class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
     RUN_CUDA_KERNEL((UpsampleBilinearForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     x_blob->dptr<T>(), in_helper, out_helper, in_height, in_width, scale_height,
                     scale_width, align_corners, y_blob->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -246,7 +246,7 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
     RUN_CUDA_KERNEL((UpsampleBilinearBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     dy_blob->dptr<T>(), dy_helper, dx_helper, in_height, in_width, scale_height,
                     scale_width, align_corners, dx_blob->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

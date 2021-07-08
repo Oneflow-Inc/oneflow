@@ -34,7 +34,7 @@ class RepeatKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
                         in->shape().elem_cnt() * GetSizeOfDataType(in->data_type()));
-                        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

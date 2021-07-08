@@ -50,7 +50,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,
                                                            num_classes, prob->dptr<T>(),
                                                            label->dptr<T>(), out->mut_dptr<T>());
-                                                           return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -88,7 +88,7 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     CrossEntropyKernelUtil<device_type, T>::ComputeDiffWithSoftmax(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
         label->dptr<T>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

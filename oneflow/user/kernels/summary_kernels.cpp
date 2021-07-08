@@ -47,7 +47,7 @@ class SummaryWriteScalar final : public user_op::OpKernel {
     std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteScalarToFile(
         istep[0], static_cast<double>(tvalue[0]), tag_str);
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -116,7 +116,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
     std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(static_cast<float>(istep[0]),
                                                                  *value, tag_str);
-                                                                 return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -178,7 +178,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
     std::string tag_str(ctag, tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
                                                              tag_str);
-                                                             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

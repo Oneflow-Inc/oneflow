@@ -74,7 +74,7 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel {
     ComputeScalarByTensor<by_scalar_func, device, T>::DoCompute(ctx->device_ctx(), x->dptr<T>(),
                                                                 scalar->dptr<T>(), y->mut_dptr<T>(),
                                                                 x->shape().elem_cnt());
-                                                                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

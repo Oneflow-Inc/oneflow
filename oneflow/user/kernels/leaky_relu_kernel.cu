@@ -46,7 +46,7 @@ class GpuLeakyReluKernel final : public user_op::OpKernel {
     const float alpha = ctx->Attr<float>("alpha");
     RUN_CUDA_KERNEL((LeakyReluForwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, alpha,
                     x->dptr<T>(), y->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -75,7 +75,7 @@ class GpuLeakyReluGradKernel final : public user_op::OpKernel {
     const float alpha = ctx->Attr<float>("alpha");
     RUN_CUDA_KERNEL((LeakyReluBackwardGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, alpha,
                     x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
-                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

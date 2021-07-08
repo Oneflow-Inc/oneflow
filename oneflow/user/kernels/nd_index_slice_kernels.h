@@ -73,7 +73,7 @@ Maybe<void> GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeCon
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
   GatherNdFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                        params->dptr<T>(), out->mut_dptr<T>());
-                                       return Maybe<void>::Ok();
+  return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -83,11 +83,14 @@ Maybe<void> ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeCo
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
-  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok();; }
+  if (indices->shape().elem_cnt() == 0) {
+    return Maybe<void>::Ok();
+    ;
+  }
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
-                                           return Maybe<void>::Ok();
+  return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -105,7 +108,7 @@ Maybe<void> TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
                                             out->mut_dptr<T>());
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
-                                           return Maybe<void>::Ok();
+  return Maybe<void>::Ok();
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -121,7 +124,7 @@ Maybe<void> TensorScatterNdAddKernel<device_type, T, I>::Compute(
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
-                                           return Maybe<void>::Ok();
+  return Maybe<void>::Ok();
 }
 
 #define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,            \

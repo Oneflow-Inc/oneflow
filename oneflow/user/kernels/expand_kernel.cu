@@ -132,7 +132,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
     InitStride(out_stride.val, out_dim_vec.data(), out_dims);
     GpuExpandFunctor<T>()(ctx->device_ctx(), in_ptr, out_stride, expand_stride, out_dims, out_size,
                           out_ptr);
-    return Maybe<void>::Ok(); 
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -42,7 +42,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel {
     binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
                 XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
                 XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
-                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

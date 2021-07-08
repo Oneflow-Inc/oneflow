@@ -29,7 +29,10 @@ class AssignKernel final : public user_op::OpKernel {
   Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    if (value_tensor->dptr() == ref_tensor->dptr()) { return Maybe<void>::Ok();; }
+    if (value_tensor->dptr() == ref_tensor->dptr()) {
+      return Maybe<void>::Ok();
+      ;
+    }
     size_t tensor_bytes_size =
         ref_tensor->shape().elem_cnt() * GetSizeOfDataType(ref_tensor->data_type());
     size_t val_tensor_bytes_size =

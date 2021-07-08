@@ -68,7 +68,7 @@ class SmoothL1LossGPUKernel final : public user_op::OpKernel {
     SmoothL1LossForward<T>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, prediction, label, beta, loss);
-           return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -100,7 +100,7 @@ class SmoothL1LossGradGpuKernel final : public user_op::OpKernel {
     SmoothL1LossBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                               ctx->device_ctx()->cuda_stream()>>>(elem_cnt, loss_grad, prediction,
                                                                   label, beta, prediction_grad);
-                                                                  return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -151,7 +151,7 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
 
     GpuAdaptiveAvgPool2dFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_h, in_w,
                                      out_h, out_w);
-                                     return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -195,7 +195,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
 
     GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_elems,
                                          in_h, in_w, out_h, out_w);
-                                         return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

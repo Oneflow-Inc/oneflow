@@ -36,7 +36,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
     L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
         ctx->device_ctx(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
         out->mut_dptr<T>(), l1, l2);
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

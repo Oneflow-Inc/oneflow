@@ -97,7 +97,7 @@ class ReflectionPad2dKernel final : public OpKernel {
     ReflectionPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
                                                 n_channel, y_height, y_width, x_height, x_width,
                                                 pad_left, pad_top);
-                                                return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -142,7 +142,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                     n_batch, n_channel, dy_height, dy_width,
                                                     dx_height, dx_width, pad_left, pad_top);
-                                                    return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -205,7 +205,7 @@ class ReplicationPad2dKernel final : public OpKernel {
     ReplicationPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                  n_batch, n_channel, y_height, y_width, x_height,
                                                  x_width, pad_left, pad_top);
-                                                 return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -250,7 +250,7 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                      n_batch, n_channel, dy_height, dy_width,
                                                      dx_height, dx_width, pad_left, pad_top);
-                                                     return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -315,7 +315,7 @@ class ConstantPad2dKernel final : public OpKernel {
     ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
                                               n_channel, y_height, y_width, x_height, x_width,
                                               pad_left, pad_top, constant_value);
-                                              return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -360,7 +360,7 @@ class ConstantPad2dGradKernel final : public OpKernel {
     ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
                                                   n_batch, n_channel, dy_height, dy_width,
                                                   dx_height, dx_width, pad_left, pad_top);
-                                                  return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

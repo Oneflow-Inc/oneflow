@@ -275,7 +275,10 @@ class OpKernel {
   }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
-  virtual Maybe<void> Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; return Maybe<void>::Ok();}
+  virtual Maybe<void> Compute(KernelComputeContext*) const {
+    LOG(INFO) << "UNIMPLEMENTED";
+    return Maybe<void>::Ok();
+  }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 

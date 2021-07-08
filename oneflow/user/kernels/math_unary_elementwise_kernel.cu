@@ -49,7 +49,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -74,7 +74,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -115,7 +115,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -140,7 +140,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
-            return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

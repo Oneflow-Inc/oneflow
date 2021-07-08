@@ -87,7 +87,7 @@ class CpuL2NormalizeKernel final : public user_op::OpKernel {
                              square_x_sum_byte_size);
     L2NormalizeForward<T>(n, c, d, static_cast<T>(epsilon), x->dptr<T>(),
                           square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
-                          return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -119,7 +119,7 @@ class CpuL2NormalizeGradKernel final : public user_op::OpKernel {
     int32_t d = dy->shape().Count(axis + 1);
     L2NormalizeBackward<T>(n, c, d, static_cast<T>(epsilon), y->dptr<T>(), dy->dptr<T>(),
                            square_x_sum->dptr<T>(), dx->mut_dptr<T>());
-                           return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

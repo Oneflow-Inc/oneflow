@@ -64,7 +64,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prob->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -137,7 +137,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
-        return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

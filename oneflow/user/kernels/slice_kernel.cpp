@@ -176,7 +176,7 @@ class SliceKernel final : public user_op::OpKernel {
     SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
     SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, x_tensor->dptr<T>(),
                                              y_tensor->mut_dptr<T>());
-                                             return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -196,7 +196,7 @@ class SliceGradKernel final : public user_op::OpKernel {
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
-                                              return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -377,7 +377,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->device_ctx(), params, update_tensor->dptr<T>(),
                                               y_tensor->mut_dptr<T>());
-                                              return Maybe<void>::Ok();
+    return Maybe<void>::Ok();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

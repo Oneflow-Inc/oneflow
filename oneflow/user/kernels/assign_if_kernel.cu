@@ -39,7 +39,10 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
     CHECK_EQ(condition->shape().At(0), 1);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    if (value->dptr() == ref->dptr()) { return Maybe<void>::Ok();; }
+    if (value->dptr() == ref->dptr()) {
+      return Maybe<void>::Ok();
+      ;
+    }
     CHECK_EQ(value->shape(), ref->shape());
     CHECK_EQ(value->data_type(), ref->data_type());
     const size_t elem_cnt = ref->shape().elem_cnt();
