@@ -73,6 +73,8 @@ class TestGraph(flow.unittest.TestCase):
 
         # Graph init
         g = CustomGraph()
+        # check _c_nn_graph init
+        test_case.assertEqual(g.name, g._c_nn_graph.name)
         # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         # g.m.name is "m"
