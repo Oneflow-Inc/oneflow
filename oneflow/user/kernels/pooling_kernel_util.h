@@ -138,7 +138,8 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx = 0;
-    T max_value = -std::numeric_limits<T>::infinity();
+    // T max_value = -std::numeric_limits<T>::infinity();
+    T max_value = (T)-1;
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
         const int64_t tcntr = i * x_width + j;
@@ -210,7 +211,8 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
 
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
-    T max_value = -std::numeric_limits<T>::infinity();
+    // T max_value = -std::numeric_limits<T>::infinity();
+    T max_value = (T)-1;
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
