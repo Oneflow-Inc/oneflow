@@ -16,24 +16,28 @@ limitations under the License.
 from __future__ import absolute_import
 
 from contextlib import contextmanager
-import oneflow.compatible.single_client.python.eager.symbol as symbol_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.balanced_splitter as balanced_splitter
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.compatible.single_client.python.lib.core.high_order_bool as high_order_bool
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.eager.boxing_hob as boxing_hob
-import oneflow.compatible.single_client.python.eager.op_infer_util as op_infer_util
+from oneflow.compatible.single_client.python.eager import symbol as symbol_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_pb
+from oneflow.core.operator import op_attribute_pb2 as op_attribute_pb
+from oneflow.core.job import sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    balanced_splitter as balanced_splitter,
+)
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.lib.core import (
+    high_order_bool as high_order_bool,
+)
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.eager import boxing_hob as boxing_hob
+from oneflow.compatible.single_client.python.eager import op_infer_util as op_infer_util
 from oneflow.compatible.single_client.python.eager.boxing_hob import BoxingHobContext
-import oneflow.compatible.single_client.python.eager.boxing_middle as boxing_middle
+from oneflow.compatible.single_client.python.eager import boxing_middle as boxing_middle
 import random
-import oneflow.compatible.single_client as flow
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+from oneflow.compatible import single_client as flow
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
 import oneflow._oneflow_internal
 
 

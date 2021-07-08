@@ -15,8 +15,8 @@ limitations under the License.
 """
 import unittest
 import numpy as np
-import oneflow as flow
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

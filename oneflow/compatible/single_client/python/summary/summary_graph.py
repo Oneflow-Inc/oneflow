@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import oneflow.core.summary.projector_pb2 as projector_pb2
+from oneflow.core.summary import projector_pb2 as projector_pb2
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 import time
 import logging
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 
 @oneflow_export("summary.Graph")

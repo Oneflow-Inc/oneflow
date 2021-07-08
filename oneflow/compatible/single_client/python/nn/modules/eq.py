@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -28,7 +28,7 @@ class Eq(Module):
 
     def forward(self, input, other):
         if isinstance(other, flow.Tensor) or isinstance(
-            other, flow._oneflow_internal.LocalTensor
+            other, oneflow._oneflow_internal.LocalTensor
         ):
             for i in range(len(input.size())):
                 assert (

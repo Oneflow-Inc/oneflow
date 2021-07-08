@@ -19,7 +19,7 @@ import collections
 from functools import reduce
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 from google.protobuf import text_format
 from oneflow.compatible.single_client.python.framework.dtype import (

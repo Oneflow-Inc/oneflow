@@ -15,7 +15,7 @@ limitations under the License.
 """
 import atexit
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from absl import flags
 
 FLAGS = flags.FLAGS

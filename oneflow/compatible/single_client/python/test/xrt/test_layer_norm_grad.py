@@ -17,7 +17,7 @@ import os
 import unittest
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 config = flow.function_config()
 

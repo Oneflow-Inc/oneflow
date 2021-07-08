@@ -16,7 +16,7 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 
 def _test(test_case, device_num):

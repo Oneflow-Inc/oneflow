@@ -15,11 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client.python.framework.id_util as id_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.ops.user_op_builder as user_op_builder
+from oneflow.compatible.single_client.python.ops import (
+    user_op_builder as user_op_builder,
+)
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 
 @oneflow_export("summary.scalar")

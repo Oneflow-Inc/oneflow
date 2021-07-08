@@ -18,15 +18,17 @@ import os
 import typing
 from google.protobuf import text_format
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
-import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
-import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
+from oneflow.core.job import job_conf_pb2 as job_conf_pb
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_pb
+from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_pb
+from oneflow.core.job import sbp_parallel_pb2 as sbp_parallel_pb
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 

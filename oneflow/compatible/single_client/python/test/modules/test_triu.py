@@ -18,8 +18,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
-import oneflow.experimental.nn as nn
+from oneflow.compatible.single_client import experimental as flow
+from oneflow.compatible.single_client.experimental import nn as nn
 from test_util import GenArgList
 
 

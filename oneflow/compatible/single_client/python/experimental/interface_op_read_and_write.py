@@ -13,20 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.lib.core.async_util as async_util
-import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def_util
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.push_util as push_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+from oneflow.compatible import single_client as flow
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_def_util,
+)
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import push_util as push_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.eager.op_executor as op_executor
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
 import oneflow._oneflow_internal
 
 

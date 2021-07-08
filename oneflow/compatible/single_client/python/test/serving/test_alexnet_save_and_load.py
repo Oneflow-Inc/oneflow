@@ -17,10 +17,10 @@ import os
 import unittest
 import shutil
 import numpy as np
-import google.protobuf.text_format as text_format
+from google.protobuf import text_format as text_format
 
-import oneflow as flow
-import oneflow.core.serving.saved_model_pb2 as saved_model_pb
+from oneflow.compatible import single_client as flow
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
 
 from alexnet import load_data, alexnet
 from ofrecord_dataset import ImageNetRecordDataset

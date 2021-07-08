@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -56,7 +56,7 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
@@ -99,7 +99,7 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
@@ -145,7 +145,7 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))

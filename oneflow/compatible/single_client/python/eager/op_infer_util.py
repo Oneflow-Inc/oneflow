@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow._oneflow_internal.oneflow.core.operator.op_node_signature as op_node_signature_cfg
-import oneflow.compatible.single_client as flow
+from oneflow.core.operator import op_node_signature_pb2 as op_node_signature_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow._oneflow_internal.oneflow.core.operator import (
+    op_node_signature as op_node_signature_cfg,
+)
+from oneflow.compatible import single_client as flow
 from google.protobuf import text_format
 
 

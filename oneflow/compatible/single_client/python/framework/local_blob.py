@@ -16,7 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 import numpy as np
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 import traceback
 

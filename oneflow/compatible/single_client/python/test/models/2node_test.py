@@ -18,7 +18,7 @@ import os
 import cnns_tests
 import env_2node
 import numpy
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from absl import app
 from absl.testing import absltest
 from test_2node_mixin import Test2NodeMixin

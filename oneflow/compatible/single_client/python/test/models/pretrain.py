@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import bert as bert_util
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.compatible import single_client as flow
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 
 def PreTrain(

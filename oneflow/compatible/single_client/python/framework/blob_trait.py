@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client as flow
+from oneflow.compatible import single_client as flow
 
 
 def __add__(self, rhs):

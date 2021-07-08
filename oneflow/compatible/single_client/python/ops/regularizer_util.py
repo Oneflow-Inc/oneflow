@@ -15,8 +15,8 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
@@ -37,7 +37,7 @@ def l1_l2_regularizer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -84,7 +84,7 @@ def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -128,7 +128,7 @@ def l2_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

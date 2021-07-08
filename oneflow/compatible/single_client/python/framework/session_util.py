@@ -17,24 +17,28 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.compiler as compiler
-import oneflow.compatible.single_client.python.framework.config_util as config_util
-import oneflow.compatible.single_client.python.framework.env_util as env_util
-import oneflow.compatible.single_client.python.framework.typing_util as oft_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.framework.job_instance as job_instance_util
-import oneflow.compatible.single_client.python.framework.push_util as push_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.compatible.single_client.python.eager.op_executor as op_executor
+from oneflow.core.job import job_set_pb2 as job_set_util
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import compiler as compiler
+from oneflow.compatible.single_client.python.framework import config_util as config_util
+from oneflow.compatible.single_client.python.framework import env_util as env_util
+from oneflow.compatible.single_client.python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.framework import (
+    job_instance as job_instance_util,
+)
+from oneflow.compatible.single_client.python.framework import push_util as push_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
 from oneflow.compatible.single_client.python.experimental import (
     interface_op_read_and_write,
 )
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
-import oneflow.compatible.single_client.python.framework.module as module_util
+from oneflow.compatible.single_client.python.framework import module as module_util
 from oneflow.compatible.single_client.python.framework.pull_util import (
     LazyFutureRemoteBlobs,
     EagerFutureRemoteBlobs,
@@ -50,11 +54,13 @@ from oneflow.compatible.single_client.python.framework.function_desc import Func
 from oneflow.compatible.single_client.python.framework.check_point import (
     SnapshotManager,
 )
-import oneflow.compatible.single_client.python.framework.check_point_v2 as check_point_v2
+from oneflow.compatible.single_client.python.framework import (
+    check_point_v2 as check_point_v2,
+)
 from contextlib import contextmanager
 from typing import Callable
 import inspect
-import oneflow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
@@ -114,7 +120,7 @@ class Session(object):
     @property
     def resource(self):
         if self.resource_ is None:
-            return oneflow.compatible.single_client.env.current_resource()
+            return flow.env.current_resource()
         else:
             return self.resource_
 
@@ -198,7 +204,7 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
         if not oneflow._oneflow_internal.IsEnvInited():
-            oneflow.compatible.single_client.env.init()
+            flow.env.init()
         _TryCompleteConfigProto(self.config_proto)
         self.resource_ = self.config_proto.resource
         if not oneflow._oneflow_internal.EagerExecutionEnabled():
@@ -350,7 +356,7 @@ class Session(object):
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
-        if oneflow.compatible.single_client.eager_execution_enabled():
+        if flow.eager_execution_enabled():
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
             self.interface_op_name2job_name_[
                 interface_op_name
@@ -450,9 +456,7 @@ def api_find_or_create_module(
 def find_or_create_module(module_name, create, reuse=False):
     assert callable(create)
     sess = session_ctx.GetDefaultSession()
-    job_name = (
-        oneflow.compatible.single_client.current_global_function_desc().job_config_proto.job_name()
-    )
+    job_name = flow.current_global_function_desc().job_config_proto.job_name()
     if job_name not in sess.job_name2module_name2module_:
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]

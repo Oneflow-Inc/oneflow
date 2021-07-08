@@ -15,7 +15,7 @@ limitations under the License.
 """
 from typing import Union
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,

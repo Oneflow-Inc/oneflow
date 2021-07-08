@@ -19,16 +19,20 @@ import collections.abc
 import traceback
 from typing import Optional, Union, Sequence, List, Text, Callable
 
-import oneflow as flow
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow._oneflow_internal.oneflow.core.job.learning_rate_schedule_conf as learning_rate_schedule_conf_cfg
+from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
+from oneflow._oneflow_internal.oneflow.core.job import (
+    learning_rate_schedule_conf as learning_rate_schedule_conf_cfg,
+)
 import oneflow._oneflow_internal
 
 
@@ -71,7 +75,7 @@ class by_global_norm(ClipGradientConf):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -137,7 +141,7 @@ class constant(WarmupConf):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -193,7 +197,7 @@ class linear(WarmupConf):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -298,7 +302,7 @@ class CosineScheduler(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -383,7 +387,7 @@ class PiecewiseConstantScheduler(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -461,7 +465,7 @@ class PiecewiseScalingScheduler(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -548,7 +552,7 @@ class PolynomialScheduler(LrScheduler):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.compatible.single_client as flow
             import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
@@ -663,7 +667,7 @@ class LinearCosineScheduler(LrScheduler):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.compatible.single_client as flow
             import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
@@ -751,7 +755,7 @@ class ExponentialScheduler(LrScheduler):
 
         .. code-block::python
 
-            import oneflow as flow
+            import oneflow.compatible.single_client as flow
             import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
@@ -839,7 +843,7 @@ class InverseTimeScheduler(LrScheduler):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.compatible.single_client as flow
             import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
@@ -927,7 +931,7 @@ class NaturalExpScheduler(LrScheduler):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.compatible.single_client as flow
             import oneflow.compatible.single_client.typing as tp
 
             @flow.global_function(type="train")
@@ -1103,7 +1107,7 @@ class SGD(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1201,7 +1205,7 @@ class SGDW(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1340,7 +1344,7 @@ class Adam(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1469,7 +1473,7 @@ class AdamW(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1608,7 +1612,7 @@ class RMSProp(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1702,7 +1706,7 @@ class LARS(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")
@@ -1824,7 +1828,7 @@ class LazyAdam(Optimizer):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         @flow.global_function(type="train")

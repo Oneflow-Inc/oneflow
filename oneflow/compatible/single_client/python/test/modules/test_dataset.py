@@ -20,7 +20,7 @@ import os
 import cv2
 import numpy as np
 
-import oneflow.experimental as flow
+from oneflow.compatible.single_client import experimental as flow
 
 
 @unittest.skipIf(

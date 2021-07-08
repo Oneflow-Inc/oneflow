@@ -15,22 +15,26 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
-import oneflow.compatible.single_client.python.framework.blob_trait as blob_trait
+from oneflow.compatible import single_client as flow
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    placement_context as placement_ctx,
+)
+from oneflow.compatible.single_client.python.framework import blob_trait as blob_trait
 from oneflow.compatible.single_client.python.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.eager.eager_blob_util as eager_blob_util
-import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
-import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.eager import (
+    eager_blob_util as eager_blob_util,
+)
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 import traceback
 import sys
@@ -91,7 +95,7 @@ def LazyRemoteBlob(lbi, **kw):
 @property
 def dtype(self):
     ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-    assert isinstance(ret, oneflow.compatible.single_client.dtype)
+    assert isinstance(ret, flow.dtype)
     return ret
 
 
@@ -104,13 +108,11 @@ def with_distribute(self, distribute):
 
 
 def with_gradient_distribute(self, distribute):
-    return oneflow.compatible.single_client.parallel_cast(
-        self, gradient_distribute=distribute
-    )
+    return flow.parallel_cast(self, gradient_distribute=distribute)
 
 
 def get_lazy_shape_log_warning(self):
-    if oneflow.compatible.single_client.scope.mirrored_view_enabled():
+    if flow.scope.mirrored_view_enabled():
         return ("%s\n%s\n%s") % (
             "WARNING:",
             "You access a consistent blob shape in mirrored view, there may be problems,",
@@ -121,7 +123,7 @@ def get_lazy_shape_log_warning(self):
 
 
 def get_mirror_shape_log_warning(self):
-    if oneflow.compatible.single_client.scope.consistent_view_enabled():
+    if flow.scope.consistent_view_enabled():
         return ("%s\n%s\n%s") % (
             "WARNING:",
             "You access a mirrored blob shape in consistent view, there may be problems,",
@@ -183,7 +185,7 @@ def BlobObjectNumpy(blob_object, tmp_name=None):
                 str(blob_object.op_arg_parallel_attr.sbp_parallel),
                 str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
             )
-            with oneflow.compatible.single_client.scope.placement(
+            with flow.scope.placement(
                 parallel_conf.device_tag(), list(parallel_conf.device_name()),
             ):
                 tmp_blob_object = boxing_util.BoxingTo(

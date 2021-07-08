@@ -17,9 +17,11 @@ from __future__ import absolute_import
 from typing import Tuple, Optional
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
-import oneflow as flow
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 
 
@@ -81,7 +83,7 @@ def min_max_observer(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -195,7 +197,7 @@ def moving_average_min_max_observer(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -318,7 +320,7 @@ def fake_quantization(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

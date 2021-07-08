@@ -15,9 +15,9 @@ limitations under the License.
 """
 from __future__ import absolute_import, division, print_function
 
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+from oneflow.compatible import single_client as flow
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
 from model_util import conv2d_layer
 
 

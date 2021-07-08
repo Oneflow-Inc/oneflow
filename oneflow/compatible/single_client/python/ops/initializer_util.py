@@ -20,9 +20,9 @@ import math
 
 import numpy as np
 
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+from oneflow.compatible import single_client as flow
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
 
@@ -59,7 +59,7 @@ def constant_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -89,7 +89,7 @@ def constant_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -149,7 +149,7 @@ def zeros_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -179,7 +179,7 @@ def zeros_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -227,7 +227,7 @@ def ones_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -257,7 +257,7 @@ def ones_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -310,7 +310,7 @@ def random_uniform_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -340,7 +340,7 @@ def random_uniform_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -410,7 +410,7 @@ def random_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -440,7 +440,7 @@ def random_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -498,7 +498,7 @@ def truncated_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -528,7 +528,7 @@ def truncated_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -592,7 +592,7 @@ def glorot_uniform_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -624,7 +624,7 @@ def glorot_uniform_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -684,7 +684,7 @@ def glorot_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -716,7 +716,7 @@ def glorot_normal_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -784,7 +784,7 @@ def variance_scaling_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -816,7 +816,7 @@ def variance_scaling_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -914,7 +914,7 @@ def kaiming_initializer(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -948,7 +948,7 @@ def kaiming_initializer(
 
     .. code-block:: python 
     
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 

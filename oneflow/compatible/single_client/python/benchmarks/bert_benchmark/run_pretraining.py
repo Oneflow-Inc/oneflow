@@ -23,7 +23,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 import benchmark_util
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from pretrain import PreTrain
 
 parser = argparse.ArgumentParser(description="flags for bert")

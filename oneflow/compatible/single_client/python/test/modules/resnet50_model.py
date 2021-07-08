@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.experimental as flow
-import oneflow.experimental.nn as nn
-from oneflow.experimental import Tensor
+from oneflow.compatible.single_client import experimental as flow
+from oneflow.compatible.single_client.experimental import nn as nn
+from oneflow.compatible.single_client.experimental import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
 
 

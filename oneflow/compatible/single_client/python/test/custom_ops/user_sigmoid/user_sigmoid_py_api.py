@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import os
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 

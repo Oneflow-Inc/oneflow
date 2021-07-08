@@ -17,23 +17,33 @@ from __future__ import absolute_import
 from typing import Optional, Sequence, Union
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.compile_context as compile_context
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
-import oneflow.compatible.single_client.python.framework.distribute as distribute_util
-import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
-import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
-import oneflow.compatible.single_client.python.eager.op_executor as op_executor
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    compile_context as compile_context,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.framework import (
+    distribute as distribute_util,
+)
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
+)
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible import single_client as flow
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 import os
 
@@ -44,9 +54,7 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[
-        oneflow.compatible.single_client.dtype
-    ] = oneflow.compatible.single_client.float32,
+    dtype: Optional[flow.dtype] = flow.float32,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
@@ -79,7 +87,7 @@ def api_get_variable(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
 
@@ -116,7 +124,7 @@ def api_get_variable(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -382,9 +390,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
     bn_in_op2blob_object = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
 
     def BuildInstruction(builder):
-        parallel_conf = (
-            oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.parallel_conf
-        )
+        parallel_conf = flow.current_scope().device_parallel_desc_symbol.parallel_conf
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )

@@ -13,26 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 import numpy as np
 import inspect
 from typing import Union
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.check_point_v2 as check_point_v2
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    check_point_v2 as check_point_v2,
+)
 from oneflow.compatible.single_client.python.framework.function_util import (
     global_function_or_identity,
 )
-import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
-import oneflow.compatible.single_client.python.framework.ofblob as ofblob_util
-import oneflow.compatible.single_client.python.lib.core.async_util as async_util
-import oneflow.compatible.single_client.python.ops.initializer_util as initializer_util
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
-import oneflow.compatible.single_client.python.framework.tensor_str as tensor_str_util
-import oneflow as flow
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.framework import ofblob as ofblob_util
+from oneflow.compatible.single_client.python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.python.ops import (
+    initializer_util as initializer_util,
+)
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import (
+    tensor_str as tensor_str_util,
+)
+from oneflow.compatible import single_client as flow
 
 
 def register_local_tensor_method(name=None):

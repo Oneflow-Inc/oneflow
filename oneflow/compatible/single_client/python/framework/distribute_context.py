@@ -15,8 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.scope_util as scope_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
 
 
 class DistributeStrategy(object):

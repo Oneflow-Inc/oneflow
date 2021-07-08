@@ -16,8 +16,12 @@ limitations under the License.
 from __future__ import absolute_import
 
 import threading
-import oneflow.compatible.single_client.python.framework.local_blob as local_blob_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    local_blob as local_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 import numpy as np
 

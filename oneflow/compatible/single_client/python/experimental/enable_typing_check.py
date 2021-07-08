@@ -16,8 +16,8 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 
 
 @oneflow_export("experimental.enable_typing_check")

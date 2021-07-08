@@ -15,17 +15,25 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
-import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
-import oneflow.compatible.single_client.python.framework.python_callback as python_callback
-import oneflow.compatible.single_client.python.framework.balanced_splitter as balanced_splitter
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_def,
+)
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import (
+    python_callback as python_callback,
+)
+from oneflow.compatible.single_client.python.framework import (
+    balanced_splitter as balanced_splitter,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 import numpy
 from functools import reduce
@@ -119,8 +127,8 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
             blob = oneflow._oneflow_internal.EagerConsistentBlob(
                 lbi, blob_object, blob_register
             )
-            with oneflow.compatible.single_client.scope.consistent_view():
-                return oneflow.compatible.single_client.identity(blob)
+            with flow.scope.consistent_view():
+                return flow.identity(blob)
 
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
         get_blob = oneflow._oneflow_internal.EagerMirroredBlob
@@ -135,7 +143,7 @@ def _MakeInputBlobObject(arg_blob_def):
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
-        scope = oneflow.compatible.single_client.current_scope()
+        scope = flow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)

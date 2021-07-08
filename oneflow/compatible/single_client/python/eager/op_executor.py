@@ -15,26 +15,40 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
-import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
-import oneflow.compatible.single_client.python.eager.blob_register as blob_register_util
-import oneflow.compatible.single_client.python.eager.symbol_storage as symbol_storage
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.python_callback as python_callback
-import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.scope_util as scope_util
-import oneflow.compatible.single_client.python.eager.op_infer_util as op_infer_util
-import oneflow.compatible.single_client.python.eager.blob_register as blob_register_util
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow.core.operator import op_node_signature_pb2 as op_node_signature_pb
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.operator import interface_blob_conf_pb2 as inter_face_blob_conf_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import (
+    blob_register as blob_register_util,
+)
+from oneflow.compatible.single_client.python.eager import (
+    symbol_storage as symbol_storage,
+)
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    python_callback as python_callback,
+)
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
+)
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.eager import op_infer_util as op_infer_util
+from oneflow.compatible.single_client.python.eager import (
+    blob_register as blob_register_util,
+)
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from google.protobuf import text_format
 
-import oneflow.compatible.single_client as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 import numpy as np
 import os

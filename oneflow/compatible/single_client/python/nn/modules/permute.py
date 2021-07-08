@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -54,7 +54,7 @@ def permute_op(tensor, *dims):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

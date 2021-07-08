@@ -18,9 +18,9 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from test_util import GenArgList
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 
 
 def _gen_test_data(params_shape, indices_shape, axis):

@@ -15,12 +15,14 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 
 

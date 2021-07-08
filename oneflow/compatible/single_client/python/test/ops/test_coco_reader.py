@@ -19,7 +19,7 @@ import os
 
 import cv2
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 VERBOSE = False
 coco_dict = dict()

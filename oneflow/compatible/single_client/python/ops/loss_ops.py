@@ -15,10 +15,12 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow as flow
-import oneflow.compatible.single_client.python.framework.id_util as id_util
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 from typing import Optional, Tuple
 
@@ -54,7 +56,7 @@ def smooth_l1_loss(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -119,7 +121,7 @@ def ctc_loss(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -233,7 +235,7 @@ def ctc_greedy_decoder(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
         from typing import Tuple

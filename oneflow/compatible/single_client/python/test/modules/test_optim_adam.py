@@ -17,7 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow.experimental as flow
+from oneflow.compatible.single_client import experimental as flow
 
 from test_util import GenArgList
 from oneflow.compatible.single_client.python.nn.parameter import Parameter

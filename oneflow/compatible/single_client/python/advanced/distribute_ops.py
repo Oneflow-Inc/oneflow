@@ -15,15 +15,19 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.framework.interpret_util as interpret_util
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.compatible import single_client as flow
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.framework import (
+    interpret_util as interpret_util,
+)
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 import oneflow._oneflow_internal
 

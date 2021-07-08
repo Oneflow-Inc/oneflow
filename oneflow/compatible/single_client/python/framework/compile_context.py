@@ -17,15 +17,25 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow.compatible.single_client as flow
-import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.distribute_context as distribute_ctx
-import oneflow.compatible.single_client.python.framework.placement_context as placement_context
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
+)
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    distribute_context as distribute_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    placement_context as placement_context,
+)
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
+)
 import oneflow._oneflow_internal
 
 

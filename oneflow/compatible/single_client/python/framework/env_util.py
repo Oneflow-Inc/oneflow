@@ -19,15 +19,19 @@ import socket
 import os
 from contextlib import closing
 
-import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
-import oneflow.core.job.env_pb2 as env_pb
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.scope_util as scope_util
-import oneflow.core.job.resource_pb2 as resource_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+from oneflow.core.control import ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
+from oneflow.core.job import env_pb2 as env_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    placement_context as placement_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.core.job import resource_pb2 as resource_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,

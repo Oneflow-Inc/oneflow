@@ -15,9 +15,9 @@ limitations under the License.
 """
 from collections import OrderedDict
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import numpy as np
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 import test_global_storage
 from test_util import GenArgDict
 

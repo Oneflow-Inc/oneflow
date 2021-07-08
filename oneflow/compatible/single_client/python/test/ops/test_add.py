@@ -17,10 +17,10 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

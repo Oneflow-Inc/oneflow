@@ -15,7 +15,9 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
 
 
 def GetDefaultBackwardBlobRegister():

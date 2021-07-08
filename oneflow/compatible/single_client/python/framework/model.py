@@ -54,8 +54,8 @@ from oneflow.compatible.single_client.python.ops.optimizer import Optimizer
 from oneflow.compatible.single_client.python.nn.optimizer.optimizer import (
     Optimizer as OOPOptimizer,
 )
-import oneflow.compatible.single_client.python.framework.typing as oneflow_typing
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import typing as oneflow_typing
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
 
 
 @oneflow_export("model.DataModule")

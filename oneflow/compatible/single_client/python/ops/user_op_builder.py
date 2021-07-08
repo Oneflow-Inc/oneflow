@@ -13,30 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.compatible.single_client.python.framework.interpret_util as interpret_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.compile_context as compile_context
-import oneflow.compatible.single_client.python.framework.distribute as distribute
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
-import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
-import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow
+from oneflow.compatible.single_client.python.framework import (
+    interpret_util as interpret_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    compile_context as compile_context,
+)
+from oneflow.compatible.single_client.python.framework import distribute as distribute
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.framework import user_op_attr_pb2 as attr_value_pb
+from oneflow._oneflow_internal.oneflow.core.framework import (
+    user_op_attr as user_op_attr_cfg,
+)
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
+from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.experimental.name_scope as name_scope
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.compatible.single_client.python.eager.eager_blob_util as eager_blob_util
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
+)
+from oneflow.core.eager import eager_symbol_pb2 as eager_symbol_util
+from oneflow.compatible.single_client.python.eager import (
+    eager_blob_util as eager_blob_util,
+)
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 import random
-import oneflow.compatible.single_client.python.eager.gradient_util as gradient_util
-import oneflow as flow
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 import traceback
 
@@ -51,9 +65,7 @@ class UserOp(object):
         self.op_conf_.name = op_name
         if op_type_name is not None:
             self.op_conf_.user_conf.op_type_name = op_type_name
-        device_tag = (
-            oneflow.compatible.single_client.current_scope().device_parallel_desc_symbol.device_tag
-        )
+        device_tag = flow.current_scope().device_parallel_desc_symbol.device_tag
         self.op_conf_.device_tag = device_tag
         self.output_arg_key_list_ = []
 
@@ -363,7 +375,7 @@ class UserOpConfBuilder(object):
                 assert isinstance(x, int)
                 attribute_mutable_at_shape.add_dim(x)
         elif attr_type == user_op_attr_cfg.kAtDataType:
-            assert attr_value in oneflow.compatible.single_client.dtypes()
+            assert attr_value in flow.dtypes()
             attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
                 attr_value
             )
@@ -391,7 +403,7 @@ class UserOpConfBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
             for x in attr_value:
-                assert x in oneflow.compatible.single_client.dtypes()
+                assert x in flow.dtypes()
                 x = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
                 attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))

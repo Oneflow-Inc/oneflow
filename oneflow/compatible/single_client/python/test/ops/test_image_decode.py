@@ -15,9 +15,9 @@ limitations under the License.
 """
 import unittest
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from PIL import Image
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 
 
 def _of_image_decode(images):

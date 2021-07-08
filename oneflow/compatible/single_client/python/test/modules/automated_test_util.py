@@ -20,7 +20,7 @@ from collections import namedtuple
 import random as random_util
 import os
 
-import oneflow.experimental as flow
+from oneflow.compatible.single_client import experimental as flow
 import torch
 import numpy as np
 

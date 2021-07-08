@@ -19,28 +19,42 @@ import inspect
 import numpy as np
 import os
 import enum
-import google.protobuf.text_format as text_format
+from google.protobuf import text_format as text_format
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
+from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_proto_cfg
 
-import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.common.data_type as dtype_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
-import oneflow.core.job.job_conf_pb2 as job_conf_proto
-import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
-import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.compile_context as compile_ctx
-import oneflow.compatible.single_client.python.framework.session_util as session_util
-import oneflow.compatible.single_client.python.framework.placement_util as placement_util
-import oneflow.compatible.single_client.python.framework.scope_util as scope_util
-import oneflow.compatible.single_client.python.framework.runtime_mode as runtime_mode
-import oneflow.compatible.single_client.python.framework.job_instance as job_instance_util
-import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_util
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
+from oneflow._oneflow_internal.oneflow.core.operator import (
+    interface_blob_conf as interface_blob_conf_proto_cfg,
+)
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
+from oneflow._oneflow_internal.oneflow.core.common import data_type as dtype_proto_cfg
+from oneflow._oneflow_internal.oneflow.core.job import sbp_parallel as sbp_parallel_cfg
+from oneflow.core.job import job_conf_pb2 as job_conf_proto
+from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_proto
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    compile_context as compile_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    session_util as session_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    placement_util as placement_util,
+)
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.framework import (
+    runtime_mode as runtime_mode,
+)
+from oneflow.compatible.single_client.python.framework import (
+    job_instance as job_instance_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 

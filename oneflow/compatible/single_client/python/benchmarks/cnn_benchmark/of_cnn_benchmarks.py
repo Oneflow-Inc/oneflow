@@ -23,7 +23,7 @@ from datetime import datetime
 import alexnet_model
 import benchmark_util
 import data_loader
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import resnet_model
 import vgg_model
 

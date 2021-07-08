@@ -24,7 +24,7 @@ def GetFrameLocationStr(depth=-1):
 
 
 def GetStackInfoExcludeOneflowPythonFile():
-    import oneflow
+    from oneflow.compatible import single_client as flow
 
     dirname = os.path.dirname(oneflow.__file__)
     stack_info = traceback.extract_stack()

@@ -15,8 +15,8 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.core.job.placement_pb2 as placement_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.core.job import placement_pb2 as placement_pb
 import functools
 
 

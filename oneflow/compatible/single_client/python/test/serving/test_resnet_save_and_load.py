@@ -18,9 +18,9 @@ import os
 import numpy as np
 import shutil
 import unittest
-import google.protobuf.text_format as text_format
-import oneflow as flow
-import oneflow.core.serving.saved_model_pb2 as saved_model_pb
+from google.protobuf import text_format as text_format
+from oneflow.compatible import single_client as flow
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
 
 from resnet_model import resnet50
 from ofrecord_dataset import ImageNetRecordDataset

@@ -16,9 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 
-import oneflow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow.compatible.single_client.python.framework.id_util as id_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework.attr_util import (
     convert_to_user_attr_value,
 )

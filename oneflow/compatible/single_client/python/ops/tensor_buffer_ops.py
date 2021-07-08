@@ -18,9 +18,9 @@ from __future__ import absolute_import
 import functools
 import operator
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow.compatible.single_client.python.framework.id_util as id_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     stable_api,
@@ -57,7 +57,7 @@ def tensor_buffer_to_tensor(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -117,7 +117,7 @@ def tensor_to_tensor_buffer(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import numpy as np
         import oneflow.compatible.single_client.typing as tp
 
@@ -178,7 +178,7 @@ def gen_tensor_buffer(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
 
         @flow.global_function(function_config=func_config)
         def GenTensorBufferJob():

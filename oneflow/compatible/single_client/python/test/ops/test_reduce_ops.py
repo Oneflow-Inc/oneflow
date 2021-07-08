@@ -18,11 +18,11 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 import tensorflow as tf
 from test_util import GenArgList
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 import test_global_storage
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

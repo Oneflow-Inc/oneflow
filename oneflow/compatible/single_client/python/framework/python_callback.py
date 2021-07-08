@@ -17,11 +17,13 @@ from __future__ import absolute_import
 
 import traceback
 
-import oneflow.compatible.single_client.python.framework.ofblob as ofblob
-import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+from oneflow.compatible.single_client.python.framework import ofblob as ofblob
+from oneflow._oneflow_internal.oneflow.core.operator import (
+    op_attribute as op_attribute_cfg,
+)
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
+from oneflow._oneflow_internal.oneflow.core.job import scope as scope_cfg
 import oneflow._oneflow_internal
 
 

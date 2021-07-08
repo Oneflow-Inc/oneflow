@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
@@ -158,8 +158,8 @@ class Conv1d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental.nn as nn
         >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randn(20, 16, 50)
@@ -366,8 +366,8 @@ class Conv2d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental.nn as nn
         >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randn(20, 16, 50, 100)

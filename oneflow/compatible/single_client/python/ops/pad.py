@@ -17,9 +17,11 @@ from __future__ import absolute_import
 
 from typing import Optional, Sequence, Union
 
-import oneflow
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     stable_api,
@@ -52,7 +54,7 @@ def pad(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -94,9 +96,9 @@ def pad(
     else:
         raise ValueError("paddings must be a tuple or a list.")
     if x.dtype in [
-        oneflow.compatible.single_client.float32,
-        oneflow.compatible.single_client.float16,
-        oneflow.compatible.single_client.float64,
+        flow.float32,
+        flow.float16,
+        flow.float64,
     ]:
         floating_constant_value = float(constant_value)
         integral_constant_value = int(0)
@@ -104,9 +106,7 @@ def pad(
         floating_constant_value = float(0)
         integral_constant_value = int(constant_value)
     return (
-        oneflow.compatible.single_client.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Pad_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
         .Op("pad")
         .Input("x", [x])
         .Output("y")
@@ -142,7 +142,7 @@ def pad_grad(
     else:
         raise ValueError("paddings must be a tuple or a list.")
     return (
-        oneflow.compatible.single_client.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("PadGrad_")
         )
         .Op("pad_grad")
@@ -186,7 +186,7 @@ def same_padding(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -225,7 +225,7 @@ def same_padding(
     assert len(dilation_rate) == num_spatial_dims
 
     return (
-        oneflow.compatible.single_client.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("SamePadding_")
         )
         .Op("same_padding")
@@ -264,7 +264,7 @@ def reflection_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -311,7 +311,7 @@ def reflection_pad2d(
         raise ValueError("padding must be in or list or tuple!")
 
     return (
-        oneflow.compatible.single_client.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Reflection_Pad2d_")
         )
         .Op("reflection_pad2d")
@@ -345,7 +345,7 @@ def replication_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -384,7 +384,7 @@ def replication_pad2d(
         raise ValueError("padding must be in or list or tuple!")
 
     return (
-        oneflow.compatible.single_client.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Replication_Pad2d_")
         )
         .Op("replication_pad2d")
@@ -420,7 +420,7 @@ def constant_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 
@@ -460,9 +460,9 @@ def constant_pad2d(
         raise ValueError("padding must be in or list or tuple!")
 
     if x.dtype in [
-        oneflow.compatible.single_client.float32,
-        oneflow.compatible.single_client.float16,
-        oneflow.compatible.single_client.float64,
+        flow.float32,
+        flow.float16,
+        flow.float64,
     ]:
         floating_value = float(constant_value)
         integral_value = int(0)
@@ -471,7 +471,7 @@ def constant_pad2d(
         integral_value = int(constant_value)
 
     return (
-        oneflow.compatible.single_client.user_op_builder(
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Constant_Pad2d_")
         )
         .Op("constant_pad2d")
@@ -507,7 +507,7 @@ def zero_pad2d(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
         import numpy as np
 

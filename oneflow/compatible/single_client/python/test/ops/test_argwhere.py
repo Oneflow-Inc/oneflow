@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 import os
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 from test_util import GenArgDict
 

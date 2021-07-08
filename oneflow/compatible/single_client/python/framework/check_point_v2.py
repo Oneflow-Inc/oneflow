@@ -18,30 +18,36 @@ import os
 import numpy as np
 from google.protobuf import text_format
 
-import oneflow.compatible.single_client as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.compatible.single_client.python.framework.config_util as config_util
-import oneflow.compatible.single_client.python.framework.dtype as dtype_util
-import oneflow.compatible.single_client.python.framework.runtime_mode as rt_mode
-import oneflow.compatible.single_client.python.ops.initializer_util as initializer_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.compatible.single_client.python.framework.id_util as id_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.lib.core.async_util as async_util
-import oneflow.compatible.single_client.python.eager.boxing_util as boxing_util
-import oneflow.compatible.single_client.python.eager.op_infer_util as op_infer_util
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+from oneflow.core.operator import op_conf_pb2 as op_conf_pb
+from oneflow.compatible.single_client.python.framework import config_util as config_util
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.ops import (
+    initializer_util as initializer_util,
+)
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import op_infer_util as op_infer_util
+from oneflow.core.framework import variable_meta_info_pb2 as variable_meta_info_pb
+from oneflow.core.framework import user_op_attr_pb2 as attr_value_pb
 from oneflow.compatible.single_client.python.experimental import (
     interface_op_read_and_write,
 )
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.compatible.single_client.python.ops.get_variable as get_variable
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.python.ops import get_variable as get_variable
 
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal import EagerBlobTrait
 from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple

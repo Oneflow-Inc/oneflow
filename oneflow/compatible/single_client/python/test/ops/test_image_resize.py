@@ -17,8 +17,8 @@ import unittest
 import cv2
 import numpy as np
 import typing as tp
-import oneflow as flow
-import oneflow.compatible.single_client.typing as otp
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as otp
 import image_test_util
 
 

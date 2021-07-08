@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow
+from oneflow.compatible import single_client as flow
 
 
 def Init():
-    oneflow.compatible.single_client.env.init()
+    flow.env.init()

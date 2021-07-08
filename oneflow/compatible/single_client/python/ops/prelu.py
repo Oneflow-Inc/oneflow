@@ -17,12 +17,16 @@ from __future__ import absolute_import
 from typing import Optional, Sequence
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
-import oneflow.compatible.single_client.python.framework.distribute as distribute_util
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
+from oneflow.compatible import single_client as flow
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.compatible.single_client.python.framework import (
+    distribute as distribute_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 
 
@@ -62,7 +66,7 @@ def prelu(
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.compatible.single_client as flow
         import oneflow.compatible.single_client.typing as tp
 
         BATCH_SIZE = 100

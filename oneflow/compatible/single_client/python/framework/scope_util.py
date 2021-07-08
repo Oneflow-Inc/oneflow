@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import traceback
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.attr_util as attr_util
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import attr_util as attr_util
+from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,

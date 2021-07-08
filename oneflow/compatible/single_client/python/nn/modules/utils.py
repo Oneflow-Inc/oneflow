@@ -15,7 +15,7 @@ limitations under the License.
 """
 from typing import List
 
-import collections.abc as container_abcs
+from collections import abc as container_abcs
 from itertools import repeat
 
 

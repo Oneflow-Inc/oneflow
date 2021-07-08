@@ -15,7 +15,7 @@ limitations under the License.
 """
 import os
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from collections import OrderedDict
 import cv2
 import time

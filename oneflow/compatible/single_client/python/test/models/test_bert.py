@@ -17,7 +17,7 @@ import copy
 import sys
 
 import numpy as np
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from absl import flags
 from pretrain import PreTrain
 import unittest

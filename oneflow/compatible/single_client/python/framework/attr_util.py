@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import oneflow.compatible.single_client as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
-import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
+from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
+from oneflow._oneflow_internal.oneflow.core.framework import (
+    user_op_attr as user_op_attr_cfg,
+)
 
 
 def SetAttrValue(attr_value, py_value, default_attr_value):

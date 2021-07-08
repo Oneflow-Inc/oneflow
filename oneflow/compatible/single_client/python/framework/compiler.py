@@ -18,24 +18,40 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import inspect
-import oneflow.compatible.single_client.python.framework.c_api_util as c_api_util
-import oneflow.compatible.single_client.python.framework.distribute as distribute_util
-import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_util
-import oneflow.compatible.single_client.python.framework.hob as hob
-import oneflow.compatible.single_client.python.lib.core.enable_if as enable_if
-import oneflow.compatible.single_client.python.framework.placement_util as placement_util
-import oneflow.compatible.single_client.python.framework.placement_context as placement_ctx
-import oneflow.compatible.single_client.python.framework.remote_blob as remote_blob_util
-import oneflow.compatible.single_client.python.framework.runtime_mode as runtime_mode
-import oneflow.compatible.single_client.python.framework.push_util as push_util
-import oneflow.compatible.single_client.python.framework.session_context as session_ctx
-import oneflow.compatible.single_client.python.framework.scope_util as scope_util
-import oneflow.compatible.single_client.python.framework.typing as oft
-import oneflow.compatible.single_client.python.framework.typing_util as oft_util
-import oneflow.compatible.single_client.python.lib.core.func_inspect_util as func_inspect_util
-import oneflow.compatible.single_client.python.ops as ops
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
+    distribute as distribute_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import (
+    placement_util as placement_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    placement_context as placement_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    runtime_mode as runtime_mode,
+)
+from oneflow.compatible.single_client.python.framework import push_util as push_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.framework import typing as oft
+from oneflow.compatible.single_client.python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.lib.core import (
+    func_inspect_util as func_inspect_util,
+)
+from oneflow.compatible.single_client.python import ops as ops
 import typing
-import oneflow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 import inspect
 

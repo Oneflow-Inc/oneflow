@@ -18,7 +18,7 @@ from collections import OrderedDict
 import unittest
 import numpy as np
 
-import oneflow.experimental as flow
+from oneflow.compatible.single_client import experimental as flow
 from test_util import GenArgList
 
 

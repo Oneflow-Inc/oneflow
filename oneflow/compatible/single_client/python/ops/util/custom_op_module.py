@@ -25,8 +25,10 @@ import sysconfig
 import numpy
 
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.sysconfig as oneflow_sysconfig
-import oneflow
+from oneflow.compatible.single_client.python.framework import (
+    sysconfig as oneflow_sysconfig,
+)
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 
 
@@ -175,4 +177,4 @@ class CustomOpModule(object):
             self.got_so_ = True
             self.so_path_ = self.out_prefix_ + ".so"
 
-        oneflow.compatible.single_client.config.load_library_now(self.so_path_)
+        flow.config.load_library_now(self.so_path_)

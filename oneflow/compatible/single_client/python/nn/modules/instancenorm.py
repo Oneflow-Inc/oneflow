@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 from oneflow.compatible.single_client.python.nn.modules.batchnorm import _NormBase
 from oneflow.compatible.single_client.python.oneflow_export import (
@@ -134,7 +134,7 @@ class InstanceNorm1d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -227,7 +227,7 @@ class InstanceNorm2d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
@@ -313,7 +313,7 @@ class InstanceNorm3d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 

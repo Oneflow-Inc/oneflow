@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import numpy as np
 import os
 import random
 
-import oneflow.compatible.single_client.typing as oft
+from oneflow.compatible.single_client import typing as oft
 
 
 @flow.unittest.skip_unless_1n2d()

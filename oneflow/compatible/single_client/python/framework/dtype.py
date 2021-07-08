@@ -16,9 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 import numpy as np
-import oneflow.core.common.data_type_pb2 as data_type_pb2
+from oneflow.core.common import data_type_pb2 as data_type_pb2
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client as flow
+from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 
 

@@ -18,7 +18,7 @@ import os
 import sys
 
 import numpy
-import oneflow
+from oneflow.compatible import single_client as flow
 from absl import app, flags
 
 FLAGS = flags.FLAGS
@@ -44,7 +44,7 @@ class TestNetMixin:
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             self.num_iter = 3
         self.set_params()
-        oneflow.compatible.single_client.clear_default_session()
+        flow.clear_default_session()
 
     def set_params(self):
         pass

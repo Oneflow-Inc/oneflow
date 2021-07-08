@@ -15,13 +15,13 @@ limitations under the License.
 """
 import sys
 import random
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-import oneflow.compatible.single_client.python.framework.id_util as id_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 
 
 class _DropoutNd(Module):

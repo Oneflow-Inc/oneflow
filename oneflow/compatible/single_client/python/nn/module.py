@@ -21,7 +21,7 @@ import itertools
 
 import numpy as np
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from oneflow.compatible.single_client.python.framework.check_point_v2 import (
     FeedValueToVariable,

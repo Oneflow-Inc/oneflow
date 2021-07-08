@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
@@ -53,7 +53,7 @@ def softplus_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow.compatible.single_client.experimental as flow
 
         >>> x1 = flow.Tensor(np.array([1, 2, 3]))
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))

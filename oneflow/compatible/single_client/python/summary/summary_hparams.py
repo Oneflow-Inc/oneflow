@@ -23,15 +23,15 @@ import hashlib
 import json
 import time
 
-import oneflow.core.summary.plugin_data_pb2 as plugin_data_pb2
-import oneflow.core.summary.summary_pb2 as summary_pb2
-import oneflow.core.summary.event_pb2 as event_pb2
-import oneflow.core.summary.tensor_pb2 as tensor_pb2
-import oneflow.core.summary.projector_pb2 as projector_pb2
+from oneflow.core.summary import plugin_data_pb2 as plugin_data_pb2
+from oneflow.core.summary import summary_pb2 as summary_pb2
+from oneflow.core.summary import event_pb2 as event_pb2
+from oneflow.core.summary import tensor_pb2 as tensor_pb2
+from oneflow.core.summary import projector_pb2 as projector_pb2
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 
 @oneflow_export("summary.text")

@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn import init
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.oneflow_export import (
@@ -23,7 +24,7 @@ from oneflow.compatible.single_client.python.oneflow_export import (
 from oneflow.compatible.single_client.python.framework.tensor import Tensor
 from typing import Tuple, Union
 
-_shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
+_shape_t = Union[int, Tuple[int], oneflow._oneflow_internal.Size]
 
 
 @oneflow_export("nn.GroupNorm")

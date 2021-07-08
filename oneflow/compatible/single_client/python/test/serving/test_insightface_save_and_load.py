@@ -20,7 +20,7 @@ import numpy as np
 import shutil
 import unittest
 import argparse
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 
 from insightface_resnet100 import Resnet100
 from ofrecord_dataset import FaceEmoreRecordDataset

@@ -15,10 +15,12 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow
+from oneflow.compatible import single_client as flow
 from typing import Sequence, Optional
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-import oneflow.compatible.single_client.python.framework.input_blob_def as input_blob_def
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_def,
+)
 import typing
 import inspect
 import sys
@@ -42,7 +44,7 @@ class Numpy(PyStructCompatibleToBlob):
         print(loss)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=oneflow.compatible.single_client.float):
+    def Placeholder(shape: Sequence[int], dtype=flow.float):
         """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have an identical shape.
         For instance::
@@ -77,7 +79,7 @@ class ListNumpy(PyStructCompatibleToBlob):
             print(mirrored_tensors)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=oneflow.compatible.single_client.float):
+    def Placeholder(shape: Sequence[int], dtype=flow.float):
         """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `list` of `numpy.ndarray` takes a `ListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::

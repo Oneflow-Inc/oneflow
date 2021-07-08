@@ -17,7 +17,7 @@ import os
 import numpy as np
 import unittest
 import typing
-import oneflow as flow
+from oneflow.compatible import single_client as flow
 import test_global_storage
 
 

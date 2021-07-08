@@ -17,7 +17,7 @@ limitations under the License.
 import math
 import unittest
 
-import oneflow.experimental as flow
+from oneflow.compatible.single_client import experimental as flow
 from oneflow.compatible.single_client.python.nn.parameter import Parameter
 
 
