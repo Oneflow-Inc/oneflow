@@ -93,6 +93,14 @@
   Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
 
 - #### Option 2: Build in docker container (recommended)
+  - Pull a docker image:
+
+    ```
+    docker pull oneflowinc/oneflow-manylinux2014-cuda10.2:0.1
+    ```
+
+    All images available : https://hub.docker.com/u/oneflowinc
+
   - In the root directory of OneFlow source code, run:
 
     ```

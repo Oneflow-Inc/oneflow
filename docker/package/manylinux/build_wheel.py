@@ -46,6 +46,7 @@ def build_img(
     use_tuna,
     use_system_proxy,
     img_tag,
+    dry,
 ):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
@@ -67,7 +68,8 @@ def build_img(
     proxy_build_arg = get_proxy_build_args() if use_system_proxy else ""
     cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
     print(cmd)
-    subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
+    if dry == False:
+        subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
 
 
 def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
@@ -303,7 +305,7 @@ if __name__ == "__main__":
         "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
     )
     parser.add_argument(
-        "--python_version", type=str, required=False, default="3.6, 3.7, 3.8",
+        "--python_version", type=str, required=False, default="3.6",
     )
     parser.add_argument(
         "--cuda_version", type=str, required=False, default="10.2",
@@ -330,6 +332,9 @@ if __name__ == "__main__":
         "--skip_img", default=False, action="store_true", required=False
     )
     parser.add_argument(
+        "--build_img", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
         "--use_tuna", default=False, action="store_true", required=False
     )
     parser.add_argument("--dry", default=False, action="store_true", required=False)
@@ -346,6 +351,8 @@ if __name__ == "__main__":
     parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
+    if args.skip_img:
+        "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
@@ -372,7 +379,6 @@ if __name__ == "__main__":
 
         def build():
             img_tag = None
-            skip_img = args.skip_img
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
@@ -390,25 +396,30 @@ if __name__ == "__main__":
                 enforced_oneflow_cmake_args += (
                     ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
                 )
-            user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
                     f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
                 )
-            if args.custom_img_tag:
-                img_tag = args.custom_img_tag
-                skip_img = True
-            elif skip_img:
-                assert is_img_existing(
-                    versioned_img_tag
-                ), f"img not found: {versioned_img_tag}"
-                img_tag = versioned_img_tag
-            else:
+            user_img_tag = f"{img_prefix}:{user}"
+            inc_img_tag = f"oneflowinc/{versioned_img_tag}"
+            img_tag = inc_img_tag
+            if args.build_img:
                 img_tag = user_img_tag
+            elif args.custom_img_tag:
+                img_tag = args.custom_img_tag
+            else:
+                if is_img_existing(versioned_img_tag):
+                    img_tag = versioned_img_tag
+                elif is_img_existing(inc_img_tag):
+                    img_tag = inc_img_tag
+                else:
+                    raise ValueError(
+                        f"img not found, please run 'docker pull {inc_img_tag}'"
+                    )
             assert img_tag is not None
             print("using", img_tag)
-            if skip_img == False:
+            if args.build_img:
                 build_img(
                     cuda_version,
                     args.oneflow_src_dir,
@@ -416,6 +427,7 @@ if __name__ == "__main__":
                     args.use_tuna,
                     args.use_system_proxy,
                     img_tag,
+                    args.dry,
                 )
             bash_args = ""
             if args.xla:
@@ -450,6 +462,8 @@ gcc --version
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
+            if args.build_img:
+                return
             if args.skip_third_party == False:
                 build_third_party(
                     img_tag,
