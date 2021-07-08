@@ -16,10 +16,8 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict
 from typing import Union
-import traceback, threading, time
 
 import oneflow._oneflow_internal
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -29,113 +27,20 @@ from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
 
 
-class _InstanceCreationError(Exception):
-    pass
-
-
-class _RememberInstanceCreationInfo:
-    def __init__(self):
-        for frame, line in traceback.walk_stack(None):
-            print("frame ", frame, " line ", line)
-            varnames = frame.f_code.co_varnames
-            print("varnames ", varnames)
-            if varnames is ():
-                break
-            print("frame.f_locals type ", type(frame.f_locals.items()))
-            for k, _ in frame.f_locals.items():
-                print(k)
-            print()
-            
-            if frame.f_locals[varnames[0]] not in (self, self.__class__):
-                break
-                # if the frame is inside a method of this instance,
-                # the first argument usually contains either the instance or
-                #  its class
-                # we want to find the first frame, where this is not the case
-        else:
-            raise _InstanceCreationError("No suitable outermost frame found.")
-
-        self._outermost_frame = frame
-        self.creation_module = frame.f_globals["__name__"]
-        (
-            self.creation_file,
-            self.creation_line,
-            self.creation_function,
-            self.creation_text,
-        ) = traceback.extract_stack(frame, 1)[0]
-        self.creation_name = self.creation_text.split("=")[0].strip()
-        super().__init__()
-        threading.Thread(target=self._check_existence_after_creation).start()
-
-    def _check_existence_after_creation(self):
-        while self._outermost_frame.f_lineno == self.creation_line:
-            time.sleep(0.01)
-        # this is executed as soon as the line number changes
-        # now we can be sure the instance was actually created
-        error = _InstanceCreationError(
-            "\nCreation name not found in creation frame.\ncreation_file: "
-            "%s \ncreation_line: %s \ncreation_text: %s\ncreation_name ("
-            "might be wrong): %s"
-            % (
-                self.creation_file,
-                self.creation_line,
-                self.creation_text,
-                self.creation_name,
-            )
-        )
-        nameparts = self.creation_name.split(".")
-        try:
-            var = self._outermost_frame.f_locals[nameparts[0]]
-        except KeyError:
-            raise error
-        finally:
-            del self._outermost_frame
-        # make sure we have no permament inter frame reference
-        # which could hinder garbage collection
-        try:
-            for name in nameparts[1:]:
-                var = getattr(var, name)
-        except AttributeError:
-            raise error
-        if var is not self:
-            raise error
-
-    def __repr__(self):
-        return (
-            super().__repr__()[:-1] + " with creation_name '%s'>" % self.creation_name
-        )
-
-    def print_creation_info(self):
-        print(
-            "object name: ",
-            self.creation_name,
-            ", module: ",
-            self.creation_module,
-            ", function: ",
-            self.creation_function,
-            "linenum: ",
-            self.creation_line,
-            ", text: ",
-            self.creation_text,
-        )
-
-
 @oneflow_export("nn.Graph", "nn.graph.Graph")
 @experimental_api
-class Graph(_RememberInstanceCreationInfo):
-    _graph_cnt = 0
+class Graph(object):
+    _child_init_cnt = dict()
+
     def __init__(self):
-        super().__init__()
         self.config = GraphConfig()
-        self._name = self.creation_name + "_Graph" + str(Graph._graph_cnt)
-        Graph._graph_cnt += 1
+        self._generate_name()
         self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
         self._state_tensortuple = None
         self.train(True)
-    
 
     @property
     def name(self):
@@ -165,6 +70,13 @@ class Graph(_RememberInstanceCreationInfo):
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
             block.origin.train(mode)
+
+    def _generate_name(self):
+        child_name = self.__class__.__name__
+        if Graph._child_init_cnt.get(child_name) is None:
+            Graph._child_init_cnt[child_name] = 0
+        self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
+        Graph._child_init_cnt[child_name] += 1
 
     def _named_state(self):
         for _, b in self._blocks.items():

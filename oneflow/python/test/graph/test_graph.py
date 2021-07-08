@@ -55,7 +55,7 @@ class CustomModule(flow.nn.Module):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGraph(flow.unittest.TestCase):
-    def _test_add_nested_module(test_case):
+    def test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
@@ -101,7 +101,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def _test_graph_config(test_case):
+    def test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -141,24 +141,38 @@ class TestGraph(flow.unittest.TestCase):
         print(repr(g))
 
     def test_graph_name(test_case):
-        class CustomGraph(flow.nn.Graph):
+        class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.m = CustomModule()
 
             def build(self, x):
-                x = self.m(x)
                 return x
 
-        g1 = CustomGraph()
-        test_case.assertEqual(g1.name, g1._c_nn_graph.name)
-        print(g1.name)
-        g1.print_creation_info()
+        class BCustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
 
-        # g2 = CustomGraph()
-        # print(g2.name)
-        # print("graph cnt ", g2._graph_cnt)
-        # g2.print_creation_info()
+            def build(self, x):
+                return x
+
+        class CBCustomGraph(BCustomGraph):
+            def __init__(self):
+                super().__init__()
+
+        def create_graph(cnt):
+            a = ACustomGraph()
+            test_case.assertEqual(a.name, "ACustomGraph_" + str(cnt))
+            b = BCustomGraph()
+            test_case.assertEqual(b.name, "BCustomGraph_" + str(cnt))
+            cb = CBCustomGraph()
+            test_case.assertEqual(cb.name, "CBCustomGraph_" + str(cnt))
+
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
 
 
 if __name__ == "__main__":
