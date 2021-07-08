@@ -45,7 +45,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
-    Error::Unimplemented();
+    throw Error::Unimplemented();
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
   
@@ -54,21 +54,45 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     if(i==dim) continue; 
     if(input){
       CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
-    }
+      }
     else{
       CHECK_LE_OR_RETURN(index->shape().At(i), like->shape().At(i));
+      }
     }
-  }
   
   // check index.shape(i) <= src.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
     if(i==dim) continue; 
     CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
-  }
+    }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
   // printf("infertensor ok");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
+  const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+
+  float src_scalar = ctx->Attr<float>("src_scalar");
+  int32_t dim = ctx->Attr<int32_t>("dim");
+
+  // check index.numaxes == src.num_axes == input/like.numaxes
+  int64_t output_num_axes = input->shape().NumAxes();
+  int64_t index_num_axes = index->shape().NumAxes();
+  CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
+  
+  // check index.shape(i) <= input/like.shape(i)
+  FOR_RANGE(int64_t, i, 0, index_num_axes) {
+    if(i==dim) continue; 
+    CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
+  }
+  
+  user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+  *out->mut_shape() = input->shape();
+  printf("infer scalar tensor ok");
   return Maybe<void>::Ok();
 }
 
@@ -83,10 +107,20 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
   // CHECK(src_arg_modifier != nullptr);
   // src_arg_modifier->set_requires_grad(false);
 
+  // should be deleted
   user_op::InputArgModifier* input_arg_modifier = GetInputArgModifierFn("input", 0);
   CHECK(input_arg_modifier != nullptr);
   input_arg_modifier->set_requires_grad(false);
 
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
+  CHECK(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+  
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InputScalarArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+                               const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
@@ -167,6 +201,14 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   *ctx->OutputDType("output", 0) = ctx->InputDType("src", 0);
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+  CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
@@ -194,6 +236,17 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
       .SetDataTypeInferFn(InferDtype) \
       .SetGetSbpFn(SetSbpScatter)
 
+#define REGISTER_SCATTER_SCALAR_OP(optypename)       \
+  REGISTER_USER_OP(optypename)                        \
+      .Input("input")                                 \
+      .Input("index")                                 \
+      .Attr<float>("src_scalar")                      \
+      .Output("output")                               \
+      .Attr<int32_t>("dim")                           \
+      .SetTensorDescInferFn(InferScalarTensorDesc)          \
+      .SetInputArgModifyFn(InputScalarArgModifierFn) \
+      .SetDataTypeInferFn(InferScalarDtype) \
+      .SetGetSbpFn(SetSbpScatter)
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
@@ -210,7 +263,26 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
         ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                            \
                                   [&ctx, &op_src_grad_name]() -> const std::string& {        \
                                     return ctx->GetOp(op_src_grad_name).output("output", 0); \
-                                  });  
+                                  });                                                        \
+      });
+
+#define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                        \
+  REGISTER_USER_OP_GRAD(optypename)                                                      \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
+        const auto op_input_grad_name = ctx->FwOp().op_name() + "_grad";                       \
+        ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+          return builder.OpTypeName("dim_scatter_scalar_update")                                        \
+              .InputBind("index", ctx->FwOp().input("index", 0))                         \
+              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
+              .Output("output")                                                          \
+              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
+              .Attr("src_scalar", static_cast<float>(0.0))                             \
+              .Build();                                                                  \
+        });                                                                              \
+        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+                                  [&ctx, &op_input_grad_name]() -> const std::string& {        \
+                                    return ctx->GetOp(op_input_grad_name).output("output", 0); \
+                                  });                                                        \
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
@@ -218,8 +290,12 @@ REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_OP("dim_scatter_add");
 REGISTER_SCATTER_OP("dim_scatter_update");
 
+REGISTER_SCATTER_SCALAR_OP("dim_scatter_scalar_update");
+REGISTER_SCATTER_SCALAR_OP("dim_scatter_scalar_add");
+
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
 
+REGISTER_USER_OP_GRAD_SCATTER_SCALAR("dim_scatter_scalar_update"); 
 }  // namespace user_op
 }  // namespace oneflow

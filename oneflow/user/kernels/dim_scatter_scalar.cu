@@ -1,14 +1,26 @@
+#ifdef WITH_CUDA
 #include "oneflow/user/kernels/dim_scatter_scalar.h"
 
 namespace oneflow{
 
 namespace user_op{
 
+namespace{
+
+template<typename IN_T, typename IDX_T>                                                          
+__global__ void DoCUDADimScatterScalarUpdate(const DimOpIndexNdHelper<IDX_T> idx_nd_helper, 
+                                       const DimOpIndexNdHelper<IDX_T> output_nd_helper,        
+                                       const int ndim, const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound, 
+                                       const IDX_T* index, const IN_T src_scalar, IN_T* output) {   
+    ScatterScalarUpdateFunctor<IN_T, IDX_T>(idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index, src_scalar, output);
+    }                   
+} // namespace 
+
 template<DeviceType device_type, typename IN_T, typename IDX_T>                                 
-class CpuDimScatterScalarUpdateKernel final : public user_op::OpKernel { 
+class GpuDimScatterScalarUpdateKernel final : public OpKernel { 
   public:                                                                                        
-  CpuDimScatterScalarUpdateKernel() = default;                                                        
-  ~CpuDimScatterScalarUpdateKernel() = default;                                              
+  GpuDimScatterScalarUpdateKernel() = default;                                                        
+  ~GpuDimScatterScalarUpdateKernel() = default;                                              
                                                                                               
   private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -46,26 +58,32 @@ class CpuDimScatterScalarUpdateKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     int64_t upper_bound = input_tensor->shape().At(dim);
+    int64_t elem_cnt = index_tensor->shape().elem_cnt(); 
 
-    ScatterScalarUpdateFunctor<IN_T, IDX_T>(idx_nd_helper, output_nd_helper, ndim,
-           index_tensor->shape().elem_cnt(), dim, upper_bound, index, src_scalar, output);
-    }
-                                                                                                
+    RUN_CUDA_KERNEL((DoCUDADimScatterScalarUpdate<IN_T, IDX_T>), ctx->device_ctx(), BlocksNum4ThreadsNum(elem_cnt),
+                    idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,
+                    src_scalar, output);
+
+    // RUN_CUDA_KERNEL((ScatterScalarUpdateFunctor<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    //                 idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,
+    //                 src_scalar, output);
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      
 };
 
-#define REGISTER_CPU_SCATTERSCALAR_KERNEL(device, dtype, itype)                                       \
-  REGISTER_USER_KERNEL("dim_scatter_scalar_update")                                                        \
-      .SetCreateFn<CpuDimScatterScalarUpdateKernel<device, dtype, itype>>()                                    \
+#define REGISTER_GPU_SCATTERSCALAR_KERNEL(device, dtype, itype)                          \
+  REGISTER_USER_KERNEL("dim_scatter_scalar_update")                                      \
+      .SetCreateFn<GpuDimScatterScalarUpdateKernel<device, dtype, itype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));   
 
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int64_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int32_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int64_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int32_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int64_t);
 
 
 } // namespace user_op
 } // namespace oneflow 
+#endif
