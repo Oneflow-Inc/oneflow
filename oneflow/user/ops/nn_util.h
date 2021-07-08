@@ -19,14 +19,14 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-// Check function???
+
 Maybe<void> CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                               int32_t stride, const std::string& padding_type, int64_t* output_size,
                               int32_t* padding_before, int32_t* padding_after);
-// Check function???
+
 Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                             int32_t stride, int32_t* padding_small, int32_t* padding_large);
-// Check function???
+
 Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
                         int32_t stride, int32_t padding_before, int64_t* output_size);
 
