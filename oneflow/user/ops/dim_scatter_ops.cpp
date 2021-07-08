@@ -89,9 +89,8 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
   }
   
-  user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+  TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input->shape();
-  printf("infer scalar tensor ok");
   return Maybe<void>::Ok();
 }
 
@@ -236,34 +235,51 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
       .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                 \
-        const auto op_src_grad_name = ctx->FwOp().op_name() + "_src_grad";                       \
-        ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-          return builder.OpTypeName("dim_gather")                                        \
-              .InputBind("index", ctx->FwOp().input("index", 0))                         \
-              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
-              .Output("output")                                                          \
-              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                             \
-              .Build();                                                                  \
-        });                                                                              \
-        ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                            \
-                                  [&ctx, &op_src_grad_name]() -> const std::string& {        \
-                                    return ctx->GetOp(op_src_grad_name).output("output", 0); \
-                                  });                                                        \
-        const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
-        ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-          return builder.OpTypeName("dim_scatter_scalar_update")                                        \
-              .InputBind("index", ctx->FwOp().input("index", 0))                         \
-              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
-              .Output("output")                                                          \
-              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
-              .Attr("src_scalar", static_cast<float>(0.0))                             \
-              .Build();                                                                  \
-        });                                                                              \
-        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
-                                  [&ctx, &op_input_grad_name]() -> const std::string& {        \
-                                    return ctx->GetOp(op_input_grad_name).output("output", 0); \
-                                  });                                                        \
+        const TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0); \
+        const TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0); \
+        const int64_t ndim = src.shape().NumAxes(); \
+        bool backprop_flag = true;  \
+        FOR_RANGE(int64_t, i, 0, ndim) { \
+          if(index.shape().At(i)!=src.shape().At(i)){ \
+            backprop_flag = false; \
+            break; \
+          } \
+        }\
+        if(backprop_flag){ \
+          const auto op_src_grad_name = ctx->FwOp().op_name() + "_src_grad";                       \
+          ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+            return builder.OpTypeName("dim_gather")                                        \
+                .InputBind("index", ctx->FwOp().input("index", 0))                         \
+                .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
+                .Output("output")                                                          \
+                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                             \
+                .Build();                                                                  \
+          });                                                                              \
+          ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                            \
+                                    [&ctx, &op_src_grad_name]() -> const std::string& {        \
+                                      return ctx->GetOp(op_src_grad_name).output("output", 0); \
+                                    });                                                        \
+          const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
+          ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+            return builder.OpTypeName("dim_scatter_scalar_update")                                        \
+                .InputBind("index", ctx->FwOp().input("index", 0))                         \
+                .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
+                .Output("output")                                                          \
+                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
+                .Attr("src_scalar", static_cast<float>(0.0))                             \
+                .Build();                                                                  \
+          });                                                                              \
+          ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+                                    [&ctx, &op_input_grad_name]() -> const std::string& {        \
+                                      return ctx->GetOp(op_input_grad_name).output("output", 0); \
+                                    });  \
+          } \
+        else{ \
+          std::cout<<"The backward pass is implemented only for src.shape == index.shape."<<std::endl;\
+          throw Error::Unimplemented(); \
+        }\
       });
+
 
 #define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
