@@ -83,9 +83,40 @@ static void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
-    // const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
-    // const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
-    // *(dx_dptr + dx_helper.NdIndexToOffset(n, c, d, dx_h, dx_w)) += dy_dptr[index];
+    const T rdepth = GetAreaPixelScale(in_depth, d, align_corners, scale_d);
+    const T rheight = GetAreaPixelScale(in_height, h, align_corners, scale_h);
+    const T rwidth = GetAreaPixelScale(in_width, w, align_corners, scale_w);
+
+    const T t1r = GetAreaPixel(rdepth, d, align_corners);
+    const int64_t t1 = t1r;
+    const int64_t t1p = (t1 < in_depth - 1) ? 1 : 0;
+    const T t1lambda = t1r - t1;
+    const T t0lambda = static_cast<T>(1.) - t1lambda;
+
+    const T h1r = GetAreaPixel(rheight, h, align_corners);
+    const int64_t h1 = h1r;
+    const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+    const T h1lambda = h1r - h1;
+    const T h0lambda = static_cast<T>(1.) - h1lambda;
+
+    const T w1r = GetAreaPixel(rwidth, w, align_corners);
+    const int64_t w1 = w1r;
+    const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
+    const T w1lambda = w1r - w1;
+    const T w0lambda = static_cast<T>(1.) - w1lambda;
+
+    const T* pos1 = &dx_dptr[dx_helper.NdIndexToOffset(n, c, t1, h1, w1)];
+    const T* pos2 = &dy_dptr[index];
+
+    pos1[0] += t0lambda * h0lambda * w0lambda * pos2[0];
+    pos1[w1p] += t0lambda * h0lambda * w1lambda * pos2[0];
+    pos1[h1p * in_width] += t0lambda * h1lambda * w0lambda * pos2[0];
+    pos1[h1p * in_width + w1p] += t0lambda * h1lambda * w1lambda * pos2[0];
+    pos1[t1p * in_height * in_width] += t1lambda * h0lambda * w0lambda * pos2[0];
+    pos1[t1p * in_height * in_width + w1p] += t1lambda * h0lambda * w1lambda * pos2[0];
+    pos1[t1p * in_height * in_width + h1p * in_width] += t1lambda * h1lambda * w0lambda * pos2[0];
+    pos1[t1p * in_height * in_width + h1p * in_width + w1p] +=
+        t1lambda * h1lambda * w1lambda * pos2[0];
   }
 }
 
