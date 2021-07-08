@@ -45,7 +45,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { now_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
-    const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), now_grad));
+    const auto& output =
+        JUST(functional::Add(autograd_meta->acc_grad(), now_grad, /*inplace=*/true));
     autograd_meta->set_acc_grad(output);
   } else {
     autograd_meta->set_acc_grad(now_grad);

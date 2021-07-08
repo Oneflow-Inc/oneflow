@@ -20,23 +20,23 @@
 # }
 
 - name: "add_n"
-  signature: "Tensor AddN(TensorTuple inputs)"
+  signature: "Tensor AddN(TensorTuple inputs, *, Bool inplace=False)"
   bind_python: True
 
 - name: "add"
-  signature: "Tensor Add(Tensor x, Tensor y)"
+  signature: "Tensor Add(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: True
 
 - name: "add_scalar"
-  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha)"
+  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha, Bool inplace=False)"
   bind_python: True
 
 - name: "add_scalar_by_tensor"
-  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar)"
+  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar, *, Bool inplace=False)"
   bind_python: True
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: True
 
 - name: "sub_scalar_by_tensor"
