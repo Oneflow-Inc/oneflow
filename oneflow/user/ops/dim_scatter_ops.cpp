@@ -162,16 +162,6 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-// Maybe<void> SetSbpInfer(user_op::InferSbpSignatureFnContext* ctx) {
-//   int32_t dim = ctx->Attr<int32_t>("dim");
-//   const cfg::SbpParallel input_sbp = ctx->SbpParallelHint4InputArgNameAndIndex("input", 0);
-//   int64_t split_axis = input_sbp.split_parallel().axis();
-//   if (ctx->parallel_num() != 1 && input_sbp.has_split_parallel()) {
-//     CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-//   }
-//   return Maybe<void>::Ok();
-// }
-
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
