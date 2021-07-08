@@ -47,14 +47,14 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
     const auto& list = feature.PbT##_list();                                             \
     const CppT* in_dptr = list.value().data();                                           \
     const int64_t padding_elem_num = truncate ? sample_elem_cnt - list.value_size() : 0; \
-    if (!truncate) {                                                                     \
+    if (truncate) {                                                                     \
+      sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, list.value_size());           \
+    } else {                                                                             \
       if (dim1_varying_length) {                                                         \
         sample_elem_cnt = list.value_size();                                             \
       } else {                                                                           \
         CHECK_EQ(sample_elem_cnt, list.value_size());                                    \
       }                                                                                  \
-    } else {                                                                             \
-      sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, list.value_size());           \
     }                                                                                    \
     CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                   \
     if (padding_elem_num > 0) {                                                          \
