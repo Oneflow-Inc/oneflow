@@ -31,9 +31,10 @@ static void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     out_helper.OffsetToNdIndex(index, n, c, d, h, w);
-    const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
-    const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
-    out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, d, in_h, in_w)];
+
+    // const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
+    // const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
+    // out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, d, in_h, in_w)];
   }
 }
 
@@ -46,9 +47,9 @@ static void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
-    const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
-    const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
-    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, d, dx_h, dx_w)) += dy_dptr[index];
+    // const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
+    // const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
+    // *(dx_dptr + dx_helper.NdIndexToOffset(n, c, d, dx_h, dx_w)) += dy_dptr[index];
   }
 }
 

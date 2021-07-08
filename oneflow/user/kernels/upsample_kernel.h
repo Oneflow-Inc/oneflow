@@ -49,6 +49,16 @@ OF_DEVICE_FUNC T GetAreaPixelScale(const int64_t input_size, const int64_t outpu
 }
 
 template<typename T>
+OF_DEVICE_FUNC T GetAreaPixel(const T scale, const int64_t dst_index, bool align_corners) {
+  if (align_corners) {
+    return scale * dst_index;
+  } else {
+    T src_idx = scale * (dst_index + 0.5) - 0.5;
+    return src_idx < 0 ? static_cast<T>(0) : src_idx;
+  }
+}
+
+template<typename T>
 struct BilinearParam {
   int64_t top_h_index;
   int64_t bottom_h_index;

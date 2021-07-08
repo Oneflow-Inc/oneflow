@@ -134,22 +134,24 @@ REGISTER_USER_OP("upsample")
 REGISTER_USER_OP("upsample_nearest_3d")
     .Input("x")
     .Output("y")
+    .Attr<float>("depth_scale")
     .Attr<float>("height_scale")
     .Attr<float>("width_scale")
     .Attr<std::string>("data_format")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+      const float depth_scale = ctx->Attr<float>("depth_scale");
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
       if (ctx->Attr<std::string>("data_format") != "channels_first"
           || x_desc->shape().NumAxes() != 5) {
         LOG(FATAL) << "upsample only supports NCDHW";
       }
-      *y_desc->mut_shape() =
-          Shape({x_desc->shape().At(0), x_desc->shape().At(1), x_desc->shape().At(2),
-                 static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
-                 static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
+      *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
+                                    static_cast<int32_t>(depth_scale * x_desc->shape().At(2)),
+                                    static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
+                                    static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -267,6 +269,7 @@ REGISTER_USER_OP("upsample_nearest_3d_grad")
     .Input("dy")
     .Input("x")
     .Output("dx")
+    .Attr<float>("depth_scale")
     .Attr<float>("height_scale")
     .Attr<float>("width_scale")
     .Attr<std::string>("data_format")
@@ -371,6 +374,7 @@ REGISTER_USER_OP_GRAD("upsample_nearest_3d")
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("x", op.input("x", 0))
                 .Output("dx")
+                .Attr("depth_scale", op.attr<float>("depth_scale"))
                 .Attr("height_scale", op.attr<float>("height_scale"))
                 .Attr("width_scale", op.attr<float>("width_scale"))
                 .Attr("data_format", op.attr<std::string>("data_format"))

@@ -24,31 +24,36 @@ namespace {
 
 template<typename T>
 __global__ void UpsampleNearest3DForward(const int64_t elem_cnt, const T* in_dptr,
-                                         NdIndexOffsetHelper<int64_t, 5> in_helper,
-                                         NdIndexOffsetHelper<int64_t, 5> out_helper,
-                                         const int64_t in_height, const int64_t in_width,
-                                         const float scale_h, const float scale_w, T* out_dptr) {
+                                     NdIndexOffsetHelper<int64_t, 5> in_helper,
+                                     NdIndexOffsetHelper<int64_t, 5> out_helper,
+                                     const int64_t in_depth, const int64_t in_height,
+                                     const int64_t in_width, const float scale_d,
+                                     const float scale_h, const float scale_w, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, d, h, w;
     out_helper.OffsetToNdIndex(index, n, c, d, h, w);
     const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
     const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
-    out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, d, in_h, in_w)];
+    const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
+    out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_d, in_h, in_w)];
   }
 }
 
 template<typename T>
 __global__ void UpsampleNearest3DBackward(const int64_t elem_cnt, const T* dy_dptr,
-                                          NdIndexOffsetHelper<int64_t, 5> dy_helper,
-                                          NdIndexOffsetHelper<int64_t, 5> dx_helper,
-                                          const int64_t in_height, const int64_t in_width,
-                                          const float scale_h, const float scale_w, T* dx_dptr) {
+                                      NdIndexOffsetHelper<int64_t, 5> dy_helper,
+                                      NdIndexOffsetHelper<int64_t, 5> dx_helper,
+                                      const int64_t in_depth, const int64_t in_height,
+                                      const int64_t in_width, const float scale_d,
+                                      const float scale_h, const float scale_w, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
+    for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
-    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, d, dx_h, dx_w)) += dy_dptr[index];
+    const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
+    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w)) += dy_dptr[index];
   }
 }
 
@@ -66,6 +71,7 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
+    const float depth_scale = ctx->Attr<float>("depth_scale");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2), x_blob->shape().At(3),
@@ -74,9 +80,10 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
                                                y_blob->shape().At(2), y_blob->shape().At(3),
                                                y_blob->shape().At(4));
     RUN_CUDA_KERNEL((UpsampleNearest3DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(3),
-                    x_blob->shape().At(4), 1.f / height_scale, 1.f / width_scale,
-                    y_blob->mut_dptr<T>());
+                    x_blob->dptr<T>(), in_helper, out_helper,
+                                x_blob->shape().At(2), x_blob->shape().At(3), x_blob->shape().At(4),
+                                1.f / depth_scale, 1.f / height_scale, 1.f / width_scale,
+                                y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -96,6 +103,7 @@ class UpsampleLinearGrad3DGPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
+    const float depth_scale = ctx->Attr<float>("depth_scale");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2), dy_blob->shape().At(3),
@@ -104,9 +112,10 @@ class UpsampleLinearGrad3DGPUKernel final : public user_op::OpKernel {
                                               dx_blob->shape().At(2), dx_blob->shape().At(3),
                                               dx_blob->shape().At(4));
     RUN_CUDA_KERNEL((UpsampleNearest3DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(3),
-                    dx_blob->shape().At(4), 1.f / height_scale, 1.f / width_scale,
-                    dx_blob->mut_dptr<T>());
+                   dy_blob->dptr<T>(), dy_helper, dx_helper,
+                                 dx_blob->shape().At(2), dx_blob->shape().At(3),
+                                 dx_blob->shape().At(4), 1.f / depth_scale, 1.f / height_scale,
+                                 1.f / width_scale, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
