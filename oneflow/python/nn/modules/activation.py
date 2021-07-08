@@ -133,8 +133,15 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self._inplace = inplace
 
     def forward(self, x):
+        if self._inplace:
+            if x.requires_grad and x.is_leaf:
+                raise RuntimeError(
+                    "a leaf Variable that requires grad is being used in an in-place operation."
+                )
+            return flow.F.relu(x, inplace=True)
         return flow.F.relu(x)
 
 
