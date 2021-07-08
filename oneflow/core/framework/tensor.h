@@ -58,6 +58,7 @@ class Tensor {
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
@@ -76,19 +77,22 @@ class Tensor {
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
-  virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
-  virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
+  virtual Maybe<Tensor> acc_grad() const = 0;
+  virtual Maybe<TensorArg> now_grad_arg() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
+  virtual Maybe<Tensor> clone() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
-  virtual void set_retain_grad(bool retain_grad) = 0;
+  virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
-  virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
-  virtual std::shared_ptr<Tensor> mut_acc_grad() = 0;
+  virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
+  virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
+  virtual bool has_autograd_meta() const = 0;
+  virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
 
@@ -97,7 +101,7 @@ class Tensor {
 };
 
 template<typename DerivedT>
-class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<DerivedT>> {
+class TensorIf : public Tensor {
  public:
   virtual ~TensorIf() = default;
 
@@ -113,8 +117,12 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
-    const std::shared_ptr<Tensor>& tensor = acc_grad();
-    return cast_for_api(tensor);
+    if (has_autograd_meta()) {
+      const std::shared_ptr<Tensor>& tensor = JUST(acc_grad());
+      return cast_for_api(tensor);
+    } else {
+      return std::shared_ptr<DerivedT>();
+    }
   }
 
   // Setters for autograd
@@ -130,6 +138,10 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   // Operators for tensor
   // used by pybind11 only
   virtual Maybe<DerivedT> api_detach() const = 0;
+  Maybe<DerivedT> api_clone() const {
+    const std::shared_ptr<Tensor>& tensor = JUST(clone());
+    return cast_for_api(tensor);
+  }
 
  protected:
   TensorIf() = default;
@@ -144,7 +156,8 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor> {
+class MirroredTensor final : public TensorIf<MirroredTensor>,
+                             public std::enable_shared_from_this<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -177,24 +190,34 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->compute_local_dep_object();
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
+  Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
+  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    return impl_->set_acc_grad(grad);
+  }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
-  std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    return impl_->set_retain_grad(retain_grad);
+  }
+  Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
+    impl_->set_autograd_meta(autograd_meta);
+  }
 
   // Operators for tensor
   Maybe<MirroredTensor> api_detach() const override;
+  Maybe<Tensor> clone() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const Symbol<Device>& device, bool is_lazy,
@@ -234,7 +257,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
       const override {
     return impl_->consumer_parallel_distribution_constraint();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const { return impl_->cur_rank_phy_tensor(); }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
+    return impl_->cur_rank_phy_tensor();
+  }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
@@ -249,6 +274,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->compute_local_dep_object();
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
+  Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
+  Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
   Maybe<void> set_consumer_parallel_distribution_constraint(
@@ -258,22 +285,31 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
+  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
-  std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    return impl_->set_acc_grad(grad);
+  }
+  Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    return impl_->set_retain_grad(retain_grad);
+  }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
+    impl_->set_autograd_meta(autograd_meta);
+  }
 
   // Operators for tensor
   virtual Maybe<ConsistentTensor> api_detach() const override;
+  Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype,
