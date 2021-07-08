@@ -34,7 +34,7 @@ namespace {
 
 template<typename T>
 void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_cnt,
-                          bool dim1_varying_length, bool auto_truncating) {
+                          bool auto_truncating, bool dim1_varying_length) {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const auto& value0 = feature.bytes_list().value(0);
@@ -53,8 +53,10 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
       } else {                                                                                  \
         CHECK_EQ(sample_elem_cnt, list.value_size());                                           \
       }                                                                                         \
+    } else {                                                                                    \
+      sample_elem_cnt = std::min<int64_t>(sample_elem_cnt, list.value_size());                  \
     }                                                                                           \
-    CopyElem<CppT, T>(in_dptr, dptr, std::min<int64_t>(sample_elem_cnt, list.value_size()));    \
+    CopyElem<CppT, T>(in_dptr, dptr, sample_elem_cnt);                                          \
     if (padding_elem_num > 0) {                                                                 \
       std::memset(dptr + sample_elem_cnt, 0, padding_elem_num * sizeof(T));                     \
     }                                                                                           \
