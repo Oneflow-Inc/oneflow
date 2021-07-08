@@ -103,8 +103,17 @@ class INTERPOLATE(Module):
         
         if len(x.shape()) == 3 and self.mode == "linear":
             assert self.align_corners is not None
-            
+            return flow.F.upsample_linear_1d(x, scale_factor=scale_factors[0], align_corners=self.align_corners)
+        
+        if len(x.shape()) == 4 and self.mode == "bilinear":
+            assert self.align_corners is not None
+            return flow.F.upsample(x, height_scale=scale_factors[0], width_scale=scale_factors[1], align_corners=self.align_corners, interpolation=self.mode)
 
+        if len(x.shape()) == 5 and self.mode == "trilinear":
+            assert self.align_corners is not None
+            return flow.F.UpsampleTrilinear3DFunctor(x, depth_scale=scale_factors[0], height_scale=scale_factors[1], width_scale=scale_factors[2], align_corners=self.align_corners)
+        
+        
         
 
 

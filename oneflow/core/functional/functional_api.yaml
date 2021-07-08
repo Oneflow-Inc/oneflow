@@ -431,6 +431,36 @@
                      String interpolation, String data_format=\"channels_first\")"
   bind_python: True
 
+- name: "upsample_linear_1d"
+  signature:
+    "Tensor UpsampleLinear1D(Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_nearest_1d"
+  signature:
+    "Tensor UpsampleNearest1DFunctor(Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_bicubic_2d"
+  signature:
+    "Tensor UpsampleBicubic2DFunctor(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_nearest_3d"
+  signature:
+    "Tensor UpsampleNearest3DFunctor(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_trilinear_3d"
+  signature:
+    "Tensor UpsampleTrilinear3DFunctor(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: True
+
 - name: "abs"
   signature: "Tensor Abs(Tensor x)"
   bind_python: True
