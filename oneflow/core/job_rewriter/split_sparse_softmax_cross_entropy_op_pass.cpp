@@ -65,13 +65,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     const std::vector<int32_t> axis_vec(1, split_axis);
 
     std::string op_name = node->op().op_name();
-    const auto& op_parallel_distribution_sig =
-        job_builder->ParallelDistributionSignature4OpName(op_name);
-    const auto& parallel_distribution_map =
-        op_parallel_distribution_sig.bn_in_op2parallel_distribution();
-    const auto it = parallel_distribution_map.find("prediction_0");
-    CHECK(it != parallel_distribution_map.end());
-    const auto& prediction_parallel_distribution = it->second;
+    const auto& prediction_parallel_distribution =
+        node->ParallelDistribution4BnInOp("prediction_0");
 
     cfg::ParallelDistribution stat_distribution_for_consumer;
 

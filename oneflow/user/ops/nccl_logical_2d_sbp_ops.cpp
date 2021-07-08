@@ -34,13 +34,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
@@ -70,13 +63,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(0).has_partial_sum_parallel());
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
@@ -108,15 +94,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      // (*, S(0)) -> (*, B)
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), 0);
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
@@ -149,17 +126,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      // (*, S(1)) -> (*, B)
-      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
-      CHECK_GE_OR_RETURN(in_split_axis, 1);
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
@@ -193,17 +159,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all2all")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      // (*, S(in_dim1_split_axis)) -> (*, S(out_dim1_split_axis))
-      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
-      const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_dim1_split_axis");
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
-      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel(1).split_parallel().axis(), in_split_axis);
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
@@ -234,14 +189,6 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_reduce_scatter")
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
-      // (*, P) -> (*, S0)
-      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      // CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
-
       cfg::ParallelDistribution* in_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       cfg::ParallelDistribution* out_distribution =
