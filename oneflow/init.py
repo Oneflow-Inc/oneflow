@@ -49,13 +49,14 @@ from oneflow.python.version import __version__
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 import oneflow.python.framework.session_util as session_util
-import oneflow.compatible.single_client
 
 del session_util
 
 import oneflow.python.framework.register_python_callback
 
-import oneflow.python_gen.__export_symbols__
+# import oneflow.python_gen.__export_symbols__
+
+# import oneflow.compatible.single_client.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
@@ -88,7 +89,7 @@ def _SyncOnMasterFn(is_multi_client, get_rank, sync):
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+# atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race

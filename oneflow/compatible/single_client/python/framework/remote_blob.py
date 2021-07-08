@@ -104,7 +104,9 @@ def with_distribute(self, distribute):
 
 
 def with_gradient_distribute(self, distribute):
-    return oneflow.compatible.single_client.parallel_cast(self, gradient_distribute=distribute)
+    return oneflow.compatible.single_client.parallel_cast(
+        self, gradient_distribute=distribute
+    )
 
 
 def get_lazy_shape_log_warning(self):

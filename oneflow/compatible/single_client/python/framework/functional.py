@@ -59,10 +59,22 @@ def RegisterFunctionalApis():
             func_name = s
             if s in _function_name_aliases:
                 func_name = _function_name_aliases[s]
-                setattr(oneflow.compatible.single_client.F, func_name, Function(func_name, f))
-                setattr(oneflow.compatible.single_client.experimental.F, func_name, Function(func_name, f))
+                setattr(
+                    oneflow.compatible.single_client.F,
+                    func_name,
+                    Function(func_name, f),
+                )
+                setattr(
+                    oneflow.compatible.single_client.experimental.F,
+                    func_name,
+                    Function(func_name, f),
+                )
             setattr(oneflow.compatible.single_client.F, s, Function(func_name, f))
-            setattr(oneflow.compatible.single_client.experimental.F, s, Function(func_name, f))
+            setattr(
+                oneflow.compatible.single_client.experimental.F,
+                s,
+                Function(func_name, f),
+            )
 
     del inspect
 

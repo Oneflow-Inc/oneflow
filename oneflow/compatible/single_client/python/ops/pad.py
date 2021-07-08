@@ -104,7 +104,9 @@ def pad(
         floating_constant_value = float(0)
         integral_constant_value = int(constant_value)
     return (
-        oneflow.compatible.single_client.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
+        oneflow.compatible.single_client.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Pad_")
+        )
         .Op("pad")
         .Input("x", [x])
         .Output("y")

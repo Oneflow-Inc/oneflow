@@ -337,7 +337,8 @@ class TestCase(unittest.TestCase):
                 )
                 os.remove(env_file.name)
             atexit.register(
-                oneflow.compatible.single_client.deprecated.delete_worker_of_multi_process, run_dir=run_dir
+                oneflow.compatible.single_client.deprecated.delete_worker_of_multi_process,
+                run_dir=run_dir,
             )
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
@@ -349,8 +350,12 @@ class TestCase(unittest.TestCase):
             _unittest_env_initilized = True
 
         oneflow.compatible.single_client.clear_default_session()
-        oneflow.compatible.single_client.enable_eager_execution(eager_execution_enabled())
-        oneflow.compatible.single_client.experimental.enable_typing_check(typing_check_enabled())
+        oneflow.compatible.single_client.enable_eager_execution(
+            eager_execution_enabled()
+        )
+        oneflow.compatible.single_client.experimental.enable_typing_check(
+            typing_check_enabled()
+        )
 
 
 def skip_unless(n, d):

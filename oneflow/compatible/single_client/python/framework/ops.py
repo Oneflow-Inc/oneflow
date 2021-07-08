@@ -75,7 +75,9 @@ def api_acc(
 def acc(one, max_acc_num, name=None):
     assert not oneflow.compatible.single_client.eager_execution_enabled()
     return (
-        oneflow.compatible.single_client.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
+        oneflow.compatible.single_client.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Acc_")
+        )
         .Op("acc")
         .Input("in", [one])
         .Output("out")

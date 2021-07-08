@@ -69,7 +69,9 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
     )
     if hierarchy is not None:
         hierarchy = tuple(hierarchy.dim())
-    with oneflow.compatible.single_client.scope.placement(device_tag, machine_device_ids, hierarchy):
+    with oneflow.compatible.single_client.scope.placement(
+        device_tag, machine_device_ids, hierarchy
+    ):
         interpret_util.Forward(op_conf)
     return ref
 

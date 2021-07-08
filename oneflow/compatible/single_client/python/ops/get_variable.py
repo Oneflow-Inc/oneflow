@@ -44,7 +44,9 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[oneflow.compatible.single_client.dtype] = oneflow.compatible.single_client.float32,
+    dtype: Optional[
+        oneflow.compatible.single_client.dtype
+    ] = oneflow.compatible.single_client.float32,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
