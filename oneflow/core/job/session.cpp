@@ -27,11 +27,9 @@ int64_t NewSessionId() {
 }
 
 ConfigProtoContext::ConfigProtoContext(const ConfigProto& config_proto)
-    : session_id_(config_proto.session_id()) {
-  Global<const IOConf>::SessionNew(session_id_, config_proto.io_conf());
-}
+    : session_id_(config_proto.session_id()) {}
 
-ConfigProtoContext::~ConfigProtoContext() { Global<const IOConf>::SessionDelete(session_id_); }
+ConfigProtoContext::~ConfigProtoContext() {}
 
 LogicalConfigProtoContext::LogicalConfigProtoContext(const std::string& config_proto_str) {
   ConfigProto config_proto;
