@@ -34,8 +34,8 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      bool has_bias = ctx->has_input("mirror", 0);
-      if (has_bias) {
+      bool has_mirror = ctx->has_input("mirror", 0);
+      if (has_mirror) {
         const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
 
         CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
@@ -69,8 +69,8 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer);
-      bool has_bias = ctx->has_input("mirror", 0);
-      if (has_bias) {
+      bool has_mirror = ctx->has_input("mirror", 0);
+      if (has_mirror) {
         const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
         CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
       }
@@ -99,8 +99,8 @@ REGISTER_NO_GRAD_USER_OP("crop_mirror_normalize_from_uint8")
     .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      bool has_bias = ctx->has_input("mirror", 0);
-      if (has_bias) {
+      bool has_mirror = ctx->has_input("mirror", 0);
+      if (has_mirror) {
         const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
         CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                         && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
@@ -139,8 +139,8 @@ REGISTER_NO_GRAD_USER_OP("crop_mirror_normalize_from_uint8")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8);
-      bool has_bias = ctx->has_input("mirror", 0);
-      if (has_bias) {
+      bool has_mirror = ctx->has_input("mirror", 0);
+      if (has_mirror) {
         const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
         CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
       }
