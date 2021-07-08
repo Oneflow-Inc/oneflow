@@ -175,7 +175,7 @@
     ```
     python3 -m oneflow --doctor
     ```
-  </details>
+ </details>
 
 ### Troubleshooting
 
