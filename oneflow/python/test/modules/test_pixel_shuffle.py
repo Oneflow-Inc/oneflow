@@ -46,13 +46,17 @@ def _np_pixel_shuffle_grad(input, h_factor, w_factor):
     return out
 
 
-def _test_pixel_shuffle_impl(test_case, device, shape, h_upscale_factor, w_upscale_factor):
+def _test_pixel_shuffle_impl(
+    test_case, device, shape, h_upscale_factor, w_upscale_factor
+):
     x = np.random.randn(*shape)
     input = flow.Tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
 
-    m = flow.nn.PixelShuffle(h_upscale_factor=h_upscale_factor, w_upscale_factor=w_upscale_factor)
+    m = flow.nn.PixelShuffle(
+        h_upscale_factor=h_upscale_factor, w_upscale_factor=w_upscale_factor
+    )
     m = m.to(device)
     of_out = m(input)
     np_out = _np_pixel_shuffle(x, h_upscale_factor, w_upscale_factor)

@@ -93,7 +93,7 @@ class PixelShufflev2(Module):
         self,
         upscale_factor: Optional[int] = None,
         h_upscale_factor: Optional[int] = None,
-        w_upscale_factor: Optional[int] = None
+        w_upscale_factor: Optional[int] = None,
     ) -> None:
         super().__init__()
 
