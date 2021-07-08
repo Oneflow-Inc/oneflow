@@ -76,7 +76,6 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
 
-  float src_scalar = ctx->Attr<float>("src_scalar");
   int32_t dim = ctx->Attr<int32_t>("dim");
 
   // check index.numaxes == src.num_axes == input/like.numaxes
@@ -98,19 +97,6 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
-  // is there a problem?
-  // user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-  // CHECK(like_arg_modifier != nullptr);
-  // like_arg_modifier->set_requires_grad(false);
-
-  // user_op::InputArgModifier* src_arg_modifier = GetInputArgModifierFn("src", 0);
-  // CHECK(src_arg_modifier != nullptr);
-  // src_arg_modifier->set_requires_grad(false);
-
-  // should be deleted
-  user_op::InputArgModifier* input_arg_modifier = GetInputArgModifierFn("input", 0);
-  CHECK(input_arg_modifier != nullptr);
-  input_arg_modifier->set_requires_grad(false);
 
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
@@ -191,7 +177,6 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
   const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-  const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0); // can be deleted
   if(input){
     CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
   }
@@ -250,8 +235,8 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
-        const auto op_src_grad_name = ctx->FwOp().op_name() + "_grad";                       \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                 \
+        const auto op_src_grad_name = ctx->FwOp().op_name() + "_src_grad";                       \
         ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
           return builder.OpTypeName("dim_gather")                                        \
               .InputBind("index", ctx->FwOp().input("index", 0))                         \
@@ -264,12 +249,26 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
                                   [&ctx, &op_src_grad_name]() -> const std::string& {        \
                                     return ctx->GetOp(op_src_grad_name).output("output", 0); \
                                   });                                                        \
+        const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
+        ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+          return builder.OpTypeName("dim_scatter_scalar_update")                                        \
+              .InputBind("index", ctx->FwOp().input("index", 0))                         \
+              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
+              .Output("output")                                                          \
+              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
+              .Attr("src_scalar", static_cast<float>(0.0))                             \
+              .Build();                                                                  \
+        });                                                                              \
+        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+                                  [&ctx, &op_input_grad_name]() -> const std::string& {        \
+                                    return ctx->GetOp(op_input_grad_name).output("output", 0); \
+                                  });                                                        \
       });
 
 #define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
       .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
-        const auto op_input_grad_name = ctx->FwOp().op_name() + "_grad";                       \
+        const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
         ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
           return builder.OpTypeName("dim_scatter_scalar_update")                                        \
               .InputBind("index", ctx->FwOp().input("index", 0))                         \
