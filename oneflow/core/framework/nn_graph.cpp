@@ -14,5 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/common/util.h"
+namespace oneflow {
 
-namespace oneflow {}
+const std::vector<std::string>& NNGraph::inputs_op_names() const { UNIMPLEMENTED(); }
+
+const std::vector<std::string>& NNGraph::outputs_op_names() const { UNIMPLEMENTED(); }
+
+}  // namespace oneflow
