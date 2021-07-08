@@ -1124,8 +1124,9 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     CHECK(!job_desc.Bool("__is_user_function__"));
     jobs.emplace_back(new Job(*job));
   };
-  if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
-    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+
+  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_legacy_model_io()) {
+    if (Global<ResourceDesc, ForSession>::Get()->resource().enable_model_io_v2()) {
       MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
     } else {
       MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
