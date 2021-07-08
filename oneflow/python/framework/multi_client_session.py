@@ -16,20 +16,38 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.session_context as session_ctx
 
-from oneflow.python.framework.session import Session
 
-
-class MultiClientSession(Session):
+class MultiClientSession(object):
     def __init__(self, sess_id):
-        super(self).__init__(sess_id)
+        self.is_inited_ = False
+        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         # self.context_ = oneflow._oneflow_internal.CreateMultiClientSessionContext(sess_id)
+        self.config_proto_ = self._make_config_proto()
 
-    def init(self):
-        # self.context_.InitGlobalObjects(self.config_proto)
+    def TryInit(self):
+        if not self.is_inited_:
+            # self.context_.InitGlobalObjects(self.config_proto)
+            self.is_inited_ = True
+
+    def Close(self):
         pass
 
-    def close(self):
-        pass
+    def __del__(self):
+        self.Close()
+
+    @property
+    def id(self):
+        return self.sess_.id
+
+    @property
+    def config_proto(self):
+        if self.config_proto_ is None:
+            self.config_proto_ = job_set_util.ConfigProto()
+        return self.config_proto_
+
+    def _make_config_proto(self):
+        config_proto = job_set_util.ConfigProto()
+        config_proto.session_id = self.id
+        return config_proto

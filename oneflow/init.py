@@ -48,9 +48,7 @@ from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
-import oneflow.python.framework.session_util as session_util
 
-del session_util
 
 import oneflow.python.framework.register_python_callback
 
@@ -66,15 +64,21 @@ register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.session_context as session_ctx
+from oneflow.python.framework.session_util import Session
+from oneflow.python.framework.multi_client_session import MultiClientSession
 
 
 if env_util.HasAllMultiClientEnvVars():
     env_util.env_init(True)
+    session_ctx.OpenDefaultSession(
+        MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+    )
 else:
     env_util.init_default_physical_env()
+    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 del env_util
-
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(is_multi_client, get_rank, sync):
