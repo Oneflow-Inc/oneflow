@@ -18,8 +18,8 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
-                       int32_t stride, const std::string& padding_type, int64_t* output_size,
-                       int32_t* padding_before, int32_t* padding_after) {
+                              int32_t stride, const std::string& padding_type, int64_t* output_size,
+                              int32_t* padding_before, int32_t* padding_after) {
   CHECK_GT_OR_RETURN(stride, 0);
   CHECK_GE_OR_RETURN(dilation_rate, 1);
 
@@ -45,8 +45,8 @@ Maybe<void> CalcOutAndPadding(int64_t input_size, int32_t filter_size, int32_t d
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                     int32_t* padding_small, int32_t* padding_large) {
+Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                            int32_t stride, int32_t* padding_small, int32_t* padding_large) {
   CHECK_GT_OR_RETURN(stride, 0);
   CHECK_GE_OR_RETURN(dilation_rate, 1);
 
@@ -59,8 +59,8 @@ Maybe<void> CalcSamePadding(int64_t input_size, int32_t filter_size, int32_t dil
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate, int32_t stride,
-                 int32_t padding_before, int64_t* output_size) {
+Maybe<void> CalcConvOut(int64_t input_size, int32_t filter_size, int32_t dilation_rate,
+                        int32_t stride, int32_t padding_before, int64_t* output_size) {
   CHECK_GT_OR_RETURN(stride, 0);
   CHECK_GE_OR_RETURN(dilation_rate, 1);
 

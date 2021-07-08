@@ -27,36 +27,36 @@ Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_a
 }
 
 }  // namespace
-//Check function name ???
+// Check function name ???
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const int32_t axis =
-        JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes()));
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  const int32_t axis =
+      JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes()));
 
-      auto dim_vec = in_shape.dim_vec();
-      dim_vec.insert(dim_vec.begin() + axis, 1);
-      *out_shape = Shape(dim_vec);
-      return Maybe<void>::Ok();
+  auto dim_vec = in_shape.dim_vec();
+  dim_vec.insert(dim_vec.begin() + axis, 1);
+  *out_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
-//Check function name ???
+// Check function name ???
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int32_t axis =
-          JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes()));
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const int32_t axis = JUST(
+      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes()));
 
-      auto dim_vec = in_tensor.shape().dim_vec();
-      FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), in_axis)
-            .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
+  auto dim_vec = in_tensor.shape().dim_vec();
+  FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), in_axis)
+        .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
 }
 
 REGISTER_USER_OP("expand_dims")
