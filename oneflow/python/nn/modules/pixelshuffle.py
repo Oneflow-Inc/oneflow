@@ -38,20 +38,31 @@ class PixelShufflev2(Module):
     by Shi et. al (2016) for more details.
 
     Args:
-        h_upscale_factor (int): factor to increase height spatial resolution by
-        w_upscale_factor (int): factor to increase width spatial resolution by
+        upscale_factor (int, optional): factor to increase spatial resolution by, only use when factors of height and width spatial are the same.
+
+        h_upscale_factor (int, optional): factor to increase height spatial resolution by, only one of h_upscale_factor and upscale_factor can be used.
+        w_upscale_factor (int, optional): factor to increase width spatial resolution by, only one of w_upscale_factor and upscale_factor can be used.
 
     Shape:
         - Input: :math:`(*, C_{in}, H_{in}, W_{in})`, where * is zero or more batch dimensions
         - Output: :math:`(*, C_{out}, H_{out}, W_{out})`, where
 
+    if use upscale_factor:
+
+    .. math::
+        C_{out} = C_{in} \div \text{h_upscale_factor}^2
+
+        H_{out} = H_{in} \times \text{upscale_factor}
+
+        W_{out} = W_{in} \times \text{upscale_factor}
+
+    if use h_upscale_factor and w_upscale_factor:
+
     .. math::
         C_{out} = C_{in} \div \text{h_upscale_factor} \div \text{w_upscale_factor}
 
-    .. math::
         H_{out} = H_{in} \times \text{h_upscale_factor}
 
-    .. math::
         W_{out} = W_{in} \times \text{w_upscale_factor}
 
     For example:
@@ -62,7 +73,7 @@ class PixelShufflev2(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> m = flow.nn.PixelShuffle(h_upscale_factor=2, w_upscale_factor=2)
+        >>> m = flow.nn.PixelShuffle(upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
         >>> y = m(x)
         >>> print(y.size())
@@ -78,10 +89,25 @@ class PixelShufflev2(Module):
         https://arxiv.org/abs/1609.05158
     """
 
-    def __init__(self, h_upscale_factor: int, w_upscale_factor: Optional[int] = None) -> None:
+    def __init__(
+        self,
+        upscale_factor: Optional[int] = None,
+        h_upscale_factor: Optional[int] = None,
+        w_upscale_factor: Optional[int] = None
+    ) -> None:
         super().__init__()
-        if w_upscale_factor is None:
-            w_upscale_factor = h_upscale_factor
+
+        if upscale_factor is None:
+            assert (
+                h_upscale_factor is not None and w_upscale_factor is not None
+            ), "h_upscale_factor and w_upscale_factor should be None if use upscale_factor"
+        else:
+            assert (
+                h_upscale_factor is None and w_upscale_factor is None
+            ), "upscale_factor should be None if use h_upscale_factor and w_upscale_factor"
+            h_upscale_factor = upscale_factor
+            w_upscale_factor = upscale_factor
+
         assert (
             h_upscale_factor > 0 and w_upscale_factor > 0
         ), "The scale factor of height and width must larger than zero"
@@ -94,7 +120,7 @@ class PixelShufflev2(Module):
         _batch, _channel, _height, _width = input.shape
         assert (
             _channel % (self.h_upscale_factor * self.w_upscale_factor) == 0
-        ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
+        ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
 
         _new_c = int(_channel / (self.h_upscale_factor * self.w_upscale_factor))
 
