@@ -23,7 +23,6 @@ REGISTER_USER_OP("add_n")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& in_0 = ctx->InputTensorDesc("in", 0);
       auto* out = ctx->OutputTensorDesc("out", 0);
-      // CHECK_NOTNULL_OR_RETURN(in_0);
       CHECK_NOTNULL_OR_RETURN(out);
       for (const auto& pair : ctx->inputs()) {
         const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
@@ -44,7 +43,6 @@ REGISTER_USER_OP("add_n")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& in_0 = ctx->InputTensorDesc("in", 0);
       auto* out = ctx->OutputTensorDesc("out", 0);
-      // CHECK_NOTNULL_OR_RETURN(in_0);
       CHECK_NOTNULL_OR_RETURN(out);
       for (const auto& pair : ctx->inputs()) {
         const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
