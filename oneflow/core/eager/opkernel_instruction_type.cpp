@@ -512,7 +512,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      JUST(blob_object->InitBlob());
+      JUST(blob_object->TryInitBlob());
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();

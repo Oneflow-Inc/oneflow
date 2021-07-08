@@ -13,12 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/nn_graph_if.h"
-#include "oneflow/core/common/util.h"
+#ifndef ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
+#define ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
+
+#include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/framework/framework.h"
+
 namespace oneflow {
 
-const std::vector<std::string>& NNGraph::inputs_op_names() const { UNIMPLEMENTED(); }
+class BernoulliKernelState : public user_op::OpKernelState {
+ public:
+  explicit BernoulliKernelState(const std::shared_ptr<one::Generator>& generator)
+      : generator_(generator) {}
 
-const std::vector<std::string>& NNGraph::outputs_op_names() const { UNIMPLEMENTED(); }
+  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
+
+ private:
+  std::shared_ptr<one::Generator> generator_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNEL_BERNOULLI_KERNEL_H_
