@@ -33,7 +33,7 @@ class INTERPOLATE(Module):
         size: Optional[Union[int, Tuple[int, ...]]] = None,
         scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
         mode: str = "nearest",
-        align_corners: Optional[bool] = None
+        align_corners: Optional[bool] = None,
     ):
         super().__init__()
         self.size = size
@@ -41,13 +41,13 @@ class INTERPOLATE(Module):
             self.scale_factor = tuple(float(factor) for factor in scale_factor)
         else:
             self.scale_factor = float(scale_factor) if scale_factor else None
-        
+
         if mode in ("nearest", "area") and align_corners is not None:
             raise ValueError(
                 "align_corners option can only be set with the "
                 "interpolating modes: linear | bilinear | bicubic | trilinear"
             )
-        
+
         self.mode = mode
         if align_corners == None:
             align_corners = False
@@ -81,7 +81,8 @@ class INTERPOLATE(Module):
             if isinstance(self.size, (list, tuple)):
                 if len(self.size) != dim:
                     raise ValueError(
-                        "size shape must match input shape. " "Input is {}D, size is {}".format(dim, len(self.size))
+                        "size shape must match input shape. "
+                        "Input is {}D, size is {}".format(dim, len(self.size))
                     )
                 output_size = self.size
             else:
@@ -93,28 +94,66 @@ class INTERPOLATE(Module):
                 if len(self.scale_factor) != dim:
                     raise ValueError(
                         "scale_factor shape must match input shape. "
-                        "Input is {}D, scale_factor is {}".format(dim, len(self.scale_factor))
+                        "Input is {}D, scale_factor is {}".format(
+                            dim, len(self.scale_factor)
+                        )
                     )
                 scale_factors = self.scale_factor
             else:
                 scale_factors = [self.scale_factor for _ in range(dim)]
         else:
             raise ValueError("either size or scale_factor should be defined")
+
+        if len(x.shape()) == 3 and self.mode == "nearest":
+            return flow.F.upsample_nearest_1d(x, scale_factor=scale_factors[0])
         
+        if len(x.shape()) == 4 and self.mode == "nearest":
+            flow.F.upsample(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                align_corners=self.align_corners,
+                interpolation=self.mode,
+            )
+        
+        if len(x.shape()) == 5 and self.mode == "nearest":
+            return flow.F.upsample_nearest_3d(x, 
+                depth_scale=scale_factors[0],
+                height_scale=scale_factors[1],
+                width_scale=scale_factors[2],
+                )
+        
+        # TODO(zxy) Add adaptive_avg_pool op
+
+        if self.mode == "area":
+            raise NotImplementedError("adaptive_avg_pool1d not impleted now!")
+        
+
         if len(x.shape()) == 3 and self.mode == "linear":
             assert self.align_corners is not None
-            return flow.F.upsample_linear_1d(x, scale_factor=scale_factors[0], align_corners=self.align_corners)
-        
+            return flow.F.upsample_linear_1d(
+                x, scale_factor=scale_factors[0], align_corners=self.align_corners
+            )
+
         if len(x.shape()) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
-            return flow.F.upsample(x, height_scale=scale_factors[0], width_scale=scale_factors[1], align_corners=self.align_corners, interpolation=self.mode)
+            return flow.F.upsample(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                align_corners=self.align_corners,
+                interpolation=self.mode,
+            )
 
         if len(x.shape()) == 5 and self.mode == "trilinear":
             assert self.align_corners is not None
-            return flow.F.UpsampleTrilinear3DFunctor(x, depth_scale=scale_factors[0], height_scale=scale_factors[1], width_scale=scale_factors[2], align_corners=self.align_corners)
-        
-        
-        
+            return flow.F.UpsampleTrilinear3DFunctor(
+                x,
+                depth_scale=scale_factors[0],
+                height_scale=scale_factors[1],
+                width_scale=scale_factors[2],
+                align_corners=self.align_corners,
+            )
 
 
 if __name__ == "__main__":

@@ -402,10 +402,11 @@ class UpsampleFunctor {
 
 class UpsampleLinear1DFunctor {
  public:
-  UpsampleLinear1DFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_linear_1d").Input("x").Output("y").Build()); }
+  UpsampleLinear1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_linear_1d").Input("x").Output("y").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
-                           const bool& align_corners,
-                           const std::string& data_format) const {
+                           const bool& align_corners, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
@@ -419,7 +420,9 @@ class UpsampleLinear1DFunctor {
 
 class UpsampleNearest1DFunctor {
  public:
-  UpsampleNearest1DFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_1d").Input("x").Output("y").Build()); }
+  UpsampleNearest1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_1d").Input("x").Output("y").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
@@ -434,7 +437,9 @@ class UpsampleNearest1DFunctor {
 
 class UpsampleBicubic2DFunctor {
  public:
-  UpsampleBicubic2DFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_bicubic_2d").Input("x").Output("y").Build()); }
+  UpsampleBicubic2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_bicubic_2d").Input("x").Output("y").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
@@ -452,9 +457,11 @@ class UpsampleBicubic2DFunctor {
 
 class UpsampleNearest3DFunctor {
  public:
-  UpsampleNearest3DFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_3d").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale, const float& height_scale,
-                           const float& width_scale,
+  UpsampleNearest3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_3d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
@@ -470,10 +477,12 @@ class UpsampleNearest3DFunctor {
 
 class UpsampleTrilinear3DFunctor {
  public:
-  UpsampleTrilinear3DFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample_trilinear_3d").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale, const float& height_scale,
-                           const float& width_scale, const bool& align_corners,
-                           const std::string& data_format) const {
+  UpsampleTrilinear3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_trilinear_3d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
+                           const bool& align_corners, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
     JUST(attrs.SetAttr<float>("height_scale", height_scale));

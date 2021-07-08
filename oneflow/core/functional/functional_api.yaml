@@ -439,7 +439,7 @@
 
 - name: "upsample_nearest_1d"
   signature:
-    "Tensor UpsampleNearest1DFunctor(Tensor x, *, Float height_scale, Float width_scale, 
+    "Tensor UpsampleNearest1DFunctor(Tensor x, *, Float scale_factor,
                      String data_format=\"channels_first\")"
   bind_python: True  
 
