@@ -104,7 +104,7 @@
   - In the root directory of OneFlow source code, run:
 
     ```
-    python3 docker/package/manylinux/build_wheel.py
+    python3 docker/package/manylinux/build_wheel.py --python_version=3.6
     ```
 
     This should produce `.whl` files in the directory `wheelhouse`
