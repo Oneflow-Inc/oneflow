@@ -23,14 +23,14 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-static void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
-                                       NdIndexOffsetHelper<int64_t, 5> in_helper,
-                                       NdIndexOffsetHelper<int64_t, 5> out_helper,
-                                       const int64_t in_depth, const int64_t in_height,
-                                       const int64_t in_width, const float scale_d,
-                                       const float scale_h, const float scale_w,
-                                       const bool align_corners, T* out_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
+__global__ void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
+                                           NdIndexOffsetHelper<int64_t, 5> in_helper,
+                                           NdIndexOffsetHelper<int64_t, 5> out_helper,
+                                           const int64_t in_depth, const int64_t in_height,
+                                           const int64_t in_width, const float scale_d,
+                                           const float scale_h, const float scale_w,
+                                           const bool align_corners, T* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, d, h, w;
     out_helper.OffsetToNdIndex(index, n, c, d, h, w);
     const T rdepth = GetAreaPixelScale(in_depth, d, align_corners, scale_d);
@@ -73,14 +73,14 @@ static void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_dptr,
 }
 
 template<typename T>
-static void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr,
-                                        NdIndexOffsetHelper<int64_t, 5> dy_helper,
-                                        NdIndexOffsetHelper<int64_t, 5> dx_helper,
-                                        const int64_t in_depth, const int64_t in_height,
-                                        const int64_t in_width, const float scale_d,
-                                        const float scale_h, const float scale_w,
-                                        const bool align_corners, T* dx_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
+__global__ void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr,
+                                            NdIndexOffsetHelper<int64_t, 5> dy_helper,
+                                            NdIndexOffsetHelper<int64_t, 5> dx_helper,
+                                            const int64_t in_depth, const int64_t in_height,
+                                            const int64_t in_width, const float scale_d,
+                                            const float scale_h, const float scale_w,
+                                            const bool align_corners, T* dx_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
     const T rdepth = GetAreaPixelScale(in_depth, d, align_corners, scale_d);
@@ -123,10 +123,10 @@ static void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_dptr
 }  // namespace
 
 template<typename T>
-class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
+class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleTrilinear3DCPUKernel() = default;
-  ~UpsampleTrilinear3DCPUKernel() = default;
+  UpsampleTrilinear3DGPUKernel() = default;
+  ~UpsampleTrilinear3DGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -143,19 +143,19 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
                                                y_blob->shape().At(2), y_blob->shape().At(3),
                                                y_blob->shape().At(4));
-    UpsampleTrilinear3DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
-                                  x_blob->shape().At(2), x_blob->shape().At(3),
-                                  x_blob->shape().At(4), 1.f / depth_scale, 1.f / height_scale,
-                                  1.f / width_scale, align_corners, y_blob->mut_dptr<T>());
+    RUN_CUDA_KERNEL((UpsampleTrilinear3DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
+                    x_blob->shape().At(3), x_blob->shape().At(4), 1.f / depth_scale,
+                    1.f / height_scale, 1.f / width_scale, align_corners, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
+class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleTrilinearGrad3DCPUKernel() = default;
-  ~UpsampleTrilinearGrad3DCPUKernel() = default;
+  UpsampleTrilinearGrad3DGPUKernel() = default;
+  ~UpsampleTrilinearGrad3DGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -175,25 +175,25 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
                                               dx_blob->shape().At(2), dx_blob->shape().At(3),
                                               dx_blob->shape().At(4));
-    UpsampleTrilinear3DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
-                                   dx_blob->shape().At(2), dx_blob->shape().At(3),
-                                   dx_blob->shape().At(4), 1.f / depth_scale, 1.f / height_scale,
-                                   1.f / width_scale, align_corners, dx_blob->mut_dptr<T>());
+    RUN_CUDA_KERNEL((UpsampleTrilinear3DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
+                    dx_blob->shape().At(3), dx_blob->shape().At(4), 1.f / depth_scale,
+                    1.f / height_scale, 1.f / width_scale, align_corners, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(dtype)                                   \
+#define REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("upsample_trilinear_3d")                                        \
-      .SetCreateFn<UpsampleTrilinear3DCPUKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                   \
-      .SetCreateFn<UpsampleTrilinearGrad3DCPUKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
+      .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(float)
-REGISTER_UPSAMPTRILINEAR3D_CPU_KERNEL(double)
+REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(float)
+REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(double)
 
 }  // namespace oneflow
