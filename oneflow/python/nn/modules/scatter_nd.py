@@ -20,41 +20,18 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
-from typing import Optional, List, Tuple
-
-
-class Scatter_nd(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.scatter_nd_op = (
-            flow.builtin_op("scatter_nd").Input("indices").Input("updates").Output("out").Build()
-        )
-
-    def forward(self, indices, updates):
-
-        return self.scatter_nd_op(input,indices)[0]
+from typing import Optional, List, Tuple, Union
 
 
 @oneflow_export("scatter_nd")
 @experimental_api
-def scatter_nd__op(indices, updates):
-    r"""Gathers values along an axis specified by `dim`.
-
-    For a 3-D tensor the output is specified by:
-
-        out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
-        out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
-        out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
-
-    :attr:`input` and :attr:`index` must have the same number of dimensions.
-    It is also required that ``index.size(d) <= input.size(d)`` for all
-    dimensions ``d != dim``.  :attr:`out` will have the same shape as :attr:`index`.
-    Note that ``input`` and ``index`` do not broadcast against each other.
+class Scatter_nd(Module):
+    r"""This operator inserts the elements in `updates` according to the `indices` and create a new Blob.
 
     Args:
-        input (Tensor): the source tensor
-        dim (int): the axis along which to index
-        index (LongTensor): the indices of elements to gather
+        indices: The indice of `updates`. Its type should be `flow.int`.
+        updates: The update Blob.
+        shape: The constant tensor shape, the constant tensor elements are all zero.
 
     For example:
 
@@ -64,14 +41,32 @@ def scatter_nd__op(indices, updates):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> input = np.random.randn(3, 4, 3, 5)
-        >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
-        >>> output.shape
-        flow.Size([3, 4, 3, 5])
+        >>> scatter_nd_layer = flow.scatter_nd([8])
+        >>> indices = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
+        >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
+        >>> out = scatter_nd_layer(indices,update)
+        >>> print(out)
+        tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
 
     """
-    return Scatter_nd()(indices, updates)
+    def __init__(self, shape: Union[list]):
+        super().__init__()
+        if not isinstance(shape, list):
+            raise ValueError("shape must be list!")
+        self.shape = shape
+
+    def forward(self, indices, updates):
+        self._op = (
+            flow.builtin_op("scatter_nd")
+            .Input("indices")
+            .Input("updates")
+            .Output("out")
+            .Attr("shape",self.shape)
+            .Build()
+        )
+
+        res = self._op(indices,updates)[0]
+        return res
 
 
 if __name__ == "__main__":

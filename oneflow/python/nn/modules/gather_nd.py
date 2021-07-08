@@ -38,23 +38,19 @@ class Gather_nd(Module):
 @oneflow_export("gather_nd")
 @experimental_api
 def gather_nd_op(input, indices):
-    r"""Gathers values along an axis specified by `dim`.
+    r"""This operator is a high-dimensional extension of `gather`, `indices` is a K-dimensional
+    tensor, which is regarded as a index of input Blob `input`.
 
-    For a 3-D tensor the output is specified by:
+    Each element defines a slice of `input`:
 
-        out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
-        out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
-        out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+    .. math::
 
-    :attr:`input` and :attr:`index` must have the same number of dimensions.
-    It is also required that ``index.size(d) <= input.size(d)`` for all
-    dimensions ``d != dim``.  :attr:`out` will have the same shape as :attr:`index`.
-    Note that ``input`` and ``index`` do not broadcast against each other.
+        output[(i_0,i_1,...,i_{K-2})] = input[indices(i_{0},i_{1},...,i_{K-2})]
+
 
     Args:
-        input (Tensor): the source tensor
-        dim (int): the axis along which to index
-        index (LongTensor): the indices of elements to gather
+        input: The input Blob.
+        indices: The slice indices.
 
     For example:
 
@@ -64,11 +60,18 @@ def gather_nd_op(input, indices):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> input = np.random.randn(3, 4, 3, 5)
-        >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
-        >>> output.shape
-        flow.Size([3, 4, 3, 5])
+        >>> input = flow.Tensor(np.array([[1, 2,3], [4, 5,6],[7,8,9]]), dtype=flow.float)
+        >>> indices_1 = flow.Tensor(np.array([[0], [2]]), dtype=flow.int)
+        >>> out_1 = flow.gather_nd(input,indices_1)
+        >>> print(out_1.shape)
+        flow.Size([2, 3])
+        >>> print(out_1)
+        tensor([[1., 2., 3.],
+                [7., 8., 9.]], dtype=oneflow.float32)
+        >>> indices_2 = flow.Tensor(np.array([[0,2], [2,1]]), dtype=flow.int)
+        >>> out_2 = flow.gather_nd(input,indices_2)
+        >>> print(out_2)
+        tensor([3., 8.], dtype=oneflow.float32)
 
     """
     return Gather_nd()(input,indices)
