@@ -27,7 +27,7 @@ Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_a
 }
 
 }  // namespace
-// Check function name ???
+
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out_shape = ctx->OutputShape("out", 0);
@@ -39,7 +39,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-// Check function name ???
+
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const int32_t axis = JUST(

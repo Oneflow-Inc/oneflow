@@ -83,10 +83,7 @@ Maybe<void> ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeCo
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   size_t out_bytes_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr<T>(), 0, out_bytes_size);
-  if (indices->shape().elem_cnt() == 0) {
-    return Maybe<void>::Ok();
-    ;
-  }
+  if (indices->shape().elem_cnt() == 0) { return Maybe<void>::Ok(); }
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());

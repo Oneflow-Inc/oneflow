@@ -361,7 +361,6 @@ class TestUserOpAttrAutoTypeKernel final : public user_op::OpKernel {
  private:
   Maybe<void> Compute(user_op::KernelComputeContext* ctx) const override {
     return Maybe<void>::Ok();
-    ;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

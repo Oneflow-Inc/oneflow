@@ -37,7 +37,7 @@ Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
 oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   return x_data_type == DataType::kFloat16 ? DataType::kFloat : x_data_type;
 }
-// Check function name ???
+
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
@@ -71,7 +71,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   *inv_variance = *mean;
   return Maybe<void>::Ok();
 }
-// Check function name ???
+
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   int64_t begin_norm_axis =
