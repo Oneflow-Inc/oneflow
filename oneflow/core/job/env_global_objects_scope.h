@@ -31,15 +31,15 @@ class EnvGlobalObjectsScope final {
   EnvGlobalObjectsScope() : is_default_physical_env_(Error::ValueError("Not initialized")) {}
   ~EnvGlobalObjectsScope();
 
-  Maybe<void> Init(const EnvProto& env_proto);
+  Maybe<void> Init(const EnvProto& env_proto, bool is_multi_client);
   const Maybe<bool>& is_default_physical_env() const { return is_default_physical_env_; }
 
   const std::shared_ptr<const ParallelDesc>& MutParallelDesc4Device(const Device& device);
 
  private:
+  std::mutex mutex_;
   Maybe<bool> is_default_physical_env_;
   HashMap<Device, std::shared_ptr<const ParallelDesc>> device2parallel_desc_;
-  std::thread::id thread_id_;
 };
 
 }  // namespace oneflow

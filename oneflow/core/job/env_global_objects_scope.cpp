@@ -87,8 +87,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 
 }  // namespace
 
-Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  thread_id_ = std::this_thread::get_id();
+Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto, bool is_multi_client) {
   is_default_physical_env_ = env_proto.is_default_physical_env();
   InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
@@ -96,6 +95,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  Global<ProcessCtx>::Get()->set_is_multi_client(is_multi_client);
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -143,16 +143,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
     Global<EpollCommNet>::New();
     Global<Transport>::New();
+#endif  // __linux__
   }
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
+#endif  // __linux__
   }
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
@@ -179,8 +183,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 
 const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
     const Device& device) {
-  CHECK(thread_id_ == std::this_thread::get_id());
   {
+    const std::lock_guard<std::mutex> lock(mutex_);
     const auto& iter = device2parallel_desc_.find(device);
     if (iter != device2parallel_desc_.end()) { return iter->second; }
   }
@@ -191,7 +195,11 @@ const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDes
   parallel_conf.add_device_name(machine_device_id);
   std::shared_ptr<const ParallelDesc> parallel_desc =
       std::make_shared<const ParallelDesc>(parallel_conf);
-  return device2parallel_desc_.emplace(device, parallel_desc).first->second;
+  {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    device2parallel_desc_.emplace(device, parallel_desc);
+  }
+  return device2parallel_desc_.at(device);
 }
 
 }  // namespace oneflow

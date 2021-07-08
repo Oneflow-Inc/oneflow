@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 class Shape;
@@ -33,6 +34,7 @@ class AttrValue;
 namespace one {
 class Tensor;
 class TensorTuple;
+class Generator;
 
 namespace functional {
 class Scalar;
@@ -75,10 +77,18 @@ enum ValueType {
   kATTR_MAP,
   kDTYPE,
   kSHAPE,
+  kGENERATOR,
+  kGENERATOR_REF,
+  kGENERATOR_MAYBE,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
   template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value, int>::type = 0> \
+  inline ValueType ValueTypeOf() {                                                               \
+    return value_type;                                                                           \
+  }                                                                                              \
+  template<typename T,                                                                           \
+           typename std::enable_if<std::is_same<T, Optional<cpp_type>>::value, int>::type = 0>   \
   inline ValueType ValueTypeOf() {                                                               \
     return value_type;                                                                           \
   }
@@ -116,6 +126,9 @@ VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
 VALUE_TYPE_OF_IMPL(DataType, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
+VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
+VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 
 #undef VALUE_TYPE_OF_IMPL
 

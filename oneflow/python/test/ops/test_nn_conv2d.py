@@ -197,7 +197,6 @@ class TestNnConv2d(flow.unittest.TestCase):
             compare_with_tensorflow(*arg)
 
     def test_cpu3(test_case):
-        return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]

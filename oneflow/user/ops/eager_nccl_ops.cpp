@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("eager_nccl_all_reduce")
+REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")

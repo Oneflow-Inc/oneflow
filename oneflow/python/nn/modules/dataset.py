@@ -25,6 +25,8 @@ from oneflow.python.nn.modules.utils import (
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple, Sequence, Union
+import random
+import sys
 import traceback
 
 
@@ -454,3 +456,103 @@ def get_ofrecord_handle(
         shuffle_after_epoch,
         name,
     )()
+
+
+@oneflow_export("nn.image.decode")
+@experimental_api
+class ImageDecode(Module):
+    def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_decode")
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("data_type", dtype)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+@oneflow_export("nn.image.normalize")
+@experimental_api
+class ImageNormalize(Module):
+    def __init__(self, std: Sequence[float], mean: Sequence[float]):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_normalize")
+            .Input("in")
+            .Output("out")
+            .Attr("std", std)
+            .Attr("mean", mean)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+@oneflow_export("nn.COCOReader")
+@experimental_api
+class COCOReader(Module):
+    def __init__(
+        self,
+        annotation_file: str,
+        image_dir: str,
+        batch_size: int,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        group_by_aspect_ratio: bool = True,
+        remove_images_without_annotations: bool = True,
+        stride_partition: bool = True,
+    ):
+        super().__init__()
+        if random_seed is None:
+            random_seed = random.randrange(sys.maxsize)
+        self._op = (
+            flow.builtin_op("COCOReader")
+            .Output("image")
+            .Output("image_id")
+            .Output("image_size")
+            .Output("gt_bbox")
+            .Output("gt_label")
+            .Output("gt_segm")
+            .Output("gt_segm_index")
+            .Attr("session_id", flow.current_scope().session_id)
+            .Attr("annotation_file", annotation_file)
+            .Attr("image_dir", image_dir)
+            .Attr("batch_size", batch_size)
+            .Attr("shuffle_after_epoch", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("group_by_ratio", group_by_aspect_ratio)
+            .Attr(
+                "remove_images_without_annotations", remove_images_without_annotations
+            )
+            .Attr("stride_partition", stride_partition)
+            .Build()
+        )
+
+    def forward(self):
+        res = self._op()
+        return res
+
+
+@oneflow_export("nn.image.batch_align")
+@experimental_api
+class ImageBatchAlign(Module):
+    def __init__(self, shape: Sequence[int], dtype: flow.dtype, alignment: int):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_batch_align")
+            .Input("in")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("data_type", dtype)
+            .Attr("alignment", alignment)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]

@@ -40,7 +40,6 @@ class CommNet {
   // we can use this token to use the "Read"
   virtual void* RegisterMemory(void* ptr, size_t byte_size) = 0;
   virtual void UnRegisterMemory(void* token) = 0;
-  virtual void RegisterMemoryDone() = 0;
 
   // Stream
   void* NewActorReadId();

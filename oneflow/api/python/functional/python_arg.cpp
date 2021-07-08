@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/scalar.h"
 
 namespace py = pybind11;
@@ -68,6 +69,11 @@ Maybe<Scalar> PythonArg::ObjectAs<Scalar>() const {
 template<>
 Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
   return detail::cast<std::shared_ptr<one::Tensor>>(Borrow());
+}
+
+template<>
+Maybe<one::Tensor> PythonArg::ObjectAs<one::Tensor>() const {
+  return *JUST(detail::cast<std::shared_ptr<one::Tensor>>(Borrow()));
 }
 
 template<>
@@ -148,6 +154,17 @@ Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
     UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to Shape from "
                                 << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
+}
+
+template<>
+Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()
+    const {
+  return detail::cast<std::shared_ptr<one::Generator>>(Borrow());
+}
+
+template<>
+Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
+  return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
 }
 
 }  // namespace functional

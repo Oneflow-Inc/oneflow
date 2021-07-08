@@ -116,6 +116,8 @@ class LogicalSliceAssign(Module):
         self.step = step
 
     def forward(self, x, update):
+        if update.dtype != x.dtype:
+            update = update.to(dtype=x.dtype)
         return flow.F.logical_slice_assign(
             x, update, start=self.start, stop=self.stop, step=self.step
         )
@@ -143,6 +145,11 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+    """
+    """[summary]
+
+    Returns:
+        [type]: [description]
     """
     start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)

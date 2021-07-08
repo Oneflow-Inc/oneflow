@@ -20,14 +20,17 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 
 namespace one {
 
 /*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, DataType dtype,
-    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
+    const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
+    bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
@@ -45,6 +48,17 @@ namespace one {
   }
 }
 
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
+    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
+  const auto& blob_desc = eager_blob_object->blob_desc();
+  const auto& tensor_meta =
+      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
+  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
+  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
+  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
+}
+
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
@@ -60,6 +74,21 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
 
 Maybe<MirroredTensor> MirroredTensor::api_detach() const {
   return std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+}
+
+Maybe<Tensor> MirroredTensor::clone() const {
+  const auto& device_type = JUST(this->device())->type();
+  int64_t device_id = JUST(this->device())->device_id();
+  std::shared_ptr<OpExpr> copy_op_ = JUST(one::OpBuilder("copy")
+                                              .Input("in", 1)
+                                              .Attr("device_type", device_type)
+                                              .Attr("device_id", device_id)
+                                              .Output("out", 1)
+                                              .Build());
+  std::shared_ptr<MirroredTensor> input =
+      std::const_pointer_cast<MirroredTensor>(shared_from_this());
+  const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
+  return output;
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(

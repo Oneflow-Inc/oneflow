@@ -20,7 +20,7 @@ for CHUNK in 1
 do
 	export ONEFLOW_TEST_DEVICE_NUM=${CHUNK}
     python3 $src_dir/ci/test/parallel_run.py \
-        --gpu_num=${gpu_num} \
+        --gpu_num="${gpu_num}" \
         --dir=test/ops \
         --timeout=1 \
         --verbose \

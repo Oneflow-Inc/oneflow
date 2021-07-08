@@ -51,6 +51,7 @@ class Function:
 def RegisterFunctionalApis():
     import inspect
     import oneflow.F
+    import oneflow.experimental.F
 
     for s in dir(oneflow._oneflow_internal.F):
         f = getattr(oneflow._oneflow_internal.F, s)
@@ -59,7 +60,9 @@ def RegisterFunctionalApis():
             if s in _function_name_aliases:
                 func_name = _function_name_aliases[s]
                 setattr(oneflow.F, func_name, Function(func_name, f))
+                setattr(oneflow.experimental.F, func_name, Function(func_name, f))
             setattr(oneflow.F, s, Function(func_name, f))
+            setattr(oneflow.experimental.F, s, Function(func_name, f))
 
     del inspect
 

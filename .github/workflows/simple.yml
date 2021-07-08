@@ -1,7 +1,9 @@
 name: Simple CI
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [review_requested]
+    branches:
+      - "*"
   push:
     branches:
       - master
@@ -22,22 +24,30 @@ jobs:
           access_token: ${{ github.token }}
   hosted:
     name: CPU-only
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
     strategy:
       fail-fast: false
+      max-parallel: 3
       matrix:
-        test_suite: ["mac", "ubuntu"]
+        test_suite: ["conda", "mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
         cmake_build_type: ["Debug", "Release"]
         build_shared_libs: ["ON", "OFF"]
         include:
+          - test_suite: conda
+            os: "ubuntu-20.04"
+            make_concurrency: 2
           - test_suite: mac
             os: "macos-10.15"
             make_concurrency: 2
           - test_suite: ubuntu
             os: "ubuntu-20.04"
             make_concurrency: 2
+        exclude:
+          - test_suite: conda
+            cmake_generator: "Ninja"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -46,14 +56,12 @@ jobs:
         if: matrix.test_suite == 'mac'
         run: |
           brew install nasm ninja
-        shell: bash
       - name: Install dependencies (apt)
         if: matrix.test_suite == 'ubuntu'
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
-        shell: bash
       - name: Cache pip (Linux)
-        if: startsWith(runner.os, 'Linux')
+        if: startsWith(runner.os, 'Linux') && matrix.test_suite != 'conda'
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
@@ -65,10 +73,27 @@ jobs:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies (pip)
+        if: matrix.test_suite != 'conda'
         run: |
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
-        shell: bash
+      - name: Download conda environment.yml
+        if: matrix.test_suite == 'conda'
+        run: |
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/5b985c863ef73fc3f3b597289fdcf740d52cf71c/dev/gcc7/environment.yml
+      - uses: conda-incubator/setup-miniconda@v2
+        if: matrix.test_suite == 'conda'
+        name: Setup conda
+        with:
+          activate-environment: oneflow-dev-gcc7
+          environment-file: environment.yml
+          python-version: 3.6
+          auto-activate-base: false
+      - name: Set environment variables (conda)
+        if: matrix.test_suite == 'conda'
+        run: |
+          conda env config vars set CXXFLAGS="-fPIC"
+        shell: bash -l {0}
       - name: Set environment variables
         run: |
           set -x
@@ -78,10 +103,12 @@ jobs:
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
+          cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
-        shell: bash
+        shell: bash -l {0}
       - name: Build (third party)
-        if: startsWith(runner.os, 'Linux')
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           set -x
           mkdir -p build-third_party
@@ -89,52 +116,69 @@ jobs:
           cd build-third_party
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j $(nproc)
-        shell: bash
+        shell: bash -l {0}
       - name: Build (of_ccobj)
-        if: startsWith(runner.os, 'Linux')
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
-        shell: bash
+        shell: bash -l {0}
       - name: Build (oneflow_internal)
-        if: startsWith(runner.os, 'Linux')
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
-        shell: bash
+        shell: bash -l {0}
       - name: Build (oneflow_py)
-        if: startsWith(runner.os, 'Linux')
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
-        shell: bash
-      - name: Build (ALL)
-        if: startsWith(runner.os, 'Linux')
+        shell: bash -l {0}
+      - name: Build (oneflow_testexe)
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }}
-        shell: bash
-      - name: Exe test
-        if: startsWith(runner.os, 'Linux')
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
+        shell: bash -l {0}
+      - name: Build (ALL)
+        if: always()
+        continue-on-error: ${{ startsWith(runner.os, 'macOS') && matrix.cmake_generator == 'Ninja' && matrix.build_shared_libs == 'ON' }}
         run: |
           mkdir -p build
           cd build
-          ./bin/oneflow_testexe
-        shell: bash
-      - name: Op test
-        if: startsWith(runner.os, 'Linux')
+          cmake .. ${{ env.cmake_flags }}
+          cmake --build . -j ${{ matrix.make_concurrency }}
+        shell: bash -l {0}
+      - name: Exe test
+        if: always()
+        continue-on-error: true
         run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
+          mkdir -p build
+          cd build
+          ./bin/oneflow_testexe
+        shell: bash -l {0}
+      - name: Op test
+        if: always()
+        continue-on-error: true
+        run: |
+          ulimit -c
+          ulimit -c unlimited
+          ulimit -c
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
-        shell: bash
+        shell: bash -l {0}
       - name: "Tar logs"
         if: always()
         run: |

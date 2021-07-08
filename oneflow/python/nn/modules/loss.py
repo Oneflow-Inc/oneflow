@@ -164,7 +164,6 @@ class CrossEntropyLoss(Module):
         >>> out_mean
         tensor([0.759], dtype=oneflow.float32)
 
-
     """
 
     def __init__(
@@ -295,12 +294,11 @@ class BCELoss(Module):
         >>> m_none = flow.nn.BCELoss()
         >>> out = m_none(sigmoid_input, target)
         >>> out
-        tensor([[1.4633, 0.5981, 0.5544],
-                [0.4032, 1.0375, 2.1269]], dtype=oneflow.float32)
+        tensor([1.0306], dtype=oneflow.float32)
 
     """
 
-    def __init__(self, weight: Tensor = None, reduction: str = None) -> None:
+    def __init__(self, weight: Tensor = None, reduction: str = "mean") -> None:
         super().__init__()
         assert reduction in [
             "none",

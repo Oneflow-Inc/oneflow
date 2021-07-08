@@ -88,7 +88,7 @@ Maybe<void> BoxingOp::InferBlobDescs(
   }
 
   DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical);
+  JUST(InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical));
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();

@@ -48,8 +48,6 @@ struct MemoryCaseUtil {
 
   static int64_t GenMemZoneId(const MemoryCase& mem_case);
 
-  static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
-
   static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
                                                  const int64_t device_id);
 };
