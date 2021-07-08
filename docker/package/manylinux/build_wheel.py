@@ -218,6 +218,7 @@ def build_oneflow(
     dry,
     use_system_proxy,
     enter_bash,
+    skip_audit,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -268,6 +269,13 @@ rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
 rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+"""
+    if skip_audit:
+        bash_cmd += f"""
+cp /tmp/tmp_wheel/*.whl {house_dir}
+"""
+    else:
+        bash_cmd += f"""
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
     return create_tmp_bash_and_run(
@@ -328,6 +336,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--skip_img", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
+        "--skip_audit", default=False, action="store_true", required=False
     )
     parser.add_argument(
         "--use_tuna", default=False, action="store_true", required=False
@@ -484,6 +495,7 @@ gcc --version
                     args.dry,
                     args.use_system_proxy,
                     args.bash,
+                    args.skip_audit,
                 )
 
         try:
