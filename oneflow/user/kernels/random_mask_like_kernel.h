@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNEL_RANDOM_MASK_GENERATOR_H_
 #define ONEFLOW_USER_KERNEL_RANDOM_MASK_GENERATOR_H_
+
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -41,7 +42,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto generator = CHECK_JUST(one::Generator::New("auto", ctx->Attr<int64_t>("seed")));
+    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
     return std::make_shared<RandomMaskLikeKernelState>(generator);
   }
 
