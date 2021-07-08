@@ -25,7 +25,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Attr<Shape>("shape")
     .Attr<DataType>("data_type")
     .Attr<bool>("dim1_varying_length", false)
-    .Attr<bool>("auto_truncating", false)
+    .Attr<bool>("truncate", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
