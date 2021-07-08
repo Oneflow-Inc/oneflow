@@ -18,7 +18,7 @@
   - (**Highly recommended**) Upgrade pip
 
     ```
-    python3 -m pip install --upgrade pip
+    python3 -m pip install --upgrade pip #--user
     ```
 
   - CUDA Toolkit Linux x86_64 Driver
