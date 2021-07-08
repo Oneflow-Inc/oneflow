@@ -498,10 +498,10 @@ class Flip(Module):
         self.flip_code = flip_code
         self._op = (
             flow.builtin_op("image_flip")
-                .Input("in")
-                .Input("flip_code")
-                .Output("out")
-                .Build()
+            .Input("in")
+            .Input("flip_code")
+            .Output("out")
+            .Build()
         )
 
     def forward(self, images):
