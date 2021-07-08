@@ -67,7 +67,9 @@ def _topk_np(input, k, dim: int = -1, largest: bool = True, _sorted: bool = True
 
 
 def _in_top_k_np(targets, predictions, k):
-    assert targets.shape[0] == predictions.shape[0], "The num of targets must equal the num of predictions"
+    assert (
+        targets.shape[0] == predictions.shape[0]
+    ), "The num of targets must equal the num of predictions"
     assert len(targets.shape) == 1, "The dimension of targets must be 1"
     assert len(predictions.shape) == 2, "The dimension of predictions must be 2"
     results = np.zeros_like(targets, dtype=np.int8)
@@ -79,13 +81,16 @@ def _in_top_k_np(targets, predictions, k):
 
 
 def _test_in_top_k_impl(test_case, shape, k, device):
-    np_targets = np.random.randint(0,shape[1],size=shape[0])
+    np_targets = np.random.randint(0, shape[1], size=shape[0])
     np_predictions = np.random.rand(*shape)
-    of_targets= flow.Tensor(
+    of_targets = flow.Tensor(
         np_targets, dtype=flow.int32, device=flow.device(device), requires_grad=True
     )
-    of_predictions= flow.Tensor(
-        np_predictions, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    of_predictions = flow.Tensor(
+        np_predictions,
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.in_top_k(of_targets, of_predictions, k)
     np_out = _in_top_k_np(np_targets, np_predictions, k)

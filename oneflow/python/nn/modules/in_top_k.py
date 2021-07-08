@@ -33,7 +33,9 @@ class InTopk(Module):
         )
 
     def forward(self, targets, predictions):
-        assert targets.shape[0] == predictions.shape[0], "The num of targets must equal the num of predictions"
+        assert (
+            targets.shape[0] == predictions.shape[0]
+        ), "The num of targets must equal the num of predictions"
         assert len(targets.shape) == 1, "The dimension of targets must be 1"
         assert len(predictions.shape) == 2, "The dimension of predictions must be 2"
         return self._in_top_k(targets, predictions)
