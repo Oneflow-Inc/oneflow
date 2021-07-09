@@ -543,6 +543,10 @@ class Tensor:
         return self.add(other)
 
     @register_local_tensor_method()
+    def __iadd__(self, other):
+        return self.add_(other)
+
+    @register_local_tensor_method()
     def __radd__(self, other):
         return self.add(other)
 

@@ -100,6 +100,24 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-5, 1e-5))
 
+    # tensor += other
+    of_x = flow.Tensor(
+        np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_y = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=False
+    )
+    of_x_inplace = of_x + 1
+    id_old = id(of_x_inplace)
+    of_x_inplace += of_y
+    test_case.assertEqual(id_old, id(of_x_inplace))
+    np_out = np_x + 1 + of_y.numpy()
+    test_case.assertTrue(np.allclose(of_x_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_x_inplace = of_x_inplace.sum()
+    of_x_inplace.backward()
+    test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-5, 1e-5))
+
     # add_scalar_by_tensor
     of_x = flow.Tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
