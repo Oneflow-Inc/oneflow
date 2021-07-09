@@ -249,28 +249,28 @@ struct CastOpLowering : public ConversionPattern {
   }
 };
 
-struct FuncOpConversion : public ConversionPattern {
-  FuncOpConversion(MLIRContext* ctx) : ConversionPattern(FuncOp::getOperationName(), 1, ctx) {}
-
-  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+class FuncOpConversion final : public OpConversionPattern<FuncOp> {
+ public:
+  using OpConversionPattern<FuncOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(FuncOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
     auto func_op = llvm::cast<FuncOp>(op);
     auto types = func_op.getArgumentTypes();
     auto func_type = rewriter.getFunctionType(types, llvm::None);
-    auto function = rewriter.create<mlir::FuncOp>(loc, func_op.sym_name(), func_type);
+    // auto function = rewriter.create<mlir::FuncOp>(loc, func_op.sym_name(), func_type);
     rewriter.eraseOp(op);
     return success();
   }
 };
 
 namespace {
-struct AffineLoweringPass : public PassWrapper<AffineLoweringPass, FunctionPass> {
+struct AffineLoweringPass : public LowerOneFlowToAffinePassBase<AffineLoweringPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
   }
   StringRef getName() const override { return "AffineLoweringPass"; }
-  void runOnFunction() final;
+  void runOnOperation() override;
 };
 }  // namespace
 
@@ -278,15 +278,19 @@ std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToAffinePass() {
   return std::make_unique<AffineLoweringPass>();
 }
 
-void AffineLoweringPass::runOnFunction() {
+void AffineLoweringPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
+  // TODO: Add type converter
   patterns.add<CastOpLowering>(&getContext());
   patterns.add<ScalarMulByTensorOpLowering>(&getContext());
-  if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+  patterns.add<FuncOpConversion>(&getContext());
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
+    getOperation()->dump();
     signalPassFailure();
+  }
 }
 
 LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
@@ -295,7 +299,7 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
   context.loadDialect<memref::MemRefDialect>();
 
   mlir::PassManager pm(&context);
-  pm.addNestedPass<FuncOp>(createLowerOneFlowToAffinePass());
+  pm.addPass(createLowerOneFlowToAffinePass());
   pm.dump();
   return pm.run(module.get());
 }
