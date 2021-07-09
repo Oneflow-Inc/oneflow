@@ -128,9 +128,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          # -w to suppress all warnings
+          # clang-12 produces many warnings on oneflow, -w to suppress them
           cmake .. -C ../cmake/caches/international/cpu.cmake \
-            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DTHIRD_PARTY=ON \
             -DONEFLOW=OFF \
@@ -140,7 +140,7 @@ jobs:
         run: |
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
-            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DTHIRD_PARTY=OFF \
             -DONEFLOW=ON \
