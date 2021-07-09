@@ -44,12 +44,7 @@ class ScatterNd : public OpExprGradFunction<ScatterNdInterpState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
     if (ctx->requires_grad) {
-      // const auto& params = ctx->SavedTensors().at(0);
-      // const auto& indices = ctx->SavedTensors().at(1);
-      // in_grads->at(0) = JUST(functional::ScatterNdLike(params, out_grads.at(0), indices));
       const auto& indices = ctx->SavedTensors().at(0);
-      // const auto& update = ctx->SavedTensors().at(1);
-      // in_grads->at(0) = indices;
       in_grads->at(1) = JUST(functional::GatherNd(out_grads.at(0),indices));
       
     }
