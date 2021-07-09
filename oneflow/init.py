@@ -69,8 +69,10 @@ import oneflow.python.framework.env_util as env_util
 
 
 if env_util.HasAllMultiClientEnvVars():
-    env_util.env_init(True)
+    oneflow._oneflow_internal.SetIsMultiClient(True)
+    env_util.api_env_init()
 else:
+    oneflow._oneflow_internal.SetIsMultiClient(False)
     env_util.init_default_physical_env()
 
 del env_util
@@ -102,22 +104,22 @@ atexit.register(
 )
 del atexit
 
-import sys
+if not oneflow._oneflow_internal.IsMultiClient():
+    import sys
 
-__original_exit__ = sys.exit
+    __original_exit__ = sys.exit
 
+    def custom_exit(returncode):
+        if returncode != 0:
+            import oneflow
 
-def custom_exit(returncode):
-    if returncode != 0:
-        import oneflow
+            oneflow._oneflow_internal.MasterSendAbort()
+        __original_exit__(returncode)
 
-        oneflow._oneflow_internal.MasterSendAbort()
-    __original_exit__(returncode)
+    sys.exit = custom_exit
 
+    del custom_exit
+    del sys
 
-sys.exit = custom_exit
-
-del custom_exit
-del sys
 del absolute_import
 del oneflow
