@@ -1116,7 +1116,7 @@ class SmoothL1Loss(Module):
     https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html
 
     It is less sensitive to outliers than :class:`torch.nn.MSELoss` and in some cases
-    prevents exploding gradients (e.g. see the paper `Fast R-CNN`_ by Ross Girshick).
+    prevents exploding gradients (e.g. see the paper `Fast R-CNN <https://openaccess.thecvf.com/content_iccv_2015/papers/Girshick_Fast_R-CNN_ICCV_2015_paper.pdf>`__ by Ross Girshick)..
 
     For a batch of size :math:`N`, the unreduced loss can be described as:
 
