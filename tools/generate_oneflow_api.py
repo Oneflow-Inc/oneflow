@@ -36,6 +36,28 @@ def dtype_related_symbols():
     ]
 
 
+def customized_symbols():
+    return [
+        # Note that the imported module name shouldn't be same with existing module, use import ... as ... if there is same module with same name
+        # oneflow.device
+        """from oneflow._oneflow_internal import device""",
+        """device.__module__ = \"oneflow\"""",
+        # oneflow.Size
+        """from oneflow._oneflow_internal import Size""",
+        """Size.__module__ = \"oneflow\"""",
+        # oneflow.sbp.sbp
+        """from oneflow._oneflow_internal.sbp import sbp""",
+        """sbp.__module__ = \"oneflow.sbp\"""",
+        """del sbp""",  # Note that del is used here carefully to avoid deleting the class that was originally exported under the oneflow namespace
+        # oneflow.Tensor
+        """from oneflow.python.framework.tensor import Tensor""",
+        """Tensor.__module__ = \"oneflow\"""",
+        # oneflow.placement
+        """from oneflow._oneflow_internal import placement""",
+        """placement.__module__ = \"oneflow\"""",
+    ]
+
+
 class VirtualModule(object):
     def __init__(self):
         self._func_or_class_dict = {}
@@ -83,6 +105,8 @@ class VirtualModule(object):
             if "experimental/__init__.py" in init_file_path:
                 lines += dtype_related_symbols()
             lines = list(mod_set) + lines
+            if "oneflow/__init__.py" in init_file_path:
+                lines = customized_symbols() + lines
             f.write("\n" + "\n".join(lines) + "\n")
 
     def submodule_names(self):
@@ -94,20 +118,24 @@ def include_submodule(modname):
 
 
 def include_export(api_name_base, symbol):
+    # print(symbol._IS_VALUE)
     if symbol.__name__ == api_name_base:
-        return ["from {} import {}".format(symbol.__module__, api_name_base)]
+        output = ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
         if inspect.isclass(symbol):
-            return [
+            output = [
                 "from {} import {}".format(symbol.__module__, symbol.__name__),
                 "{} = {}".format(api_name_base, symbol.__name__),
             ]
         else:
-            return [
+            output = [
                 "from {} import {} as {}".format(
                     symbol.__module__, symbol.__name__, api_name_base
                 )
             ]
+    if symbol._IS_VALUE:
+        output.append("{} = {}()".format(api_name_base, api_name_base))
+    return output
 
 
 def exported_symbols():
