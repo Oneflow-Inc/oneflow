@@ -47,8 +47,8 @@ class CheckUnusedMaybeVisitor : public RecursiveASTVisitor<CheckUnusedMaybeVisit
 
     for (const auto& x : stmt->children()) {
       if (ExprWithCleanups* expr = dyn_cast<ExprWithCleanups>(x)) {
-        std::string type = expr->getType().getAsString();
-        if (type.substr(0, 12) == "class Maybe<" || type.substr(0, 6) == "Maybe<") {
+        std::string typeStr = expr->getType().getAsString();
+        if (typeStr.substr(0, 12) == "class Maybe<" || typeStr.substr(0, 6) == "Maybe<") {
           DiagnosticsEngine& DE = Context->getDiagnostics();
           unsigned DiagID = DE.getCustomDiagID(DiagnosticsEngine::Error,
                                                "This function returns Maybe but the return "
@@ -58,16 +58,19 @@ class CheckUnusedMaybeVisitor : public RecursiveASTVisitor<CheckUnusedMaybeVisit
         }
       }
       if (CallExpr* call = dyn_cast<CallExpr>(x)) {
-        std::string returnType;
         llvm::CrashRecoveryContext CRC;
-        CRC.RunSafely([&call, &returnType, this]() {
+        std::string returnTypeStr;
+        CRC.RunSafely([&call, &returnTypeStr, this]() {
+          QualType returnType;
           if (auto* callee = call->getDirectCallee()) {
-            returnType = callee->getReturnType().getAsString();
+            returnType = callee->getReturnType();
           } else {
-            returnType = call->getCallReturnType(*this->Context).getAsString();
+            returnType = call->getCallReturnType(*this->Context);
           }
+          if (returnType->isClassType()) { returnTypeStr = returnType.getAsString(); }
         });
-        if (returnType.substr(0, 12) == "class Maybe<" || returnType.substr(0, 6) == "Maybe<") {
+        if (returnTypeStr.substr(0, 12) == "class Maybe<"
+            || returnTypeStr.substr(0, 6) == "Maybe<") {
           DiagnosticsEngine& DE = Context->getDiagnostics();
           unsigned DiagID = DE.getCustomDiagID(DiagnosticsEngine::Error,
                                                "This function returns Maybe but the return "
