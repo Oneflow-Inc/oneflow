@@ -19,6 +19,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 import oneflow
+import oneflow.python.framework.graph_build_util as graph_build_util
 
 
 class SubModule(flow.nn.Module):
@@ -136,12 +137,19 @@ class TestGraph(flow.unittest.TestCase):
                 super().__init__()
 
             def build(self):
-                test_case.assertEqual(flow.eager_execution_enabled(), False)
+                test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+                print(graph_build_util.lazy_mode.is_enabled())
 
         g = CustomGraph()
-        test_case.assertEqual(flow.eager_execution_enabled(), True)
+
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+        with graph_build_util.lazy_mode.gard(True):
+            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
-        test_case.assertEqual(flow.eager_execution_enabled(), True)
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
 
 if __name__ == "__main__":
