@@ -321,6 +321,7 @@ class Operator {
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
+bool IsCpuOnly(const std::string& user_op_type_name);
 bool IsCpuOnly(const OperatorConf& op_conf);
 
 struct OnlyCpuSupportPredicator {

@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/tensor_buffer.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include <opencv2/opencv.hpp>
 
 namespace oneflow {

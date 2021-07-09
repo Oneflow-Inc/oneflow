@@ -28,11 +28,16 @@ def _test_ones(test_case, device, shape):
     y = flow.ones(shape, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(shape), y.numpy()))
 
-    y2 = flow.ones(10, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.ones(10), y2.numpy()))
 
-    y3 = flow.ones(10, dtype=flow.float64, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.float64), y3.numpy()))
+def _test_different_dtype(test_case, device, shape):
+    y1 = flow.ones(shape, dtype=flow.int32, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int32), y1.numpy()))
+
+    y2 = flow.ones(shape, dtype=flow.uint8, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.uint8), y2.numpy()))
+
+    y3 = flow.ones(shape, dtype=flow.float64, device=flow.device(device))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.float64), y3.numpy()))
 
 
 def _test_ones_backward(test_case, device, shape):
@@ -113,6 +118,7 @@ class TestConstantModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_ones,
+            _test_different_dtype,
             _test_zeros,
             _test_ones_backward,
             _test_zeros_backward,
