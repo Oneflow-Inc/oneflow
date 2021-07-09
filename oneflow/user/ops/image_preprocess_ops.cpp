@@ -37,11 +37,9 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       bool has_mirror = ctx->has_input("mirror", 0);
       if (has_mirror) {
         const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-
         CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                         && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
       }
-
       user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
