@@ -53,8 +53,9 @@ MultiClientSessionContext::~MultiClientSessionContext() {
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<IDMgr>::Delete();
 
-    // TODO(chengcheng): remove ForEnv
+    // TODO(chengcheng): remove template ForEnv and ForSession
     Global<ResourceDesc, ForSession>::Delete();
+    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
@@ -68,8 +69,15 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     Resource resource = config_proto.resource();
 
     {
-      // TODO(chengcheng): remove this hack
-      //   env config for multi-client
+      // NOTE(chengcheng):
+      //   In multi-client, user can NOT config gpu_device_num and cpu_device_num.
+      //
+      //   cpu_device_num is a confusing name, it should be explained as:
+      //       gpu_device corresponding host memory and compute stream.
+      //   When gpu_device_num == 0 (cpu only), cpu device num should be process num.
+      //
+      //   gpu_device_num is the number of visible GPUs one current machine.
+      //   NOTE: gpu_device_num NOT necessarily equal to the num of process one this machine.
       resource.set_machine_num(GlobalProcessCtx::NodeSize());
       const int32_t gpu_device_num = GetGpuDeviceNum();
       resource.set_gpu_device_num(gpu_device_num);
@@ -80,13 +88,18 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       }
     }
 
-    Global<ResourceDesc, ForSession>::Delete();
+    // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
+    if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+      // TODO(chengcheng): reorganize dependency of all Global objects.
+      Global<ResourceDesc, ForSession>::Delete();
+    }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
     Global<IDMgr>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
 
     for (const std::string& lib_path : config_proto.load_lib_path()) {
+      // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
       JUST(LoadLibrary(lib_path));
     }
 
