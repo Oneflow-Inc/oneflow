@@ -16,26 +16,31 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.framework.session_context as session_ctx
+
+from google.protobuf import text_format
 
 
 class MultiClientSession(object):
     def __init__(self, sess_id):
         self.is_inited_ = False
+        self.is_closed_ = False
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
-        # self.context_ = oneflow._oneflow_internal.CreateMultiClientSessionContext(sess_id)
+        oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
 
     def TryInit(self):
         if not self.is_inited_:
-            # self.context_.InitGlobalObjects(self.config_proto)
+            config_proto_str = text_format.MessageToString(self.config_proto)
+            oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.is_inited_ = True
 
-    def Close(self):
-        pass
+    def TryClose(self):
+        if not self.is_closed_:
+            oneflow._oneflow_internal.DestroyMultiClientSessionContext()
+            self.is_closed_ = True
 
-    def __del__(self):
-        self.Close()
+    def __def__(self):
+        self.TryClose()
 
     @property
     def id(self):
