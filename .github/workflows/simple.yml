@@ -181,6 +181,7 @@ jobs:
         shell: bash -l {0}
       - name: "Tar logs"
         if: always()
+        continue-on-error: true
         run: |
           set -ex
           if [[ -d "${HOME}/oneflow_temp" ]]
