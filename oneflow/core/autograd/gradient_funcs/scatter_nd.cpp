@@ -31,7 +31,7 @@ class ScatterNd : public OpExprGradFunction<ScatterNdInterpState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = inputs.at(1)->requires_grad();
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // indices
       ctx->SaveTensorForBackward(inputs.at(1));  // update
@@ -49,7 +49,9 @@ class ScatterNd : public OpExprGradFunction<ScatterNdInterpState> {
       // in_grads->at(0) = JUST(functional::ScatterNdLike(params, out_grads.at(0), indices));
       const auto& indices = ctx->SavedTensors().at(0);
       // const auto& update = ctx->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::GatherNd(out_grads.at(0),indices))
+      // in_grads->at(0) = indices;
+      in_grads->at(1) = JUST(functional::GatherNd(out_grads.at(0),indices));
+      
     }
     return Maybe<void>::Ok();
   }
