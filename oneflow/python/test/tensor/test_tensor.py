@@ -490,6 +490,30 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
+    
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_flow_tensor_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "asin",
+                device=device,
+            )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "arcsin",
+                device=device,
+            )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
