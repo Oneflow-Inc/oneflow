@@ -32,6 +32,7 @@ def clip_grad_norm(
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
     concatenated into a single vector.
+
     Args:
         parameters (Iterable[Tensor] or Tensor): an iterable of Tensors or a
             single Tensor that will have gradients normalized
@@ -41,10 +42,30 @@ def clip_grad_norm(
         error_if_nonfinite (bool): if True, an error is thrown if the total
             norm of the gradients from :attr:``parameters`` is ``nan``,
             ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+
     Returns:
         Parameters after cliping gradient norm
         Total norm of the parameters (viewed as a single vector).
+    
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
+        >>> m = flow.nn.ReLU()
+        >>> out1 = m(x1)
+        >>> out1 = out1.sum()
+        >>> out1.backward()
+        >>> total_norm = flow.nn.utils.clip_grad_norm(x1.parameters(), 1.0)
+        >>> total_norm
+        tensor([1.317 , 1.7627, 2.0634], dtype=oneflow.float32)
+
     """
+
     if isinstance(parameters, flow.Tensor):
         parameters = [parameters]
     parameters = [p for p in parameters if p.grad is not None]
@@ -58,7 +79,7 @@ def clip_grad_norm(
         total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
     else:
         total_norm = flow.linalg.norm(flow.stack([flow.linalg.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
-    if total_norm.isnan() or total_norm.isinf():
+    if total_norm.numpy().isnan() or total_norm.numpy().isinf():
         if error_if_nonfinite:
             raise RuntimeError(
                 f'The total norm of order {norm_type} for gradients from '
