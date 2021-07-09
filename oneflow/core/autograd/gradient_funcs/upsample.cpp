@@ -226,5 +226,49 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> 
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 
+struct UpsampleNearest1DInterpState : public OpExprInterpState {
+  bool requires_grad;
+  float scale_factor;
+  std::string data_format;
+};
+
+class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UpsampleNearest1DInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
+    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UpsampleNearest1DInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    if (ctx->requires_grad) {
+      MutableAttrMap attrs;
+      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+      in_grads->resize(1);
+      in_grads->at(0) = JUST(functional::UpsampleNearest1D(
+          out_grads.at(0), ctx->scale_factor, ctx->data_format));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_1d", UpsampleNearest1D);
+
+
+
+
 }  // namespace one
 }  // namespace oneflow
