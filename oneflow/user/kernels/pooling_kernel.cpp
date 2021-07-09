@@ -235,16 +235,15 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_POOLING_WITH_DEVICE(device) \
+  REGISTER_POOLING_KERNELS(device, int32_t)  \
   REGISTER_POOLING_KERNELS(device, float)    \
-  REGISTER_POOLING_KERNELS(device, int32_t)
+  REGISTER_POOLING_KERNELS(device, double)
 
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
-REGISTER_POOLING_KERNELS(DeviceType::kCPU, double)
-REGISTER_POOLING_KERNELS(DeviceType::kCPU, int64_t)
 
 #ifdef WITH_CUDA
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kGPU)
-// REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
+// TODO: REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCPU),

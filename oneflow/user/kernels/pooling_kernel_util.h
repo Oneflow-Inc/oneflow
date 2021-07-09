@@ -22,20 +22,20 @@ limitations under the License.
 #include "oneflow/core/operator/operator_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/kernel/util/numeric_limits.cuh"
 #endif  // WITH_CUDA
 
 namespace oneflow {
 
-#define POOLING_DATA_TYPE_CPU_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
-  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble) \
+#define POOLING_DATA_TYPE_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define POOLING_DATA_TYPE_GPU_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+#define POOLING_DATA_TYPE_CPU_SEQ POOLING_DATA_TYPE_SEQ
+
+#define POOLING_DATA_TYPE_GPU_SEQ POOLING_DATA_TYPE_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
@@ -127,7 +127,6 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     const int64_t start_idx = (n * n_channel + c) * x_width * x_height;
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
-
     const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
                              : x_height;
@@ -142,21 +141,16 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx = 0;
 
-    T max_value = static_cast<T>(-127);
-    // T max_value = -std::numeric_limits<T>::infinity();
-    // T max_value = static_cast<T>(numeric_limits<T>::lower_bound());
-
-    if (num == elem_num - 1) {
-      printf("\nMaxpool2dFarwardCompute >>>>>>>> thread num:%ld", elem_num);
-      printf(" >> max_value >> %ld", static_cast<long>(max_value));
-    }
+    // equal to -std::numeric_limits<T>::infinity();
+    T max_value = numeric_limits<T>::lower_bound();
 
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
         const int64_t tcntr = i * x_width + j;
         const int64_t search_idx = start_idx + tcntr;
         T val = src[search_idx];
-        if ((val > max_value) || std::isnan(val)) {
+        // std::isnan() could raise bug if use g++ 4.x to compile
+        if (val > max_value || numerics<T>::isnan(val)) {
           max_value = val;
           maxindex = tcntr;
           src_idx = search_idx;
@@ -223,22 +217,14 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
 
-    T max_value = static_cast<T>(-127);
-    // T max_value = -std::numeric_limits<T>::infinity();
-    // T max_value = static_cast<T>(numeric_limits<T>::lower_bound());
-
-    if (num == elem_num - 1) {
-      printf("\nMaxpool3dFarwardCompute >>>>>>>> thread num:%ld\n", elem_num);
-      printf(" >> max_value >> %ld", static_cast<long>(max_value));
-    }
-
+    T max_value = -std::numeric_limits<T>::infinity();
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
           const int64_t tcntr = zi * x_height * x_width + i * x_width + j;
           const int64_t search_idx = start_idx + tcntr;
           T val = src[search_idx];
-          if ((val > max_value) || std::isnan(val)) {
+          if (val > max_value || numerics<T>::isnan(val)) {
             max_value = val;
             maxindex = tcntr;
             src_idx = search_idx;
