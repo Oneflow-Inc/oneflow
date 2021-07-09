@@ -277,7 +277,7 @@ void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgM
 }
 
 Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                          const user_op::UserOpConfWrapper& conf) {
+                                 const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
@@ -285,7 +285,7 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 }
 
 Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                          const user_op::UserOpConfWrapper& conf) {
+                                 const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
@@ -496,7 +496,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-      return  Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 

@@ -45,7 +45,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+                               const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* loss_scale = GetInputArgModifierFn("loss_scale", 0);
   CHECK(loss_scale != nullptr);
   loss_scale->set_is_mutable(true);

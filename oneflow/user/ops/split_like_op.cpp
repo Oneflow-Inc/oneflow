@@ -68,7 +68,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& user_op_conf) {
+                               const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL(like_modifier);
