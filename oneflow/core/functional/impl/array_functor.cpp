@@ -513,9 +513,8 @@ class TensorGetItemFunctor {
     Shape shape(result_dims);
     if (shape.NumAxes() != 0 && shape != *(result->shape())) {
       return functional::Reshape(result, shape);
-    } else {
-      return result;
     }
+    return result;
   }
 };
 

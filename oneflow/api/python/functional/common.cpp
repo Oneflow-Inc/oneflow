@@ -66,9 +66,8 @@ Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object) {
     return std::make_shared<detail::IndexItem>(object == Py_True);
   } else if (object == Py_None) {
     return std::make_shared<detail::IndexItem>(detail::NoneIndex{});
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Invalid index " << PyStringAsString(PyObject_Repr(object));
   }
+  UNIMPLEMENTED_THEN_RETURN() << "Invalid index " << PyStringAsString(PyObject_Repr(object));
 }
 
 }  // namespace detail
