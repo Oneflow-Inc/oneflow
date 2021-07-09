@@ -44,9 +44,9 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
 
 
 @oneflow_export("ddp")
-def DDP(module: Module, world_size=None):
-    if world_size is None:
-        world_size = flow.distributed.get_world_size()
+def DDP(module: Module):
+    assert flow.distributed.get_local_rank() == flow.distributed.get_rank()
+    world_size = flow.distributed.get_world_size()
     nccl_allreduce_op = (
         builtin_op("eager_nccl_all_reduce")
         .Input("in")
