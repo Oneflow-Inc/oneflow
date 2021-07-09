@@ -110,7 +110,6 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   std::string pooling_type_;
 };
 
-template<typename T>
 struct PoolGpuKernelUtil {
   static void FWCompute(user_op::KernelComputeContext* ctx,
                         GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
@@ -119,8 +118,9 @@ struct PoolGpuKernelUtil {
     CHECK(gpu_pool_op_kernel_state != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingForward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
-        CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
+        CudnnSPOnePtr(x->data_type()), gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(),
+        CudnnSPZeroPtr(x->data_type()), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(),
+        y->mut_dptr()));
   }
 
   static void BWCompute(user_op::KernelComputeContext* ctx,
@@ -132,16 +132,15 @@ struct PoolGpuKernelUtil {
     CHECK(gpu_pool_op_kernel_state != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingBackward(
         ctx->device_ctx()->cudnn_handle(), gpu_pool_op_kernel_state->cudnn_pooling_desc(),
-        CudnnSPOnePtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
+        CudnnSPOnePtr(y->data_type()), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
         gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), dy->dptr(),
-        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr(y->data_type()),
         gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), dx->mut_dptr()));
   }
 };
 
 }  // namespace
 
-template<typename T>
 class AvgPool1DGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool1DGpuKernel() = default;
@@ -151,11 +150,10 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool1DGradGpuKernel() = default;
@@ -164,11 +162,10 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class AvgPool2DGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool2DGpuKernel() = default;
@@ -178,11 +175,10 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool2DGradGpuKernel() = default;
@@ -192,11 +188,10 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class AvgPool3DGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool3DGpuKernel() = default;
@@ -206,11 +201,10 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
  public:
   AvgPool3DGradGpuKernel() = default;
@@ -220,11 +214,10 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool1DGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool1DGpuKernel() = default;
@@ -234,11 +227,10 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool1DGradGpuKernel() = default;
@@ -248,11 +240,10 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool2DGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool2DGpuKernel() = default;
@@ -262,11 +253,10 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool2DGradGpuKernel() = default;
@@ -276,11 +266,10 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool3DGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool3DGpuKernel() = default;
@@ -290,11 +279,10 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::FWCompute(ctx, pool_state.get());
   };
 };
 
-template<typename T>
 class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
  public:
   MaxPool3DGradGpuKernel() = default;
@@ -304,63 +292,46 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+    PoolGpuKernelUtil::BWCompute(ctx, pool_state.get());
   };
 };
 
-#define REGISTER_POOL_GPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("avg_pool_1d")                                                  \
-      .SetCreateFn<AvgPool1DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_1d_grad")                                             \
-      .SetCreateFn<AvgPool1DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_2d")                                                  \
-      .SetCreateFn<AvgPool2DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                             \
-      .SetCreateFn<AvgPool2DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_3d")                                                  \
-      .SetCreateFn<AvgPool3DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("avg_pool_3d_grad")                                             \
-      .SetCreateFn<AvgPool3DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_1d")                                                  \
-      .SetCreateFn<MaxPool1DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_1d_grad")                                             \
-      .SetCreateFn<MaxPool1DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_2d")                                                  \
-      .SetCreateFn<MaxPool2DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_2d_grad")                                             \
-      .SetCreateFn<MaxPool2DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_3d")                                                  \
-      .SetCreateFn<MaxPool3DGpuKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("max_pool_3d_grad")                                             \
-      .SetCreateFn<MaxPool3DGradGpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
-
-REGISTER_POOL_GPU_KERNEL(float)
-REGISTER_POOL_GPU_KERNEL(double)
-REGISTER_POOL_GPU_KERNEL(float16)
+REGISTER_USER_KERNEL("avg_pool_1d")
+    .SetCreateFn<AvgPool1DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("avg_pool_1d_grad")
+    .SetCreateFn<AvgPool1DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("avg_pool_2d")
+    .SetCreateFn<AvgPool2DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("avg_pool_2d_grad")
+    .SetCreateFn<AvgPool2DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("avg_pool_3d")
+    .SetCreateFn<AvgPool3DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("avg_pool_3d_grad")
+    .SetCreateFn<AvgPool3DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_1d")
+    .SetCreateFn<MaxPool1DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_1d_grad")
+    .SetCreateFn<MaxPool1DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_2d")
+    .SetCreateFn<MaxPool2DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_2d_grad")
+    .SetCreateFn<MaxPool2DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_3d")
+    .SetCreateFn<MaxPool3DGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+REGISTER_USER_KERNEL("max_pool_3d_grad")
+    .SetCreateFn<MaxPool3DGradGpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 }  // namespace oneflow
 
