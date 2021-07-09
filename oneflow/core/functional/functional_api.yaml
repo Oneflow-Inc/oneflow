@@ -443,6 +443,18 @@
                      String data_format=\"channels_first\")"
   bind_python: True  
 
+- name: "upsample_nearest_2d"
+  signature:
+    "Tensor UpsampleNearest2D(Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_bilinear_2d"
+  signature:
+    "Tensor UpsampleBilinear2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
 - name: "upsample_bicubic_2d"
   signature:
     "Tensor UpsampleBicubic2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,

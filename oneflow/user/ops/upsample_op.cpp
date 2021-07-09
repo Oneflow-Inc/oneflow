@@ -355,7 +355,6 @@ REGISTER_USER_OP("upsample_bilinear_2d_grad")
       return Maybe<void>::Ok();
     });
 
-
 REGISTER_USER_OP("upsample_bicubic_2d_grad")
     .Input("dy")
     .Input("x")
@@ -514,7 +513,6 @@ REGISTER_USER_OP_GRAD("upsample_nearest_2d")
         AddOp(grad_op);
       }
     });
-
 
 REGISTER_USER_OP_GRAD("upsample_bilinear_2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
