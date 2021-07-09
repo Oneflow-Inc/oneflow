@@ -40,7 +40,6 @@ class Graph(object):
         self._optimizers = OrderedDict()
         self._is_compiled = False
         self._state_tensortuple = None
-        self.train(True)
 
     @property
     def name(self):
@@ -64,12 +63,6 @@ class Graph(object):
         self._optimizers[name] = self.OptimizerConfig(
             optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
-
-    def train(self, mode: bool = True):
-        self.config._train(mode)
-        for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
-            block.origin.train(mode)
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -337,6 +330,7 @@ class Block(object):
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
+        self._train(False)
 
     @property
     def proto(self):
