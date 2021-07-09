@@ -13,25 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
-#define ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
+#ifndef ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
+#define ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 
-#include <string>
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-struct GlobalProcessCtx {
-  static void GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id);
-  static int64_t Rank();
-  static int64_t LocalRank();
-  static int64_t NodeSize();
-  static int64_t ThisNodeId();
-  static int64_t NumOfProcessPerNode();
-  static bool IsThisProcessMaster();
-  static size_t WorldSize();
-  static std::string LogDirEntry();
+class MultiClientSessionContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MultiClientSessionContext);
+  MultiClientSessionContext() : is_inited_(false) {}
+  ~MultiClientSessionContext();
+
+  Maybe<void> TryInit(const ConfigProto& config_proto);
+
+ private:
+  bool is_inited_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
+#endif  // ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
