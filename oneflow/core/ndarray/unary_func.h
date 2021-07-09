@@ -55,7 +55,13 @@ SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncNegative);
 
 template<typename T>
 struct UnaryFuncExp final {
-  static OF_DEVICE_FUNC const T Invoke(const T x) { return std::exp(x); }
+  static OF_DEVICE_FUNC const T Invoke(const T x) {
+#if defined(__HIP_PLATFORM_HCC__)
+    return expf(x); 
+#else
+    return std::exp(x); 
+#endif
+  }
 };
 SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncExp);
 

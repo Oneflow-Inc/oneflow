@@ -13,26 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
-#define ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
-
-#include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/device/rocm_stream_handle.h"
+#include "oneflow/core/device/rocm_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
-struct ThreadCtx {
-#ifdef WITH_CUDA
-  std::unique_ptr<CudaStreamHandle> g_cuda_stream;
-  Channel<CudaCBEvent>* cb_event_chan;
-#endif
-
 #ifdef WITH_ROCM
-  std::unique_ptr<RocmStreamHandle> g_rocm_stream;
-  Channel<RocmCBEvent>* cb_event_chan;
-#endif
-};
+
+REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          RocmStreamHandle* rocm_handle = nullptr;
+                          rocm_handle = thread_ctx.g_rocm_stream.get();
+                          return new RocmDeviceCtx(rocm_handle);
+                        }));
+
+#endif  // WITH_ROCM
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_

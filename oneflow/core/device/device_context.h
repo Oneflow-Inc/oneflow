@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
@@ -38,6 +39,13 @@ class DeviceCtx {
   virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+#endif
+
+#ifdef WITH_ROCM
+  virtual const hipStream_t& rocm_stream() const { UNIMPLEMENTED(); }
+  virtual const hipblasHandle_t& hipblas_pmh_handle() const { UNIMPLEMENTED(); }
+  virtual const hipblasHandle_t& hipblas_pmd_handle() const { UNIMPLEMENTED(); }
+  virtual const hipblasHandle_t& hipblas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }

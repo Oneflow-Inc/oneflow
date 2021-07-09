@@ -225,8 +225,12 @@ endif()
 if (BUILD_ROCM)
   # Find hip
   find_package(hip)
+  find_package(hipblas)
+  find_package(hipcub)
   add_definitions(-DWITH_ROCM)
   list(APPEND oneflow_third_party_libs hip::device)
+  list(APPEND oneflow_third_party_libs roc::hipblas)
+  list(APPEND oneflow_third_party_libs hip::hipcub)
 endif()
 
 if(BUILD_RDMA)

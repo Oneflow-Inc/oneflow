@@ -29,7 +29,8 @@ limitations under the License.
 
 namespace oneflow {
 
-#if defined(WITH_CUDA)
+// #if defined(WITH_CUDA)
+#if defined (WITH_CUDA) || defined (WITH_ROCM)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
@@ -82,6 +83,8 @@ template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
 #if defined(__CUDACC__)
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
+#elif defined(__HIP_PLATFORM_HCC__)
 #define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC inline

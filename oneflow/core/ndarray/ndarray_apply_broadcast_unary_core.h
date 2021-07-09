@@ -30,13 +30,6 @@ struct NdarrayApplyBroadcastUnaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
 };
 
-template<typename T, int NDIMS, template<typename> class unary_func>
-struct NdarrayApplyBroadcastUnaryCore final {
-  OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
-    y.template Assign<NDIMS>(x.Broadcast(y.shape()).template UnaryFunc<unary_func>());
-  }
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_APPLY_BROADCAST_UNARY_CORE_H_
