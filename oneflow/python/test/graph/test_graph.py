@@ -116,23 +116,11 @@ class TestGraph(flow.unittest.TestCase):
 
         g = CustomGraph()
 
-        # check set train to True
-        g.train(True)
-        test_case.assertEqual(g.training, True)
-        test_case.assertEqual(g.m.training, True)
-        test_case.assertEqual(g.m.layer.conv1.training, True)
+        # check default training is True
+        test_case.assertEqual(g.config.training, False)
 
         # set graph config
         g.config.enable_fuse_add_to_output(True)
-
-        # check set train to False
-        g.train(False)
-        test_case.assertEqual(g.training, False)
-        test_case.assertEqual(g.training, False)
-        test_case.assertEqual(g.m.training, False)
-        test_case.assertEqual(g.m.layer.conv1.training, False)
-
-        # set graph config
         g.config.enable_fuse_add_to_output(False)
 
         # check _named_state get the right tensor
