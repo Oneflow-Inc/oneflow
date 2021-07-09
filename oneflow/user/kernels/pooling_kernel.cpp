@@ -46,7 +46,7 @@ std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelCompu
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kCPU, T> {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                               const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     Maxpool2dFarwardCompute<T>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[1],

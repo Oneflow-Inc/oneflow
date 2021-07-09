@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/kernel/util/numeric_limits.cuh"
 #endif  // WITH_CUDA
 
 namespace oneflow {
@@ -58,32 +59,34 @@ class PoolingParams3D {
                   const std::vector<int32_t>& dilation, const bool return_indices,
                   const bool ceil_mode);
   ~PoolingParams3D() = default;
-  void Reset(const ShapeView& x_shape);
 
+  const std::string& data_format() const { return data_format_; }
+  const std::vector<int32_t>& padding_before_3d() const { return padding_before_3d_; }
+  const std::vector<int32_t>& padding_after_3d() const { return padding_after_3d_; }
+  const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
+  const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
+  const std::vector<int32_t>& dilation_3d() const { return dilation_3d_; }
+  const bool& return_indices() const { return return_indices_; }
+  const bool& ceil_mode() const { return ceil_mode_; }
+  const int64_t& num_batch() const { return batch_num_; }
+  const int64_t& num_channel() const { return channel_num_; }
+
+  void Reset(const ShapeView& x_shape);
   Shape GetYShape() const;
   Shape GetXShape5D() const;
   Shape GetYShape5D() const;
-
-  const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
-  const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
-  const std::vector<int32_t>& padding_before_3d() const { return padding_before_3d_; }
-  const std::vector<int32_t>& padding_after_3d() const { return padding_after_3d_; }
-  const std::vector<int32_t>& dilation_3d() const { return dilation_3d_; }
-  const std::string& data_format() const { return data_format_; }
-  const int64_t& num_batch() const { return batch_num_; }
-  const int64_t& num_channel() const { return channel_num_; }
 
  private:
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
-  std::vector<int32_t> pooling_size_3d_;
-  std::vector<int32_t> stride_3d_;
-  std::vector<int32_t> padding_before_3d_;
-  std::vector<int32_t> padding_after_3d_;
-  std::vector<int32_t> dilation_3d_;
   std::string data_format_;
   std::string padding_;
+  std::vector<int32_t> padding_before_3d_;
+  std::vector<int32_t> padding_after_3d_;
+  std::vector<int32_t> pooling_size_3d_;
+  std::vector<int32_t> stride_3d_;
+  std::vector<int32_t> dilation_3d_;
   bool return_indices_;
   bool ceil_mode_;
   int64_t batch_num_;
@@ -93,7 +96,7 @@ class PoolingParams3D {
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                               const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d);
 
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
@@ -138,8 +141,16 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx = 0;
+
+    T max_value = static_cast<T>(-127);
     // T max_value = -std::numeric_limits<T>::infinity();
-    T max_value = (T)-1;
+    // T max_value = static_cast<T>(numeric_limits<T>::lower_bound());
+
+    if (num == elem_num - 1) {
+      printf("\nMaxpool2dFarwardCompute >>>>>>>> thread num:%ld", elem_num);
+      printf(" >> max_value >> %ld", static_cast<long>(max_value));
+    }
+
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
         const int64_t tcntr = i * x_width + j;
@@ -211,8 +222,16 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
 
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
+
+    T max_value = static_cast<T>(-127);
     // T max_value = -std::numeric_limits<T>::infinity();
-    T max_value = (T)-1;
+    // T max_value = static_cast<T>(numeric_limits<T>::lower_bound());
+
+    if (num == elem_num - 1) {
+      printf("\nMaxpool3dFarwardCompute >>>>>>>> thread num:%ld\n", elem_num);
+      printf(" >> max_value >> %ld", static_cast<long>(max_value));
+    }
+
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
