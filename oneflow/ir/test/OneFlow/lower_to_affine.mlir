@@ -1,4 +1,4 @@
-// RUN: oneflow-opt -test-oneflow-trait-folder %s | FileCheck %s
+// RUN: oneflow-opt -lower-oneflow-to-affine %s | FileCheck %s
 // CHECK: return
 module  {
   func @Cast_1__FUSE__ScalarMulByTensor_2(%arg0: tensor<96x96xf32>, %arg1: tensor<1xf64>, %arg2: tensor<96x96xf64>) {
