@@ -22,6 +22,7 @@ import oneflow.experimental as flow
 import oneflow.typing as oft
 from oneflow.python.test.modules.automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(
@@ -490,7 +491,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
-    
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
@@ -498,9 +499,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_flow_tensor_asin_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
-                test_case,
-                "asin",
-                device=device,
+                test_case, "asin", device=device,
             )
 
     @unittest.skipIf(
@@ -510,9 +509,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_flow_tensor_arcsin_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
-                test_case,
-                "arcsin",
-                device=device,
+                test_case, "arcsin", device=device,
             )
 
     @unittest.skipIf(
@@ -972,7 +969,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
-    
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
@@ -980,11 +977,8 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_tanh_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
-                test_case,
-                "tanh",
-                device=device,
+                test_case, "tanh", device=device,
             )
-
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
