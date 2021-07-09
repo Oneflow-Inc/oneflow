@@ -73,7 +73,7 @@ def in_top_k_op(targets, predictions, k):
         >>> predictions2 = flow.Tensor(np.array([[0.0, 1.0, 2.0, 3.0], [3.0, 2.0, 1.0, 0.0],]), dtype=flow.float32, device=flow.device('cuda'))
         >>> out3 = flow.in_top_k(targets2, predictions2, k=1)
         >>> out3
-        tensor([1, 0], device='cuda:0', dtype=oneflow.int8)}
+        tensor([1, 0], device='cuda:0', dtype=oneflow.int8)
 
     """
 
