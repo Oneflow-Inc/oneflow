@@ -7,7 +7,6 @@ import platform
 
 
 python_dir = sys.argv[1]
-# python_dir = project_source_dir + "/oneflow/python"
 output_filepath = sys.argv[2]
 
 filemode = sys.argv[3]
