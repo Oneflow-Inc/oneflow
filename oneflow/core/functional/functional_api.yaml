@@ -513,7 +513,7 @@
   signature:
     "Tensor UpsampleTrilinear3DGrad(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
                      Bool align_corners, String data_format=\"channels_first\")"
-  bind_python: True
+  bind_python: False
 
 - name: "abs"
   signature: "Tensor Abs(Tensor x)"
