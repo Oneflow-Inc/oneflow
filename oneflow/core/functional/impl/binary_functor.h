@@ -30,6 +30,20 @@ namespace impl {
 class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
+  }
+
+ protected:
+  BinaryFunctor() = default;
+  virtual ~BinaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceableBinaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -42,8 +56,8 @@ class BinaryFunctor {
   }
 
  protected:
-  BinaryFunctor() = default;
-  virtual ~BinaryFunctor() = default;
+  InplaceableBinaryFunctor() = default;
+  virtual ~InplaceableBinaryFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };
