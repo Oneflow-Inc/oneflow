@@ -55,7 +55,7 @@ def _test_scatter_nd_backward(test_case, device):
     of_update = flow.Tensor(np.array([10.2,5.1,12.7]), requires_grad=True, dtype=flow.float, device=flow.device(device))
 
     np_out = np.array([0. ,10.2, 0. , 0. , 12.7, 0. , 5.1, 0. ])
-    np_grad = np.array([[1,1,1],[0,0,0],[1,1,1]])
+    np_grad = np.array([1., 1., 1.])
     output = scatter_nd_layer(indices, of_update)
     out_sum = output.sum()
     out_sum.backward()
