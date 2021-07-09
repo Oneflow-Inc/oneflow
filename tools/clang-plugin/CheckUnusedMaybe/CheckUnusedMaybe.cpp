@@ -11,50 +11,65 @@
 
 using namespace clang;
 
-class CheckUnusedMaybeVisitor : public RecursiveASTVisitor<CheckUnusedMaybeVisitor> {
- public:
-  explicit CheckUnusedMaybeVisitor(ASTContext* Context) : Context(Context) {
+class CheckUnusedMaybeVisitor
+    : public RecursiveASTVisitor<CheckUnusedMaybeVisitor> {
+public:
+  explicit CheckUnusedMaybeVisitor(ASTContext *Context) : Context(Context) {
     {
-      auto skip_filenames_env = llvm::StringRef(std::getenv("ONEFLOW_MAYBE_CHECK_SKIP_FN"));
+      auto skip_filenames_env =
+          llvm::StringRef(std::getenv("ONEFLOW_MAYBE_CHECK_SKIP_FN"));
       if (!skip_filenames_env.empty()) {
         skip_filenames_env.split(skip_filenames, ";");
-        for (const auto& x : skip_filenames) { llvm::outs() << "skip: " << x << "\n"; }
+        for (const auto &x : skip_filenames) {
+          llvm::outs() << "skip: " << x << "\n";
+        }
       }
     }
     {
-      auto only_filenames_env = llvm::StringRef(std::getenv("ONEFLOW_MAYBE_CHECK_ONLY_FN"));
+      auto only_filenames_env =
+          llvm::StringRef(std::getenv("ONEFLOW_MAYBE_CHECK_ONLY_FN"));
       if (!only_filenames_env.empty()) {
         only_filenames_env.split(only_filenames, ";");
-        for (const auto& x : only_filenames) { llvm::outs() << "only: " << x << "\n"; }
+        for (const auto &x : only_filenames) {
+          llvm::outs() << "only: " << x << "\n";
+        }
       }
     }
   }
 
-  virtual bool VisitCompoundStmt(CompoundStmt* stmt) {
+  virtual bool VisitCompoundStmt(CompoundStmt *stmt) {
     if (!only_filenames.empty()) {
       bool skip = true;
-      for (const auto& x : only_filenames) {
-        if (Context->getSourceManager().getFilename(stmt->getBeginLoc()).contains(x)) {
+      for (const auto &x : only_filenames) {
+        if (Context->getSourceManager()
+                .getFilename(stmt->getBeginLoc())
+                .contains(x)) {
           skip = false;
         }
       }
-      if (skip) { return true; }
+      if (skip) {
+        return true;
+      }
     }
 
-    for (const auto& x : skip_filenames) {
-      if (Context->getSourceManager().getFilename(stmt->getBeginLoc()).contains(x)) { return true; }
+    for (const auto &x : skip_filenames) {
+      if (Context->getSourceManager()
+              .getFilename(stmt->getBeginLoc())
+              .contains(x)) {
+        return true;
+      }
     }
 
-    for (const auto& x : stmt->children()) {
+    for (const auto &x : stmt->children()) {
       std::string typeStr;
-      if (ExprWithCleanups* expr = dyn_cast<ExprWithCleanups>(x)) {
+      if (ExprWithCleanups *expr = dyn_cast<ExprWithCleanups>(x)) {
         typeStr = expr->getType().getAsString();
       }
-      if (CallExpr* call = dyn_cast<CallExpr>(x)) {
+      if (CallExpr *call = dyn_cast<CallExpr>(x)) {
         llvm::CrashRecoveryContext CRC;
         CRC.RunSafely([&call, &typeStr, this]() {
           QualType returnType;
-          if (auto* callee = call->getDirectCallee()) {
+          if (auto *callee = call->getDirectCallee()) {
             returnType = callee->getReturnType();
           } else {
             returnType = call->getCallReturnType(*this->Context);
@@ -64,44 +79,50 @@ class CheckUnusedMaybeVisitor : public RecursiveASTVisitor<CheckUnusedMaybeVisit
           }
         });
       }
-      if (typeStr.substr(0, 12) == "class Maybe<" || typeStr.substr(0, 6) == "Maybe<") {
-        DiagnosticsEngine& DE = Context->getDiagnostics();
-        unsigned DiagID = DE.getCustomDiagID(DiagnosticsEngine::Error,
-                                             "This function returns Maybe but the return "
-                                             "value is ignored. Wrap it with JUST(..)?");
+      if (typeStr.substr(0, 12) == "class Maybe<" ||
+          typeStr.substr(0, 6) == "Maybe<") {
+        DiagnosticsEngine &DE = Context->getDiagnostics();
+        unsigned DiagID =
+            DE.getCustomDiagID(DiagnosticsEngine::Error,
+                               "This function returns Maybe but the return "
+                               "value is ignored. Wrap it with JUST(..)?");
         auto DB = DE.Report(x->getBeginLoc(), DiagID);
-        DB.AddSourceRange(clang::CharSourceRange::getCharRange(x->getSourceRange()));
+        DB.AddSourceRange(
+            clang::CharSourceRange::getCharRange(x->getSourceRange()));
       }
     }
     return true;
   }
 
- private:
-  ASTContext* Context;
+private:
+  ASTContext *Context;
   llvm::SmallVector<llvm::StringRef, 10> skip_filenames;
   llvm::SmallVector<llvm::StringRef, 10> only_filenames;
 };
 
 class CheckUnusedMaybeConsumer : public clang::ASTConsumer {
- public:
-  explicit CheckUnusedMaybeConsumer(ASTContext* Context) : Visitor(Context) {}
+public:
+  explicit CheckUnusedMaybeConsumer(ASTContext *Context) : Visitor(Context) {}
 
-  void HandleTranslationUnit(clang::ASTContext& Context) override {
+  void HandleTranslationUnit(clang::ASTContext &Context) override {
     Visitor.TraverseDecl(Context.getTranslationUnitDecl());
   }
 
- private:
+private:
   CheckUnusedMaybeVisitor Visitor;
 };
 
 class CheckUnusedMaybeAction : public clang::PluginASTAction {
- public:
-  virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance& Compiler,
-                                                                llvm::StringRef InFile) override {
-    return std::make_unique<CheckUnusedMaybeConsumer>(&Compiler.getASTContext());
+public:
+  virtual std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    llvm::StringRef InFile) override {
+    return std::make_unique<CheckUnusedMaybeConsumer>(
+        &Compiler.getASTContext());
   }
 
-  bool ParseArgs(const CompilerInstance& CI, const std::vector<std::string>& args) override {
+  bool ParseArgs(const CompilerInstance &CI,
+                 const std::vector<std::string> &args) override {
     return true;
   }
 
@@ -109,5 +130,5 @@ class CheckUnusedMaybeAction : public clang::PluginASTAction {
   ActionType getActionType() override { return AddAfterMainAction; }
 };
 
-static FrontendPluginRegistry::Add<CheckUnusedMaybeAction> X("check-unused-maybe",
-                                                             "Check unused maybe");
+static FrontendPluginRegistry::Add<CheckUnusedMaybeAction>
+    X("check-unused-maybe", "Check unused maybe");
