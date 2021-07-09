@@ -223,16 +223,13 @@ struct ScalarMulByTensorOpLowering : public ConversionPattern {
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
-    lowerOpToLoops(
-        op, operands, rewriter,
-        [loc](OpBuilder& builder, ValueRange memRefOperands, ValueRange loopIvs) {
-          typename ScalarMulByTensorOp::Adaptor scalar_mul_by_tensor_adaptor(memRefOperands);
-          auto loadedLhs =
-              builder.create<AffineLoadOp>(loc, scalar_mul_by_tensor_adaptor.x(), loopIvs);
-          auto loadedRhs =
-              builder.create<AffineLoadOp>(loc, scalar_mul_by_tensor_adaptor.scalar(), loopIvs);
-          return builder.create<MulFOp>(loc, loadedLhs, loadedRhs);
-        });
+    lowerOpToLoops(op, operands, rewriter,
+                   [loc](OpBuilder& builder, ValueRange memRefOperands, ValueRange loopIvs) {
+                     typename ScalarMulByTensorOp::Adaptor adaptor(memRefOperands);
+                     auto loadedLhs = builder.create<AffineLoadOp>(loc, adaptor.x(), loopIvs);
+                     auto loadedRhs = builder.create<AffineLoadOp>(loc, adaptor.scalar(), loopIvs);
+                     return builder.create<MulFOp>(loc, loadedLhs, loadedRhs);
+                   });
     return success();
   }
 };
@@ -243,11 +240,26 @@ struct CastOpLowering : public ConversionPattern {
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
-    typename CastOp::Adaptor scalar_mul_by_tensor_adaptor(operands);
+    typename CastOp::Adaptor adaptor(operands);
     Value casted = rewriter.create<memref::CastOp>(
-        loc, /* source */ scalar_mul_by_tensor_adaptor.x(),
+        loc, /* source */ adaptor.x(),
         /* dest */ convertTensorToMemRef(op->getResultTypes().front().cast<TensorType>()));
     rewriter.replaceOp(op, casted);
+    return success();
+  }
+};
+
+struct FuncOpConversion : public ConversionPattern {
+  FuncOpConversion(MLIRContext* ctx) : ConversionPattern(FuncOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+                                ConversionPatternRewriter& rewriter) const final {
+    auto loc = op->getLoc();
+    auto func_op = llvm::cast<FuncOp>(op);
+    auto types = func_op.getArgumentTypes();
+    auto func_type = rewriter.getFunctionType(types, llvm::None);
+    auto function = rewriter.create<mlir::FuncOp>(loc, func_op.sym_name(), func_type);
+    rewriter.eraseOp(op);
     return success();
   }
 };
