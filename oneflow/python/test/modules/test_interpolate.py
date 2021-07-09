@@ -27,6 +27,7 @@ def _test_interpolate_nearest_1d(test_case, device):
         np.arange(1, 5).reshape((1, 1, 4)),
         device=flow.device(device),
         dtype=flow.float32,
+        requires_grad=True,
     )
     m = flow.nn.functional.interpolate(scale_factor=2.0, mode="nearest")
     of_out = m(input)
