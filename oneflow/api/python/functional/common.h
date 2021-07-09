@@ -114,7 +114,7 @@ T&& dereference(std::shared_ptr<T>&& val) {
 }
 
 template<typename T>
-/*static*/ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
+/* static */ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
   PyObject* obj = src.ptr();
   bool is_tuple = PyTuple_Check(obj);
   CHECK_OR_RETURN(is_tuple || PyList_Check(obj))

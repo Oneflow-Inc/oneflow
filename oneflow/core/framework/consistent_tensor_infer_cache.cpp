@@ -134,7 +134,7 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 
 }  // namespace
 
-/*static*/ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
+/* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
   Symbol<ParallelDesc> parallel_desc;
   {

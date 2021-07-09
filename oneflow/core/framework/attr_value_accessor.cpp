@@ -160,17 +160,17 @@ Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_va
   }
 }
 
-/*static*/ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const AttrValue& proto_attr_value) {
+/* static */ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const AttrValue& proto_attr_value) {
   return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
 }
 
-/*static*/ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const cfg::AttrValue& cfg_attr_value) {
+/* static */ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const cfg::AttrValue& cfg_attr_value) {
   AttrValue proto_attr_value;
   cfg_attr_value.ToProto(&proto_attr_value);
   return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
 }
 
-/*static*/ Maybe<void> AttrValueUtil::ToProtoAttrValue(const AttrVal& cpp_attr_value,
+/* static */ Maybe<void> AttrValueUtil::ToProtoAttrValue(const AttrVal& cpp_attr_value,
                                                        AttrValue* attr_value) {
   if (false) {
 // clang-format off

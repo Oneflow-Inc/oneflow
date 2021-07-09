@@ -46,7 +46,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 
 }  // namespace
 
-/*static*/ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
+/* static */ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
@@ -64,7 +64,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 }
 
 template<>
-/*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
+/* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
                                                                   const TensorTuple& inputs,
                                                                   const OpExprInterpContext& ctx) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
@@ -73,13 +73,13 @@ template<>
 }
 
 template<>
-/*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
+/* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                         const TensorTuple& inputs,
                                                         const OpExprInterpContext& ctx) {
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
-/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
+/* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
     auto infer_ctx = JUST(GetCurInferCtx());
@@ -92,14 +92,14 @@ template<>
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
 
-/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
+/* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                                               const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
   JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
   return op_conf;
 }
 
-/*static*/ Maybe<Tensor> OpInterpUtil::BuildTensor(
+/* static */ Maybe<Tensor> OpInterpUtil::BuildTensor(
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
     const bool is_lazy) {
