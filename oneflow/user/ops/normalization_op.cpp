@@ -27,7 +27,6 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamTensorDescFn(
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_input(bn, 0)) {
       const auto& tensor_desc = ctx->InputTensorDesc(bn, 0);
-      // CHECK_OR_RETURN(tensor_desc != nullptr);
       CHECK_EQ_OR_RETURN(tensor_desc.shape(), shape);
     }
     return Maybe<void>::Ok();
@@ -39,7 +38,6 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op:
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_input(bn, 0)) {
       const auto& tensor_desc = ctx->InputTensorDesc(bn, 0);
-      // CHECK_OR_RETURN(tensor_desc != nullptr);
       CHECK_EQ_OR_RETURN(tensor_desc.data_type(), data_type);
     }
     return Maybe<void>::Ok();
