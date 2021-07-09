@@ -49,6 +49,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("uint8") = DType::UInt8().get();
   m.attr("record") = DType::OFRecord().get();
   m.attr("tensor_buffer") = DType::TensorBuffer().get();
+  m.attr("bfloat16") = DType::BFloat16().get();
 }
 
 }  // namespace oneflow
