@@ -95,7 +95,7 @@ REGISTER_USER_OP("broadcast_like")
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
-      Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures)
     .SetDataTypeInferFn(InferDataType);

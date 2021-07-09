@@ -45,7 +45,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("onerec_decoder")
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
-      Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
