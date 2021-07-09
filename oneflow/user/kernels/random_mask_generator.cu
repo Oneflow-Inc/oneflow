@@ -52,10 +52,9 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const float rat
 
 void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
                                                      const float rate, int8_t* mask) {
-  const auto& cuda_gen = CHECK_JUST(one::TryGetDeviceGenerator<DeviceType::kGPU>(generator_));
-  const auto& block_num = cuda_gen->block_num();
-  const auto& thread_num = cuda_gen->thread_num();
-  auto* curand_states = cuda_gen->curand_states();
+  int32_t block_num = generator_->max_block_num();
+  int32_t thread_num = generator_->max_thread_num();
+  auto* curand_states = generator_->curand_states();
   const int32_t elem_cnt_per_block = thread_num * sizeof(PackType) * kMinPackPerThread;
   const int32_t block_num_final =
       std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
