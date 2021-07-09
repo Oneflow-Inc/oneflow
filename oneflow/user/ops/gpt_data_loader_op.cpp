@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .OptionalInput("iteration")
     .Output("out")
     .Attr<std::string>("data_file_prefix")

@@ -77,7 +77,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("assign")
+REGISTER_NO_GRAD_USER_OP("assign")
     .Input("ref")
     .Input("value")
     .SetTensorDescInferFn(InferTensorDesc)
@@ -85,7 +85,7 @@ REGISTER_USER_OP("assign")
     .SetInputArgModifyFn(InputArgModifierFn)
     .SetDataTypeInferFn(InferDataType);
 
-REGISTER_USER_OP("assign_if")
+REGISTER_NO_GRAD_USER_OP("assign_if")
     .Input("ref")
     .Input("value")
     .Input("condition")
@@ -94,7 +94,7 @@ REGISTER_USER_OP("assign_if")
     .SetInputArgModifyFn(InputArgModifierFn)
     .SetDataTypeInferFn(InferDataType);
 
-REGISTER_USER_OP("assign_if_not")
+REGISTER_NO_GRAD_USER_OP("assign_if_not")
     .Input("ref")
     .Input("value")
     .Input("condition")

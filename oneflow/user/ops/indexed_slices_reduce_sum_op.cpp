@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("indexed_slices_reduce_sum")
+REGISTER_NO_GRAD_USER_OP("indexed_slices_reduce_sum")
     .Input("x_indices")
     .Input("x_values")
     .Output("y_indices")

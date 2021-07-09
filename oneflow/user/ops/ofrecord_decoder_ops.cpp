@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Input("in")
     .Output("out")
     .Attr<std::string>("name")
@@ -59,7 +59,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
     .Input("in")
     .Output("out")
     .Attr<std::string>("name")
@@ -86,7 +86,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Input("in")
     .Output("out")
     .Attr<std::string>("name")
@@ -120,7 +120,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Input("in")
     .Output("out")
     .Attr<std::string>("name")

@@ -18,9 +18,11 @@ from __future__ import absolute_import
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.CheckAndClearRegistryFlag()
+
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
-placement = oneflow._oneflow_internal.PlacementSymbol
+placement = oneflow._oneflow_internal.placement
 no_grad = oneflow._oneflow_internal.autograd.no_grad
 
 # define dtype at the begining of oneflow init
@@ -65,14 +67,21 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
 
-env_util.init_default_physical_env()
+
+if env_util.HasAllMultiClientEnvVars():
+    oneflow._oneflow_internal.SetIsMultiClient(True)
+    env_util.api_env_init()
+else:
+    oneflow._oneflow_internal.SetIsMultiClient(False)
+    env_util.init_default_physical_env()
+
 del env_util
 
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
-def _SyncOnMasterFn(get_rank, sync):
+def _SyncOnMasterFn(is_multi_client, get_rank, sync):
     def SyncOnMaster():
-        if get_rank() == 0:
+        if is_multi_client or get_rank() == 0:
             sync()
 
     return SyncOnMaster
@@ -86,28 +95,31 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # so sync vm in advance to avoid data race
 atexit.register(
     _SyncOnMasterFn(
+        oneflow.python.framework.distribute.is_multi_client(),
         oneflow.python.framework.distribute.get_rank,
-        oneflow._oneflow_internal.eager.single_client.Sync,
+        oneflow._oneflow_internal.eager.multi_client.Sync
+        if oneflow.python.framework.distribute.is_multi_client()
+        else oneflow._oneflow_internal.eager.single_client.Sync,
     )
 )
 del atexit
 
-import sys
+if not oneflow._oneflow_internal.IsMultiClient():
+    import sys
 
-__original_exit__ = sys.exit
+    __original_exit__ = sys.exit
 
+    def custom_exit(returncode):
+        if returncode != 0:
+            import oneflow
 
-def custom_exit(returncode):
-    if returncode != 0:
-        import oneflow
+            oneflow._oneflow_internal.MasterSendAbort()
+        __original_exit__(returncode)
 
-        oneflow._oneflow_internal.MasterSendAbort()
-    __original_exit__(returncode)
+    sys.exit = custom_exit
 
+    del custom_exit
+    del sys
 
-sys.exit = custom_exit
-
-del custom_exit
-del sys
 del absolute_import
 del oneflow
