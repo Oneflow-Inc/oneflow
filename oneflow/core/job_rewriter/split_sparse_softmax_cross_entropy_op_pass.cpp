@@ -85,7 +85,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         stat_distribution_for_consumer.add_sbp_parallel()->mutable_broadcast_parallel();
       } else {
         CHECK(!sbp.has_partial_sum_parallel());
-        *stat_distribution_for_consumer.add_sbp_parallel() = sbp;
+        *stat_distribution_for_consumer.add_sbp_parallel() = cfg::SbpParallel(sbp);
       }
     }
     CHECK(has_split_axis_parallel);
@@ -104,13 +104,13 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                         {reduce_max_device_stage_op.op_conf()});
     cfg::ParallelDistributionSignature reduce_max_device_stage_signature;
     (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["in_0"] =
-        prediction_parallel_distribution;
+        cfg::ParallelDistribution(prediction_parallel_distribution);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["out_0"] =
-        prediction_parallel_distribution;
+        cfg::ParallelDistribution(prediction_parallel_distribution);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["mask_0"] =
-        prediction_parallel_distribution;
+        cfg::ParallelDistribution(prediction_parallel_distribution);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["count_0"] =
-        prediction_parallel_distribution;
+        cfg::ParallelDistribution(prediction_parallel_distribution);
     job_builder->AddParallelDistributionSignature4OpName(reduce_max_device_stage_op.op_name(),
                                                          reduce_max_device_stage_signature);
 

@@ -31,6 +31,19 @@ constexpr char kJsonKeyGUID[] = "guid";
 constexpr char kJsonKeyPort[] = "port";
 constexpr char kJsonKeyLankLayer[] = "link_layer";
 constexpr char kJsonValueLinkLayerInfiniBand[] = "InfiniBand";
+constexpr char kJsonKeyPCIBusID[] = "pci_bus_id";
+
+void GetPCIBusID(const std::string& name, std::string* pci_bus_id) {
+#ifdef __linux__
+  const std::string device_path = "/sys/class/infiniband/" + name + "/device";
+  const char* device_real_path = realpath(device_path.data(), nullptr);
+  if (device_real_path == nullptr) { return; }
+  const std::string device_real_path_str = device_real_path;
+  const size_t pos = device_real_path_str.rfind('/');
+  if (pos == std::string::npos) { return; }
+  *pci_bus_id = device_real_path_str.substr(pos + 1);
+#endif
+}
 
 }  // namespace
 
@@ -40,6 +53,7 @@ struct NetIBDeviceDescriptor::Impl {
   uint64_t guid{};
   uint8_t port{};
   NetIBDeviceDescriptorLinkLayer link_layer{};
+  std::string pci_bus_id;
 };
 
 NetIBDeviceDescriptor::NetIBDeviceDescriptor() { impl_.reset(new Impl()); }
@@ -58,6 +72,8 @@ NetIBDeviceDescriptorLinkLayer NetIBDeviceDescriptor::LinkLayer() const {
   return impl_->link_layer;
 }
 
+const std::string& NetIBDeviceDescriptor::PCIBusID() const { return impl_->pci_bus_id; }
+
 void NetIBDeviceDescriptor::Serialize(std::string* serialized) const {
   nlohmann::json json_object;
   json_object[kJsonKeyOrdinal] = impl_->ordinal;
@@ -69,6 +85,7 @@ void NetIBDeviceDescriptor::Serialize(std::string* serialized) const {
   } else {
     UNIMPLEMENTED();
   }
+  json_object[kJsonKeyPCIBusID] = impl_->pci_bus_id;
   *serialized = json_object.dump(2);
 }
 
@@ -106,6 +123,7 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Query(int32_
   } else {
     UNIMPLEMENTED();
   }
+  GetPCIBusID(desc->impl_->name, &desc->impl_->pci_bus_id);
   return std::shared_ptr<const NetIBDeviceDescriptor>(desc);
 }
 
@@ -123,6 +141,7 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Deserialize(
   } else {
     UNIMPLEMENTED();
   }
+  desc->impl_->pci_bus_id = json_object[kJsonKeyPCIBusID];
   return std::shared_ptr<const NetIBDeviceDescriptor>(desc);
 }
 
