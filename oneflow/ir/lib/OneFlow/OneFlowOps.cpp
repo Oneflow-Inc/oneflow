@@ -18,11 +18,16 @@ limitations under the License.
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -177,11 +182,94 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
-// outline matched DAG into a JIT op
-// a JIT op generates its oneflow op/kernel
-// a JIT op contains a module could be converted to LLVM
-// a JIT module has a function with memref arg and runtime calls generated kernel with blob ptr
-// ultimate goal: end user of oneflow only need to write pdl or python wrapper to test fusers
+static MemRefType convertTensorToMemRef(TensorType type) {
+  assert(type.hasRank() && "expected only ranked shapes");
+  return MemRefType::get(type.getShape(), type.getElementType());
+}
+
+using LoopIterationFn =
+    function_ref<Value(OpBuilder& rewriter, ValueRange memRefOperands, ValueRange loopIvs)>;
+
+static Value insertAllocAndDealloc(MemRefType type, Location loc, PatternRewriter& rewriter) {
+  auto alloc = rewriter.create<memref::AllocOp>(loc, type);
+  auto* parentBlock = alloc->getBlock();
+  alloc->moveBefore(&parentBlock->front());
+  auto dealloc = rewriter.create<memref::DeallocOp>(loc, alloc);
+  dealloc->moveBefore(&parentBlock->back());
+  return alloc;
+}
+
+static void lowerOpToLoops(Operation* op, ValueRange operands, PatternRewriter& rewriter,
+                           LoopIterationFn processIteration) {
+  auto tensorType = (*op->result_type_begin()).cast<TensorType>();
+  auto loc = op->getLoc();
+  auto memRefType = convertTensorToMemRef(tensorType);
+  // TODO: remove alloc and dealloc
+  auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
+  SmallVector<int64_t, 4> lowerBounds(tensorType.getRank(), /*Value=*/0);
+  SmallVector<int64_t, 4> steps(tensorType.getRank(), /*Value=*/1);
+  buildAffineLoopNest(rewriter, loc, lowerBounds, tensorType.getShape(), steps,
+                      [&](OpBuilder& nestedBuilder, Location loc, ValueRange ivs) {
+                        Value valueToStore = processIteration(nestedBuilder, operands, ivs);
+                        nestedBuilder.create<AffineStoreOp>(loc, valueToStore, alloc, ivs);
+                      });
+  rewriter.replaceOp(op, alloc);
+}
+
+struct ScalarMulByTensorOpLowering : public ConversionPattern {
+  ScalarMulByTensorOpLowering(MLIRContext* ctx)
+      : ConversionPattern(ScalarMulByTensorOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+                                ConversionPatternRewriter& rewriter) const final {
+    auto loc = op->getLoc();
+    lowerOpToLoops(
+        op, operands, rewriter,
+        [loc](OpBuilder& builder, ValueRange memRefOperands, ValueRange loopIvs) {
+          typename ScalarMulByTensorOp::Adaptor scalar_mul_by_tensor_adaptor(memRefOperands);
+          auto loadedLhs =
+              builder.create<AffineLoadOp>(loc, scalar_mul_by_tensor_adaptor.x(), loopIvs);
+          auto loadedRhs =
+              builder.create<AffineLoadOp>(loc, scalar_mul_by_tensor_adaptor.scalar(), loopIvs);
+          return builder.create<MulFOp>(loc, loadedLhs, loadedRhs);
+        });
+    return success();
+  }
+};
+namespace {
+struct AffineLoweringPass : public PassWrapper<AffineLoweringPass, FunctionPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
+  }
+  StringRef getName() const override { return "AffineLoweringPass"; }
+  void runOnFunction() final;
+  static std::unique_ptr<AffineLoweringPass> create() {
+    return std::make_unique<AffineLoweringPass>();
+  }
+};
+}  // namespace
+
+void AffineLoweringPass::runOnFunction() {
+  ConversionTarget target(getContext());
+  target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
+  target.addIllegalDialect<OneFlowDialect>();
+  RewritePatternSet patterns(&getContext());
+  patterns.add<ScalarMulByTensorOpLowering>(&getContext());
+  if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    signalPassFailure();
+}
+
+LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<memref::MemRefDialect>();
+
+  mlir::PassManager pm(&context);
+  pm.addNestedPass<FuncOp>(AffineLoweringPass::create());
+  pm.dump();
+  return pm.run(module.get());
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
                                                       mlir::OpResult mul_res,
                                                       mlir::OpResult cast_res) {
@@ -236,37 +324,43 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
 
+      mlir::MLIRContext context;
+
+      // TODO: is it a good idea to insert the sub-graph at entry block?
+      // TODO: add dedicated op definition for this kind OneFlow_JitFunc
+      // TODO: save input output alias info in OneFlow_JitFunc's attr
+      OpBuilder builder(&context);
+
+      OwningModuleRef jit_module(
+          ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+
       // create a function to be lowered
       SmallVector<Type, 3> types(created->getOperandTypes());
       types.push_back(created->getResultTypes().front());
       auto func_type = rewriter.getFunctionType(types, llvm::None);
-      auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
-      // TODO: is it a good idea to insert the sub-graph at entry block?
-      // TODO: add dedicated op definition for this kind OneFlow_JitFunc
-      // TODO: save input output alias info in OneFlow_JitFunc's attr
-      mlir::MLIRContext context;
-      context.getOrLoadDialect<oneflow::OneFlowDialect>();
-      context.loadDialect<StandardOpsDialect>();
-      OwningModuleRef jit_module(
-          ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
-      OpBuilder builder(jit_module->getContext());
-      auto entry_block = function.addEntryBlock();
+      auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
 
-      builder.setInsertionPointToStart(entry_block);
+      auto& entry_block = *function.addEntryBlock();
+      builder.setInsertionPointToStart(&entry_block);
+
       // TODO: make this transformation generic, using a value => arg mapping and walk the graph
       auto cast_op_ =
           builder.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
-                                 /* operands */ entry_block->getArguments().take_front(),
+                                 /* operands */ entry_block.getArguments().take_front(),
                                  /* attributes */ cast_op->getAttrs());
       builder.create<ScalarMulByTensorOp>(
           mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
           /* operands */
-          SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block->getArgument(1)}),
+          SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block.getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
       builder.create<ReturnOp>(mul_op->getLoc());
       // TODO: decare terminator
       // TODO: skip outline functions when translating beck to job
       jit_module->push_back(function);
+      jit_module->dump();
+
+      LogicalResult result = Lower(context, jit_module);
+      if (result.failed()) { exit(EXIT_FAILURE); }
       jit_module->dump();
 
       cast_op.erase();
