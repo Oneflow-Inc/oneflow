@@ -31,7 +31,7 @@ class Scatter_nd(Module):
     Args:
         indices: The indice of `updates`. Its type should be `flow.int`.
         updates: The update Blob.
-        shape: The constant tensor shape, the constant tensor elements are all zero.
+        shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero.
 
     For example:
 

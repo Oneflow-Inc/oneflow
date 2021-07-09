@@ -45,7 +45,7 @@ def gather_nd_op(input, indices):
 
     .. math::
 
-        output[(i_0,i_1,...,i_{K-2})] = input[indices(i_{0},i_{1},...,i_{K-2})]
+        output[i_{0},i_{1},...,i_{K-2}] = input[indices(i_{0},i_{1},...,i_{K-2})]
 
 
     Args:
