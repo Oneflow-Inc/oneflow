@@ -236,6 +236,22 @@ struct ScalarMulByTensorOpLowering : public ConversionPattern {
     return success();
   }
 };
+
+struct CastOpLowering : public ConversionPattern {
+  CastOpLowering(MLIRContext* ctx) : ConversionPattern(CastOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+                                ConversionPatternRewriter& rewriter) const final {
+    auto loc = op->getLoc();
+    typename CastOp::Adaptor scalar_mul_by_tensor_adaptor(operands);
+    Value casted = rewriter.create<memref::CastOp>(
+        loc, /* source */ scalar_mul_by_tensor_adaptor.x(),
+        /* dest */ convertTensorToMemRef(op->getResultTypes().front().cast<TensorType>()));
+    rewriter.replaceOp(op, casted);
+    return success();
+  }
+};
+
 namespace {
 struct AffineLoweringPass : public PassWrapper<AffineLoweringPass, FunctionPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
@@ -255,6 +271,7 @@ void AffineLoweringPass::runOnFunction() {
   target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
+  patterns.add<CastOpLowering>(&getContext());
   patterns.add<ScalarMulByTensorOpLowering>(&getContext());
   if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
     signalPassFailure();
