@@ -56,6 +56,20 @@ InplaceBiasAdd(DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_si
                                 CudnnSPOnePtr<float>(), c_desc.Get(), y));
 }
 
+#if CUDA_VERSION >= 11000
+
+template<typename T, typename Index>
+typename std::enable_if<std::is_same<T, nv_bfloat16>::value>::type InplaceBiasAdd(
+    DeviceCtx* ctx, Index outer_size, Index bias_size, Index inner_size, const T* x, const T* bias,
+    T* y) {
+  CudnnTensorDesc c_desc(CUDNN_TENSOR_NCHW, kBFloat16, outer_size, bias_size, inner_size, 1);
+  CudnnTensorDesc a_desc(CUDNN_TENSOR_NCHW, kBFloat16, 1, bias_size, 1, 1);
+  OF_CUDNN_CHECK(cudnnAddTensor(ctx->cudnn_handle(), CudnnSPOnePtr<float>(), a_desc.Get(), bias,
+                                CudnnSPOnePtr<float>(), c_desc.Get(), y));
+}
+
+#endif
+
 template<typename T, typename Index>
 typename std::enable_if<IsIntegral<T>::value>::type InplaceBiasAdd(DeviceCtx* ctx, Index outer_size,
                                                                    Index bias_size,
@@ -157,5 +171,51 @@ REGISTER_BIAS_ADD_USER_KERNEL(GPU, double)
 REGISTER_BIAS_ADD_USER_KERNEL(GPU, int8_t)
 REGISTER_BIAS_ADD_USER_KERNEL(GPU, int32_t)
 REGISTER_BIAS_ADD_USER_KERNEL(GPU, int64_t)
+
+#if CUDA_VERSION >= 11000
+
+class BiasAddBFloat16GpuUserKernel final : public user_op::OpKernel {
+ public:
+  BiasAddBFloat16GpuUserKernel() = default;
+  ~BiasAddBFloat16GpuUserKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
+    auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
+    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape().elem_cnt();
+    if (IsKernelSafeInt32(n)) {
+      BiasAddCalculation<DeviceType::kGPU, nv_bfloat16, int32_t>::Invoke(
+          ctx->device_ctx(), outer_size, bias_size, inner_size,
+          reinterpret_cast<const nv_bfloat16*>(a_tensor->dptr()),
+          reinterpret_cast<const nv_bfloat16*>(b_tensor->dptr()),
+          reinterpret_cast<nv_bfloat16*>(out_tensor->mut_dptr()));
+    } else {
+      BiasAddCalculation<DeviceType::kGPU, nv_bfloat16, int64_t>::Invoke(
+          ctx->device_ctx(), outer_size, bias_size, inner_size,
+          reinterpret_cast<const nv_bfloat16*>(a_tensor->dptr()),
+          reinterpret_cast<const nv_bfloat16*>(b_tensor->dptr()),
+          reinterpret_cast<nv_bfloat16*>(out_tensor->mut_dptr()));
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("bias_add")
+    .SetCreateFn<BiasAddBFloat16GpuUserKernel>()
+    .SetIsMatchedHob((user_op::HobDataType("out", 0) == kBFloat16))
+    .SetInplaceProposalFn([](const user_op::InferContext&,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "a", 0, true));
+      return Maybe<void>::Ok();
+    });
+
+#endif
 
 }  // namespace oneflow

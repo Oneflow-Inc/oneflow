@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#if defined(WITH_CUDA) && CUDA_VERSION >= 11000
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#endif
 
 namespace oneflow {
 
@@ -28,42 +31,39 @@ void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_da
   shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
 }
 
-template<typename T>
-T GetDtypeMatchedValue(double floating, int64_t integral);
-
-template<>
-float16 GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<float16>(floating);
-}
-
-template<>
-float GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<float>(floating);
-}
-
-template<>
-double GetDtypeMatchedValue(double floating, int64_t integral) {
-  return floating;
-}
-
-template<>
-int8_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int8_t>(integral);
-}
-
-template<>
-int32_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int32_t>(integral);
-}
-
-template<>
-int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return integral;
+const void* GetDtypeMatchedValuePtr(const DataType data_type, double floating, int64_t integral) {
+  if (data_type == kFloat) {
+    static const float val = static_cast<float>(floating);
+    return static_cast<const void*>(&val);
+  } else if (data_type == kDouble) {
+    static const double val = floating;
+    return static_cast<const void*>(&val);
+  } else if (data_type == kFloat16) {
+    static const float16 val = static_cast<float16>(floating);
+    return static_cast<const void*>(&val);
+  } else if (data_type == kInt8) {
+    static const int8_t val = static_cast<int8_t>(integral);
+    return static_cast<const void*>(&val);
+  } else if (data_type == kInt32) {
+    static const int32_t val = static_cast<int32_t>(integral);
+    return static_cast<const void*>(&val);
+  } else if (data_type == kInt64) {
+    static const int64_t val = static_cast<int64_t>(integral);
+    return static_cast<const void*>(&val);
+#if defined(WITH_CUDA) && CUDA_VERSION >= 11000
+  } else if (data_type == kBFloat16) {
+    static const nv_bfloat16 val = static_cast<nv_bfloat16>(floating);
+    return static_cast<const void*>(&val);
+  }
+#endif
+  else {
+    UNIMPLEMENTED();
+  }
 }
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type>
 class PadKernel final : public user_op::OpKernel {
  public:
   PadKernel() = default;
@@ -73,14 +73,15 @@ class PadKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T constant_value = GetDtypeMatchedValue<T>(ctx->Attr<double>("floating_constant_value"),
-                                                     ctx->Attr<int64_t>("integral_constant_value"));
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
     const int64_t ndims = x->shape().NumAxes();
     const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding_before.size(), ndims);
-    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
-                                     static_cast<T>(constant_value), y->mut_dptr<T>());
+    NewKernelUtil<device_type>::Fill(
+        ctx->device_ctx(), y->shape().elem_cnt(), y->data_type(),
+        GetDtypeMatchedValuePtr(y->data_type(), ctx->Attr<double>("floating_constant_value"),
+                                ctx->Attr<int64_t>("integral_constant_value")),
+        y->mut_dptr());
     MemoryCopyNdDesc memory_copy_nd_desc;
 
     DimVector src_shape_vec(ndims);
@@ -100,32 +101,22 @@ class PadKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
+    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr(), x->dptr(),
                                reduced_memory_copy_nd_desc);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PAD_KERNEL(dev, dtype)                                             \
-  REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel<dev, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == dev)                                              \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_PAD_KERNEL(dev)                                             \
+  REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel<dev>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == dev));
 
 #ifdef WITH_CUDA
-REGISTER_PAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, float16)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_PAD_KERNEL(DeviceType::kGPU, int8_t)
+REGISTER_PAD_KERNEL(DeviceType::kGPU)
 #endif
-REGISTER_PAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_PAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_PAD_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_PAD_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
+REGISTER_PAD_KERNEL(DeviceType::kCPU)
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type>
 class PadGradKernel final : public user_op::OpKernel {
  public:
   PadGradKernel() = default;
@@ -158,30 +149,20 @@ class PadGradKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
 
     std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
+    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr(), dy->dptr(),
                                reduced_memory_copy_nd_desc);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PAD_GRAD_KERNEL(dev, dtype)            \
-  REGISTER_USER_KERNEL("pad_grad")                      \
-      .SetCreateFn<PadGradKernel<dev, dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == dev) \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_PAD_GRAD_KERNEL(dev)    \
+  REGISTER_USER_KERNEL("pad_grad")       \
+      .SetCreateFn<PadGradKernel<dev>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == dev));
 
 #ifdef WITH_CUDA
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, double)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, float16)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int32_t)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int64_t)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU, int8_t)
+REGISTER_PAD_GRAD_KERNEL(DeviceType::kGPU)
 #endif
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU, double)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU, int8_t)
+REGISTER_PAD_GRAD_KERNEL(DeviceType::kCPU)
 
 }  // namespace oneflow

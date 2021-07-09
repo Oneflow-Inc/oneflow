@@ -18,6 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/kernel/util/blas_interface.h"
 
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif
+
 namespace oneflow {
 
 class Blob;
@@ -33,6 +37,11 @@ struct BlasIf<DeviceType::kGPU> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const float16* a,
                      const float16* b, const double beta, float16* c);
+#if CUDA_VERSION >= 11000
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const double alpha,
+                     const nv_bfloat16* a, const nv_bfloat16* b, const double beta, nv_bfloat16* c);
+#endif
 
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
@@ -46,6 +55,12 @@ struct BlasIf<DeviceType::kGPU> {
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const float16* a,
                             const float16* b, const double beta, float16* c);
+#if CUDA_VERSION >= 11000
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const double alpha, const nv_bfloat16* a,
+                            const nv_bfloat16* b, const double beta, nv_bfloat16* c);
+#endif
 
   static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
                    float* y, const int incy);
