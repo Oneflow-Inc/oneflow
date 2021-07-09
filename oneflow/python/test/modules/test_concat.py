@@ -119,6 +119,7 @@ def _test_concat_grad_and_no_grad(test_case, device):
         np.allclose(input1.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-4, 1e-4)
     )
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
