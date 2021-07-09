@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <pybind11/pybind11.h>
+#include <string>
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/nn_graph_if.h"
-#include "oneflow/core/common/util.h"
+
+namespace py = pybind11;
+
 namespace oneflow {
-
-const std::vector<std::string>& NNGraph::inputs_op_names() const { UNIMPLEMENTED(); }
-
-const std::vector<std::string>& NNGraph::outputs_op_names() const { UNIMPLEMENTED(); }
-
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  using namespace oneflow;
+  py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "NNGraph")
+      .def(py::init<const std::string&>())
+      .def_property_readonly("name", &NNGraph::job_name);
+}
 }  // namespace oneflow
