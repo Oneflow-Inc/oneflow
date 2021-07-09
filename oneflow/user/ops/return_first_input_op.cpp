@@ -18,31 +18,20 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
-      ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  return Device::New("nccl");
-}
+namespace {
 
-REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
-    .Input("in")
+REGISTER_USER_OP("return_first_input")
+    .InputWithMinimum("in", 1)
     .Output("out")
-    .Attr<std::string>("parallel_conf")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDeviceInferFn(DeviceInferFn)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
-    });
-
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+}  // namespace
 }  // namespace oneflow

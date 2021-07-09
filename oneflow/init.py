@@ -75,8 +75,6 @@ else:
     oneflow._oneflow_internal.SetIsMultiClient(False)
     env_util.init_default_physical_env()
 
-del env_util
-
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(is_multi_client, get_rank, sync):
