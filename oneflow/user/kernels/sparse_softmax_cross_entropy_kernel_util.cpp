@@ -73,11 +73,14 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     // sum | tmp[i] = Sum_j(prob[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                                 reduce_storage_var);
+
+    NdarrayUtil<DeviceType::kCPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob),
+                                                          Val({n, 1}, tmp));  // for backward
     FOR_RANGE(int64_t, i, 0, n) {
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
       K label = labels[i] - lower_bound;
-      if (label >= 0 && label < w) { y[i] = -SafeLog(tmp[i]) + new_tmp[i * w + label]; }
+      if (label >= 0 && label < w) { y[i] = SafeLog(tmp[i]) - new_tmp[i * w + label]; }
     }
   }
 
