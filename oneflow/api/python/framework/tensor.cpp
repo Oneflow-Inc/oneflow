@@ -42,32 +42,22 @@ const DType* GetTensorDType(const Tensor& tensor) {
   return DType::Get(tensor.dtype()).GetOrThrow().get();
 }
 
-template<typename T>
-struct TensorExportUtil final {};
+std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shape,
+                                        const DType* dtype, const Symbol<Device>& device,
+                                        bool is_lazy, bool requires_grad, bool is_leaf) {
+  return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
+                                    is_leaf)
+      .GetPtrOrThrow();
+}
 
-template<>
-struct TensorExportUtil<MirroredTensor> final {
-  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                    const DType* dtype,
-                                                    const Symbol<Device>& device, bool is_lazy,
-                                                    bool requires_grad, bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
-                                      is_leaf)
-        .GetPtrOrThrow();
-  }
-};
-
-template<>
-struct TensorExportUtil<ConsistentTensor> final {
-  static std::shared_ptr<ConsistentTensor> MakeTensor(
-      const std::shared_ptr<const Shape>& shape, const DType* dtype,
-      Symbol<cfg::ParallelDistribution>& parallel_distribution, Symbol<ParallelDesc> parallel_desc,
-      bool is_lazy, bool requires_grad, bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype->data_type(), parallel_distribution,
-                                        parallel_desc, is_lazy, requires_grad, is_leaf)
-        .GetPtrOrThrow();
-  }
-};
+std::shared_ptr<Tensor> MakeConsistentTensor(
+    const std::shared_ptr<const Shape>& shape, const DType* dtype,
+    Symbol<cfg::ParallelDistribution>& parallel_distribution, Symbol<ParallelDesc> parallel_desc,
+    bool is_lazy, bool requires_grad, bool is_leaf) {
+  return ConsistentTensor::MakeTensor(shape, dtype->data_type(), parallel_distribution,
+                                      parallel_desc, is_lazy, requires_grad, is_leaf)
+      .GetPtrOrThrow();
+}
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = std::dynamic_pointer_cast<MirroredTensor>(t);
@@ -215,8 +205,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
-      .def(py::init(&TensorExportUtil<MirroredTensor>::MakeTensor))
-      .def(py::init(&TensorExportUtil<ConsistentTensor>::MakeTensor))
+      .def(py::init(&MakeLocalTensor))
+      .def(py::init(&MakeConsistentTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
