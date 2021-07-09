@@ -268,7 +268,7 @@ class BCELoss(Module):
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -887,7 +887,7 @@ class CTCLoss(Module):
         >>> out = loss_sum(log_probs, targets, input_lengths, target_lengths)
         >>> out
         tensor([6.8257], dtype=oneflow.float32)
-        >>> 
+        >>>
 
     """
 
@@ -1104,6 +1104,149 @@ class BCEWithLogitsLoss(Module):
         else:
             # Do no reduction
             return _weighted_loss
+
+
+@oneflow_export("nn.SmoothL1Loss")
+@experimental_api
+class SmoothL1Loss(Module):
+    r"""Creates a criterion that uses a squared term if the absolute
+    element-wise error falls below beta and an L1 term otherwise.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html
+
+    It is less sensitive to outliers than :class:`torch.nn.MSELoss` and in some cases
+    prevents exploding gradients (e.g. see the paper `Fast R-CNN <https://openaccess.thecvf.com/content_iccv_2015/papers/Girshick_Fast_R-CNN_ICCV_2015_paper.pdf>`__ by Ross Girshick)..
+
+    For a batch of size :math:`N`, the unreduced loss can be described as:
+
+    .. math::
+        \ell(x, y) = L = \{l_1, ..., l_N\}^T
+
+    with
+
+    .. math::
+        l_n = \begin{cases}
+        0.5 (x_n - y_n)^2 / beta, & \text{if } |x_n - y_n| < beta \\
+        |x_n - y_n| - 0.5 * beta, & \text{otherwise }
+        \end{cases}
+
+    If `reduction` is not `none`, then:
+
+    .. math::
+        \ell(x, y) =
+        \begin{cases}
+            \operatorname{mean}(L), &  \text{if reduction} = \text{`mean';}\\
+            \operatorname{sum}(L),  &  \text{if reduction} = \text{`sum'.}
+        \end{cases}
+
+    .. note::
+        Smooth L1 loss can be seen as exactly :class:`L1Loss`, but with the :math:`|x - y| < beta`
+        portion replaced with a quadratic function such that its slope is 1 at :math:`|x - y| = beta`.
+        The quadratic segment smooths the L1 loss near :math:`|x - y| = 0`.
+
+    .. note::
+        Smooth L1 loss is closely related to :class:`HuberLoss`, being
+        equivalent to :math:`huber(x, y) / beta` (note that Smooth L1's beta hyper-parameter is
+        also known as delta for Huber). This leads to the following differences:
+
+        * As beta -> 0, Smooth L1 loss converges to :class:`L1Loss`, while :class:`HuberLoss`
+          converges to a constant 0 loss.
+        * As beta -> :math:`+\infty`, Smooth L1 loss converges to a constant 0 loss, while
+          :class:`HuberLoss` converges to :class:`MSELoss`.
+        * For Smooth L1 loss, as beta varies, the L1 segment of the loss has a constant slope of 1.
+          For :class:`HuberLoss`, the slope of the L1 segment is beta.
+
+    Args:
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). By default,
+            the losses are averaged over each loss element in the batch. Note that for
+            some losses, there are multiple elements per sample. If the field :attr:`size_average`
+            is set to ``False``, the losses are instead summed for each minibatch. Ignored
+            when :attr:`reduce` is ``False``. Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). By default, the
+            losses are averaged or summed over observations for each minibatch depending
+            on :attr:`size_average`. When :attr:`reduce` is ``False``, returns a loss per
+            batch element instead and ignores :attr:`size_average`. Default: ``True``
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+        beta (float, optional): Specifies the threshold at which to change between L1 and L2 loss.
+            The value must be non-negative. Default: 1.0
+
+    Shape:
+        - Input: :math:`(N, *)` where :math:`*` means any number of additional dimensions
+        - Target: :math:`(N, *)`; same shape as the input
+        - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N, *)`; same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32), dtype=flow.float32)
+        >>> y = flow.Tensor(np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32), dtype=flow.float32)
+        >>> m = flow.nn.SmoothL1Loss(reduction="none")
+        >>> out = m(x, y)
+        >>> out
+        tensor([0.02 , 0.125, 1.7  , 0.005, 0.18 ], dtype=oneflow.float32)
+
+        >>> m = flow.nn.SmoothL1Loss(reduction="mean")
+        >>> out = m(x, y)
+        >>> out
+        tensor([0.406], dtype=oneflow.float32)
+
+        >>> m = flow.nn.SmoothL1Loss(reduction="sum")
+        >>> out = m(x, y)
+        >>> out
+        tensor([2.03], dtype=oneflow.float32)
+    """
+
+    def __init__(
+        self,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+        beta: float = 1.0,
+    ) -> None:
+        super().__init__()
+        if size_average is not None:
+            raise ValueError("Argument reduce is not supported yet")
+        if reduce is not None:
+            raise ValueError("Argument reduce is not supported yet")
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+        self.reduction = reduction
+        self.beta = beta
+
+        self._op = (
+            flow.builtin_op("smooth_l1_loss")
+            .Input("prediction")
+            .Input("label")
+            .Output("loss")
+            .Attr("beta", float(beta))
+            .Build()
+        )
+
+    def forward(self, input, target,) -> Tensor:
+
+        loss = self._op(input, target)[0]
+
+        if self.reduction == "none":
+            return loss
+        elif self.reduction == "sum":
+            return flow.experimental.sum(loss)
+        elif self.reduction == "mean":
+            return flow.experimental.mean(loss)
 
 
 if __name__ == "__main__":

@@ -443,9 +443,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow
 
