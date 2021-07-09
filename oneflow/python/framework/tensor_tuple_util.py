@@ -18,11 +18,11 @@ import collections
 from typing import Union, Sequence, Tuple, Optional
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow._oneflow_internal import TensorTuple, LocalTensor
+from oneflow._oneflow_internal import TensorTuple, Tensor
 
 
 def convert_to_tensor_tuple(
-    args: Optional[Union[Tensor, Sequence[Tensor], LocalTensor, Sequence[LocalTensor]]]
+    args: Optional[Union[Tensor, Sequence[Tensor], Tensor, Sequence[Tensor]]]
 ):
     if args is None:
         return TensorTuple()
