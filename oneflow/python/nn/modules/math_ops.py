@@ -460,7 +460,7 @@ def _add(x, y):
 @experimental_api
 def _add_inplace(x, y):
     r"""
-    In-place version of :func:`flow.experimental.add`.
+    In-place version of :func:`oneflow.experimental.Tensor.add`.
     """
 
     if isinstance(y, (int, float)):
