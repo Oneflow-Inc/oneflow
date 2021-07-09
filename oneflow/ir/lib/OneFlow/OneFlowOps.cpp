@@ -243,11 +243,12 @@ struct AffineLoweringPass : public PassWrapper<AffineLoweringPass, FunctionPass>
   }
   StringRef getName() const override { return "AffineLoweringPass"; }
   void runOnFunction() final;
-  static std::unique_ptr<AffineLoweringPass> create() {
-    return std::make_unique<AffineLoweringPass>();
-  }
 };
 }  // namespace
+
+std::unique_ptr<Pass> mlir::oneflow::createLowerToAffinePass() {
+  return std::make_unique<AffineLoweringPass>();
+}
 
 void AffineLoweringPass::runOnFunction() {
   ConversionTarget target(getContext());
@@ -265,7 +266,7 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
   context.loadDialect<memref::MemRefDialect>();
 
   mlir::PassManager pm(&context);
-  pm.addNestedPass<FuncOp>(AffineLoweringPass::create());
+  pm.addNestedPass<FuncOp>(createLowerToAffinePass());
   pm.dump();
   return pm.run(module.get());
 }
