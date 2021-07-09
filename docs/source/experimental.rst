@@ -74,6 +74,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ConstantPad2d
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d
 .. autofunction:: oneflow.experimental.nn.Dropout
+.. autofunction:: oneflow.experimental.slice
 .. autofunction:: oneflow.experimental.eq
 .. autofunction:: oneflow.experimental.ne
 .. autofunction:: oneflow.experimental.to
@@ -116,6 +117,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
 .. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
+.. autofunction:: oneflow.experimental.nn.SmoothL1Loss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.masked_select
@@ -236,3 +238,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.tensor_to_tensor_buffer
 .. autofunction:: oneflow.experimental.Tensor.type_as
 .. autofunction:: oneflow.experimental.Tensor.long
+.. autofunction:: oneflow.experimental.bernoulli

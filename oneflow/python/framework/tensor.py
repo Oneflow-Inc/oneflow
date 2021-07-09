@@ -257,8 +257,20 @@ class Tensor:
 
     @grad.setter
     @_auto_determine
-    def grad(self, grad_tensor):
-        self._local_or_consistent_tensor.grad = grad_tensor
+    def grad(self, new_grad):
+        def check_grad(grad, new_grad):
+            assert grad.shape == new_grad.shape, "Shape of new grad is not equal"
+            assert grad.device == new_grad.device, "Device of new grad is not equal"
+            assert grad.dtype == new_grad.dtype, "Data type of new grad is not equal"
+            assert type(grad) == type(new_grad), "Type of new grad is not equal"
+
+        if self._local_or_consistent_tensor is not None:
+            if new_grad is None:
+                self._local_or_consistent_tensor.set_grad(None)
+            else:
+                new_grad_detach = new_grad.detach()._local_or_consistent_tensor
+                check_grad(self._local_or_consistent_tensor.grad, new_grad_detach)
+                self._local_or_consistent_tensor.set_grad(new_grad_detach)
 
     @property
     def grad_fn(self):
@@ -307,6 +319,13 @@ class Tensor:
     def detach(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
+        else:
+            return None
+
+    @_auto_determine
+    def clone(self):
+        if self._local_or_consistent_tensor is not None:
+            return flow.Tensor(self._local_or_consistent_tensor.clone())
         else:
             return None
 
