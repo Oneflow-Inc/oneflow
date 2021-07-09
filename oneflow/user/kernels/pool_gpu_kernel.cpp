@@ -43,9 +43,9 @@ class CudnnPoolDesc final {
 
 class GPUPoolOpKernelState final : public user_op::OpKernelState {
  public:
-  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
-                       const Shape& y_shape, const std::string& data_format, const DataType& dtype,
-                       const Params3D& params_3d)
+  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
+                       const ShapeView& y_shape, const std::string& data_format,
+                       const DataType& dtype, const Params3D& params_3d)
       : dim_(dim), pooling_type_(pooling_type) {
     Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
   }
@@ -82,7 +82,7 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
       const int32_t& dim, const std::string& pooling_type, user_op::KernelComputeContext* ctx) {
     if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
     const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    const Shape& x_shape = x_desc->shape();
+    const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -92,8 +92,8 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-    const DataType dtype = x_desc->data_type();
+    const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
+    const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
     return std::make_shared<GPUPoolOpKernelState>(dim, pooling_type, x_shape, y_shape, data_format,
                                                   dtype, params_3d);
   }
