@@ -33,11 +33,11 @@ namespace oneflow {
 
 namespace {
 
-class LazyJobInstance : public JobInstance {
+class LazyJobInstance final : public JobInstance {
  public:
   LazyJobInstance(const LazyJobInstance&) = delete;
   LazyJobInstance(LazyJobInstance&&) = delete;
-  ~LazyJobInstance() = default;
+  ~LazyJobInstance() override = default;
   LazyJobInstance(const std::string& job_name,
                   const HashMap<std::string, std::function<void(int64_t)>>& push_cbs,
                   const HashMap<std::string, std::function<void(int64_t)>>& pull_cbs,
@@ -77,7 +77,7 @@ class LazyJobInstance : public JobInstance {
 
 namespace vm {
 
-class RunLazyJobInstructionType : public InstructionType {
+class RunLazyJobInstructionType final : public InstructionType {
  public:
   RunLazyJobInstructionType(const RunLazyJobInstructionType&) = delete;
   RunLazyJobInstructionType(RunLazyJobInstructionType&&) = delete;
@@ -89,7 +89,7 @@ class RunLazyJobInstructionType : public InstructionType {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
-    device_ctx->WaitUntilQeueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     {
       const auto& job_instance = MakeJobInstance(instruction);
       const auto& job_name = job_instance->job_name();
@@ -107,8 +107,6 @@ class RunLazyJobInstructionType : public InstructionType {
   }
 
  private:
-  virtual const char* device_tag() const { return "lazy_job"; }
-
   LazyJobDeviceCtx* GetLazyJobDeviceCtx(Instruction* instruction) const {
     auto* stream = instruction->mut_stream();
     auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(stream->device_ctx().get());
