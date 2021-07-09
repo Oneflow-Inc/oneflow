@@ -39,6 +39,7 @@ def _need_check_device_tag(op_conf):
     return op_conf.HasField("device_tag")
 
 
+@oneflow_export("OutputFuture")
 class OutputFuture(object):
     def __init__(self):
         self.cond_var_ = threading.Condition()
