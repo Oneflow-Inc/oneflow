@@ -45,74 +45,53 @@ locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
-# import oneflow.python.framework.session_util as session_util
+from oneflow.compatible.single_client.python.framework import session_util
 
-# del session_util
+del session_util
 
-# import oneflow.python.framework.register_python_callback
 
-# import atexit
-# import oneflow.python.framework.c_api_util
-# import oneflow.python.framework.register_class_method_util as register_class_method_util
+import oneflow.compatible.single_client.python_gen.__export_symbols__
+
+import oneflow.compatible.single_client.python.framework.c_api_util
+
+# register ForeignCallback
+from oneflow.compatible.single_client.python.framework import register_python_callback
+from oneflow.compatible.single_client.python.framework import python_callback
+
+oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
+    python_callback.global_python_callback
+)
+del python_callback
+del register_python_callback
+
+# register Watcher
+from oneflow.compatible.single_client.python.framework import watcher
+
+oneflow._oneflow_internal.RegisterWatcherOnlyOnce(watcher._global_watcher)
+del watcher
+
+# register BoxingUtil
+from oneflow.compatible.single_client.python.eager import boxing_util
+
+oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(
+    boxing_util._global_boxing_util
+)
+del boxing_util
+
+
+from oneflow.compatible.single_client.python.framework import register_class_method_util
+
+register_class_method_util.RegisterMethod4Class()
+del register_class_method_util
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 
-# register_class_method_util.RegisterMethod4Class()
-# oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+import atexit
+from oneflow.compatible.single_client.python.framework.session_context import (
+    TryCloseDefaultSession,
+)
 
-# import oneflow.python.framework.env_util as env_util
-
-
-# if env_util.HasAllMultiClientEnvVars():
-#     env_util.env_init(True)
-# else:
-#     env_util.init_default_physical_env()
-
-# del env_util
-
-
-# capture oneflow methods so that they can be still accessed after `del oneflow`
-# def _SyncOnMasterFn(is_multi_client, get_rank, sync):
-#     def SyncOnMaster():
-#         if is_multi_client or get_rank() == 0:
-#             sync()
-
-#     return SyncOnMaster
-
-
-# atexit.register(oneflow._oneflow_internal.SetShuttingDown)
-# atexit.register(oneflow._oneflow_internal.DestroyEnv)
-# atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-# Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
-# will be set to nullptr by TryCloseDefaultSession,
-# so sync vm in advance to avoid data race
-# atexit.register(
-#     _SyncOnMasterFn(
-#         oneflow.python.framework.distribute.is_multi_client(),
-#         oneflow.python.framework.distribute.get_rank,
-#         oneflow._oneflow_internal.eager.multi_client.Sync
-#         if oneflow.python.framework.distribute.is_multi_client()
-#         else oneflow._oneflow_internal.eager.single_client.Sync,
-#     )
-# )
-# del atexit
-
-# import sys
-
-# __original_exit__ = sys.exit
-
-
-# def custom_exit(returncode):
-#     if returncode != 0:
-#         import oneflow
-
-#         oneflow._oneflow_internal.MasterSendAbort()
-#     __original_exit__(returncode)
-
-
-# sys.exit = custom_exit
-
-# del custom_exit
-# del sys
-# del absolute_import
-# del oneflow
+atexit.register(TryCloseDefaultSession)
+del TryCloseDefaultSession
+del atexit
+del absolute_import

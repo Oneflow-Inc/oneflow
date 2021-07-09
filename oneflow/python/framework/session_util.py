@@ -428,6 +428,9 @@ class Session(object):
         self.cond_var_.notify()
         self.cond_var_.release()
 
+    def __del__(self):
+        oneflow._oneflow_internal.ClearSessionById(self.id)
+
 
 @oneflow_export("find_or_create_module")
 def api_find_or_create_module(

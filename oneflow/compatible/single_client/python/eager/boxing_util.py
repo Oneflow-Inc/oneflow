@@ -1009,5 +1009,4 @@ class BoxingUtil(oneflow._oneflow_internal.deprecated.ForeignBoxingUtil):
         return Assign(builder, target_blob_object, source_blob_object)
 
 
-# _global_boxing_util = BoxingUtil()
-# oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(_global_boxing_util)
+_global_boxing_util = BoxingUtil()

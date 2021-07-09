@@ -3,10 +3,8 @@ import os
 import argparse
 import inspect
 
-# import oneflow
-import oneflow.python_gen.__export_symbols__
-
-import oneflow.compatible.single_client.python_gen.__export_symbols__
+import oneflow
+import oneflow.compatible.single_client
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-root", "--root_path", type=str, required=True)

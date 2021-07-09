@@ -31,14 +31,14 @@ HashMap<int64_t, std::shared_ptr<Session>>* GlobalId2SessionMap() {
   return &id2session_map;
 }
 
-int64_t* DefaultSessionId() {
-  static int64_t default_sess_id;
+std::vector<int64_t>* DefaultSessionId() {
+  static std::vector<int64_t> default_sess_id;
   return &default_sess_id;
 }
 
 Maybe<void> SetDefaultSessionId(int64_t val) {
-  int64_t* id = DefaultSessionId();
-  *id = val;
+  std::vector<int64_t>* ids = DefaultSessionId();
+  ids->push_back(val);
   return Maybe<void>::Ok();
 }
 
@@ -78,7 +78,10 @@ Maybe<bool> Session::IsConsistentStrategyEnabled() const {
          && !is_mirrored_strategy_enabled_stack_->back();
 }
 
-Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
+Maybe<int64_t> GetDefaultSessionId() {
+  std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
+  return DefaultSessionId()->back();
+}
 
 Maybe<Session> RegsiterSession(int64_t id) {
   std::shared_ptr<Session> sess = std::make_shared<Session>(id);
@@ -103,6 +106,7 @@ Maybe<void> ClearSessionById(int64_t id) {
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) != id2session_map->end());
   id2session_map->erase(id);
+  DefaultSessionId()->pop_back();
   return Maybe<void>::Ok();
 }
 
