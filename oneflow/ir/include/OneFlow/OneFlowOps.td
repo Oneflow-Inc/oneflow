@@ -3,6 +3,7 @@
 
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Pass/PassBase.td"
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
@@ -200,3 +201,9 @@ def OutlineFuseCastScale : Pat<
   ),
   (OutlineFunction $mul_op, $cast_op)
 >;
+
+def LowerOneFlowToAffinePass : Pass<"lower-oneflow-to-affine", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createLowerOneFlowToAffinePass()";
+  let dependentDialects = ["AffineDialect", "memref::MemRefDialect", "StandardOpsDialect"];
+}

@@ -7,4 +7,9 @@ set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
 mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 
-add_mlir_dialect(OneFlowOps oneflow DEPENDS MLIROneFlowEnumsIncGen MLIROneFlowPatternsIncGen)
+# TODO: seperate conversion and opt with --name
+set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
+mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
+add_public_tablegen_target(MLIROneFlowPassIncGen)
+
+add_mlir_dialect(OneFlowOps oneflow DEPENDS MLIROneFlowEnumsIncGen MLIROneFlowPatternsIncGen MLIROneFlowPassIncGen)

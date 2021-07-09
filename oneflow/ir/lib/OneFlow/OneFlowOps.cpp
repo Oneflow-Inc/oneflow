@@ -246,7 +246,7 @@ struct AffineLoweringPass : public PassWrapper<AffineLoweringPass, FunctionPass>
 };
 }  // namespace
 
-std::unique_ptr<Pass> mlir::oneflow::createLowerToAffinePass() {
+std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToAffinePass() {
   return std::make_unique<AffineLoweringPass>();
 }
 
@@ -266,7 +266,7 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
   context.loadDialect<memref::MemRefDialect>();
 
   mlir::PassManager pm(&context);
-  pm.addNestedPass<FuncOp>(createLowerToAffinePass());
+  pm.addNestedPass<FuncOp>(createLowerOneFlowToAffinePass());
   pm.dump();
   return pm.run(module.get());
 }
