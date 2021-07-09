@@ -134,7 +134,6 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
              "possiable";
-      ;
       JUST(input_meta_datas_.at(i)->now_grad_arg()->PushPartialTensor(input_grads.at(i)));
     }
   }
