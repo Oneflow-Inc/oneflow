@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.python.framework.c_api_util as c_api_util
 
 from google.protobuf import text_format
 
@@ -27,6 +28,12 @@ class MultiClientSession(object):
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
+
+        self.function_flag_name2default_val_ = {}
+        self._UpdateFunctionFlagName2DefaultVal()
+
+        self.scope_attr_name2default_val_ = {}
+        self._UpdateScopeAttrName2DefaultVal()
 
     def TryInit(self):
         if not self.is_inited_:
@@ -52,7 +59,23 @@ class MultiClientSession(object):
             self.config_proto_ = job_set_util.ConfigProto()
         return self.config_proto_
 
+    @property
+    def function_flag_name2default_val(self):
+        return self.function_flag_name2default_val_
+
+    @property
+    def scope_attr_name2default_val(self):
+        return self.scope_attr_name2default_val_
+
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
         config_proto.session_id = self.id
         return config_proto
+
+    def _UpdateFunctionFlagName2DefaultVal(self):
+        items = c_api_util.GetFunctionConfigDef().attr_name2attr_def.items()
+        self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
+
+    def _UpdateScopeAttrName2DefaultVal(self):
+        items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
+        self.scope_attr_name2default_val_ = {k: v.default_val for k, v in items}
