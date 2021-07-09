@@ -554,5 +554,9 @@
   bind_python: False
 
 - name: "diag"
-  signature: "Tensor Diag(Tensor x, *, Int64 diagonal=0)"
+  signature: "Tensor Diag(Tensor x, *, Int32 diagonal=0)"
   bind_python: True
+
+- name: "diag_grad"
+  signature: "Tensor DiagGrad(Tensor dy, Tensor in, *, Int32 diagonal=0)"
+  bind_python: False
