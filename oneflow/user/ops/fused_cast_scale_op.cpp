@@ -19,22 +19,20 @@ namespace oneflow {
 namespace {
 
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* scale_by_tensor =
-      ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-  CHECK_EQ_OR_RETURN(scale_by_tensor->shape().NumAxes(), 1);
-  CHECK_EQ_OR_RETURN(scale_by_tensor->shape().At(0), 1);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+  CHECK_EQ_OR_RETURN(scale_by_tensor.shape().NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(scale_by_tensor.shape().At(0), 1);
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_is_dynamic() = x->is_dynamic();
-  *y->mut_shape() = x->shape();
+  *y->mut_is_dynamic() = x.is_dynamic();
+  *y->mut_shape() = x.shape();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DataTypeInfer(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* scale_by_tensor =
-      ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+  const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_data_type() = scale_by_tensor->data_type();
+  *y->mut_data_type() = scale_by_tensor.data_type();
   return Maybe<void>::Ok();
 }
 

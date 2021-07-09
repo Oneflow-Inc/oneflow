@@ -145,6 +145,10 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   ~UserOpInferContext() override = default;
 
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }

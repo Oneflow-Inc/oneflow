@@ -519,9 +519,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                              \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);                 \
-        const DataType& data_type = mean->data_type();                                          \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                                      \
+        const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);                      \
+        const DataType& data_type = mean.data_type();                                           \
+        const int64_t elem_cnt = mean.shape().elem_cnt();                                       \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;                 \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
@@ -740,13 +740,13 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
       const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);
       const bool has_beta_diff = ctx->has_output("beta_diff", 0);
       const bool has_normalized_diff = ctx->has_output("normalized_diff", 0);
-      const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      const int64_t instance_size = dy->shape().Count(begin_params_axis);
+      const auto& dy = ctx->InputTensorDesc("dy", 0);
+      const int64_t instance_size = dy.shape().Count(begin_params_axis);
       size_t tmp_buffer_size = 0;
       if (has_gamma_diff && has_beta_diff && has_normalized_diff) {
         const size_t tmp_gamma_diff =
-            GetCudaAlignedSize(GetLayerNormParamGradNumBlocks(dy->shape().elem_cnt())
-                               * instance_size * sizeof(float16));
+            GetCudaAlignedSize(GetLayerNormParamGradNumBlocks(dy.shape().elem_cnt()) * instance_size
+                               * sizeof(float16));
         const size_t tmp_beta_diff = tmp_gamma_diff;
         const size_t tmp_reduce_buf = tmp_gamma_diff;
         tmp_buffer_size = tmp_gamma_diff + tmp_beta_diff + tmp_reduce_buf;
