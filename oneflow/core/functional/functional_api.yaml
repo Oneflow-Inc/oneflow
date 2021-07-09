@@ -59,6 +59,11 @@
   signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
   bind_python: True
 
+- name: "bernoulli"
+  signature:
+    "Tensor Bernoulli(Tensor x, DataType dtype=kFloat, Generator generator=None)"
+  bind_python: True
+
 - name: "broadcast_mul"
   signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
   bind_python: True
@@ -148,7 +153,7 @@
   bind_python: True
 
 - name: "relu"
-  signature: "Tensor Relu(Tensor x)"
+  signature: "Tensor Relu(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "relu_grad"
@@ -342,6 +347,15 @@
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor SparseSoftmaxCrossEntropy(Tensor logits, Tensor label, *, Int64 depth)"
   bind_python: True
+
+- name: "smooth_l1_loss"
+  signature: "Tensor SmoothL1Loss(Tensor logits, Tensor label, *, Float beta)"
+  bind_python: True
+
+- name: "smooth_l1_loss_grad"
+  signature:
+    "Tensor SmoothL1LossGrad(Tensor loss_grad, Tensor prediction, Tensor label, *, Float beta)"
+  bind_python: False
 
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
