@@ -851,11 +851,11 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Build();
 }
 
-Maybe<one::UserOpExpr> AdaptivePoolGradOp() {
-  return AdaptivePoolGradOp(UniqueOpName("adaptive_pool_grad"));
+Maybe<one::UserOpExpr> AdaptivePoolNdGradOp(const int& ndims) {
+  return AdaptivePoolNdGradOp(ndims, UniqueOpName("adaptive_avg_pool_nd_grad"));
 }
-Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name) {
-  return one::OpBuilder("adaptive_avg_pool2d_grad", name)
+Maybe<one::UserOpExpr> AdaptivePoolNdGradOp(const int& ndims, const std::string& name) {
+  return one::OpBuilder("adaptive_avg_pool" + std::to_string(ndims) + "d_grad", name)
       .Input("x")
       .Input("dy")
       .Output("dx")

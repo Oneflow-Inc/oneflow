@@ -18,6 +18,37 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
+@oneflow_export("nn.AdaptiveAvgPool1d")
+@experimental_api
+class AdaptiveAvgPool1d(Module):
+    def __init__(self, output_size) -> None:
+        super().__init__()
+        self.output_size = output_size
+
+        self._op = (
+            flow.builtin_op("adaptive_avg_pool1d")
+                .Input("x")
+                .Attr("output_size", [])
+                .Output("y")
+                .Build()
+        )
+
+    def forward(self, x):
+        new_output_size = None
+        assert len(x.shape) == 3
+
+        if isinstance(self.output_size, int):
+            new_output_size = tuple([self.output_size])
+        elif isinstance(self.output_size, tuple):
+            pass
+        else:
+            raise NotImplementedError("output_size param wrong, please check!")
+
+        assert (new_output_size is not None and new_output_size[0] <= x.shape[2]), f"output_size param wrong, please check!"
+
+        return self._op(x, output_size=new_output_size)[0]
+
+
 @oneflow_export("nn.AdaptiveAvgPool2d")
 @experimental_api
 class AdaptiveAvgPool2d(Module):
@@ -95,6 +126,53 @@ class AdaptiveAvgPool2d(Module):
         ), f"output_size param wrong, please check!"
         assert (
             new_output_size[1] <= x.shape[3]
+        ), f"output_size param wrong, please check!"
+
+        return self._op(x, output_size=new_output_size)[0]
+
+
+@oneflow_export("nn.AdaptiveAvgPool3d")
+@experimental_api
+class AdaptiveAvgPool3d(Module):
+    def __init__(self, output_size) -> None:
+        super().__init__()
+        self.output_size = output_size
+
+        self._op = (
+            flow.builtin_op("adaptive_avg_pool3d")
+                .Input("x")
+                .Attr("output_size", [])
+                .Output("y")
+                .Build()
+        )
+
+    def forward(self, x):
+        new_output_size = []
+        assert len(x.shape) == 5
+
+        if isinstance(self.output_size, int):
+            for _ in range(len(x.shape) - 2):
+                new_output_size.append(self.output_size)
+        elif isinstance(self.output_size, tuple):
+            new_output_size = list(self.output_size)
+            if self.output_size[0] is None:
+                new_output_size[0] = x.shape[2]
+            if self.output_size[1] is None:
+                new_output_size[1] = x.shape[3]
+            if self.output_size[2] is None:
+                new_output_size[2] = x.shape[4]
+        else:
+            raise NotImplementedError("output_size param wrong, please check!")
+
+        new_output_size = tuple(new_output_size)
+        assert (
+                new_output_size[0] <= x.shape[2]
+        ), f"output_size param wrong, please check!"
+        assert (
+                new_output_size[1] <= x.shape[3]
+        ), f"output_size param wrong, please check!"
+        assert (
+                new_output_size[2] <= x.shape[4]
         ), f"output_size param wrong, please check!"
 
         return self._op(x, output_size=new_output_size)[0]

@@ -26,9 +26,9 @@ struct AdaptivePoolInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class AdaptivePool : public OpExprGradFunction<AdaptivePoolInterpState> {
+class AdaptivePoolNd : public OpExprGradFunction<AdaptivePoolInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Init(const OpExpr& op, const int& ndims);
   Maybe<void> Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
@@ -39,16 +39,16 @@ class AdaptivePool : public OpExprGradFunction<AdaptivePoolInterpState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-Maybe<void> AdaptivePool::Init(const OpExpr& op) {
+Maybe<void> AdaptivePoolNd::Init(const OpExpr& op, const int& ndims) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::AdaptivePoolGradOp(GradientOpName(op_name)));
+  grad_op_ = JUST(op_expr_helper::AdaptivePoolNdGradOp(ndims, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePool::Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> AdaptivePoolNd::Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
                                   const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -57,7 +57,7 @@ Maybe<void> AdaptivePool::Capture(AdaptivePoolInterpState* ctx, const TensorTupl
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePool::Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> AdaptivePoolNd::Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
                                 TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -68,7 +68,24 @@ Maybe<void> AdaptivePool::Apply(const AdaptivePoolInterpState* ctx, const Tensor
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool2d", AdaptivePool);
+class AdaptivePool1d final : public AdaptivePoolNd {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNd::Init(op, 1); }
+};
+
+class AdaptivePool2d final : public AdaptivePoolNd {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNd::Init(op, 2); }
+};
+
+class AdaptivePool3d final : public AdaptivePoolNd {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNd::Init(op, 3); }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool1d", AdaptivePool1d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool2d", AdaptivePool2d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool3d", AdaptivePool3d);
 
 }  // namespace one
 }  // namespace oneflow
