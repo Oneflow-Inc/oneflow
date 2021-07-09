@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#if CUDA_VERSION >= 11000
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#endif
 
 namespace oneflow {
 
@@ -381,13 +384,49 @@ FILL(uint8_t);
 FILL(int8_t)
 FILL(int32_t)
 FILL(int64_t)
-
 #undef FILL
+
+#if CUDA_VERSION >= 11000
+void FillBFloat16(DeviceCtx* ctx, const int64_t n, const nv_bfloat16 value, nv_bfloat16* y) {
+  FillGpu<nv_bfloat16>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, value, y);
+}
+#endif
 
 void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const float16 value,
                                            float16* y) {
   FillGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, float16_2half(value), reinterpret_cast<half*>(y));
+}
+
+void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n,
+                                           const DataType data_type, const void* value_ptr,
+                                           void* y) {
+  if (data_type == kFloat) {
+    return Fill(ctx, n, *(reinterpret_cast<const float*>(value_ptr)), reinterpret_cast<float*>(y));
+  } else if (data_type == kDouble) {
+    return Fill(ctx, n, *(reinterpret_cast<const double*>(value_ptr)),
+                reinterpret_cast<double*>(y));
+  } else if (data_type == kFloat16) {
+    return Fill(ctx, n, *(reinterpret_cast<const float16*>(value_ptr)),
+                reinterpret_cast<float16*>(y));
+  } else if (data_type == kInt8) {
+    return Fill(ctx, n, *(reinterpret_cast<const int8_t*>(value_ptr)),
+                reinterpret_cast<int8_t*>(y));
+  } else if (data_type == kInt32) {
+    return Fill(ctx, n, *(reinterpret_cast<const int32_t*>(value_ptr)),
+                reinterpret_cast<int32_t*>(y));
+  } else if (data_type == kInt64) {
+    return Fill(ctx, n, *(reinterpret_cast<const int64_t*>(value_ptr)),
+                reinterpret_cast<int64_t*>(y));
+#if CUDA_VERSION >= 11000
+  } else if (data_type == kBFloat16) {
+    return FillBFloat16(ctx, n, *(reinterpret_cast<const nv_bfloat16*>(value_ptr)),
+                        reinterpret_cast<nv_bfloat16*>(y));
+#endif
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 #define COPY_COLS_REGION(T)                                                                    \

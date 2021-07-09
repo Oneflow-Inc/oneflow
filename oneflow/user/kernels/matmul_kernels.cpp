@@ -125,9 +125,6 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
   }
 };
 
-#endif
-
-#ifdef WITH_CUDA
 REGISTER_USER_KERNEL("matmul")
     .SetCreateFn<MatmulGpuHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
@@ -139,7 +136,60 @@ REGISTER_USER_KERNEL("matmul")
       }
       return Maybe<void>::Ok();
     });
-#endif
+
+#if CUDA_VERSION >= 11000
+
+class MatmulGpuBFloat16Kernel final : public user_op::OpKernel {
+ public:
+  MatmulGpuBFloat16Kernel() = default;
+  ~MatmulGpuBFloat16Kernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(2, a->shape().NumAxes());
+
+    int32_t m = 0, n = 0, k = 0;
+    std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
+    if (has_add_to_output) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+    }
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = has_add_to_output ? 1.0 : 0.0;
+    NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
+                                            reinterpret_cast<const nv_bfloat16*>(a->dptr()),
+                                            reinterpret_cast<const nv_bfloat16*>(b->dptr()), beta,
+                                            reinterpret_cast<nv_bfloat16*>(out->mut_dptr()));
+  }
+};
+
+REGISTER_USER_KERNEL("matmul")
+    .SetCreateFn<MatmulGpuBFloat16Kernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+                     & (user_op::HobDataType("a", 0) == DataType::kBFloat16))
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
+
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
 class BatchMatmulFloatingKernel final : public user_op::OpKernel {
@@ -251,7 +301,62 @@ REGISTER_USER_KERNEL("batch_matmul")
       return Maybe<void>::Ok();
     });
 
-#endif
+#if CUDA_VERSION >= 11000
+
+class BatchMatmulGpuBFloat16Kernel final : public user_op::OpKernel {
+ public:
+  BatchMatmulGpuBFloat16Kernel() = default;
+  ~BatchMatmulGpuBFloat16Kernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    CBLAS_TRANSPOSE trans_a = ctx->Attr<bool>("transpose_a") ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = ctx->Attr<bool>("transpose_b") ? CblasTrans : CblasNoTrans;
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int32_t num_axes = a->shape().NumAxes();
+    CHECK_GT(num_axes, 2);
+
+    int32_t m = 0, n = 0, k = 0;
+    std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
+    if (has_add_to_output) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+    }
+    size_t batch_size = a->shape().Count(0, num_axes - 2);
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = has_add_to_output ? 1.0 : 0.0;
+    NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
+        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, alpha,
+        reinterpret_cast<const nv_bfloat16*>(a->dptr()),
+        reinterpret_cast<const nv_bfloat16*>(b->dptr()), beta,
+        reinterpret_cast<nv_bfloat16*>(out->mut_dptr()));
+  }
+};
+
+REGISTER_USER_KERNEL("batch_matmul")
+    .SetCreateFn<BatchMatmulGpuBFloat16Kernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+                     & (user_op::HobDataType("a", 0) == DataType::kBFloat16))
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
+
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
 class BroadcastMatmulKernel final : public user_op::OpKernel {
