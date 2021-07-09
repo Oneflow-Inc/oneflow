@@ -421,7 +421,8 @@ class UpsampleLinear1DFunctor {
 class UpsampleLinear1DGradFunctor {
  public:
   UpsampleLinear1DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_linear_1d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_linear_1d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const bool& align_corners, const std::string& data_format) const {
@@ -456,7 +457,8 @@ class UpsampleNearest1DFunctor {
 class UpsampleNearest1DGradFunctor {
  public:
   UpsampleNearest1DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_1d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_1d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
@@ -491,7 +493,8 @@ class UpsampleNearest2DFunctor {
 class UpsampleNearest2DGradFunctor {
  public:
   UpsampleNearest2DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const std::string& data_format) const {
@@ -505,7 +508,6 @@ class UpsampleNearest2DGradFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class UpsampleBilinear2DFunctor {
  public:
@@ -530,7 +532,8 @@ class UpsampleBilinear2DFunctor {
 class UpsampleBilinear2DGradFunctor {
  public:
   UpsampleBilinear2DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
@@ -570,7 +573,8 @@ class UpsampleBicubic2DFunctor {
 class UpsampleBicubic2DGradFunctor {
  public:
   UpsampleBicubic2DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_bicubic_2d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_bicubic_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
@@ -610,7 +614,8 @@ class UpsampleNearest3DFunctor {
 class UpsampleNearest3DGradFunctor {
  public:
   UpsampleNearest3DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_3d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_3d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
@@ -651,7 +656,8 @@ class UpsampleTrilinear3DFunctor {
 class UpsampleTrilinear3DGradFunctor {
  public:
   UpsampleTrilinear3DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_trilinear_3d_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_trilinear_3d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
@@ -668,7 +674,6 @@ class UpsampleTrilinear3DGradFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class UnsortedSegmentSumLikeFunctor {
  public:

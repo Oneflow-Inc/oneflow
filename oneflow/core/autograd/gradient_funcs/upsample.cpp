@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
@@ -92,6 +93,49 @@ Maybe<void> Upsample::Apply(const UpsampleInterpState* ctx, const TensorTuple& o
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample", Upsample);
+
+struct UpsampleNearest2DInterpState : public OpExprInterpState {
+  bool requires_grad;
+  float height_scale;
+  float width_scale;
+  std::string data_format;
+};
+
+class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UpsampleNearest2DInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
+    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UpsampleNearest2DInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    if (ctx->requires_grad) {
+      MutableAttrMap attrs;
+      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+      in_grads->resize(1);
+      in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(out_grads.at(0), ctx->height_scale,
+                                                               ctx->width_scale, ctx->data_format));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_2d", UpsampleNearest2D);
 
 }  // namespace one
 }  // namespace oneflow
