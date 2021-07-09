@@ -1564,7 +1564,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1572,19 +1572,19 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   const auto& eager_symbol_list = sess->eager_symbol_list();
   InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
                                            eager_symbol_list.get(), _ReleaseLogicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   JUST(Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   if (debug::RecordingInstructions()) {
     OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
       debug::RecordInstruction(instruction_msg);
