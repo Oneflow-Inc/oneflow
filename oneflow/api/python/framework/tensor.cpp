@@ -99,14 +99,15 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
           Copy(ofblob_ptr, array);
           synced = true;
         },
-        modifier);
+        modifier));
+    return Maybe<void>::Ok();
   }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
