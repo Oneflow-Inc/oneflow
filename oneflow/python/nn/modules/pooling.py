@@ -200,12 +200,13 @@ class AvgPool3d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-
         >>> flow.enable_eager_execution()
-        >>> inputarr = np.random.randn(9, 7, 11, 32, 20)
-        >>> of_avgpool3d = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1),)
-        >>> x = flow.Tensor(inputarr)
-        >>> y = of_avgpool3d(x)
+
+        >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
+        >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
+        >>> y = m(x)
+        >>> y.shape
+        flow.Size([9, 7, 10, 31, 19])
 
     """
 
@@ -417,21 +418,21 @@ class MaxPool2d(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> kernel_size, stride, padding = (3, 3), (1, 1), (1, 2)
+        >>> kernel_size, stride, padding = (3, 4), (1, 1), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
         >>> y = m(x)
         >>> y #doctest: +ELLIPSIS
-        tensor([[[[0.5488, 0.7152, 0.7152, 0.7152, 0.6459],
+        tensor([[[[0.7152, 0.7152, 0.7152, 0.7152],
                   ...
-                  [0.568 , 0.9256, 0.9256, 0.9256, 0.5289]]]], dtype=oneflow.float32)
+                  [0.9256, 0.9256, 0.9256, 0.9256]]]], dtype=oneflow.float32)
 
-        >>> kernel_size, stride, padding = (2, 3), (4, 5), (1, 2)
+        >>> kernel_size, stride, padding = (2, 4), (4, 5), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 32, 20))
         >>> y = m(x)
-        >>> y.size()
+        >>> y.shape
         flow.Size([9, 7, 9, 5])
 
     """
@@ -557,21 +558,21 @@ class MaxPool3d(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> kernel_size, stride, padding = (3, 3, 3), (1, 1, 1), (1, 1, 2)
+        >>> kernel_size, stride, padding = (3, 3, 4), (1, 1, 1), (1, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
         >>> y = m(x)
         >>> y #doctest: +ELLIPSIS
-        tensor([[[[[0.7782, 0.87  , 0.9786, 0.9786, 0.9786],
+        tensor([[[[[0.87  , 0.9786, 0.9786, 0.9786],
                    ...
-                   [0.9447, 0.9447, 0.9447, 0.6668, 0.6668]]]]], dtype=oneflow.float32)
-        >>> kernel_size, stride, padding = (2, 2, 3), (3, 4, 5), (2, 1, 2)
+                   [0.9447, 0.9447, 0.9447, 0.6668]]]]], dtype=oneflow.float32)
+        >>> kernel_size, stride, padding = (4, 2, 4), (3, 4, 5), (2, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
-        >>> y.size()
-        flow.Size([9, 7, 5, 9, 5])
+        >>> y.shape
+        flow.Size([9, 7, 4, 9, 5])
 
     """
 
