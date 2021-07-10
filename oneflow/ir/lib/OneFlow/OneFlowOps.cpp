@@ -265,7 +265,6 @@ class FuncOpConversion final : public OpConversionPattern<FuncOp> {
 
     rewriter.applySignatureConversion(&func.getBody(), conversion);
     rewriter.updateRootInPlace(func, [&] {
-      for (auto x : conversion.getConvertedTypes()) { x.dump(); }
       func.setType(
           rewriter.getFunctionType(conversion.getConvertedTypes(), func_type.getResults()));
     });
