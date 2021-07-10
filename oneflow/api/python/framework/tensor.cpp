@@ -63,7 +63,7 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = std::dynamic_pointer_cast<MirroredTensor>(t);
   CHECK_NOTNULL_OR_RETURN(tensor) << "local tensors supported only";
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
         tensor,
         [](uint64_t of_blob_ptr) {
