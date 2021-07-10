@@ -453,6 +453,8 @@ class Tensor:
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
         elif isinstance(key, int):
+            if key < 0:
+                key = self.shape[0] + key
             squeeze_dims = [0]
         else:
             # do nothing
@@ -461,7 +463,7 @@ class Tensor:
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         if squeeze_dims is not None:
-            res = res.squeeze(dim=squeeze_dims)
+            return res.squeeze(dim=squeeze_dims)
         return res
 
     @_auto_determine
@@ -473,6 +475,8 @@ class Tensor:
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
         elif isinstance(key, int):
+            if key < 0:
+                key = self.shape[0] + key
             unsqueeze_dims = [0]
         else:
             unsqueeze_dims = []
