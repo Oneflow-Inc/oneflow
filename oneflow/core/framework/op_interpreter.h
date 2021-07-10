@@ -99,8 +99,12 @@ class LazyInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
 
  private:
-  DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
+  // DECLARE_NORMAL_APPLY_FUNC(UserOp);
+  DECLARE_NORMAL_APPLY_FUNC(InputOp);
+  // DECLARE_NORMAL_APPLY_FUNC(OuputOp);
+  // DECLARE_NORMAL_APPLY_FUNC(VariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {

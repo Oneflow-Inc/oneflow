@@ -40,15 +40,26 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
   }
 
-  APPLY_IF(FunctionOp);
-  APPLY_IF(BuiltinOp);
+  APPLY_IF(InputOp);
+  // APPLY_IF(VariableOp);
+  // APPLY_IF(UserOp);
+  // APPLY_IF(FunctionOp);
+  // APPLY_IF(BuiltinOp);
 #undef APPLY_IF
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
                      << " has not been supported in LazyInterpreter::Apply.";
 }
 
-Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
+Maybe<void> LazyInterpreter::ApplyImpl(const InputOpExpr& op_expr, const TensorTuple& inputs,
+                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 0);
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 0);
+  const auto& scope = JUST(GetCurrentScope());
+}
+
+
+Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
   const auto& scope = JUST(GetCurrentScope());

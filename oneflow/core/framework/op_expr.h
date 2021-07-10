@@ -154,6 +154,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
+using InputOpExpr = BuiltinOpExprImpl<InputOpConf>;
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
 using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
