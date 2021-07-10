@@ -137,7 +137,7 @@ class ReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self._inplace:
+        if self.inplace:
             _check_inplace_valid(x)
         return flow.F.relu(x, self.inplace)
 
