@@ -19,7 +19,6 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
-import oneflow.typing as oft
 from oneflow.python.test.modules.automated_test_util import *
 
 
