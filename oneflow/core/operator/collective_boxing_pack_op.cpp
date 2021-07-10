@@ -25,7 +25,7 @@ class CollectiveBoxingPackOp : public Operator {
   CollectiveBoxingPackOp() = default;
   ~CollectiveBoxingPackOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -41,9 +41,10 @@ class CollectiveBoxingPackOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void CollectiveBoxingPackOp::InitFromOpConf() {
+Maybe<void> CollectiveBoxingPackOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId CollectiveBoxingPackOp::lbi4ibn(const std::string& input_bn) const {
