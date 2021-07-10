@@ -43,8 +43,8 @@ DataType GetDataTypeFromBnInOpVec(
 
 Maybe<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
-  if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
+  DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf->device_tag()));
+  if (IsCpuOnly(*op_conf)) { CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU); }
   JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
 }
