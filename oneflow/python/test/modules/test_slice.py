@@ -175,6 +175,13 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
 
+    def test_logical_slice_assign_negative_index(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4))
+        input = flow.Tensor(np_arr)
+        np_arr[-1] = 1
+        input[-1] = 1
+        test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
+
     def test_logical_slice_assign_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
         input = flow.Tensor(np_arr)
