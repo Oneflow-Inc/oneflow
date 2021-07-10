@@ -34,6 +34,8 @@ def _test_interpolate_nearest_1d(test_case, device):
     np_out = [[[1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0]]]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    print(input.grad.numpy())
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

@@ -107,7 +107,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState
 
   Maybe<void> Capture(UpsampleNearest2DInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -151,7 +151,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DInterpSta
 
   Maybe<void> Capture(UpsampleBilinear2DInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -196,7 +196,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> 
 
   Maybe<void> Capture(UpsampleLinear1DInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -238,7 +238,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState
 
   Maybe<void> Capture(UpsampleNearest1DInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -281,7 +281,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
 
   Maybe<void> Capture(UpsampleBicubic2DInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -312,8 +312,6 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bicubic_2d", UpsampleBicubic2D);
-
-
 
 }  // namespace one
 }  // namespace oneflow
