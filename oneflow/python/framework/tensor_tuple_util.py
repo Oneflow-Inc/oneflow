@@ -17,17 +17,17 @@ limitations under the License.
 import collections
 from typing import Union, Sequence, Tuple, Optional
 
-from oneflow.python.framework.tensor import Tensor
+from oneflow.python.framework.tensor import Tensor as PyTensor
 from oneflow._oneflow_internal import TensorTuple, Tensor
 
 
 def convert_to_tensor_tuple(
-    args: Optional[Union[Tensor, Sequence[Tensor], Tensor, Sequence[Tensor]]]
+    args: Optional[Union[PyTensor, Sequence[PyTensor], Tensor, Sequence[Tensor]]]
 ):
     if args is None:
         return TensorTuple()
     elif isinstance(args, collections.abc.Sequence):
-        if isinstance(args[0], Tensor):
+        if isinstance(args[0], PyTensor):
             for tensor in args:
                 if not tensor.is_determined:
                     tensor.determine()
@@ -35,7 +35,7 @@ def convert_to_tensor_tuple(
         return TensorTuple(args)
     else:
         tensor_tuple = TensorTuple()
-        if isinstance(args, Tensor):
+        if isinstance(args, PyTensor):
             if not args.is_determined:
                 args.determine()
             tensor_tuple.append(args._local_or_consistent_tensor)
