@@ -74,14 +74,15 @@ struct TensorExportUtil<ConsistentTensor> final {
 namespace {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [](uint64_t of_blob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->AsyncAutoMemset(0);
         },
-        "mut");
+        "mut"));
+    return Maybe<void>::Ok();
   }));
 
   return Maybe<void>::Ok();
@@ -98,14 +99,15 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
           Copy(ofblob_ptr, array);
           synced = true;
         },
-        modifier);
+        modifier));
+    return Maybe<void>::Ok();
   }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
@@ -215,6 +217,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   api->def("zeros_", &ApiEagerMirroredTensorZeros);
   api->def("_register_hook",
            [](const std::shared_ptr<MirroredTensor>& self, const AutogradMeta::Hook& hook) -> void {
+             if (!self->grad_fn_node()) { CHECK_JUST(AddAccumulateFunctionNode(self)); }
              self->mut_autograd_meta()->add_hook(hook);
            });
 }
@@ -233,6 +236,15 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("dtype", &GetTensorDType<T>)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
+      // setter of grad
+      .def("set_grad",
+           [](T& t, const std::shared_ptr<T>& grad) {
+             if (t.is_leaf()) {
+               t.set_acc_grad(grad);
+             } else {
+               throw std::runtime_error("You can only change gradient of leaf tensors.");
+             }
+           })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("is_leaf", &T::is_leaf)
       .def_property(
@@ -247,9 +259,10 @@ void ExportTensor(py::module& m, const char* name) {
       // Methods of pytorch
       .def("retain_grad",
            [](T& t) {
-             if (!t.is_leaf()) { t.set_retain_grad(true); }
+             if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
            })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
+      .def("clone", [](const T& t) { return t.api_clone().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent);
