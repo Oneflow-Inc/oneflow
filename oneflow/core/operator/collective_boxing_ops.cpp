@@ -27,7 +27,7 @@ class CollectiveBoxingGenericOp : public Operator {
   ~CollectiveBoxingGenericOp() override = default;
 
  private:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_collective_boxing_generic_conf());
     const RankDesc& rank_desc = op_conf().collective_boxing_generic_conf().rank_desc();
     if (GenericOpHasInput(rank_desc)) { EnrollInputBn("in", false); }

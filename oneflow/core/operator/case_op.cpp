@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void CaseOp::InitFromOpConf() {
+Maybe<void> CaseOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollRepeatedOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
