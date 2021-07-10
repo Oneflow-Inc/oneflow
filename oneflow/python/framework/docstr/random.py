@@ -18,7 +18,10 @@ from oneflow.python.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.F.bernoulli,
-    r"""This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
+    r"""
+    bernoulli(input, *, generator=None, out=None)
+    
+    This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
         input(Tensor) - the input tensor of probability values for the Bernoulli distribution

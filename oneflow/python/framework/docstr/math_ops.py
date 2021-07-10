@@ -43,7 +43,7 @@ tensor x and y should be same.
 add_docstr(
     oneflow.F.mul,
     r"""
-mul(Tensor x, Tensor y) -> Tensor
+mul(x, y) -> Tensor
 
 Computes the multiplication of x by y for each element, the shape of 
 tensor x and y should be same.
