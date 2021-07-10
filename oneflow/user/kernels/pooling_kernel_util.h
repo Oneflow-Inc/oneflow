@@ -20,10 +20,10 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
-#ifdef WITH_CUDA
-#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/kernel/util/numeric_limits.cuh"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 
 namespace oneflow {
@@ -142,7 +142,7 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     int64_t src_idx = 0;
 
     // equal to -std::numeric_limits<T>::infinity();
-    T max_value = numeric_limits<T>::lower_bound();
+    T max_value = oneflow::numeric_limits<T>::lower_bound();
 
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
@@ -150,7 +150,7 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
         const int64_t search_idx = start_idx + tcntr;
         T val = src[search_idx];
         // std::isnan() could raise bug if use g++ 4.x to compile
-        if (val > max_value || numerics<T>::isnan(val)) {
+        if (val > max_value || oneflow::numerics<T>::isnan(val)) {
           max_value = val;
           maxindex = tcntr;
           src_idx = search_idx;
@@ -217,14 +217,14 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
 
-    T max_value = -std::numeric_limits<T>::infinity();
+    T max_value = oneflow::numeric_limits<T>::lower_bound();
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
           const int64_t tcntr = zi * x_height * x_width + i * x_width + j;
           const int64_t search_idx = start_idx + tcntr;
           T val = src[search_idx];
-          if (val > max_value || numerics<T>::isnan(val)) {
+          if (val > max_value || oneflow::numerics<T>::isnan(val)) {
             max_value = val;
             maxindex = tcntr;
             src_idx = search_idx;
