@@ -74,14 +74,15 @@ struct TensorExportUtil<ConsistentTensor> final {
 namespace {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [](uint64_t of_blob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->AsyncAutoMemset(0);
         },
-        "mut");
+        "mut"));
+    return Maybe<void>::Ok();
   }));
 
   return Maybe<void>::Ok();
@@ -98,14 +99,15 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
           Copy(ofblob_ptr, array);
           synced = true;
         },
-        modifier);
+        modifier));
+    return Maybe<void>::Ok();
   }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
