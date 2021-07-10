@@ -121,3 +121,8 @@ del custom_exit
 del sys
 del absolute_import
 del oneflow
+
+import oneflow.python.framework.docstr
+from oneflow.python.framework.docstr.utils import register_docstr
+
+register_docstr()
