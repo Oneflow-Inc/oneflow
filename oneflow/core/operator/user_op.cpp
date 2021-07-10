@@ -524,7 +524,7 @@ void UserOp::InitFromOpConf() {
         }
         return nullptr;
       };
-      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+      CHECK_JUST(val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_));
     }
   }
 }
