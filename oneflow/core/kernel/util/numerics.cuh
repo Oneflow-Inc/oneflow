@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// reference: https://github.com/pytorch/pytorch/blob/master/aten/src/THC/THCNumerics.cuh
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_NUMERICS_H
 #define ONEFLOW_CORE_KERNEL_UTIL_NUMERICS_H
 #pragma once

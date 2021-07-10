@@ -141,7 +141,7 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx = 0;
 
-    // equal to -std::numeric_limits<T>::infinity();
+    /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = oneflow::numeric_limits<T>::lower_bound();
 
     for (int64_t i = hstart; i < hend; i += dilation_h) {
@@ -149,7 +149,17 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
         const int64_t tcntr = i * x_width + j;
         const int64_t search_idx = start_idx + tcntr;
         T val = src[search_idx];
-        // std::isnan() could raise bug if use g++ 4.x to compile
+        /* NOTE:
+        std::isnan(val) only supports a few data types, see:
+        https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
+        the following exception will be throw:
+
+        new_kernel_util.cu:24] Check failed: cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
+        ctx->cuda_stream() ) : unspecified launch failure (719)
+
+        but if use gcc/g++ 7.x to compile, everything is ok!
+        the exact reason is still unknown!
+        */
         if (val > max_value || oneflow::numerics<T>::isnan(val)) {
           max_value = val;
           maxindex = tcntr;
