@@ -170,6 +170,9 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         with graph_build_util.lazy_mode.gard(True):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+            with graph_build_util.lazy_mode.gard(False):
+                test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
         # check lazy mode in nn.Graph._compile
