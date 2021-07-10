@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -50,7 +51,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
-  if (EagerExecutionEnabled()) {
+  if (!LazyMode::is_enabled()) {
     const auto& session = JUST(GetDefaultSession());
     bool is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
                                         || JUST(session->IsMirroredStrategyEnabled());

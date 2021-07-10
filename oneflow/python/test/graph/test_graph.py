@@ -21,6 +21,30 @@ import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
 
+def _multi_client_execute(f):
+    def deco(*args):
+        import oneflow._oneflow_internal
+        import oneflow.python.framework.env_util as env_util
+        import oneflow.python.framework.session_util as session_util
+        import oneflow.python.framework.session_context as session_ctx
+        from oneflow.python.framework.multi_client_session import MultiClientSession
+
+        prev_is_multi_client = oneflow._oneflow_internal.IsMultiClient()
+
+        session_ctx.TryCloseDefaultSession()
+        oneflow._oneflow_internal.SetIsMultiClient(True)
+        session_ctx.OpenDefaultSession(
+            MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+        )
+
+        f(*args)
+
+        oneflow._oneflow_internal.SetIsMultiClient(prev_is_multi_client)
+        session_ctx.TryCloseDefaultSession()
+        session_ctx.OpenDefaultSession(session_util.Session(oneflow._oneflow_internal.NewSessionId()))
+
+    return deco
+
 
 class SubModule(flow.nn.Module):
     def __init__(self):
@@ -165,19 +189,9 @@ class TestGraph(flow.unittest.TestCase):
         for i in range(0, 3):
             create_graph(i)
 
+    @_multi_client_execute
     def test_graph_build_ctx(test_case):
-        import oneflow._oneflow_internal
-        import oneflow.python.framework.env_util as env_util
-        import oneflow.python.framework.session_context as session_ctx
-        from oneflow.python.framework.multi_client_session import MultiClientSession
 
-        session_ctx.TryCloseDefaultSession()
-        oneflow._oneflow_internal.SetIsMultiClient(True)
-        env_util.api_env_init()
-
-        session_ctx.OpenDefaultSession(
-            MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-        )
         # check lazy_mode
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         with graph_build_util.lazy_mode.gard(True):
@@ -187,20 +201,23 @@ class TestGraph(flow.unittest.TestCase):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
-        # check lazy mode in nn.Graph._compile
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
+                self.config.enable_auto_mixed_precision(True)
 
             def build(self):
+                # check lazy mode in nn.Graph._compile
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+                test_case.assertEqual(oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(), self.name)
+                print("graph proto", self._graph_proto)
 
+        test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraph()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
-        print("mc_flag in test ", env_util.MultiClientEnvVarIsTrue())
 
 
 

@@ -69,6 +69,7 @@ class MultiClientSession(object):
 
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
+        config_proto.resource.SetInParent()
         config_proto.session_id = self.id
         return config_proto
 
