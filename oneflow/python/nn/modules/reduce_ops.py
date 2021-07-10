@@ -42,13 +42,12 @@ class Sum(Module):
 
         self.axis = axis
         self.keepdims = keepdims
-        self._op = _build_reduce_op("reduce_sum", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
-        return self._op(input, axis=axis_checked)[0]
+        return flow.F.reduce_sum(input, axis=axis_checked, keepdims=self.keepdims)
 
 
 @oneflow_export("sum")
@@ -93,15 +92,7 @@ class Mean(Module):
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
-        reduce_sum = flow.experimental.sum(input, dim=self.axis, keepdim=self.keepdims)
-        reduce_count = 1
-        if len(self.axes) == 0:
-            for dim in input.shape:
-                reduce_count *= dim
-        else:
-            for i in self.axes:
-                reduce_count *= input.shape[i]
-        return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+        return flow.F.reduce_mean(input, axis=self.axes, keepdims=self.keepdims)
 
 
 @oneflow_export("mean")

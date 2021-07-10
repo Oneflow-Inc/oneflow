@@ -1056,22 +1056,12 @@ def pow_op(tensor, exponent):
 class Addmm(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._matmul_op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", 1.0)
-            .Build()
-        )
 
     def forward(self, x, mat1, mat2, alpha=1, beta=1):
         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
             raise ValueError("input matrixes shape can not be greater than 2")
         else:
-            return _mul(x, beta) + _mul(self._matmul_op(mat1, mat2)[0], alpha)
+            return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
 
 
 @oneflow_export("addmm")
