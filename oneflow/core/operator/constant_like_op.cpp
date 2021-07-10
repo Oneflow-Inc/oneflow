@@ -40,6 +40,7 @@ class ConstantLikeOp final : public Operator {
     CHECK(op_conf().has_constant_like_conf());
     EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
