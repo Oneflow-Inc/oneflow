@@ -30,6 +30,13 @@ limitations under the License.
 // useful in implementing min, max, etc.
 
 namespace oneflow {
+namespace detail {
+
+#if defined(__CUDACC__)
+#define OF_NUMERICS_FUNC static inline __host__ __device__
+#else
+#define OF_NUMERICS_FUNC static inline
+#endif
 
 template<typename T>
 struct numeric_limits {};
@@ -48,73 +55,74 @@ constexpr double inf = INFINITY;
 
 template<>
 struct numeric_limits<bool> {
-  static inline __host__ __device__ bool lowest() { return false; }
-  static inline __host__ __device__ bool max() { return true; }
-  static inline __host__ __device__ bool lower_bound() { return false; }
-  static inline __host__ __device__ bool upper_bound() { return true; }
+  OF_NUMERICS_FUNC bool lowest() { return false; }
+  OF_NUMERICS_FUNC bool max() { return true; }
+  OF_NUMERICS_FUNC bool lower_bound() { return false; }
+  OF_NUMERICS_FUNC bool upper_bound() { return true; }
 };
 
 template<>
 struct numeric_limits<uint8_t> {
-  static inline __host__ __device__ uint8_t lowest() { return 0; }
-  static inline __host__ __device__ uint8_t max() { return UINT8_MAX; }
-  static inline __host__ __device__ uint8_t lower_bound() { return 0; }
-  static inline __host__ __device__ uint8_t upper_bound() { return UINT8_MAX; }
+  OF_NUMERICS_FUNC uint8_t lowest() { return 0; }
+  OF_NUMERICS_FUNC uint8_t max() { return UINT8_MAX; }
+  OF_NUMERICS_FUNC uint8_t lower_bound() { return 0; }
+  OF_NUMERICS_FUNC uint8_t upper_bound() { return UINT8_MAX; }
 };
 
 template<>
 struct numeric_limits<int8_t> {
-  static inline __host__ __device__ int8_t lowest() { return INT8_MIN; }
-  static inline __host__ __device__ int8_t max() { return INT8_MAX; }
-  static inline __host__ __device__ int8_t lower_bound() { return INT8_MIN; }
-  static inline __host__ __device__ int8_t upper_bound() { return INT8_MAX; }
+  OF_NUMERICS_FUNC int8_t lowest() { return INT8_MIN; }
+  OF_NUMERICS_FUNC int8_t max() { return INT8_MAX; }
+  OF_NUMERICS_FUNC int8_t lower_bound() { return INT8_MIN; }
+  OF_NUMERICS_FUNC int8_t upper_bound() { return INT8_MAX; }
 };
 
 template<>
 struct numeric_limits<int16_t> {
-  static inline __host__ __device__ int16_t lowest() { return INT16_MIN; }
-  static inline __host__ __device__ int16_t max() { return INT16_MAX; }
-  static inline __host__ __device__ int16_t lower_bound() { return INT16_MIN; }
-  static inline __host__ __device__ int16_t upper_bound() { return INT16_MAX; }
+  OF_NUMERICS_FUNC int16_t lowest() { return INT16_MIN; }
+  OF_NUMERICS_FUNC int16_t max() { return INT16_MAX; }
+  OF_NUMERICS_FUNC int16_t lower_bound() { return INT16_MIN; }
+  OF_NUMERICS_FUNC int16_t upper_bound() { return INT16_MAX; }
 };
 
 template<>
 struct numeric_limits<int32_t> {
-  static inline __host__ __device__ int32_t lowest() { return INT32_MIN; }
-  static inline __host__ __device__ int32_t max() { return INT32_MAX; }
-  static inline __host__ __device__ int32_t lower_bound() { return INT32_MIN; }
-  static inline __host__ __device__ int32_t upper_bound() { return INT32_MAX; }
+  OF_NUMERICS_FUNC int32_t lowest() { return INT32_MIN; }
+  OF_NUMERICS_FUNC int32_t max() { return INT32_MAX; }
+  OF_NUMERICS_FUNC int32_t lower_bound() { return INT32_MIN; }
+  OF_NUMERICS_FUNC int32_t upper_bound() { return INT32_MAX; }
 };
 
 template<>
 struct numeric_limits<int64_t> {
 #ifdef _MSC_VER
-  static inline __host__ __device__ int64_t lowest() { return _I64_MIN; }
-  static inline __host__ __device__ int64_t max() { return _I64_MAX; }
-  static inline __host__ __device__ int64_t lower_bound() { return _I64_MIN; }
-  static inline __host__ __device__ int64_t upper_bound() { return _I64_MAX; }
+  OF_NUMERICS_FUNC int64_t lowest() { return _I64_MIN; }
+  OF_NUMERICS_FUNC int64_t max() { return _I64_MAX; }
+  OF_NUMERICS_FUNC int64_t lower_bound() { return _I64_MIN; }
+  OF_NUMERICS_FUNC int64_t upper_bound() { return _I64_MAX; }
 #else
-  static inline __host__ __device__ int64_t lowest() { return INT64_MIN; }
-  static inline __host__ __device__ int64_t max() { return INT64_MAX; }
-  static inline __host__ __device__ int64_t lower_bound() { return INT64_MIN; }
-  static inline __host__ __device__ int64_t upper_bound() { return INT64_MAX; }
+  OF_NUMERICS_FUNC int64_t lowest() { return INT64_MIN; }
+  OF_NUMERICS_FUNC int64_t max() { return INT64_MAX; }
+  OF_NUMERICS_FUNC int64_t lower_bound() { return INT64_MIN; }
+  OF_NUMERICS_FUNC int64_t upper_bound() { return INT64_MAX; }
 #endif
 };
 
 template<>
 struct numeric_limits<float> {
-  static inline __host__ __device__ float lowest() { return -FLT_MAX; }
-  static inline __host__ __device__ float max() { return FLT_MAX; }
-  static inline __host__ __device__ float lower_bound() { return -static_cast<float>(inf); }
-  static inline __host__ __device__ float upper_bound() { return static_cast<float>(inf); }
+  OF_NUMERICS_FUNC float lowest() { return -FLT_MAX; }
+  OF_NUMERICS_FUNC float max() { return FLT_MAX; }
+  OF_NUMERICS_FUNC float lower_bound() { return -static_cast<float>(inf); }
+  OF_NUMERICS_FUNC float upper_bound() { return static_cast<float>(inf); }
 };
 
 template<>
 struct numeric_limits<double> {
-  static inline __host__ __device__ double lowest() { return -DBL_MAX; }
-  static inline __host__ __device__ double max() { return DBL_MAX; }
-  static inline __host__ __device__ double lower_bound() { return -inf; }
-  static inline __host__ __device__ double upper_bound() { return inf; }
+  OF_NUMERICS_FUNC double lowest() { return -DBL_MAX; }
+  OF_NUMERICS_FUNC double max() { return DBL_MAX; }
+  OF_NUMERICS_FUNC double lower_bound() { return -inf; }
+  OF_NUMERICS_FUNC double upper_bound() { return inf; }
 };
 
+}  // namespace detail
 }  // namespace oneflow

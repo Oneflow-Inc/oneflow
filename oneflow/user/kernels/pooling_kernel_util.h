@@ -142,7 +142,7 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     int64_t src_idx = 0;
 
     /* equal to -std::numeric_limits<T>::infinity(); */
-    T max_value = oneflow::numeric_limits<T>::lower_bound();
+    T max_value = detail::numeric_limits<T>::lower_bound();
 
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
@@ -157,10 +157,9 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
         new_kernel_util.cu:24] Check failed: cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
         ctx->cuda_stream() ) : unspecified launch failure (719)
 
-        but if use gcc/g++ 7.x to compile, everything is ok!
-        the exact reason is still unknown!
+        but if use gcc/g++ 7.x to compile, everything is ok! the exact reason is still unknown!
         */
-        if (val > max_value || oneflow::numerics<T>::isnan(val)) {
+        if (val > max_value || detail::numerics<T>::isnan(val)) {
           max_value = val;
           maxindex = tcntr;
           src_idx = search_idx;
@@ -227,14 +226,14 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
 
-    T max_value = oneflow::numeric_limits<T>::lower_bound();
+    T max_value = detail::numeric_limits<T>::lower_bound();
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
           const int64_t tcntr = zi * x_height * x_width + i * x_width + j;
           const int64_t search_idx = start_idx + tcntr;
           T val = src[search_idx];
-          if (val > max_value || oneflow::numerics<T>::isnan(val)) {
+          if (val > max_value || detail::numerics<T>::isnan(val)) {
             max_value = val;
             maxindex = tcntr;
             src_idx = search_idx;
