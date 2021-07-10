@@ -90,7 +90,7 @@ REGISTER_USER_OP("gather")
     });
 
 REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
+                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
   bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
   if (need_grad_in) {
     user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
@@ -105,6 +105,7 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
     AddOp(in_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

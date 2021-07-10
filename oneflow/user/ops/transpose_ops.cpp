@@ -68,7 +68,8 @@ REGISTER_USER_OP("transpose")
     });
 
 REGISTER_USER_OP_GRAD("transpose")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         const auto& tmp = op.attr<std::vector<int32_t>>("perm");
@@ -84,5 +85,6 @@ REGISTER_USER_OP_GRAD("transpose")
         op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
         AddOp(transpose_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 }  // namespace oneflow
