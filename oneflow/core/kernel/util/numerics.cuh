@@ -18,11 +18,9 @@ limitations under the License.
 #define ONEFLOW_CORE_KERNEL_UTIL_NUMERICS_H
 #pragma once
 
-#include <cuda.h>
 #include <limits.h>
 #include <math.h>
 #include <float.h>
-#include <half.hpp>
 #include <cstdlib>
 #include <assert.h>
 

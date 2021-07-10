@@ -15,11 +15,9 @@ limitations under the License.
 */
 // reference: https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/cuda/NumericLimits.cuh
 #pragma once
-#include <cuda.h>
 #include <limits.h>
 #include <math.h>
 #include <float.h>
-#include <half.hpp>
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
