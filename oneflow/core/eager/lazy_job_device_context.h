@@ -30,6 +30,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   LazyJobDeviceCtx() = default;
   ~LazyJobDeviceCtx() override = default;
 
+#ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const override {
     UNIMPLEMENTED();
     return *(const cudaStream_t*)nullptr;
@@ -50,6 +51,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
     UNIMPLEMENTED();
     return *(const cudnnHandle_t*)nullptr;
   }
+#endif
 
   void SyncDevice() override { UNIMPLEMENTED(); }
 
