@@ -25,7 +25,7 @@ class SrcSubsetTickOp final : public Operator {
   SrcSubsetTickOp() = default;
   ~SrcSubsetTickOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
@@ -37,10 +37,11 @@ class SrcSubsetTickOp final : public Operator {
   Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-void SrcSubsetTickOp::InitFromOpConf() {
+Maybe<void> SrcSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_src_subset_tick_conf());
   EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
