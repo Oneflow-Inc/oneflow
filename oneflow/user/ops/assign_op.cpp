@@ -48,8 +48,8 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                               const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
@@ -61,6 +61,7 @@ void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierF
     CHECK(condition_modifier != nullptr);
     condition_modifier->set_requires_grad(false);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {

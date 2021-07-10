@@ -48,7 +48,7 @@ using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
+using InputArgModifyFn = std::function<Maybe<void>(GetInputArgModifier, const UserOpConfWrapper&)>;
 using OutputArgModifier = OutputBlobModifier;
 using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
