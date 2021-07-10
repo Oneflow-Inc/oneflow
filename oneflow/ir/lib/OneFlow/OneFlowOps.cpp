@@ -216,11 +216,11 @@ static void lowerOpToLoops(Operation* op, ValueRange operands, PatternRewriter& 
   rewriter.replaceOp(op, alloc);
 }
 
-struct ScalarMulByTensorOpLowering : public ConversionPattern {
-  ScalarMulByTensorOpLowering(MLIRContext* ctx)
-      : ConversionPattern(ScalarMulByTensorOp::getOperationName(), 1, ctx) {}
+struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
+ public:
+  using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+  LogicalResult matchAndRewrite(ScalarMulByTensorOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
     lowerOpToLoops(op, operands, rewriter,
@@ -234,10 +234,10 @@ struct ScalarMulByTensorOpLowering : public ConversionPattern {
   }
 };
 
-struct CastOpLowering : public ConversionPattern {
-  CastOpLowering(MLIRContext* ctx) : ConversionPattern(CastOp::getOperationName(), 1, ctx) {}
-
-  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+struct CastOpLowering final : public OpConversionPattern<CastOp> {
+ public:
+  using OpConversionPattern<CastOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(CastOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
     typename CastOp::Adaptor adaptor(operands);
@@ -255,10 +255,13 @@ class FuncOpConversion final : public OpConversionPattern<FuncOp> {
   LogicalResult matchAndRewrite(FuncOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
-    auto func_op = llvm::cast<FuncOp>(op);
-    auto types = func_op.getArgumentTypes();
-    auto func_type = rewriter.getFunctionType(types, llvm::None);
-    // auto function = rewriter.create<mlir::FuncOp>(loc, func_op.sym_name(), func_type);
+    auto types = op.getArgumentTypes();
+    auto memref_types = llvm::to_vector<6>(llvm::map_range(
+        types, [&](Type t) { return convertTensorToMemRef(t.cast<TensorType>()); }));
+    // auto func_type = rewriter.getFunctionType(TypeRange(memref_types), llvm::None);
+    auto func_type0 = rewriter.getFunctionType(types, llvm::None);
+    // auto new_func = rewriter.create<mlir::FuncOp>(loc, "xx", func_type0);
+    // rewriter.inlineRegionBefore(op.getBody(), new_func.getBody(), new_func.end());
     rewriter.eraseOp(op);
     return success();
   }
