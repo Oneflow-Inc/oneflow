@@ -131,7 +131,48 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
+    def test_graph_name(test_case):
+        class ACustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return x
+
+        class BCustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return x
+
+        class CBCustomGraph(BCustomGraph):
+            def __init__(self):
+                super().__init__()
+
+        def create_graph(cnt):
+            a = ACustomGraph()
+            test_case.assertEqual(a.name, "ACustomGraph_" + str(cnt))
+            b = BCustomGraph()
+            test_case.assertEqual(b.name, "BCustomGraph_" + str(cnt))
+            cb = CBCustomGraph()
+            test_case.assertEqual(cb.name, "CBCustomGraph_" + str(cnt))
+
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+
     def test_graph_build_ctx(test_case):
+        # check lazy_mode
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+        with graph_build_util.lazy_mode.gard(True):
+            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+
+        # check lazy mode in nn.Graph._compile
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -141,12 +182,6 @@ class TestGraph(flow.unittest.TestCase):
                 print(graph_build_util.lazy_mode.is_enabled())
 
         g = CustomGraph()
-
-        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        with graph_build_util.lazy_mode.gard(True):
-            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
