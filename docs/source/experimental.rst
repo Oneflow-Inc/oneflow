@@ -3,7 +3,6 @@ oneflow.experimental
 Experimental features
 ----------------------------------
 .. currentmodule:: oneflow.experimental
-.. autofunction:: oneflow.F.add
 .. autofunction:: oneflow.experimental.nn.ReLU
 .. autofunction:: oneflow.experimental.nn.ReLU6
 .. autofunction:: oneflow.experimental.nn.LeakyReLU
