@@ -41,11 +41,11 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
   if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
-  rptr->Init(op_conf);
+  JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
 }
 
@@ -53,17 +53,18 @@ std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf
 
 Operator::Operator() : device_type_(DeviceType::kInvalidDevice) {}
 
-void Operator::Init(const OperatorConf& op_conf) {
-  Init(std::make_shared<const OperatorConf>(op_conf));
+Maybe<void> Operator::Init(const OperatorConf& op_conf) {
+  return Init(std::make_shared<const OperatorConf>(op_conf));
 }
 
-void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<void> Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
   op_conf_ = std::move(op_conf);
-  device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
-  InitFromOpConf();
+  device_type_ = JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
+  JUST(InitFromOpConf());
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
+  return Maybe<void>::Ok();
 }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -1089,14 +1090,14 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   return IsCpuOnly(op_conf.user_conf().op_type_name());
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
   std::shared_ptr<OperatorConf> dev_op_conf = std::make_shared<OperatorConf>(op_conf);
   dev_op_conf->set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  auto op = CheckAndConstructOp(dev_op_conf);
+  auto op = JUST(CheckAndConstructOp(dev_op_conf));
   return op;
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf) {
   if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
   return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
@@ -1389,7 +1390,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
-  const auto& op = ConstructOp(op_conf);
+  const auto& op = JUST(ConstructOp(op_conf));
   JUST(CheckOpInputSignature(*op, upstream_signature));
   JUST(op->FillOpParallelDesc(parallel_desc));
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;

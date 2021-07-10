@@ -500,7 +500,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  auto op = ConstructOp(op_conf, parallel_desc.device_type());
+  auto op = JUST(ConstructOp(op_conf, parallel_desc.device_type()));
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
@@ -571,7 +571,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
       << Error::OpConfDeviceTagNoSetError() << "op_name: " << op_name << " not set device tag";
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf));
+  op_name2op_.emplace(op_name, JUST(ConstructOp(op_conf)));
   Operator* op = op_name2op_.at(op_name).get();
 
   cfg::SbpSignature sbp_sig_conf;
@@ -1090,7 +1090,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
-    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type());
+    const auto& bw_op = CHECK_JUST(ConstructOp(bw_op_conf, op.device_type()));
     for (const auto& ibn : bw_op->input_bns()) {
       const auto& lbi = bw_op->BnInOp2Lbi(ibn);
       if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }

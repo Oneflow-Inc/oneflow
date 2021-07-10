@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void SinkTickOp::InitFromOpConf() {
+Maybe<void> SinkTickOp::InitFromOpConf() {
   CHECK(op_conf().has_sink_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
