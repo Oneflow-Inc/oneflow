@@ -161,6 +161,14 @@ class LocalUserOpInferContext : public user_op::InferContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    auto out =
+        const_cast<LocalUserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+    CHECK_NOTNULL(out);
+    return *out;
+  }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }

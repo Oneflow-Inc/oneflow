@@ -64,13 +64,14 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
   CHECK_NOTNULL_OR_RETURN(tensor) << "local tensors supported only";
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [](uint64_t of_blob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->AsyncAutoMemset(0);
         },
-        "mut");
+        "mut"));
+    return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
@@ -89,14 +90,15 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
           Copy(ofblob_ptr, array);
           synced = true;
         },
-        modifier);
+        modifier));
+    return Maybe<void>::Ok();
   }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
@@ -216,7 +218,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("set_grad",
            [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
              if (t.is_leaf()) {
-               t.set_acc_grad(grad);
+               t.set_acc_grad(grad).GetOrThrow();
              } else {
                throw std::runtime_error("You can only change gradient of leaf tensors.");
              }

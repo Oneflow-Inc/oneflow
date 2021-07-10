@@ -138,9 +138,9 @@ size_t InferTrainWorkspaceSize(const ShapeView& x_shape, const DataType data_typ
 }
 
 size_t InferTrainTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  return InferTrainWorkspaceSize(x->shape(), x->data_type(), axis);
+  return InferTrainWorkspaceSize(x.shape(), x.data_type(), axis);
 }
 
 size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type,
@@ -161,13 +161,13 @@ size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type
 }
 
 size_t InferGradTmpSize(user_op::InferContext* ctx) {
-  const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const auto& dy = ctx->InputTensorDesc("dy", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
   size_t tmp_size = 0;
   if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
-    tmp_size += GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+    tmp_size += GetCudaAlignedSize(dy.shape().elem_cnt() * GetSizeOfDataType(dy.data_type()));
   }
-  tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy->shape(), dy->data_type(), axis));
+  tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy.shape(), dy.data_type(), axis));
   return tmp_size;
 }
 
@@ -617,9 +617,9 @@ REGISTER_BN_ADD_RELU_GRAD_KERNEL(double)
 #if (CUDNN_VERSION >= 7401)
 
 size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
+  const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();
@@ -640,9 +640,9 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
 }
 
 size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
+  const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();
