@@ -159,7 +159,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
                               const user_op::UserOpConfWrapper&) -> Maybe<void> {      \
         user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
-        CHECK(label_modifier != nullptr);                                              \
+        CHECK_OR_RETURN(label_modifier != nullptr);                                    \
         label_modifier->set_requires_grad(false);                                      \
         return Maybe<void>::Ok();                                                      \
       })                                                                               \

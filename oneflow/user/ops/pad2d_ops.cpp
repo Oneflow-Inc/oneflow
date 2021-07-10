@@ -85,7 +85,7 @@ REGISTER_USER_OP("reflection_pad2d")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
       return Maybe<void>::Ok();
     })
@@ -178,7 +178,7 @@ REGISTER_USER_OP("replication_pad2d")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
       return Maybe<void>::Ok();
     })
@@ -273,7 +273,7 @@ REGISTER_USER_OP("constant_pad2d")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
       return Maybe<void>::Ok();
     })

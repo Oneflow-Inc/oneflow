@@ -169,7 +169,7 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-      CHECK(mask_modifier != nullptr);
+      CHECK_OR_RETURN(mask_modifier != nullptr);
       mask_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })

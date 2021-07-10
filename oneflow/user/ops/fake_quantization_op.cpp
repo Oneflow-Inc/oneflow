@@ -49,11 +49,11 @@ REGISTER_USER_OP("fake_quantization")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
-      CHECK(scale != nullptr);
+      CHECK_OR_RETURN(scale != nullptr);
       scale->set_requires_grad(false);
 
       user_op::InputArgModifier* zero_point = GetInputArgModifierFn("zero_point", 0);
-      CHECK(zero_point != nullptr);
+      CHECK_OR_RETURN(zero_point != nullptr);
       zero_point->set_requires_grad(false);
       return Maybe<void>::Ok();
     })

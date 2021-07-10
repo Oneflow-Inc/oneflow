@@ -79,11 +79,11 @@ Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgMo
     training = true;
   }
   user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
-  CHECK(moving_mean_modifier != nullptr);
+  CHECK_OR_RETURN(moving_mean_modifier != nullptr);
   moving_mean_modifier->set_is_mutable(training);
   moving_mean_modifier->set_requires_grad(false);
   user_op::InputArgModifier* moving_variance_modifier = GetInputArgModifierFn("moving_variance", 0);
-  CHECK(moving_variance_modifier != nullptr);
+  CHECK_OR_RETURN(moving_variance_modifier != nullptr);
   moving_variance_modifier->set_is_mutable(training);
   moving_variance_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();

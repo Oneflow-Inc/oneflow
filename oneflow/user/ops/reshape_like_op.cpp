@@ -42,7 +42,7 @@ REGISTER_USER_OP("reshape_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL(like_modifier);
+      CHECK_NOTNULL_OR_RETURN(like_modifier);
       like_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })

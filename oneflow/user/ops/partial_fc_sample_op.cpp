@@ -65,7 +65,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
-      CHECK_NOTNULL(label_modifier);
+      CHECK_NOTNULL_OR_RETURN(label_modifier);
       label_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
