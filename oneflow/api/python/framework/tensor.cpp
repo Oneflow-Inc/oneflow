@@ -213,7 +213,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
       .def_property_readonly("is_cuda", &Tensor::is_cuda)
-      .def_property_readonly("grad", [](const Tensor& t) { return t.acc_grad().GetPtrOrThrow(); })
+      .def_property_readonly("grad",
+                             [](const Tensor& t) -> std::shared_ptr<Tensor> {
+                               if (t.has_autograd_meta()) {
+                                 return t.acc_grad().GetPtrOrThrow();
+                               } else {
+                                 return std::shared_ptr<Tensor>();
+                               }
+                             })
       // setter of grad
       .def("set_grad",
            [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
