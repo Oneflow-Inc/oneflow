@@ -241,6 +241,7 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
                                 ConversionPatternRewriter& rewriter) const final {
     auto loc = op->getLoc();
     typename CastOp::Adaptor adaptor(operands);
+    if (!adaptor.x().getType().dyn_cast<MemRefType>()) { return failure(); }
     Value casted = rewriter.create<memref::CastOp>(
         loc, /* source */ adaptor.x(),
         /* dest */ convertTensorToMemRef(op->getResultTypes().front().cast<TensorType>()));
@@ -252,17 +253,22 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
 class FuncOpConversion final : public OpConversionPattern<FuncOp> {
  public:
   using OpConversionPattern<FuncOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(FuncOp op, ArrayRef<Value> operands,
+  LogicalResult matchAndRewrite(FuncOp func, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
-    auto loc = op->getLoc();
-    auto types = op.getArgumentTypes();
-    auto memref_types = llvm::to_vector<6>(llvm::map_range(
-        types, [&](Type t) { return convertTensorToMemRef(t.cast<TensorType>()); }));
-    // auto func_type = rewriter.getFunctionType(TypeRange(memref_types), llvm::None);
-    auto func_type0 = rewriter.getFunctionType(types, llvm::None);
-    // auto new_func = rewriter.create<mlir::FuncOp>(loc, "xx", func_type0);
-    // rewriter.inlineRegionBefore(op.getBody(), new_func.getBody(), new_func.end());
-    rewriter.eraseOp(op);
+    auto func_type = func.getType();
+    TypeConverter::SignatureConversion conversion(func_type.getNumInputs());
+    // TODO: handle input output alias here by adding extra input arg
+    for (auto arg_type : llvm::enumerate(func_type.getInputs())) {
+      auto converted = convertTensorToMemRef(arg_type.value().cast<TensorType>());
+      conversion.addInputs(arg_type.index(), converted);
+    }
+
+    rewriter.applySignatureConversion(&func.getBody(), conversion);
+    rewriter.updateRootInPlace(func, [&] {
+      for (auto x : conversion.getConvertedTypes()) { x.dump(); }
+      func.setType(
+          rewriter.getFunctionType(conversion.getConvertedTypes(), func_type.getResults()));
+    });
     return success();
   }
 };
@@ -285,11 +291,15 @@ void AffineLoweringPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
   target.addIllegalDialect<OneFlowDialect>();
+  target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+    for (auto arg : op.getArguments()) {
+      if (arg.getType().dyn_cast<TensorType>()) { return false; }
+    }
+    return true;
+  });
   RewritePatternSet patterns(&getContext());
   // TODO: Add type converter
-  patterns.add<CastOpLowering>(&getContext());
-  patterns.add<ScalarMulByTensorOpLowering>(&getContext());
-  patterns.add<FuncOpConversion>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, FuncOpConversion>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
