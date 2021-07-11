@@ -150,7 +150,7 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
-Symbol<Device> TensorGetDevice(const MirroredTensor& tensor) {
+Symbol<Device> TensorGetDevice(const Tensor& tensor) {
   return tensor.device().GetOrThrow();
 }
 
