@@ -39,7 +39,7 @@ def register_local_tensor_method(name=None):
             op_name = method.__name__
         else:
             op_name = name
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return decorator
@@ -868,7 +868,7 @@ def _default_initializer_for_determining(tensor):
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             shape,
             dtype,
             undetermined_tensor.device,
@@ -891,7 +891,7 @@ def _numpy_initializer_for_determining(tensor):
     if undetermined_tensor.is_consistent:
         raise NotImplementedError()
     else:
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -913,13 +913,7 @@ def _input_args_is_numpy(*args):
 
 
 def _input_args_is_consistent_or_local(*args):
-    return len(args) == 1 and isinstance(
-        args[0],
-        (
-            oneflow._oneflow_internal.ConsistentTensor,
-            oneflow._oneflow_internal.LocalTensor,
-        ),
-    )
+    return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
 
 def _input_args_is_tensor(*args):
@@ -937,7 +931,7 @@ def _input_args_is_shape(*args):
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return set_tensor_op
