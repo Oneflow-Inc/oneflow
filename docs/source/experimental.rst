@@ -142,6 +142,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.reciprocal
 .. autofunction:: oneflow.experimental.add
 .. autofunction:: oneflow.experimental.Tensor.add
+.. autofunction:: oneflow.experimental.Tensor.add_
 .. autofunction:: oneflow.experimental.sign
 .. autofunction:: oneflow.experimental.Tensor.sign
 .. autofunction:: oneflow.experimental.sin
