@@ -83,16 +83,12 @@ class Mean(Module):
 
         self.axis = axis
         self.keepdims = keepdims
-        if axis is None:
-            self.axes = []
-        else:
-            self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
-        return flow.F.reduce_mean(input, axis=self.axes, keepdims=self.keepdims)
+        return flow.F.reduce_mean(input, axis=axis_checked, keepdims=self.keepdims)
 
 
 @oneflow_export("mean")
