@@ -395,12 +395,21 @@ def GetEnvDefaultParallelConf(device_tag):
 
 def HasAllMultiClientEnvVars():
     return (
-        os.getenv("MASTER_ADDR")
-        and os.getenv("MASTER_PORT")
-        and os.getenv("WORLD_SIZE")
-        and os.getenv("RANK")
-        and os.getenv("LOCAL_RANK")
+        ("MASTER_ADDR" in os.environ)
+        and ("MASTER_PORT" in os.environ)
+        and ("WORLD_SIZE" in os.environ)
+        and ("RANK" in os.environ)
+        and ("LOCAL_RANK" in os.environ)
     )
+
+
+"""
+    os.getenv("MASTER_ADDR")
+    and os.getenv("MASTER_PORT")
+    and os.getenv("WORLD_SIZE")
+    and os.getenv("RANK")
+    and os.getenv("LOCAL_RANK")
+"""
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):

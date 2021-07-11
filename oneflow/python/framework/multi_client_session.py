@@ -36,7 +36,9 @@ class MultiClientSession(object):
 
     def TryInit(self):
         if not self.is_inited_:
+            print("self.config_proto:", self.config_proto)
             config_proto_str = text_format.MessageToString(self.config_proto)
+            print("str:", config_proto_str)
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.is_inited_ = True
 
@@ -55,8 +57,6 @@ class MultiClientSession(object):
 
     @property
     def config_proto(self):
-        if self.config_proto_ is None:
-            self.config_proto_ = job_set_util.ConfigProto()
         return self.config_proto_
 
     @property
@@ -69,6 +69,12 @@ class MultiClientSession(object):
 
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
+        config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
+        if oneflow._oneflow_internal.flags.with_cuda():
+            config_proto.resource.gpu_device_num = 1
+        else:
+            config_proto.resource.cpu_device_num = 1
+            config_proto.resource.gpu_device_num = 0
         config_proto.session_id = self.id
         return config_proto
 
@@ -79,3 +85,10 @@ class MultiClientSession(object):
     def _update_scope_attr_name2defaultVal(self):
         items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
         self.scope_attr_name2default_val_ = {k: v.default_val for k, v in items}
+
+    def AnyGlobalFunctionDefined(self):  # compatible with old version session
+        return False
+
+    @property
+    def is_running(self):  # compatible with old version session
+        return self.is_inited_

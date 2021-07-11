@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 namespace one {
@@ -56,8 +57,39 @@ Maybe<void> LazyInterpreter::ApplyImpl(const InputOpExpr& op_expr, const TensorT
   CHECK_EQ_OR_RETURN(inputs.size(), 0);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 0);
   const auto& scope = JUST(GetCurrentScope());
-}
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  int64_t symbol_id = JUST(scope->symbol_id());
+  op_conf->set_scope_symbol_id(symbol_id);
+  if (!op_conf->has_device_tag()) {
+    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
+  }
+  auto infer_ctx = JUST(GetCurInferCtx());
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 
+  const std::string& op_name = op_conf->name();
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
+            << " and the origin op_conf is :" << op_conf->DebugString();
+
+  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
+  const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
+      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+
+  const std::string& obn = op_expr.indexed_obns().at(0);
+  const auto& parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
+  const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
+
+  CHECK_OR_RETURN(!outputs->at(0).get());
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  TensorNameScope::Global()->Record(outputs->at(0), op_name + "/" + obn);
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -73,6 +105,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     const std::string& tensor_name = TensorNameScope::Global()->Lookup(inputs[i]);
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, tensor_name);
+    // TODO(chengcheng): check inputs tensor placement equal, and create parallel scope? or set in
+    // python.
   }
   const auto& session = JUST(GetDefaultSession());
   bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());

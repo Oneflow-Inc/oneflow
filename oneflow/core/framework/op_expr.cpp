@@ -380,10 +380,9 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
-
 template<>
 Maybe<void> BuiltinOpExprImpl<InputOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                           const AttrMap& attrs) const {
+                                                        const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_input_conf()) = op_proto_;

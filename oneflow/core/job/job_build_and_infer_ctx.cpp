@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -99,7 +100,8 @@ void UpdateOpName2AncestorsNeedNoGrad(
 
 }  // namespace
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
+    : job_(job), job_id_(job_id), unique_op_name_index_(0) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
@@ -1293,6 +1295,35 @@ Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
                                                      const std::string& bn_in_op) const {
   const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
   return GenLogicalBlobName(lbi);
+}
+
+Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
+    const OperatorConf& op_conf) {
+  // NOTE(chengcheng): arg op_conf has a default global op_name because it is created by
+  //  static functional op expr, so we need reset a unique op name for each functional op.
+  //  This op_conf can NOT be a input/output/varible op which has set correct name in nn.Graph.
+  CHECK_OR_RETURN(
+      !(op_conf.has_input_conf() || op_conf.has_variable_conf() || op_conf.has_output_conf()));
+
+  const auto& scope = JUST(GetCurrentScope());
+
+  std::string op_name_prefix;
+  for (const std::string& prefix : scope->scope_proto().scope_op_name_prefixes()) {
+    op_name_prefix += (prefix + "-");
+  }
+  std::string op_type_name;
+  if (op_conf.has_user_conf()) {
+    op_type_name = op_conf.user_conf().op_type_name();
+  } else {
+    op_type_name = "SystemOp";
+  }
+  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
+  ++unique_op_name_index_;
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
+            << " and the origin op_conf is :" << op_conf.DebugString();
+  return op_name;
 }
 
 }  // namespace oneflow

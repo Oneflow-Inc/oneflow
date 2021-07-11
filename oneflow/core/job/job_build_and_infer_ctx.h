@@ -66,6 +66,9 @@ class JobBuildAndInferCtx {
   Maybe<void> Rebuild();
   Maybe<std::string> GetOpBlobLbn(const std::string& op_name, const std::string& bn_in_op) const;
 
+  // NOTE(chengcheng): Only used in multi-client.
+  Maybe<std::string> NewUniqueOpNameByFunctionalOpConf(const OperatorConf& op_conf);
+
   virtual Maybe<void> Complete() = 0;
 
  protected:
@@ -152,6 +155,7 @@ class JobBuildAndInferCtx {
   bool is_job_conf_frozen_;
   bool has_job_conf_;
   HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
+  int64_t unique_op_name_index_;
 };
 
 class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
