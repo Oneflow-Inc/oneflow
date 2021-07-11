@@ -31,7 +31,7 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
   if (!acc_tensor_) {
     acc_tensor_ = partial_tensor;
   } else {
-    acc_tensor_ = JUST(functional::Add(partial_tensor, acc_tensor_));
+    acc_tensor_ = JUST(functional::Add(partial_tensor, acc_tensor_, /*inplace=*/true));
   }
   return Maybe<void>::Ok();
 }

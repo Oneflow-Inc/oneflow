@@ -67,13 +67,14 @@ int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 
 int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
-std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
+std::shared_ptr<Tensor> MirroredTensor::data() const {
   std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
   return t;
 }
 
-Maybe<MirroredTensor> MirroredTensor::api_detach() const {
-  return std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+Maybe<Tensor> MirroredTensor::detach() const {
+  std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+  return tensor;
 }
 
 Maybe<Tensor> MirroredTensor::clone() const {
@@ -117,13 +118,13 @@ int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
 
 int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 
-std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
+std::shared_ptr<Tensor> ConsistentTensor::data() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
-  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
+Maybe<Tensor> ConsistentTensor::detach() const {
+  std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 

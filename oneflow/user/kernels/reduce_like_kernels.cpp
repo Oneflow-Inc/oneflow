@@ -22,8 +22,8 @@ namespace {
 
 size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
   if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
-  const user_op::TensorDesc* tensor_desc_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  return tensor_desc_x->shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x->data_type());
+  const user_op::TensorDesc& tensor_desc_x = ctx->InputTensorDesc("x", 0);
+  return tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
 }
 
 }  // namespace
@@ -163,7 +163,7 @@ REGISTER_USER_KERNEL("reduce_sum_like")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+      const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("y", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       if (axis.empty()) {
