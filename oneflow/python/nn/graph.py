@@ -100,7 +100,7 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         session.TryInit()
 
-        with graph_build_util.graph_build_context(self.config):
+        with graph_build_util.graph_build_context(self.config.proto, session):
             outputs = self.build(*args)
 
         self._is_compiled = True

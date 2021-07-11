@@ -20,6 +20,7 @@ from contextlib import contextmanager
 
 import inspect
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.scope_util as scope_util
 import oneflow._oneflow_internal
@@ -28,18 +29,25 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 
 
 @contextmanager
-def graph_build_context(config):
+def graph_build_context(config_proto, session):
+    print("resource ", session.current_resource)
+    device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(session.current_resource)
+    print("devices ", device_tag_and_ids)
+    scope = scope_util.MakeInitialScope(
+        config_proto,
+        *device_tag_and_ids,
+        None,  # hierarchy
+        False,  # is_mirrored
+    )
     with lazy_mode.gard(True):
-        with JobBuildAndInferCtx(config):
-            yield
-    # with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-    # with scope_util.ScopeContext(scope):
-    #     yield
+        with JobBuildAndInferCtx(config_proto):
+            with scope_util.ScopeContext(scope):
+                yield
 
 
 class JobBuildAndInferCtx(object):
-    def __init__(self, config):
-        self._job_conf = config.proto
+    def __init__(self, config_proto):
+        self._job_conf = config_proto
 
     def __enter__(self):
         c_api_util.JobBuildAndInferCtx_Open(self._job_conf.job_name())
