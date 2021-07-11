@@ -49,7 +49,7 @@ def _run_functional_doctest(
 )
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
-        _run_functional_doctest(test_case, raise_on_error=True)
+        _run_functional_doctest(test_case, raise_on_error=True, verbose=None)
 
 
 if __name__ == "__main__":

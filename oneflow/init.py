@@ -122,7 +122,9 @@ del sys
 del absolute_import
 del oneflow
 
-import oneflow.python.framework.docstr
+import oneflow.python.framework.docstr as docstr
 from oneflow.python.framework.docstr.utils import register_docstr
 
 register_docstr()
+del register_docstr
+del docstr
