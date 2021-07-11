@@ -25,7 +25,7 @@ add_docstr(
 
     Args:
         input(Tensor) - the input tensor of probability values for the Bernoulli distribution
-        generator: (optional) – a pseudorandom number generator for sampling
+        generator: (Generator, optional) – a pseudorandom number generator for sampling
         out (Tensor, optional) – the output tensor.
 
     Shape:
@@ -48,7 +48,7 @@ add_docstr(
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = flow.bernoulli(x)
+        >>> y = flow.F.bernoulli(x)
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.],
