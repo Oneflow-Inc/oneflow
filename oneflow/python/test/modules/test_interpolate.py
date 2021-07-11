@@ -33,7 +33,8 @@ def _test_interpolate_nearest_1d(test_case, device):
     of_out = m(input)
     np_out = [[[1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0]]]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
+    of_out = of_out.sum()
+    of_out.backward()
     print(input.grad.numpy())
 
 

@@ -255,8 +255,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState
       MutableAttrMap attrs;
       const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
       in_grads->resize(1);
-      in_grads->at(0) =
-          JUST(functional::UpsampleNearest1D(out_grads.at(0), ctx->scale_factor, ctx->data_format));
+      in_grads->at(0) = JUST(
+          functional::UpsampleNearest1DGrad(out_grads.at(0), ctx->scale_factor, ctx->data_format));
     }
     return Maybe<void>::Ok();
   }
