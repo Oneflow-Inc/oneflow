@@ -424,13 +424,14 @@ class UpsampleLinear1DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_linear_1d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const bool& align_corners, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -460,12 +461,13 @@ class UpsampleNearest1DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_nearest_1d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -496,13 +498,14 @@ class UpsampleNearest2DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -535,7 +538,8 @@ class UpsampleBilinear2DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
@@ -543,7 +547,7 @@ class UpsampleBilinear2DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -576,7 +580,8 @@ class UpsampleBicubic2DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_bicubic_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
@@ -584,7 +589,7 @@ class UpsampleBicubic2DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -617,7 +622,8 @@ class UpsampleNearest3DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_nearest_3d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
@@ -625,7 +631,7 @@ class UpsampleNearest3DGradFunctor {
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -659,7 +665,8 @@ class UpsampleTrilinear3DGradFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("upsample_trilinear_3d_grad").Input("dy").Input("x").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const bool& align_corners, const std::string& data_format) const {
     MutableAttrMap attrs;
@@ -668,7 +675,7 @@ class UpsampleTrilinear3DGradFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:

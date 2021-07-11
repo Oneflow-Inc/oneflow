@@ -439,7 +439,7 @@
 
 - name: "upsample_linear_1d_grad"
   signature:
-    "Tensor UpsampleLinear1DGrad(Tensor x, *, Float scale_factor, Bool align_corners,
+    "Tensor UpsampleLinear1DGrad(Tensor dy, Tensor x, *, Float scale_factor, Bool align_corners,
                      String data_format=\"channels_first\")"
   bind_python: False
 
@@ -451,7 +451,7 @@
 
 - name: "upsample_nearest_1d_grad"
   signature:
-    "Tensor UpsampleNearest1DGrad(Tensor x, *, Float scale_factor,
+    "Tensor UpsampleNearest1DGrad(Tensor dy, Tensor x, *, Float scale_factor,
                      String data_format=\"channels_first\")"
   bind_python: False
 
@@ -463,7 +463,7 @@
 
 - name: "upsample_nearest_2d_grad"
   signature:
-    "Tensor UpsampleNearest2DGrad(Tensor x, *, Float height_scale, Float width_scale, 
+    "Tensor UpsampleNearest2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, 
                      String data_format=\"channels_first\")"
   bind_python: False 
 
@@ -475,7 +475,7 @@
 
 - name: "upsample_bilinear_2d_grad"
   signature:
-    "Tensor UpsampleBilinear2DGrad(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+    "Tensor UpsampleBilinear2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
                      String data_format=\"channels_first\")"
   bind_python: False
 
@@ -487,7 +487,7 @@
 
 - name: "upsample_bicubic_2d_grad"
   signature:
-    "Tensor UpsampleBicubic2DGrad(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+    "Tensor UpsampleBicubic2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
                      String data_format=\"channels_first\")"
   bind_python: False
 
@@ -499,7 +499,7 @@
 
 - name: "upsample_nearest_3d_grad"
   signature:
-    "Tensor UpsampleNearest3DGrad(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+    "Tensor UpsampleNearest3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
                      String data_format=\"channels_first\")"
   bind_python: False
 
@@ -511,7 +511,7 @@
 
 - name: "upsample_trilinear_3d_grad"
   signature:
-    "Tensor UpsampleTrilinear3DGrad(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+    "Tensor UpsampleTrilinear3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
                      Bool align_corners, String data_format=\"channels_first\")"
   bind_python: False
 
