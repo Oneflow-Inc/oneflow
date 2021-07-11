@@ -23,8 +23,9 @@ import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.nn.module import Module
+from oneflow.python.framework.multi_client_session import MultiClientSession 
 from oneflow.python.framework.tensor import Tensor
+from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
@@ -96,8 +97,8 @@ class Graph(object):
         if len(state) > 0:
             self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state)
 
-        # TODO(xuxiaoyu): start MultiClientSession
         session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
         session.TryInit()
 
         with graph_build_util.graph_build_context(self.config.proto, session):

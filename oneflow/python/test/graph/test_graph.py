@@ -211,10 +211,25 @@ class TestGraph(flow.unittest.TestCase):
             def build(self):
                 # check lazy mode in nn.Graph._compile
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-                test_case.assertEqual(oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(), self.name)
                 print("graph proto", self._graph_proto)
+
+                # check session type
+                import oneflow.python.framework.session_context as session_ctx
+                from oneflow.python.framework.multi_client_session import MultiClientSession 
+                session = session_ctx.GetDefaultSession()
+                print("session type ", type(session))
+                test_case.assertEqual(type(session), MultiClientSession)
+
+                # check scope
                 import oneflow.python.framework.scope_util as scope_util
-                print("cur scope in build ", scope_util.to_proto(oneflow.current_scope()))
+                scope = oneflow.current_scope()
+                scope_proto = scope_util.to_proto(scope)
+                print("cur scope in build ", scope_proto)
+                test_case.assertEqual(session.id, scope_proto.session_id)
+
+                # check job_build_and_infer_ctx
+                test_case.assertEqual(oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(), self.name)
+
 
         test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraph()
