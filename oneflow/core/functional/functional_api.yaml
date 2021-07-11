@@ -112,6 +112,10 @@
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
   bind_python: True
 
+- name: "reduce_mean"
+  signature: "Tensor ReduceMean(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
 - name: "transpose"
   signature: "Tensor Transpose(Tensor x, *, Int32List perm)"
   bind_python: True
