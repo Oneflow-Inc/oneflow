@@ -19,16 +19,16 @@ from oneflow.python.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.F.sin,
     r"""
-    sin(input: Tensor) -> Tensor
+    sin(x: Tensor) -> Tensor
 
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
     .. math::
 
-        \text{out}_{i} = \sin(\text{input}_{i})
+        \text{y}_{i} = \sin(\text{x}_{i})
 
     Args:
-        input (Tensor): the input tensor.
+        x (Tensor): the input tensor.
 
     For example:
 
@@ -38,12 +38,12 @@ add_docstr(
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
-        >>> out1 = flow.F.sin(x1)
-        >>> out1
+        >>> y1 = flow.F.sin(x1)
+        >>> y1
         tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
-        >>> out2 = flow.F.sin(x2)
-        >>> out2
+        >>> y2 = flow.F.sin(x2)
+        >>> y2
         tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
 
 
@@ -53,15 +53,15 @@ add_docstr(
 add_docstr(
     oneflow.F.cos,
     r"""
-    cos(x) -> Tensor
+    cos(x: Tensor) -> Tensor
 
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
     .. math::
-        \text{out}_{i} = \cos(\text{input}_{i})
+        \text{y}_{i} = \cos(\text{x}_{i})
 
     Args:
-        input (Tensor): the input tensor.
+        x (Tensor): the input tensor.
 
     For example:
 
