@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import random
 from collections import OrderedDict
 
 import numpy as np
 
 import oneflow.experimental as flow
-from oneflow.python.test.modules.automated_test_util import *
+import oneflow.typing as oft
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -100,7 +101,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape)
         np_zeros = np.zeros(x.shape)
 
-        random_fill_val = np.random.uniform(-100.0, 100.0)
+        random_fill_val = random.uniform(-100.0, 100.0)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -124,7 +125,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
 
-        random_fill_val = np.random.randint(-100, 100)
+        random_fill_val = random.randint(-100, 100)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -490,26 +491,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_flow_tensor_asin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "asin", device=device,
-            )
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_flow_tensor_arcsin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "arcsin", device=device,
-            )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
@@ -968,16 +949,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_tensor_tanh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "tanh", device=device,
-            )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
