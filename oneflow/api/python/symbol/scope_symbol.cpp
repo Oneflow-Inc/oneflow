@@ -37,7 +37,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id", [](const Scope& x) { return x.symbol_id().GetOrThrow(); })
-      .def_property_readonly("_proto_str", [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
+      .def_property_readonly("_proto_str",
+                             [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
       .def("auto_increment_id", &Scope::auto_increment_id)
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("job_desc_symbol", &Scope::job_desc_symbol)

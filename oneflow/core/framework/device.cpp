@@ -67,7 +67,7 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                             int64_t device_id) {
+                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
   auto* vec = &type2device_id2device[type];

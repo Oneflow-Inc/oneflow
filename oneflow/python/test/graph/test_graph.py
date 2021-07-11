@@ -21,6 +21,7 @@ import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
 
+
 def _multi_client_execute(f):
     def deco(*args):
         import oneflow._oneflow_internal
@@ -41,7 +42,9 @@ def _multi_client_execute(f):
 
         oneflow._oneflow_internal.SetIsMultiClient(prev_is_multi_client)
         session_ctx.TryCloseDefaultSession()
-        session_ctx.OpenDefaultSession(session_util.Session(oneflow._oneflow_internal.NewSessionId()))
+        session_ctx.OpenDefaultSession(
+            session_util.Session(oneflow._oneflow_internal.NewSessionId())
+        )
 
         return out
 
@@ -215,29 +218,32 @@ class TestGraph(flow.unittest.TestCase):
 
                 # check session type
                 import oneflow.python.framework.session_context as session_ctx
-                from oneflow.python.framework.multi_client_session import MultiClientSession 
+                from oneflow.python.framework.multi_client_session import (
+                    MultiClientSession,
+                )
+
                 session = session_ctx.GetDefaultSession()
-                print("session type ", type(session))
                 test_case.assertEqual(type(session), MultiClientSession)
 
                 # check scope
                 import oneflow.python.framework.scope_util as scope_util
+
                 scope = oneflow.current_scope()
                 scope_proto = scope_util.to_proto(scope)
                 print("cur scope in build ", scope_proto)
                 test_case.assertEqual(session.id, scope_proto.session_id)
 
                 # check job_build_and_infer_ctx
-                test_case.assertEqual(oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(), self.name)
-
+                test_case.assertEqual(
+                    oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(),
+                    self.name,
+                )
 
         test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraph()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-
-
 
 
 if __name__ == "__main__":

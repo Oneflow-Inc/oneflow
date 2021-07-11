@@ -171,7 +171,7 @@ Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_va
 }
 
 /* static */ Maybe<void> AttrValueUtil::ToProtoAttrValue(const AttrVal& cpp_attr_value,
-                                                       AttrValue* attr_value) {
+                                                         AttrValue* attr_value) {
   if (false) {
 // clang-format off
 #define MAKE_ENTRY(field, cpp_type, attr_type)                                        \

@@ -25,6 +25,7 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 
+
 @oneflow_export("experimental.scope.config")
 def api_scope_config(**kwargs):
     name2default = session_ctx.GetDefaultSession().scope_attr_name2default_val

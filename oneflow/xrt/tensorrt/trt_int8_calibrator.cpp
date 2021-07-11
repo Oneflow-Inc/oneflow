@@ -176,7 +176,7 @@ TRTInt8CalibratorResource::LookupOrCreate(const std::string& name) {
 }
 
 /* static */ const std::unordered_map<std::string,  // NOLINT
-                                    TRTInt8CalibratorResource*>&
+                                      TRTInt8CalibratorResource*>&
 TRTInt8CalibratorResource::All() {
   return resources;
 }

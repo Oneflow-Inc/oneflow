@@ -23,12 +23,13 @@ import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.framework.multi_client_session import MultiClientSession 
+from oneflow.python.framework.multi_client_session import MultiClientSession
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
+
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
 @experimental_api
@@ -52,7 +53,7 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
-    
+
     @property
     def _graph_proto(self):
         return c_api_util.GetCurrentJob()

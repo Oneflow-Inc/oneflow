@@ -58,7 +58,7 @@ class MultiClientSession(object):
         if self.config_proto_ is None:
             self.config_proto_ = job_set_util.ConfigProto()
         return self.config_proto_
-    
+
     @property
     def current_resource(self):
         return c_api_util.CurrentResource()
