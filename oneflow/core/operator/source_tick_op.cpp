@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void SourceTickOp::InitFromOpConf() {
+Maybe<void> SourceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_source_tick_conf());
   CHECK(op_conf().ctrl_in_op_name().empty());
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
