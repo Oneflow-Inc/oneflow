@@ -19,10 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void OutputOp::InitFromOpConf() {
+Maybe<void> OutputOp::InitFromOpConf() {
   CHECK(op_conf().has_output_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out")->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> OutputOp::InferLogicalOutBlobDescs(

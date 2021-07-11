@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void CallbackNotifyOp::InitFromOpConf() {
+Maybe<void> CallbackNotifyOp::InitFromOpConf() {
   CHECK(op_conf().has_callback_notify_conf());
   EnrollInputBn("in", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
