@@ -105,7 +105,9 @@ class INTERPOLATE(Module):
             raise ValueError("either size or scale_factor should be defined")
 
         if len(x.shape) == 3 and self.mode == "nearest":
-            return flow.F.upsample_nearest_1d(x, scale_factor=scale_factors[0])
+            return flow.F.upsample_nearest_1d(
+                x, scale_factor=scale_factors[0], data_format="channels_first"
+            )
 
         if len(x.shape) == 4 and self.mode == "nearest":
             flow.F.upsample(
@@ -114,6 +116,7 @@ class INTERPOLATE(Module):
                 width_scale=scale_factors[1],
                 align_corners=self.align_corners,
                 interpolation=self.mode,
+                data_format="channels_first",
             )
 
         if len(x.shape) == 5 and self.mode == "nearest":
@@ -122,6 +125,7 @@ class INTERPOLATE(Module):
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
+                data_format="channels_first",
             )
 
         # TODO(zxy) Add adaptive_avg_pool op
@@ -132,7 +136,10 @@ class INTERPOLATE(Module):
         if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None
             return flow.F.upsample_linear_1d(
-                x, scale_factor=scale_factors[0], align_corners=self.align_corners
+                x,
+                scale_factor=scale_factors[0],
+                align_corners=self.align_corners,
+                data_format="channels_first",
             )
 
         if len(x.shape) == 4 and self.mode == "bilinear":
@@ -143,6 +150,7 @@ class INTERPOLATE(Module):
                 width_scale=scale_factors[1],
                 align_corners=self.align_corners,
                 interpolation=self.mode,
+                data_format="channels_first",
             )
 
         if len(x.shape) == 5 and self.mode == "trilinear":
@@ -153,6 +161,7 @@ class INTERPOLATE(Module):
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
                 align_corners=self.align_corners,
+                data_format="channels_first",
             )
 
 

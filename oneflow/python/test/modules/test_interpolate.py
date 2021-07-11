@@ -35,7 +35,7 @@ def _test_interpolate_nearest_1d(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
     of_out.backward()
-    
+    print(input.grad.numpy())
 
 
 @unittest.skipIf(
