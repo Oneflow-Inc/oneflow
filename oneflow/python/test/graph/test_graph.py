@@ -37,11 +37,13 @@ def _multi_client_execute(f):
             MultiClientSession(oneflow._oneflow_internal.NewSessionId())
         )
 
-        f(*args)
+        out = f(*args)
 
         oneflow._oneflow_internal.SetIsMultiClient(prev_is_multi_client)
         session_ctx.TryCloseDefaultSession()
         session_ctx.OpenDefaultSession(session_util.Session(oneflow._oneflow_internal.NewSessionId()))
+
+        return out
 
     return deco
 
