@@ -33,12 +33,15 @@ def graph_build_context(config_proto, session):
     print("resource ", session.current_resource)
     device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(session.current_resource)
     print("devices ", device_tag_and_ids)
+    print("cur scope before build ", scope_util.to_proto(oneflow.current_scope()))
     scope = scope_util.MakeInitialScope(
         config_proto,
         *device_tag_and_ids,
-        None,  # hierarchy
+        None,  # TODO(): set hierarchy from user graph config
         False,  # is_mirrored
     )
+    print("init scope", scope_util.to_proto(scope))
+
     with lazy_mode.gard(True):
         with JobBuildAndInferCtx(config_proto):
             with scope_util.ScopeContext(scope):

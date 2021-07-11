@@ -213,6 +213,8 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
                 test_case.assertEqual(oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(), self.name)
                 print("graph proto", self._graph_proto)
+                import oneflow.python.framework.scope_util as scope_util
+                print("cur scope in build ", scope_util.to_proto(oneflow.current_scope()))
 
         test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraph()
