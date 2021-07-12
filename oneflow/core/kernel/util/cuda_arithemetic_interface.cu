@@ -419,10 +419,12 @@ void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n,
   } else if (data_type == kInt64) {
     return Fill(ctx, n, *(reinterpret_cast<const int64_t*>(value_ptr)),
                 reinterpret_cast<int64_t*>(y));
-#if CUDA_VERSION >= 11000
   } else if (data_type == kBFloat16) {
+#if CUDA_VERSION >= 11000
     return FillBFloat16(ctx, n, *(reinterpret_cast<const nv_bfloat16*>(value_ptr)),
                         reinterpret_cast<nv_bfloat16*>(y));
+#else
+    UNIMPLEMENTED();
 #endif
   } else {
     UNIMPLEMENTED();

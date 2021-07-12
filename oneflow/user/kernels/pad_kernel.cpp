@@ -50,13 +50,14 @@ const void* GetDtypeMatchedValuePtr(const DataType data_type, double floating, i
   } else if (data_type == kInt64) {
     static const int64_t val = static_cast<int64_t>(integral);
     return static_cast<const void*>(&val);
-#if defined(WITH_CUDA) && CUDA_VERSION >= 11000
   } else if (data_type == kBFloat16) {
+#if defined(WITH_CUDA) && CUDA_VERSION >= 11000
     static const nv_bfloat16 val = static_cast<nv_bfloat16>(floating);
     return static_cast<const void*>(&val);
-  }
+#else
+    UNIMPLEMENTED();
 #endif
-  else {
+  } else {
     UNIMPLEMENTED();
   }
 }

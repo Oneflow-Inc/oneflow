@@ -348,10 +348,12 @@ void Relu(DeviceCtx* device_ctx, int64_t n, const DataType data_type, const void
                  mask);
   } else if (data_type == kFloat16) {
     Relu<half>(device_ctx, n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y), mask);
-#if CUDA_VERSION >= 11000
   } else if (data_type == kBFloat16) {
+#if CUDA_VERSION >= 11000
     Relu<nv_bfloat16>(device_ctx, n, reinterpret_cast<const nv_bfloat16*>(x),
                       reinterpret_cast<nv_bfloat16*>(y), mask);
+#else
+    UNIMPLEMENTED();
 #endif
   } else {
     UNIMPLEMENTED();
@@ -369,11 +371,13 @@ void AddRelu(DeviceCtx* device_ctx, int64_t n, const DataType data_type, const v
   } else if (data_type == kFloat16) {
     AddRelu<half>(device_ctx, n, reinterpret_cast<const half*>(x),
                   reinterpret_cast<const half*>(addend), reinterpret_cast<half*>(y), mask);
-#if CUDA_VERSION >= 11000
   } else if (data_type == kBFloat16) {
+#if CUDA_VERSION >= 11000
     AddRelu<nv_bfloat16>(device_ctx, n, reinterpret_cast<const nv_bfloat16*>(x),
                          reinterpret_cast<const nv_bfloat16*>(addend),
                          reinterpret_cast<nv_bfloat16*>(y), mask);
+#else
+    UNIMPLEMENTED();
 #endif
   } else {
     UNIMPLEMENTED();
@@ -391,10 +395,12 @@ void ReluBackward(DeviceCtx* device_ctx, int64_t n, const DataType data_type, co
   } else if (data_type == kFloat16) {
     ReluBackward<half>(device_ctx, n, mask, reinterpret_cast<const half*>(dy),
                        reinterpret_cast<half*>(addend_diff));
-#if CUDA_VERSION >= 11000
   } else if (data_type == kBFloat16) {
+#if CUDA_VERSION >= 11000
     ReluBackward<nv_bfloat16>(device_ctx, n, mask, reinterpret_cast<const nv_bfloat16*>(dy),
                               reinterpret_cast<nv_bfloat16*>(addend_diff));
+#else
+    UNIMPLEMENTED();
 #endif
   } else {
     UNIMPLEMENTED();
