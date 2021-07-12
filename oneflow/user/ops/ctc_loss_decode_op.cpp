@@ -24,12 +24,11 @@ REGISTER_USER_OP("ctc_greedy_decoder")
     .Output("neg_sum_logits")
     .Attr<bool>("merge_repeated")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs->shape().At(0)});
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
       *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
       return Maybe<void>::Ok();
     })
@@ -56,17 +55,19 @@ REGISTER_USER_OP("ctc_beam_search_decoder")
     .Attr<int32_t>("beam_width")
     .Attr<int32_t>("top_paths")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+
       const int64_t beam_width = ctx->Attr<int32_t>("beam_width");
       const int64_t top_paths = ctx->Attr<int32_t>("top_paths");
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
       CHECK_GE_OR_RETURN(beam_width, 0);
       CHECK_GE_OR_RETURN(top_paths, 0);
       CHECK_LE_OR_RETURN(top_paths, beam_width);
-      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs->shape().At(0)});
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
       *ctx->OutputShape("log_probability", 0) = Shape({batch_size, top_paths});
       return Maybe<void>::Ok();
     })
