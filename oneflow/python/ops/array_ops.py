@@ -2648,44 +2648,30 @@ def nvtx_end(
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
-def _check_scatter_blobs(input, dim, index, like_or_src):
-    assert dim < len(index.shape), ValueError(
-        "Value of dim is out of range(dim should be less than len(index.shape))"
+def _check_scatter_blobs(input, dim, index, src):
+    _input_num_axes = len(input.shape)
+    _index_num_axes = len(index.shape)
+    _src_num_axes = len(src.shape)
+    # check index.numaxes == src.num_axes == input.numaxes
+    assert _input_num_axes == _index_num_axes, ValueError(
+        "The num axes of input should be equal to index's num axes"
     )
-    assert len(input.shape) == len(index.shape) and len(input.shape) == len(
-        like_or_src.shape
-    ), ValueError("Number of dimensions of input, index and like/src should equal")
-    for i in range(0, len(input.shape)):
-        assert input.shape[i] == index.shape[i], ValueError(
-            "Shape of input and index should be same"
-        )
-        assert input.shape[i] <= like_or_src.shape[i], ValueError(
-            "Shape like/src blob should be larger than input"
-        )
-@oneflow_export("dim_scatter_update_like")
-@stable_api
-def dim_scatter_update_like(
-    input: oneflow._oneflow_internal.BlobDesc,
-    dim: int,
-    index: oneflow._oneflow_internal.BlobDesc,
-    like: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-    _check_scatter_blobs(input, dim, index, like)
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatterUpdateLike_")
-        )
-        .Op("dim_scatter_update_like")
-        .Input("input", [input])
-        .Input("index", [index])
-        .Input("like", [like])
-        .Output("output")
-        .Attr("dim", int(dim))
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
+    assert _index_num_axes == _src_num_axes, ValueError(
+        "The num axes of input, index, src should be equal"
     )
+    assert dim < _index_num_axes, ValueError(
+        "Value of dim is out of range(dim should be less than the num axes of index)"
+    )
+    
+    for i in range(0, _input_num_axes):
+        assert index.shape[i] <= input.shape[i], ValueError(
+            "Shape of input should be larger than index"
+        )
+        assert index.shape[i] <= src.shape[i], ValueError(
+            "Shape of src should be larger than index"
+        )
+
+
 @oneflow_export("dim_scatter_update")
 @stable_api
 def dim_scatter_update(
@@ -2695,43 +2681,97 @@ def dim_scatter_update(
     src: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatterUpdate_")
+    r"""This operator writes the elements specified by `index` along with the axis 
+    `dim` from the `src` into the `input`.
+
+    Take a 3-D blob as example, the output is specified by:
+    
+    .. code-block:: python
+
+        output[index[i][j][k]][j][k] = input[i][j][k]  # if dim == 0
+        output[i][index[i][j][k]][k] = input[i][j][k]  # if dim == 1
+        output[i][j][index[i][j][k]] = input[i][j][k]  # if dim == 2
+
+    input, index and src (if it is a Tensor) should all have the same number of dimensions. 
+    It is also required that index.shape(d) <= src.shape(d) for all dimensions d, 
+    and that index.shape(d) <= self.shape(d) for all dimensions d != dim.
+    Note that index and src do not broadcast.
+
+    Args:
+        input (oneflow._oneflow_internal.BlobDesc): The input blob.
+        dim (int): The axis along which to index
+        index (oneflow._oneflow_internal.BlobDesc): The index blob of elements to scatter. 
+        src (oneflow._oneflow_internal.BlobDesc): The source blob whose elements will be scatterd and updated to output.
+        name (Optional[str], optional):The name of the operation. Defaults to None.
+
+    Returns:
+        oneflow._oneflow_internal.BlobDesc: The scatterd Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def dim_scatter_update_job(
+            input: tp.Numpy.Placeholder((3, 5), dtype=flow.float32),
+            index: tp.Numpy.Placeholder((2, 3), dtype=flow.int32),
+            src: tp.Numpy.Placeholder((2, 5), dtype=flow.float32),
+        ) -> tp.Numpy:
+            return flow.dim_scatter_update(input, 1, index, src)
+
+
+        input = np.ones(shape=(3, 5), dtype=np.float32)
+        index = np.array([[0, 1, 2], 
+                          [0, 1, 4]], dtype=np.int32)
+        src = np.array([[1, 2, 3, 4, 5], 
+                        [6, 7, 8, 9, 10]], dtype=np.float32)
+        out = dim_scatter_update_job(input, index, src)
+        print(out)
+
+        # out [[1. 2. 3. 1. 1.]
+        #      [6. 7. 1. 1. 8.]
+        #      [1. 1. 1. 1. 1.]]
+
+    """
+
+    if type(src) is oneflow._oneflow_internal.LazyConsistentBlob: 
+        _check_scatter_blobs(input, dim, index, src)
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("DimScatterUpdate_")
+            )
+            .Op("dim_scatter_update")
+            .Input("input", [input])
+            .Input("index", [index])
+            .Input("src", [src])
+            .Output("output")
+            .Attr("dim", int(dim))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
-        .Op("dim_scatter_update")
+    else: 
+        return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterScalarUpdate_")
+        )
+        .Op("dim_scatter_scalar_update")
         .Input("input", [input])
         .Input("index", [index])
-        .Input("src", [src])
+        .Attr("src_scalar", float(src))
         .Output("output")
         .Attr("dim", int(dim))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-@oneflow_export("dim_scatter_add_like")
-@stable_api
-def dim_scatter_add_like(
-    input: oneflow._oneflow_internal.BlobDesc,
-    dim: int,
-    index: oneflow._oneflow_internal.BlobDesc,
-    like: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
-        )
-        .Op("dim_scatter_add_like")
-        .Input("input", [input])
-        .Input("index", [index])
-        .Input("like", [like])
-        .Output("output")
-        .Attr("dim", int(dim))
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+
+
 @oneflow_export("dim_scatter_add")
 @stable_api
 def dim_scatter_add(
@@ -2741,6 +2781,63 @@ def dim_scatter_add(
     src: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator adds the elements specified by `index` along with the axis 
+    `dim` from the `src` into the `input`.
+
+    Take a 3-D blob as example, the output is specified by:
+    
+    .. code-block:: python
+
+        output[index[i][j][k]][j][k] += input[i][j][k]  # if dim == 0
+        output[i][index[i][j][k]][k] += input[i][j][k]  # if dim == 1
+        output[i][j][index[i][j][k]] += input[i][j][k]  # if dim == 2
+
+    input, index and src (if it is a Tensor) should all have the same number of dimensions. 
+    It is also required that index.shape(d) <= src.shape(d) for all dimensions d, 
+    and that index.shape(d) <= self.shape(d) for all dimensions d != dim.
+    Note that index and src do not broadcast.
+
+    Args:
+        input (oneflow._oneflow_internal.BlobDesc): The input blob.
+        dim (int): The axis along which to index
+        index (oneflow._oneflow_internal.BlobDesc): The index blob of elements to scatter. 
+        src (oneflow._oneflow_internal.BlobDesc): The source blob whose elements will be scatterd and added to output.
+        name (Optional[str], optional):The name of the operation. Defaults to None.
+
+    Returns:
+        oneflow._oneflow_internal.BlobDesc: The scatterd Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def dim_scatter_add_job(
+            input: tp.Numpy.Placeholder((3, 5), dtype=flow.float32),
+            index: tp.Numpy.Placeholder((2, 3), dtype=flow.int32),
+            src: tp.Numpy.Placeholder((2, 5), dtype=flow.float32),
+        ) -> tp.Numpy:
+            return flow.dim_scatter_add(input, 1, index, src)
+
+
+        input = np.ones(shape=(3, 5), dtype=np.float32)
+        index = np.array([[0, 1, 2], 
+                          [0, 1, 4]], dtype=np.int32)
+        src = np.array([[1, 2, 3, 4, 5], 
+                        [6, 7, 8, 9, 10]], dtype=np.float32)
+        out = dim_scatter_add_job(input, index, src)
+        print(out)
+
+        # out [[2. 3. 4. 1. 1.]
+        #      [7. 8. 1. 1. 9.]
+        #      [1. 1. 1. 1. 1.]]
+
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimScatterAdd_")
