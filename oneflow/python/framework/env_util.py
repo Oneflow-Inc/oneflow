@@ -80,6 +80,8 @@ def env_init():
             scope_util.InitScopeStack()
         else:
             exit(0)
+    else:
+        scope_util.InitScopeStack()
     return True
 
 
@@ -392,13 +394,12 @@ def GetEnvDefaultParallelConf(device_tag):
 
 
 def HasAllMultiClientEnvVars():
-    return (
-        os.getenv("MASTER_ADDR")
-        and os.getenv("MASTER_PORT")
-        and os.getenv("WORLD_SIZE")
-        and os.getenv("RANK")
-        and os.getenv("LOCAL_RANK")
-    )
+    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
+    has_all_env_vars = all([os.getenv(x) for x in env_var_names])
+    if not has_all_env_vars:
+        has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
+        assert not has_at_least_one_env_var
+    return has_all_env_vars
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):

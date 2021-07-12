@@ -23,7 +23,7 @@ class CopyHdOp final : public Operator {
   CopyHdOp() = default;
   ~CopyHdOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
@@ -50,9 +50,10 @@ class CopyHdOp final : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void CopyHdOp::InitFromOpConf() {
+Maybe<void> CopyHdOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> CopyHdOp::InferOutBlobDescs(
