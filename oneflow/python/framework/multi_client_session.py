@@ -60,8 +60,11 @@ class MultiClientSession(object):
         return self.config_proto_
 
     @property
-    def current_resource(self):
-        return c_api_util.CurrentResource()
+    def resource(self):
+        if self.is_inited_ and not self.is_closed_:
+            return c_api_util.CurrentResource()
+        else:
+            return None
 
     @property
     def function_flag_name2default_val(self):

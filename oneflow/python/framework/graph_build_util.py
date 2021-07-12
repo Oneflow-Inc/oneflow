@@ -31,7 +31,7 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 @contextmanager
 def graph_build_context(config_proto, session):
     device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(
-        session.current_resource
+        session.resource
     )
     scope = scope_util.MakeInitialScope(
         config_proto,
