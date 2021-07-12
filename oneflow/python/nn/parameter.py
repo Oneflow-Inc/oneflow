@@ -26,7 +26,7 @@ class Parameter(Tensor):
         # TODO: uncomment the following two lines when consistent <-> local conversion is ready
         # data.set_is_consistent(True)
         # data.set_placement(flow.placement("gpu", ["0:0"], None))
-        self._data = data
+        self._data = flow.Tensor(data)
         self._data.requires_grad = requires_grad
 
     def __getattr__(self, name):
