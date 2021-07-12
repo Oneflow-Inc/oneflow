@@ -39,7 +39,7 @@ def register_local_tensor_method(name=None):
             op_name = method.__name__
         else:
             op_name = name
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return decorator
@@ -322,6 +322,13 @@ class Tensor:
         else:
             return None
 
+    @_auto_determine
+    def clone(self):
+        if self._local_or_consistent_tensor is not None:
+            return flow.Tensor(self._local_or_consistent_tensor.clone())
+        else:
+            return None
+
     def requires_grad_(self, requires_grad=True):
         self.requires_grad = requires_grad
 
@@ -446,6 +453,8 @@ class Tensor:
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
         elif isinstance(key, int):
+            if key < 0:
+                key = self.shape[0] + key
             squeeze_dims = [0]
         else:
             # do nothing
@@ -454,7 +463,7 @@ class Tensor:
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         if squeeze_dims is not None:
-            res = res.squeeze(dim=squeeze_dims)
+            return res.squeeze(dim=squeeze_dims)
         return res
 
     @_auto_determine
@@ -466,6 +475,8 @@ class Tensor:
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
         elif isinstance(key, int):
+            if key < 0:
+                key = self.shape[0] + key
             unsqueeze_dims = [0]
         else:
             unsqueeze_dims = []
@@ -534,6 +545,10 @@ class Tensor:
     @register_local_tensor_method()
     def __add__(self, other):
         return self.add(other)
+
+    @register_local_tensor_method()
+    def __iadd__(self, other):
+        return self.add_(other)
 
     @register_local_tensor_method()
     def __radd__(self, other):
@@ -853,7 +868,7 @@ def _default_initializer_for_determining(tensor):
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             shape,
             dtype,
             undetermined_tensor.device,
@@ -876,7 +891,7 @@ def _numpy_initializer_for_determining(tensor):
     if undetermined_tensor.is_consistent:
         raise NotImplementedError()
     else:
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -898,13 +913,7 @@ def _input_args_is_numpy(*args):
 
 
 def _input_args_is_consistent_or_local(*args):
-    return len(args) == 1 and isinstance(
-        args[0],
-        (
-            oneflow._oneflow_internal.ConsistentTensor,
-            oneflow._oneflow_internal.LocalTensor,
-        ),
-    )
+    return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
 
 def _input_args_is_tensor(*args):
@@ -922,7 +931,7 @@ def _input_args_is_shape(*args):
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return set_tensor_op
