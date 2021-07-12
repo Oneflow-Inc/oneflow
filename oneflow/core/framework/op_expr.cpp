@@ -144,6 +144,11 @@ class UserOpExprInferContext : public user_op::InferContext {
     return user_op_expr_->indexed_output_pairs();
   }
 
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
   user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(name, index);
   }

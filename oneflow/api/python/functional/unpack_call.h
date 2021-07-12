@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include <tuple>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
@@ -52,8 +53,8 @@ template<typename F, typename R>
 struct unpack_call {
   static R apply(const F& f, const std::vector<PythonArg>& args) {
     constexpr size_t nargs = function_traits<F>::nargs;
-    CHECK_EQ(nargs, args.size()) << "Requires " << nargs << " arguments, but " << args.size()
-                                 << " is given.";
+    CHECK_EQ_OR_THROW(nargs, args.size())
+        << "Requires " << nargs << " arguments, but " << args.size() << " is given.";
     return unpack_call_dispatcher<F, R, nargs, 0>::apply(f, args);
   }
 };
@@ -63,7 +64,7 @@ struct unpack_call {
   struct unpack_call<F, K> {                                                            \
     static R apply(const F& f, const std::vector<PythonArg>& args) {                    \
       constexpr size_t nargs = function_traits<F>::nargs;                               \
-      CHECK_EQ(nargs, args.size())                                                      \
+      CHECK_EQ_OR_THROW(nargs, args.size())                                             \
           << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \
       return (return_fn)(unpack_call_dispatcher<F, K, nargs, 0>::apply(f, args));       \
     }                                                                                   \
