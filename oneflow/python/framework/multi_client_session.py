@@ -36,9 +36,7 @@ class MultiClientSession(object):
 
     def TryInit(self):
         if not self.is_inited_:
-            print("self.config_proto:", self.config_proto)
             config_proto_str = text_format.MessageToString(self.config_proto)
-            print("str:", config_proto_str)
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.is_inited_ = True
 
@@ -69,6 +67,8 @@ class MultiClientSession(object):
 
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
+        # NOTE(chengcheng): Only set for proto required key, and the value of gpu_device_num will
+        #  NOT used in MultiClientSessionContext.
         config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
         if oneflow._oneflow_internal.flags.with_cuda():
             config_proto.resource.gpu_device_num = 1
