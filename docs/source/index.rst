@@ -26,6 +26,7 @@ OneFlow API Reference
     tensorrt 
     deprecated  
     experimental 
+    F
     scope 
     sysconfig    
     random 
