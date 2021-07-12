@@ -304,7 +304,7 @@ def enable_debug_mode(val):
 @oneflow_export("config.legacy_model_io_enabled")
 def api_legacy_model_io_enabled():
     sess = session_ctx.GetDefaultSession()
-    return sess.config_proto.io_conf.enable_legacy_model_io
+    return sess.config_proto.resource.enable_legacy_model_io
 
 
 @oneflow_export("config.enable_legacy_model_io")
@@ -321,7 +321,7 @@ def api_enable_legacy_model_io(val: bool = True):
 def enable_legacy_model_io(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.enable_legacy_model_io = val
+    sess.config_proto.resource.enable_legacy_model_io = val
 
 
 @oneflow_export("config.enable_model_io_v2")
@@ -338,7 +338,7 @@ def api_enable_model_io_v2(val):
 def enable_model_io_v2(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.enable_model_io_v2 = val
+    sess.config_proto.resource.enable_model_io_v2 = val
 
 
 @oneflow_export("config.collect_act_event")
