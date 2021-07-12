@@ -242,11 +242,7 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
     auto loc = op->getLoc();
     typename CastOp::Adaptor adaptor(operands);
     if (!adaptor.x().getType().dyn_cast<MemRefType>()) { return failure(); }
-    Value casted = rewriter.create<memref::CastOp>(
-        loc, /* source */ adaptor.x(),
-        /* dest */ convertTensorToMemRef(op->getResultTypes().front().cast<TensorType>()));
-    rewriter.replaceOp(op, casted);
-    return success();
+    return failure();
   }
 };
 
