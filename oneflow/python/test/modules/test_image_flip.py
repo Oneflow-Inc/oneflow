@@ -20,13 +20,7 @@ import oneflow.experimental as flow
 
 
 def _of_image_flip(images, image_static_shape, flip_code):
-    image_zeros = np.zeros(tuple(image_static_shape))
-    for idx, image in enumerate(images):
-        image_zeros[idx, : image.shape[1], : image.shape[2], : image.shape[3]] = image
-
-    image_tensors = flow.Tensor(
-        image_zeros, dtype=flow.float, device=flow.device("cpu")
-    )
+    image_tensors = flow.Tensor(images, dtype=flow.float, device=flow.device("cpu"))
     image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
     flip_images = flow.nn.image.flip(flip_code)(image_tensor_buffer)
     return flip_images.numpy()
@@ -56,10 +50,15 @@ def _compare_image_flip_with_cv(test_case, image_files):
     assert all([len(image.shape) == 4 for image in images])
 
     image_static_shape = _get_images_static_shape(images)
+    image_paddings = np.zeros(tuple(image_static_shape))
+    for idx, image in enumerate(images):
+        image_paddings[
+            idx, : image.shape[1], : image.shape[2], : image.shape[3]
+        ] = image
 
-    flip_images = _of_image_flip(images, image_static_shape, 1)
+    flip_images = _of_image_flip(image_paddings, image_static_shape, 1)
 
-    for image, flip_image in zip(images, flip_images):
+    for image, flip_image in zip(image_paddings, flip_images):
         exp_flip_image = cv2.flip(image.squeeze(), 1)
 
         test_case.assertTrue(np.allclose(exp_flip_image, flip_image))
