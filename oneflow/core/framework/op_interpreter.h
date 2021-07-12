@@ -100,11 +100,10 @@ class LazyInterpreter : public OpExprInterpreter {
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(UserOp);
-  DECLARE_NORMAL_APPLY_FUNC(InputOp);
-  // DECLARE_NORMAL_APPLY_FUNC(OuputOp);
-  // DECLARE_NORMAL_APPLY_FUNC(VariableOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedInputOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
+  DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
-  // DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {
