@@ -14,27 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/framework/nn_graph_if.h"
 
 namespace py = pybind11;
 
+namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
-
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("InitDefaultEnv", &InitDefaultEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
-
-  m.def("CurrentMachineId", &CurrentMachineId);
-
-  m.def("GetRank", &GetRank);
-  m.def("GetWorldSize", &GetWorldSize);
-  m.def("GetNodeSize", &GetNodeSize);
-  m.def("GetLocalRank", &GetLocalRank);
-  m.def("IsMultiClient", &IsMultiClient);
-  m.def("SetIsMultiClient", &SetIsMultiClient);
+  using namespace oneflow;
+  py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "NNGraph")
+      .def(py::init<const std::string&>())
+      .def_property_readonly("name", &NNGraph::job_name);
 }
+}  // namespace oneflow

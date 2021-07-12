@@ -114,8 +114,6 @@ jobs:
           set -x
           echo "CC=clang-12" >> $GITHUB_ENV
           echo "CXX=clang++-12" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp;oneflow/core/kernel/kernel_util;oneflow/core/kernel/new_kernel_util" >> $GITHUB_ENV
       - name: Build Clang plug-in
         run: |
           cd tools/clang-plugin
@@ -126,41 +124,28 @@ jobs:
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Build (CMake configure)
+      - name: Build (third party)
         run: |
           mkdir build
+          cd build
+          # clang-12 produces many warnings on oneflow, -w to suppress them
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DTHIRD_PARTY=ON \
+            -DONEFLOW=OFF \
+            -DCMAKE_CXX_FLAGS="-w"
+          cmake --build . -j$(nproc)
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+        run: |
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-      - name: Build (third party)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
-          cmake --build . -j$(nproc) --target oneflow_deps
-      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
+            -DTHIRD_PARTY=OFF \
+            -DONEFLOW=ON \
+            -DCMAKE_CXX_FLAGS="-w -fplugin=${{ env.clang_plugin_path }}"
           cmake --build . -j$(nproc)
-      - name: Tar core
-        if: always()
-        continue-on-error: true
-        run: |
-          set -ex
-          tar -cvf build_core.tar ${PWD}/build/**/core.*
-      - name: Upload core
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: core-build-oneflow-with-clang-plugin
-          path: |
-            build.tar
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -479,26 +464,26 @@ jobs:
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-      - name: Op test (distributed, 1st try)
+      - name: Single client op test (distributed, 1st try)
         if: matrix.test_suite == 'cuda'
         continue-on-error: true
         id: distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Op test (distributed, 2nd try)
+      - name: Single client op test  (distributed, 2nd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Op test (distributed, 3rd try)
+      - name: Single client op test  (distributed, 3rd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
-        if: failure() && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
@@ -521,7 +506,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/doctest.sh"
-      - name: Dry run test (run without runtime)
+      - name: Single client dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -549,7 +534,7 @@ jobs:
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
-      - name: Module API test
+      - name: Multi clint module API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -557,7 +542,7 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
-      - name: Tensor API test
+      - name: Multi clint tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -565,7 +550,7 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
-      - name: Op test
+      - name: Single clint op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
         run: |
@@ -574,7 +559,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-      - name: Model test
+      - name: Single clint model test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -582,7 +567,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-      - name: Model serve test
+      - name: Single clint model serve test
         id: model_serve_test
         if: matrix.test_suite == 'cuda'
         run: |
@@ -597,21 +582,21 @@ jobs:
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
-      - name: Benchmark (mainly for backward compatibility)
+      - name: Single clint benchmark (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
-      - name: Benchmark FP16 (mainly for backward compatibility)
+      - name: Single clint benchmark FP16 (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
-      - name: XLA Test
+      - name: Single clint XLA Test
         if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
         run: |
           set -x
