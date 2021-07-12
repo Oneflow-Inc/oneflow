@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void ReentrantLockOp::InitFromOpConf() {
+Maybe<void> ReentrantLockOp::InitFromOpConf() {
   EnrollInputBn("start", false);
   if (op_conf().reentrant_lock_conf().has_end()) { EnrollInputBn("end", false); }
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {

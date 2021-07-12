@@ -17,10 +17,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void DecodeRandomOp::InitFromOpConf() {
+Maybe<void> DecodeRandomOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_random_conf());
   if (op_conf().decode_random_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 void DecodeRandomOp::VirtualGenKernelConf(
