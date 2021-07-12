@@ -487,28 +487,36 @@ class ImageFlip(Module):
         >>> import oneflow.experimental.nn as nn
         >>> flow.enable_eager_execution()
 
-        >>> arr = np.random.randn(2,2,2,3)
-        >>> image_tensors = flow.Tensor(arr)
+        >>> arr = np.array([
+        ...    [[[1, 2, 3], [3, 2, 1]],
+        ...     [[2, 3, 4], [4, 3, 2]]],
+        ...    [[[3, 4, 5], [5, 4, 3]],
+        ...     [[4, 5, 6], [6, 5, 4]]]])
+        >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
         >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
-        >>> output = nn.image.flip(1)(image_tensor_buffer)
+        >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
+        >>> output[0]
+        array([[[3., 2., 1.],
+                [1., 2., 3.]],
+        <BLANKLINE>
+               [[4., 3., 2.],
+                [2., 3., 4.]]], dtype=float32)
+        >>> output[1]
+        array([[[5., 4., 3.],
+                [3., 4., 5.]],
+        <BLANKLINE>
+               [[6., 5., 4.],
+                [4., 5., 6.]]], dtype=float32)
     """
 
     def __init__(self, flip_code):
         super().__init__()
         self.flip_code = flip_code
-        # self._op = (
-        #     flow.builtin_op("image_flip")
-        #     .Input("in")
-        #     .Input("flip_code")
-        #     .Output("out")
-        #     .Build()
-        # )
 
     def forward(self, images):
         flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
-        # return flow.F.triu(x, self.diagonal)
 
-        return flow.F.image_flip(images, flip_codes)[0]
+        return flow.F.image_flip(images, flip_codes)
 
 
 @oneflow_export("nn.image.decode")
@@ -614,4 +622,4 @@ class ImageBatchAlign(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
