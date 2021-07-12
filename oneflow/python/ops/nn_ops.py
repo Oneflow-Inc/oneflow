@@ -3829,25 +3829,32 @@ def mish(
     """
     if name is None:
         name = id_util.UniqueStr("Mish_")
-
-    return x * flow.math.tanh(
-        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    print(
+        "111"
+    )
+    return (
+        flow.user_op_builder(name)
+        .Op("mish")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
 
 
-@oneflow_export("nn.swish")
-def swish(
+@oneflow_export("nn.silu")
+def silu(
     x: oneflow._oneflow_internal.BlobDesc,
-    beta: float = 1.0,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r"""The Swish activation function.
+    r"""The SiLU activation function.
 
     The equation is:
 
     .. math::
 
-        out = x * sigmoid(\beta*x)
+        out = x * sigmoid(x)
 
     For example:
 
@@ -3859,29 +3866,106 @@ def swish(
 
 
         @flow.global_function()
-        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy:
-            return flow.nn.swish(x)
+        def silu_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy:
+            return flow.nn.silu(x)
 
 
         x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
 
 
-        out = swish_job(x)
+        out = silu_job(x)
         # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
 
     Args:
         x (oneflow._oneflow_internal.BlobDesc): The input Blob.
-        beta (float, optional): The smooth factor. Defaults to 1.0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
     if name is None:
-        name = id_util.UniqueStr("Swish_")
+        name = id_util.UniqueStr("Silu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("silu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
+@oneflow_export("nn.selu")
+def selu(
+    x: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""The SELU activation. 
 
+    The formula is: 
+    
+    .. math::  
+    
+        \text{SELU}(x) = \begin{cases}
+				scale * (x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
+    		    \end{cases}
+    
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        scale (float, optional): The `scale` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
+        alpha (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    
+    For example:
+    
+    .. code-block:: python 
+    
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+    
+    
+        @flow.global_function()
+        def selu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.selu(x)
+    
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = selu_job(x)
+        # output [-1.7050093  1.050701   3.6774535]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Selu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("selu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+@oneflow_export("nn.softsign")
+def softsign(
+    x: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("Softsign_")
+    return (
+        flow.user_op_builder(name)
+        .Op("softsign")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("nn.hardswish")
 def hardswish(
