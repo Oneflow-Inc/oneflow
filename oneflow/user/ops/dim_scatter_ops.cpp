@@ -68,7 +68,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
-  // printf("infertensor ok");
   return Maybe<void>::Ok();
 }
 
@@ -113,7 +112,7 @@ Maybe<void> InputScalarArgModifierFn(user_op::GetInputArgModifier GetInputArgMod
   return Maybe<void>::Ok();
 }
 
-void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src) {
+void _SetSbp(user_op::SbpContext* ctx, const char* like_or_input) {
   const user_op::TensorDesc& index_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
   int64_t index_num_axes = index_tensor.shape().NumAxes();
@@ -123,32 +122,32 @@ void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src) {
     if (i != dim) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("src", 0), i)
           .Split(user_op::OpArg("output", 0), i)
-          .Split(user_op::OpArg(like_or_src, 0), i)
+          .Split(user_op::OpArg(like_or_input, 0), i)
           .Build();
     } else {
       ctx->NewBuilder()
           .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("src", 0), i)
           .PartialSum(user_op::OpArg("output", 0))
-          .Broadcast(user_op::OpArg(like_or_src, 0))
+          .Broadcast(user_op::OpArg(like_or_input, 0))
           .Build();
 
       ctx->NewBuilder()
           .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("src", 0), i)
           .PartialSum(user_op::OpArg("output", 0))
-          .PartialSum(user_op::OpArg(like_or_src, 0))
+          .PartialSum(user_op::OpArg(like_or_input, 0))
           .Build();
     }
   }
 
   ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("input", 0))
+      .PartialSum(user_op::OpArg("src", 0))
       .Broadcast(user_op::OpArg("index", 0))
       .PartialSum(user_op::OpArg("output", 0))
-      .PartialSum(user_op::OpArg(like_or_src, 0))
+      .PartialSum(user_op::OpArg(like_or_input, 0))
       .Build();
 }
 
@@ -158,7 +157,7 @@ Maybe<void> SetSbpLike(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
-  _SetSbp(ctx, "src");
+  _SetSbp(ctx, "input");
   return Maybe<void>::Ok();
 }
 
