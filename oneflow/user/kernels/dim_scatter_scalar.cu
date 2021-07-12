@@ -64,9 +64,6 @@ class GpuDimScatterScalarUpdateKernel final : public OpKernel {
                     idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,
                     src_scalar, output);
 
-    // RUN_CUDA_KERNEL((ScatterScalarUpdateFunctor<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-    //                 idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index,
-    //                 src_scalar, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      
 };
@@ -80,6 +77,8 @@ class GpuDimScatterScalarUpdateKernel final : public OpKernel {
 
 REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int32_t);
 REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int64_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int32_t);
+REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int64_t);
 REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int32_t);
 REGISTER_GPU_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int64_t);
 
