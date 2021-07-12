@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
@@ -81,8 +82,9 @@ __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dp
 
     for (int64_t i = 0; i < 4; i++) {
       for (int64_t j = 0; j < 4; j++) {
-        *(dx_dptr + dx_helper.NdIndexToOffset(n, c, input_y - 1 + j, input_x - 1 + i)) +=
-            dy_dptr[index];
+        cuda::atomic::Add(
+            dx_dptr + dx_helper.NdIndexToOffset(n, c, input_y - 1 + j, input_x - 1 + i),
+            dy_dptr[index]);
       }
     }
   }

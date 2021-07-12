@@ -35,7 +35,8 @@ def _test_interpolate_nearest_1d(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
     of_out.backward()
-    print(input.grad.numpy())
+    np_grad = [[[2.0, 2.0, 2.0, 2.0]]]
+    test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -48,7 +49,10 @@ class TestUpsample2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_interpolate_nearest_1d,
         ]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [
+            "cpu",
+            "cuda",
+        ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

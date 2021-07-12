@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
@@ -63,12 +64,18 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     const T dy = dy_dptr[index];
     const T dbottom = params.h_lerp * dy;
     T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    *(dx_dptr_bottom_offset + params.left_w_index) += static_cast<T>((1 - params.w_lerp) * dbottom);
-    *(dx_dptr_bottom_offset + params.right_w_index) += static_cast<T>(params.w_lerp * dbottom);
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
+                      static_cast<T>((1 - params.w_lerp) * dbottom));
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
+                      static_cast<T>(params.w_lerp * dbottom));
     const T dtop = dy - dbottom;
     T* dx_dptr_top_offset = dx_dptr + top_offset;
     *(dx_dptr_top_offset + params.left_w_index) += static_cast<T>((1 - params.w_lerp) * dtop);
     *(dx_dptr_top_offset + params.right_w_index) += static_cast<T>(params.w_lerp * dtop);
+    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
+                      static_cast<T>((1 - params.w_lerp) * dtop));
+    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
+                      static_cast<T>(params.w_lerp * dtop));
   }
 }
 

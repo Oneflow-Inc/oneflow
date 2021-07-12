@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
@@ -108,15 +109,27 @@ __global__ void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_
     T* pos1 = &dx_dptr[dx_helper.NdIndexToOffset(n, c, t1, h1, w1)];
     const T* pos2 = &dy_dptr[index];
 
-    pos1[0] += t0lambda * h0lambda * w0lambda * pos2[0];
-    pos1[w1p] += t0lambda * h0lambda * w1lambda * pos2[0];
-    pos1[h1p * in_width] += t0lambda * h1lambda * w0lambda * pos2[0];
-    pos1[h1p * in_width + w1p] += t0lambda * h1lambda * w1lambda * pos2[0];
-    pos1[t1p * in_height * in_width] += t1lambda * h0lambda * w0lambda * pos2[0];
-    pos1[t1p * in_height * in_width + w1p] += t1lambda * h0lambda * w1lambda * pos2[0];
-    pos1[t1p * in_height * in_width + h1p * in_width] += t1lambda * h1lambda * w0lambda * pos2[0];
-    pos1[t1p * in_height * in_width + h1p * in_width + w1p] +=
-        t1lambda * h1lambda * w1lambda * pos2[0];
+    cuda::atomic::Add(pos1 + 0, t0lambda * h0lambda * w0lambda * pos2[0]);
+    // pos1[0] += t0lambda * h0lambda * w0lambda * pos2[0];
+    cuda::atomic::Add(pos1 + w1p, t0lambda * h0lambda * w1lambda * pos2[0]);
+    // pos1[w1p] += t0lambda * h0lambda * w1lambda * pos2[0];
+    cuda::atomic::Add(pos1 + h1p * in_width, t0lambda * h1lambda * w0lambda * pos2[0]);
+    // pos1[h1p * in_width] += t0lambda * h1lambda * w0lambda * pos2[0];
+    cuda::atomic::Add(pos1 + h1p * in_width + w1p, t0lambda * h1lambda * w1lambda * pos2[0]);
+    // pos1[h1p * in_width + w1p] += t0lambda * h1lambda * w1lambda * pos2[0];
+    cuda::atomic::Add(pos1 + t1p * in_height * in_width, t1lambda * h0lambda * w0lambda * pos2[0]);
+    // pos1[t1p * in_height * in_width] += t1lambda * h0lambda * w0lambda * pos2[0];
+    cuda::atomic::Add(pos1 + t1p * in_height * in_width + w1p,
+                      t1lambda * h0lambda * w1lambda * pos2[0]);
+    // pos1[t1p * in_height * in_width + w1p] += t1lambda * h0lambda * w1lambda * pos2[0];
+    cuda::atomic::Add(pos1 + t1p * in_height * in_width + h1p * in_width,
+                      t1lambda * h1lambda * w0lambda * pos2[0]);
+    // pos1[t1p * in_height * in_width + h1p * in_width] += t1lambda * h1lambda * w0lambda *
+    // pos2[0];
+    cuda::atomic::Add(pos1 + t1p * in_height * in_width + h1p * in_width + w1p,
+                      t1lambda * h1lambda * w1lambda * pos2[0]);
+    // pos1[t1p * in_height * in_width + h1p * in_width + w1p] +=
+    //     t1lambda * h1lambda * w1lambda * pos2[0];
   }
 }
 
