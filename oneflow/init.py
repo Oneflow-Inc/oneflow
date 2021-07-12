@@ -45,13 +45,10 @@ locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
 from oneflow.python.version import __version__
-
+import oneflow.python.framework.session_util as session_util
+del session_util
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
-
-import oneflow.python.framework.session_util as session_util
-
-del session_util
 
 import oneflow.python.framework.register_python_callback
 
