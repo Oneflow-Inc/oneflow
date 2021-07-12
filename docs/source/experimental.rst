@@ -240,3 +240,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.type_as
 .. autofunction:: oneflow.experimental.Tensor.long
 .. autofunction:: oneflow.experimental.bernoulli
+.. autofunction:: oneflow.experimental.in_top_k
+.. autofunction:: oneflow.experimental.Tensor.in_top_k
