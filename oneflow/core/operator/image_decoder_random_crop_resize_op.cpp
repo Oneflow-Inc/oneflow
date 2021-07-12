@@ -51,10 +51,11 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
   ~ImageDecoderRandomCropResizeOp() override = default;
 
  private:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in", false);
     EnrollOutputBn("out", false);
     EnrollTmpBn("tmp");
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
