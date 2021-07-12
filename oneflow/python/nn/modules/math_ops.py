@@ -763,17 +763,19 @@ class FMod(Module):
             raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([y],dtype=flow.float32,device=x.device)
+            y = flow.tensor([abs(y)],dtype=flow.float32,device=x.device)
         elif isinstance(y, (flow.Tensor, flow._oneflow_internal.LocalTensor)):
             if x.dtype != y.dtype:
                 x = flow.F.cast(x, flow.float32)
                 y = flow.F.cast(y, flow.float32)
         else:
             raise ValueError("Expected type of other is Tensor or Scalar")
-        res = flow.F.abs(flow.F.fmod(x, y))
-        sign = flow.experimental.sign(x)
-        return  flow.F.mul(res, sign)
-
+        cond = x.lt(0)
+        x = x.lt(0).where(-x,x)
+        y = y.lt(0).where(-y,y)
+        res = flow.F.fmod(x, y)
+        
+        return cond.where(-res,res)
 
 @oneflow_export("fmod")
 @experimental_api
@@ -804,7 +806,7 @@ def fmod_op(input,other):
         tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
         >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
         tensor([1. , 0.5, 0. , 1. , 0.5], dtype=oneflow.float32)
-        >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., -1]))
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., 1]))
         tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
 
     """
@@ -1766,4 +1768,4 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)

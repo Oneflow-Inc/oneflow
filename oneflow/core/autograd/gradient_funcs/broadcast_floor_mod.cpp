@@ -37,7 +37,7 @@ class BroadcastFloorMod : public OpExprGradFunction<BroadcastFloorModInterpState
   Maybe<void> Apply(const BroadcastFloorModInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
+    in_grads->resize(2);
     if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
   }
