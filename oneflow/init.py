@@ -76,13 +76,11 @@ if env_util.HasAllMultiClientEnvVars():
     session_ctx.OpenDefaultSession(
         MultiClientSession(oneflow._oneflow_internal.NewSessionId())
     )
+    scope_util.InitScopeStack()
 else:
     oneflow._oneflow_internal.SetIsMultiClient(False)
     env_util.init_default_physical_env()
     session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
-    assert oneflow._oneflow_internal.CurrentMachineId() == 0
-
-scope_util.InitScopeStack()
 
 del env_util
 
