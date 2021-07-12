@@ -816,57 +816,6 @@ def GetSliceAttrs(slice_tup_list, input_shape):
     return start_list, stop_list, step_list
 
 
-@oneflow_export("experimental.logical_slice")
-def logical_slice(
-    x: oneflow._oneflow_internal.BlobDesc,
-    slice_tup_list: Sequence[Tuple[int, int, int]],
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-
-    name = id_util.UniqueStr("LogicalSlice_") if name is None else name
-    if not isinstance(name, str):
-        raise ValueError("name must be a string")
-
-    start_list, stop_list, step_list = GetSliceAttrs(slice_tup_list, x.shape)
-    op = (
-        flow.user_op_builder(name)
-        .Op("logical_slice")
-        .Input("x", [x])
-        .Output("y")
-        .Attr("start", start_list)
-        .Attr("stop", stop_list)
-        .Attr("step", step_list)
-        .Build()
-    )
-    return op.InferAndTryRun().SoleOutputBlob()
-
-
-@oneflow_export("experimental.logical_slice_assign")
-def logical_slice_assign(
-    x: oneflow._oneflow_internal.BlobDesc,
-    value: oneflow._oneflow_internal.BlobDesc,
-    slice_tup_list: Sequence[Tuple[int, int, int]],
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-
-    name = id_util.UniqueStr("LogicalSliceAssign_") if name is None else name
-    if not isinstance(name, str):
-        raise ValueError("name must be a string")
-
-    start_list, stop_list, step_list = GetSliceAttrs(slice_tup_list, x.shape)
-    op = (
-        flow.user_op_builder(name)
-        .Op("logical_slice_assign")
-        .Input("ref", [x])
-        .Input("value", [value])
-        .Attr("start", start_list)
-        .Attr("stop", stop_list)
-        .Attr("step", step_list)
-        .Build()
-    )
-    return op.InferAndTryRun()
-
-
 @oneflow_export("reverse")
 def reverse(
     input: oneflow._oneflow_internal.BlobDesc,
