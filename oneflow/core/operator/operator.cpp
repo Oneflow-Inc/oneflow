@@ -45,7 +45,7 @@ std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf
   Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
   if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
-  rptr->Init(op_conf);
+  CHECK_JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
 }
 
@@ -53,17 +53,18 @@ std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf
 
 Operator::Operator() : device_type_(DeviceType::kInvalidDevice) {}
 
-void Operator::Init(const OperatorConf& op_conf) {
-  Init(std::make_shared<const OperatorConf>(op_conf));
+Maybe<void> Operator::Init(const OperatorConf& op_conf) {
+  return Init(std::make_shared<const OperatorConf>(op_conf));
 }
 
-void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<void> Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
   op_conf_ = std::move(op_conf);
-  device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
-  InitFromOpConf();
+  device_type_ = JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
+  JUST(InitFromOpConf());
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
+  return Maybe<void>::Ok();
 }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {

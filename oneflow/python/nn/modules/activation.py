@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.utils import _check_inplace_valid
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
@@ -92,13 +93,12 @@ class PReLU(Module):
         super().__init__()
         self.num_parameters = num_parameters
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
-        self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
         assert (
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
-        return self.op(x, self.weight)[0]
+        return flow.F.prelu(x, self.weight)
 
 
 @oneflow_export("nn.ReLU")
@@ -133,16 +133,12 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._inplace = inplace
+        self.inplace = inplace
 
     def forward(self, x):
-        if self._inplace:
-            if x.requires_grad and x.is_leaf:
-                raise RuntimeError(
-                    "a leaf Variable that requires grad is being used in an in-place operation."
-                )
-            return flow.F.relu(x, inplace=True)
-        return flow.F.relu(x)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.relu(x, self.inplace)
 
 
 @oneflow_export("nn.ReLU6")
