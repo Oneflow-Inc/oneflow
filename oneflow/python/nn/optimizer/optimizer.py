@@ -16,7 +16,7 @@ limitations under the License.
 
 import warnings
 from typing import Dict, Callable, Union, Any, Iterator
-from types import GeneratorType
+import collections
 
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
@@ -29,7 +29,7 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
-        if isinstance(parameters, GeneratorType):
+        if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
             self._options = default_options
         else:  # Dict
@@ -81,6 +81,28 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def zero_grad(self, set_to_none: bool = False):
+        r"""Sets the gradients of all optimized torch.Tensor s to zero.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                This will in general have lower memory footprint, and can modestly
+                improve performance. However, it changes certain behaviors.
+        For example:
+            1. When the user tries to access a gradient and perform manual ops on
+            it, a None attribute or a Tensor full of 0s will behave differently.
+
+            2. If the user requests zero_grad(set_to_none=True) followed by a
+            backward pass, grads are guaranteed to be None for params that did not
+            receive a gradient.
+
+            3. Optimizers have a different behavior if the gradient is 0 or None
+            (in one case it does the step with a gradient of 0 and in the other
+            it skips the step altogether).
+
+        Returns:
+            None
+
+        """
         all_grad_is_none = True
         for param_group in self.param_groups:
             for param in param_group.parameters:

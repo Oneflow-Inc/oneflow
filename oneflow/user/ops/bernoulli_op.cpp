@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("bernoulli")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("bernoulli")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("seed", -1)
@@ -25,8 +25,8 @@ REGISTER_CPU_ONLY_USER_OP("bernoulli")
     .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      *out_tensor->mut_shape() = in_tensor->shape();
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      *out_tensor->mut_shape() = in_tensor.shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

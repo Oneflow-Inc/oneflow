@@ -38,6 +38,7 @@ class InferContext {
  public:
   virtual ~InferContext() = default;
 
+  virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
   virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
@@ -102,11 +103,9 @@ class DeviceInferContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  virtual std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string&,
-                                                                            int64_t) = 0;
+  virtual Symbol<Device>* OutputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) = 0;
 
-  virtual std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string&,
-                                                                          int64_t) const = 0;
+  virtual Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) const = 0;
 
  protected:
   DeviceInferContext() = default;

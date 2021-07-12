@@ -4,11 +4,23 @@
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 
+## Latest News
+- Version 0.4.0 is out!
+  - New Pytorch flavored APIs (`import oneflow.experimental as flow`)
+  - New [models and examples](https://github.com/Oneflow-Inc/models)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.4.0)
+
 ## Install OneFlow
 
   ### System Requirements
 
-  - Python 3.6, 3.7, 3.8
+  - Python 3.6, 3.7, 3.8 (3.9 is available in nightly version)
+  - (**Highly recommended**) Upgrade pip
+
+    ```
+    python3 -m pip install --upgrade pip #--user
+    ```
+
   - CUDA Toolkit Linux x86_64 Driver
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
@@ -20,22 +32,22 @@
   - To install latest stable release of OneFlow with CUDA support:
 
     ```bash
-    python3 -m pip install -f https://release.oneflow.info oneflow==0.4.0+cu102 --user
+    python3 -m pip install -f https://release.oneflow.info oneflow==0.4.0+cu102
     ```
 
   - To install nightly release of OneFlow with CUDA support:
     ```bash
-    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
+    python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/cu102
     ```
 
   - To install other available builds for different variants:
     - Stable
       ```bash
-      python3 -m pip install --find-links https://release.oneflow.info oneflow==0.4.0+[PLATFORM] --user
+      python3 -m pip install --find-links https://release.oneflow.info oneflow==0.4.0+[PLATFORM]
       ```
     - Nightly
       ```
-      python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
+      python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
       ```
     - All available `[PLATFORM]`:
       | Platform |CUDA Driver Version| Supported GPUs |
@@ -81,10 +93,18 @@
   Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
 
 - #### Option 2: Build in docker container (recommended)
+  - Pull a docker image:
+
+    ```
+    docker pull oneflowinc/oneflow-manylinux2014-cuda10.2:0.1
+    ```
+
+    All images available : https://hub.docker.com/u/oneflowinc
+
   - In the root directory of OneFlow source code, run:
 
     ```
-    python3 docker/package/manylinux/build_wheel.py
+    python3 docker/package/manylinux/build_wheel.py --python_version=3.6
     ```
 
     This should produce `.whl` files in the directory `wheelhouse`
@@ -107,7 +127,7 @@
   - Install dependencies
     - on Ubuntu 20.04, run:
       ```
-      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake
+      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
       ```
     - on macOS, run:
       ```
@@ -118,14 +138,42 @@
     ```
     mkdir build
     cd build
-    cmake ..
+    ```
+
+  - Config the project, inside `build` directory:
+    - If you are in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/cn/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/cn/cpu.cmake
+      ```
+
+    - If you are not in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/international/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/international/cpu.cmake
+      ```
+
+  - Build the project, inside `build` directory, run:
+    ```
     make -j$(nproc)
     ```
 
-  - Add oneflow to your PYTHONPATH
+  - Add oneflow to your PYTHONPATH, inside `build` directory, run:
 
     ```
-    source build/source.sh
+    source source.sh
     ```
 
     Please note that this change is not permanent.
@@ -135,9 +183,6 @@
     ```
     python3 -m oneflow --doctor
     ```
-
-  - If you are in China, please add these CMake flags `-DTHIRD_PARTY_MIRROR=aliyun -DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple` for faster dependency downloads.
-  - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 </details>
 
 ### Troubleshooting
@@ -190,8 +235,19 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
-- [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues): any install, bug, feature issues.
+- [www.oneflow.org](http://www.oneflow.org): brand related information.
+
+- ### 中文
+  - QQ 群: 331883
+  - 微信号（加好友入交流群）: OneFlowXZS
+  - [知乎](https://www.zhihu.com/org/oneflow-17)
+
+- ### International
+  - [Discord](https://discord.gg/4kpjGA5bZY)
+  - [Twitter](https://twitter.com/OneFlowNews)
+  - [LinkedIn](https://www.linkedin.com/company/oneflow-inc)
+  - [Medium](https://oneflow2020.medium.com)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).

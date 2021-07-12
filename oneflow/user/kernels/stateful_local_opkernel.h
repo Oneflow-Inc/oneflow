@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/framework/op_interpreter.h"
 
 namespace oneflow {
 
@@ -159,6 +160,14 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
     UNIMPLEMENTED();
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    auto out =
+        const_cast<LocalUserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+    CHECK_NOTNULL(out);
+    return *out;
   }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -301,13 +310,12 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const std::shared_ptr<const Device>& device,
-                                          const AttrMap& base_attrs,
+                                          const Symbol<Device>& device, const AttrMap& base_attrs,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Symbol<Device>& device() const { return device_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
@@ -378,7 +386,7 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::shared_ptr<const Device> device_;
+  Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;

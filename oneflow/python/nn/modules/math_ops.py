@@ -21,7 +21,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.nn.modules.utils import _check_axis
+from oneflow.python.nn.modules.utils import _check_axis, _check_inplace_valid
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
     get_inversed_perm,
@@ -191,14 +191,17 @@ class BroadcastSub(Module):
 
 
 class ScalarAdd(Module):
-    def __init__(self, alpha) -> None:
+    def __init__(self, alpha, inplace: bool = False) -> None:
         super().__init__()
         if not isinstance(alpha, int) and not isinstance(alpha, float):
             raise ValueError("scalar type can only be int or float")
         self.alpha = alpha
+        self.inplace = inplace
 
     def forward(self, x):
-        return flow.F.add_scalar(x, self.alpha)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.add_scalar(x, self.alpha, self.inplace)
 
 
 @oneflow_export("sub")
@@ -366,27 +369,36 @@ def _reciprocal(x):
 
 
 class ScalarAddByTensor(Module):
-    def __init__(self) -> None:
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x, y):
-        return flow.F.add_scalar_by_tensor(x, y)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.add_scalar_by_tensor(x, y, self.inplace)
 
 
 class ElementwiseAdd(Module):
-    def __init__(self) -> None:
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x, y):
-        return flow.F.add(x, y)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.add(x, y, self.inplace)
 
 
 class BroadcastAdd(Module):
-    def __init__(self) -> None:
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x, y):
-        return flow.F.broadcast_add(x, y)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.broadcast_add(x, y, self.inplace)
 
 
 @oneflow_export("add")
@@ -442,6 +454,27 @@ def _add(x, y):
         return ScalarAddByTensor()(x, y)
     else:
         return BroadcastAdd()(x, y)
+
+
+@register_tensor_op("add_")
+@experimental_api
+def _add_inplace(x, y):
+    r"""
+    In-place version of :func:`oneflow.experimental.Tensor.add`.
+    """
+
+    if isinstance(y, (int, float)):
+        return ScalarAdd(y, inplace=True)(x)
+    elif x.shape == y.shape:
+        return ElementwiseAdd(inplace=True)(x, y)
+    elif x.shape == (1,):
+        raise RuntimeError(
+            f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
+        )
+    elif y.shape == (1,):
+        return ScalarAddByTensor(inplace=True)(x, y)
+    else:
+        return BroadcastAdd(inplace=True)(x, y)
 
 
 class Asin(Module):
@@ -1012,13 +1045,27 @@ class Pow(Module):
 @register_tensor_op("pow")
 @experimental_api
 def pow_op(tensor, exponent):
-    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
-    exponent can be either a single float number or a single int number.
-    
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
+    When exponent is a scalar value, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ \text{exponent}
+​
+    When exponent is a tensor, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ {\text{exponent}_i}
+
+    Args:
+        - input (Tensor): the input tensor.
+        - exponent (int, float, Tensor): the exponent.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
     For example:
 
     .. code-block:: python
-
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
@@ -1029,7 +1076,12 @@ def pow_op(tensor, exponent):
         >>> out
         array([ 1.,  4.,  9., 16., 25., 36.], dtype=float32)
 
-
+        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> out = flow.pow(x, y).numpy()
+        >>> out
+        array([  1.,   4.,  27., 256.], dtype=float32)
+        
     """
     return Pow()(tensor, exponent)
 
@@ -1037,22 +1089,12 @@ def pow_op(tensor, exponent):
 class Addmm(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._matmul_op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", 1.0)
-            .Build()
-        )
 
     def forward(self, x, mat1, mat2, alpha=1, beta=1):
         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
             raise ValueError("input matrixes shape can not be greater than 2")
         else:
-            return _mul(x, beta) + _mul(self._matmul_op(mat1, mat2)[0], alpha)
+            return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
 
 
 @oneflow_export("addmm")

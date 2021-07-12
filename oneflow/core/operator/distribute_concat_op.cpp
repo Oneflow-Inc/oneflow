@@ -27,7 +27,7 @@ class DistributeConcatOp final : public Operator {
   DistributeConcatOp() = default;
   ~DistributeConcatOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -51,11 +51,12 @@ class DistributeConcatOp final : public Operator {
   int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
 
-void DistributeConcatOp::InitFromOpConf() {
+Maybe<void> DistributeConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_concat_conf());
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeConcatOp::InferLogicalOutBlobDescs(
@@ -133,11 +134,11 @@ Maybe<void> DistributeConcatOp::InferBlobParallelDesc() {
         std::make_shared<const ParallelDesc>(op_parallel_desc->GetParallelIdOnlyParallelConf(i));
   }
   bn2parallel_desc["out"] = op_parallel_desc;
-  FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+  JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
     auto it = bn2parallel_desc.find(bn);
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
-  });
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -169,7 +170,7 @@ Maybe<void> DistributeConcatOp::InferSbpSignature(
     }
   }
   cfg::SbpSignatureList sbp_sig_list;
-  GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list));
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
 }

@@ -45,9 +45,9 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void Init(const OperatorConf& op_conf);
-  void Init(std::shared_ptr<const OperatorConf> op_conf);
-  virtual void InitFromOpConf() = 0;
+  Maybe<void> Init(const OperatorConf& op_conf);
+  Maybe<void> Init(std::shared_ptr<const OperatorConf> op_conf);
+  virtual Maybe<void> InitFromOpConf() = 0;
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -321,6 +321,7 @@ class Operator {
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
+bool IsCpuOnly(const std::string& user_op_type_name);
 bool IsCpuOnly(const OperatorConf& op_conf);
 
 struct OnlyCpuSupportPredicator {

@@ -69,6 +69,7 @@ size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_s
                            const int32_t idx_offset) {
   int64_t col_buf_elem_cnt = 1;
   int64_t ndims = out_shape.NumAxes() - 2;
+
   for (size_t i = 0; i != ndims + 1; ++i) { col_buf_elem_cnt *= weight_shape.At(i + 1); }
   for (size_t i = 0; i != ndims; ++i) { col_buf_elem_cnt *= out_shape.At(idx_offset + i); }
   return col_buf_elem_cnt;
@@ -378,7 +379,7 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
     }
   }
 
-  return std::move(state);
+  return state;
 }
 
 template<typename T>
@@ -428,9 +429,10 @@ class ConvCpuKernel final : public user_op::OpKernel {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       if (bias != nullptr) {
         int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
-        int64_t num_of_bias_mul = tmp_buffer->shape().elem_cnt() - num_of_col_buf;
+        int64_t num_of_bias_mul =
+            (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
         CHECK_GT(num_of_bias_mul, 0);
-        T* bias_mul_dptr = col_buf_dptr + num_of_col_buf * sizeof(T);
+        T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
         if (!is_bias_mul_inited) {
           InitBiasMulBuf(bias_mul_dptr, num_of_bias_mul);
           is_bias_mul_inited = true;
@@ -459,14 +461,13 @@ class ConvCpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
         const auto& out_shape = ctx->OutputTensorDesc("out", 0)->shape();                   \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape();   \
+        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();               \
                                                                                             \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));              \
         tmp_buffer_size +=                                                                  \
             CalcElemNumOfColBuf(out_shape, weight_shape, idx_offset) * sizeof(dtype);       \
-                                                                                            \
-        const auto* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);                      \
-        if (bias != nullptr) {                                                              \
+        bool has_bias = ctx->has_input("bias", 0);                                          \
+        if (has_bias) {                                                                     \
           int64_t bias_mul_cnt = 1;                                                         \
           for (int i = 0; i < ndims; ++i) { bias_mul_cnt *= out_shape.At(idx_offset + i); } \
           tmp_buffer_size += bias_mul_cnt * sizeof(dtype);                                  \
@@ -541,8 +542,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         size_t tmp_buffer_size = 0;                                                        \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();    \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("filter", 0)->shape();  \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
+        const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
                                                                                            \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
         tmp_buffer_size +=                                                                 \
@@ -603,7 +604,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();         \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
         const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
                                                                                                 \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
@@ -630,7 +631,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     user_op::Tensor* bias_mul_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape().elem_cnt());
+    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape().elem_cnt() / sizeof(T));
     Memset<DeviceType::kCPU>(ctx->device_ctx(), bias_diff->mut_dptr<T>(), 0,
                              bias_diff->shape().elem_cnt() * sizeof(T));
 
@@ -668,7 +669,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                      \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                            \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();        \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                    \
         const int ndims = out_diff_shape.NumAxes() - 2;                                        \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                 \
         int64_t bias_mul_cnt = 1;                                                              \

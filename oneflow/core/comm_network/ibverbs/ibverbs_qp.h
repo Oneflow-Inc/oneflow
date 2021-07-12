@@ -27,10 +27,7 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_pd* pd) {
-    mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_)));
-    CHECK_EQ(mem_desc_->sge_vec().size(), 1);
-  }
+  ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
   const ActorMsg& msg() const { return msg_; }
@@ -51,6 +48,8 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
+struct IBVerbsCommNetRMADesc;
+
 class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
@@ -62,7 +61,7 @@ class IBVerbsQP final {
   void Connect(const IBVerbsConnectionInfo& peer_info);
   void PostAllRecvRequest();
 
-  void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
+  void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
 

@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void XrtLaunchOp::InitFromOpConf() {
+Maybe<void> XrtLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xrt_launch_conf());
   const auto& launch_conf = op_conf().xrt_launch_conf();
   int inputs_num = launch_conf.in().size();
@@ -38,6 +38,7 @@ void XrtLaunchOp::InitFromOpConf() {
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
@@ -90,7 +91,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const auto& sbp_signatures = launch_conf.sbp_signatures();
     xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
     for (const auto& pair : sbp_signatures) {
-      cfg_sbp_signatures.insert({pair.first, pair.second});
+      cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
     }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));

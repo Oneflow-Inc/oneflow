@@ -31,9 +31,6 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
     if (b.host_mem().has_cuda_pinned_mem()) {
       *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
     }
-    if (b.host_mem().has_used_by_network()) {
-      common->mutable_host_mem()->set_used_by_network(true);
-    }
     return true;
   } else {
     return false;
@@ -69,11 +66,6 @@ int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
 
 int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
-}
-
-bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
-  return mem_case.has_host_mem() && !mem_case.host_mem().has_cuda_pinned_mem()
-         && !mem_case.host_mem().used_by_network();
 }
 
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,

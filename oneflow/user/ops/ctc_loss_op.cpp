@@ -27,20 +27,18 @@ REGISTER_USER_OP("ctc_loss")
     .Attr<int32_t>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const user_op::TensorDesc* target_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths.shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
       *ctx->OutputShape("loss", 0) = Shape({batch_size});
       *ctx->OutputShape("alpha", 0) =
-          Shape({batch_size, log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
+          Shape({batch_size, log_probs.shape().At(0), 2 * targets.shape().At(1) + 1});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -72,18 +70,16 @@ REGISTER_USER_OP("ctc_loss_grad")
     .Attr<int32_t>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const user_op::TensorDesc* target_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths.shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
-      *ctx->OutputShape("grad", 0) = log_probs->shape();
+      *ctx->OutputShape("grad", 0) = log_probs.shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -125,5 +121,35 @@ REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpC
                               return ctx->GetOp(ctc_loss_grad_op_name).output("grad", 0);
                             });
 });
+
+REGISTER_USER_OP("ctc_greedy_decoder")
+    .Input("log_probs")
+    .Input("input_lengths")
+    .Output("decoded")
+    .Output("neg_sum_logits")
+    .Attr<bool>("merge_repeated")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+      *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
+          .Split(user_op::OpArg("input_lengths", 0), 0)
+          .Split(user_op::OpArg("decoded", 0), 0)
+          .Split(user_op::OpArg("neg_sum_logits", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
+      *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
