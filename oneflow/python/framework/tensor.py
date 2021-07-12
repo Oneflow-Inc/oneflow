@@ -273,6 +273,10 @@ class Tensor:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
             else:
+                if isinstance(new_grad, Tensor):
+                    if not new_grad.is_determined:
+                        new_grad.determine()
+                    new_grad = new_grad._local_or_consistent_tensor
                 new_grad_detach = new_grad.detach()
                 check_grad(self.grad, new_grad_detach)
                 self._local_or_consistent_tensor.set_grad(new_grad_detach)
