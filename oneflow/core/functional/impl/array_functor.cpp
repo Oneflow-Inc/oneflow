@@ -489,7 +489,7 @@ class TensorGetItemFunctor {
       } else if (index_item.IsNone()) {
         result_dims.emplace_back(1);
       } else if (index_item.IsBoolean()) {
-        CHECK_OR_RETURN(index_item.boolean()) << "Index fasle is not supported.";
+        CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
         result_dims.emplace_back(1);
       }
     }
@@ -505,7 +505,7 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = x;
+      result = JUST(functional::Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
     } else {
       result = JUST(functional::Slice(x, start, end, step));
     }

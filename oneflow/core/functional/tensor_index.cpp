@@ -71,7 +71,7 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
     } else {
       // None or Boolean.
       if (index_item.IsBoolean()) {
-        CHECK_OR_RETURN(index_item.boolean()) << "Index fasle is not supported.";
+        CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
       }
       regular_index->emplace_back(index_item);
     }
