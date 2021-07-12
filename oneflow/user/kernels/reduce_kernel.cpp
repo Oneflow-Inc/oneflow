@@ -168,7 +168,7 @@ REGISTER_USER_KERNEL("reduce_sum")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
+      const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;

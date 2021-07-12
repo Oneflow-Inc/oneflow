@@ -99,7 +99,6 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   }
 
   std::mt19937& engine() { return engine_; }
-  void set_engine(std::mt19937 engine) { engine_ = engine; }
 
  public:
   std::mt19937 engine_;

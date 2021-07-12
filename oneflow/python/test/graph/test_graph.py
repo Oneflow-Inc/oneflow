@@ -73,6 +73,8 @@ class TestGraph(flow.unittest.TestCase):
 
         # Graph init
         g = CustomGraph()
+        # check _c_nn_graph init
+        test_case.assertEqual(g.name, g._c_nn_graph.name)
         # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         # g.m.name is "m"
@@ -114,23 +116,11 @@ class TestGraph(flow.unittest.TestCase):
 
         g = CustomGraph()
 
-        # check set train to True
-        g.train(True)
-        test_case.assertEqual(g.training, True)
-        test_case.assertEqual(g.m.training, True)
-        test_case.assertEqual(g.m.layer.conv1.training, True)
+        # check default training is True
+        test_case.assertEqual(g.config.training, False)
 
         # set graph config
         g.config.enable_fuse_add_to_output(True)
-
-        # check set train to False
-        g.train(False)
-        test_case.assertEqual(g.training, False)
-        test_case.assertEqual(g.training, False)
-        test_case.assertEqual(g.m.training, False)
-        test_case.assertEqual(g.m.layer.conv1.training, False)
-
-        # set graph config
         g.config.enable_fuse_add_to_output(False)
 
         # check _named_state get the right tensor
@@ -140,19 +130,39 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
-    def test_graph_compile(test_case):
-        class CustomGraph(flow.nn.Graph):
+    def test_graph_name(test_case):
+        class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.m = CustomModule()
-                self.config.enable_auto_mixed_precision(True)
 
             def build(self, x):
-                x = self.m(x)
                 return x
 
-        g = CustomGraph()
-        test_case.assertEqual(g.name, g._c_nn_graph.name)
+        class BCustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return x
+
+        class CBCustomGraph(BCustomGraph):
+            def __init__(self):
+                super().__init__()
+
+        def create_graph(cnt):
+            a = ACustomGraph()
+            test_case.assertEqual(a.name, "ACustomGraph_" + str(cnt))
+            b = BCustomGraph()
+            test_case.assertEqual(b.name, "BCustomGraph_" + str(cnt))
+            cb = CBCustomGraph()
+            test_case.assertEqual(cb.name, "CBCustomGraph_" + str(cnt))
+
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
 
 
 if __name__ == "__main__":

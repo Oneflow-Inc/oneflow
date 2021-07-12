@@ -26,7 +26,7 @@ class VariableOp final : public Operator {
   VariableOp() : Operator() {}
   ~VariableOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;

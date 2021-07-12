@@ -36,7 +36,7 @@ class Generator final {
 
   uint64_t current_seed() const;
 
-  // Reset current seed by default seed, and returns it.
+  // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
 
   const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }

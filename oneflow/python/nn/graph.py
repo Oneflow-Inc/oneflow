@@ -18,7 +18,6 @@ from collections import OrderedDict
 from typing import Union
 
 import oneflow._oneflow_internal
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
@@ -31,15 +30,16 @@ from oneflow.python.framework.function_util import FunctionConfig
 @oneflow_export("nn.Graph", "nn.graph.Graph")
 @experimental_api
 class Graph(object):
+    _child_init_cnt = dict()
+
     def __init__(self):
         self.config = GraphConfig()
-        self._name = id_util.UniqueStr(self.__class__.__name__ + "_")
+        self._generate_name()
         self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
         self._state_tensortuple = None
-        self.train(True)
 
     @property
     def name(self):
@@ -64,11 +64,12 @@ class Graph(object):
             optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
 
-    def train(self, mode: bool = True):
-        self.config._train(mode)
-        for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
-            block.origin.train(mode)
+    def _generate_name(self):
+        child_name = self.__class__.__name__
+        if Graph._child_init_cnt.get(child_name) is None:
+            Graph._child_init_cnt[child_name] = 0
+        self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
+        Graph._child_init_cnt[child_name] += 1
 
     def _named_state(self):
         for _, b in self._blocks.items():
@@ -329,6 +330,7 @@ class Block(object):
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
+        self._train(False)
 
     @property
     def proto(self):
