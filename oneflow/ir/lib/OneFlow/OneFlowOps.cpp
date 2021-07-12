@@ -196,11 +196,19 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
 
   LogicalResult matchAndRewrite(ScalarMulByTensorOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
+    auto scalar = op.scalar();
+    auto reshaped_scalar =
+        rewriter
+            .create<tosa::ReshapeOp>(
+                op->getLoc(),
+                RankedTensorType::get({1, 1}, scalar.getType().cast<TensorType>().getElementType()),
+                scalar, rewriter.getI64ArrayAttr({1, 1}))
+            .output();
     rewriter.replaceOpWithNewOp<tosa::MulOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
         /* input1 */ op.x(),
-        /* input2 */ op.scalar(),
+        /* input2 */ reshaped_scalar,
         /* shift */ rewriter.getIntegerAttr(rewriter.getI32Type(), 0));
     return success();
   }
