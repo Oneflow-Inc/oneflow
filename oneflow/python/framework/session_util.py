@@ -519,9 +519,6 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
-
-
 @oneflow_export("InitEagerGlobalSession")
 def TmpInitEagerGlobalSession():
     config_pb = _GetDefaultConfigProto()

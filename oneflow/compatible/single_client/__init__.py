@@ -46,8 +46,13 @@ from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
 from oneflow.compatible.single_client.python.framework import session_util
+from oneflow.compatible.single_client.python.framework import session_context
 
+session_context.OpenDefaultSession(
+    session_util.Session(oneflow._oneflow_internal.NewSessionId())
+)
 del session_util
+del session_context
 
 
 import oneflow.compatible.single_client.python_gen.__export_symbols__

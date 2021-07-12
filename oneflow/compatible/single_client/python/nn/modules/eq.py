@@ -28,7 +28,7 @@ class Eq(Module):
 
     def forward(self, input, other):
         if isinstance(other, flow.Tensor) or isinstance(
-            other, oneflow._oneflow_internal.LocalTensor
+            other, oneflow._oneflow_internal.Tensor
         ):
             for i in range(len(input.size())):
                 assert (
