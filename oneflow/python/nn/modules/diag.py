@@ -30,7 +30,6 @@ class Diag(Module):
 
 
 @oneflow_export("diag")
-@register_tensor_op("diag")
 @experimental_api
 def diag_op(input, diagonal=0):
     r"""
@@ -68,6 +67,18 @@ def diag_op(input, diagonal=0):
 
     return Diag(diagonal)(input)
 
+
+@register_tensor_op("diag")
+@experimental_api
+def diag_op_tensor(input, diagonal=0):
+    r"""
+    diag() -> Tensor
+    See :func:`oneflow.experimental.diag`
+    
+    """
+
+    return Diag(diagonal)(input)
+    
 
 if __name__ == "__main__":
     import doctest
