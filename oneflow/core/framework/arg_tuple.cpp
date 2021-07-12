@@ -22,9 +22,10 @@ namespace oneflow {
 namespace {
 
 std::pair<std::string, int> GetPair(const std::string& bn) {
+  int32_t index = 0;
   const size_t pos = bn.rfind('_');
-  CHECK_NE(pos, std::string::npos) << "bn: " << bn;
-  return std::make_pair(bn.substr(0, pos), std::stoi(bn.substr(pos + 1)));
+  if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
+  return std::make_pair(bn.substr(0, pos), index);
 }
 
 void InitArgName2BnIndex2TensorTupleIndex(
