@@ -562,7 +562,7 @@ class TestAsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_asinh(test_case, *arg)
             _test_arcsinh(test_case, *arg)
-    
+
     def test_flow_asinh_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_flow_against_pytorch(

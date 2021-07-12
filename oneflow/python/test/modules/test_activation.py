@@ -693,6 +693,17 @@ class TestSoftplusModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("softplus has bug")
+    def test_softplus_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case, 
+                "nn.Softplus", 
+                extra_annotations={"beta": int, "threshold": int},
+                extra_generators={"beta": random(1, 6), "threshold": random(0, 6)},
+                device=device,
+            )
+
 
 def _test_hardswish_impl(test_case, shape, device):
     m = flow.nn.Hardswish()
