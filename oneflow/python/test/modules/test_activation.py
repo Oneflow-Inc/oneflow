@@ -180,6 +180,7 @@ class TestTanh(flow.unittest.TestCase):
                 test_case, "tanh", device=device,
             )
 
+
 def _test_elu_function_impl(test_case, shape, device):
     m = flow.nn.ELU()
     arr = np.random.randn(*shape)
