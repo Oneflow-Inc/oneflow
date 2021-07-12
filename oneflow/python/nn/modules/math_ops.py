@@ -792,12 +792,12 @@ class FMod(Module):
         super().__init__()
 
     def forward(self, x, y):
-        if not isinstance(x, (flow.Tensor, flow._oneflow_internal.LocalTensor)):
+        if not isinstance(x, (flow.Tensor, flow._oneflow_internal.Tensor)):
             raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
             y = flow.tensor([abs(y)],dtype=flow.float32,device=x.device)
-        elif isinstance(y, (flow.Tensor, flow._oneflow_internal.LocalTensor)):
+        elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
             if x.dtype != y.dtype:
                 x = flow.F.cast(x, flow.float32)
                 y = flow.F.cast(y, flow.float32)

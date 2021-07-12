@@ -15,16 +15,17 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
-import random
+import random as rd
 
 import numpy as np
-import torch
+
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 def _numpy_fmod(x,y):
     sign = np.sign(x)
-    res = np.abs(np.fmod(x,y))
+    res = np.fmod(np.abs(x),np.abs(y))
     return sign * res
 
 def _numpy_fmod_grad(x):
@@ -34,13 +35,13 @@ def _numpy_fmod_grad(x):
 
 def _test_fmod_same_shape_tensor(test_case, shape, device):
     input = flow.Tensor(
-        np.random.randint(1,100,(2,5)),
+        np.random.uniform(-100,100,shape),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
     other = flow.Tensor(
-        np.random.randint(1,10,(2,5)), dtype=flow.float32, device=flow.device(device)
+        np.random.uniform(-10,10,shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.fmod(input, other)
     np_out = _numpy_fmod(input.numpy(), other.numpy())
@@ -52,60 +53,39 @@ def _test_fmod_same_shape_tensor(test_case, shape, device):
 
 def _test_fmod_tensor_vs_scalar(test_case, shape, device):
     input = flow.Tensor(
-        np.random.randint(-100,-1,shape),
+        np.random.randint(-100,100,shape),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    other = random.randint(-10,-1)
+    other = rd.uniform(-1,1) * 100
     of_out = flow.fmod(input, other)
     np_out = _numpy_fmod(input.numpy(),other)
     of_out.sum().backward()
-    print(input)
-    print(other)
-    print(of_out)
-    print(np_out)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     test_case.assertTrue(np.allclose(input.grad.numpy(), _numpy_fmod_grad(input.numpy()), 1e-5, 1e-5))
 
-def _test_fmod_vs_torch(test_case, shape, device):
-    x = np.random.randint(-100,-1,shape)
-    of_input = flow.Tensor(
-        x,
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
-    )
-    torch_input = torch.tensor(
-        x,
-        dtype=torch.float32,
-        device=torch.device(device),
-        requires_grad=True,
-    )
-    other = random.randint(1,10)
-    of_out = flow.fmod(of_input, other)
-    torch_out = torch.fmod(torch_input,other)
-    of_out.sum().backward()
-    torch_out.sum().backward()
-    print(of_input)
-    print(other)
-    print(of_out)
-    print(torch_out)
-    test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.detach().numpy(), 1e-5, 1e-5))
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), torch_input.grad.detach().numpy(), 1e-5, 1e-5))
 class TestFmodModule(flow.unittest.TestCase):
     def test_fmod(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            # _test_fmod_same_shape_tensor,
-            # _test_fmod_tensor_vs_scalar
-            _test_fmod_vs_torch
+            _test_fmod_same_shape_tensor,
+            _test_fmod_tensor_vs_scalar
         ]
         arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu","cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
+            arg[0](test_case, *arg[1:]) 
+    
+    def test_flow_fmod_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, 
+                "fmod",
+                extra_annotations={"other": float},
+                extra_generators={"other": random(-100, 100)}, 
+                device=device,
+            )
 
 if __name__ == "__main__":
     unittest.main()
