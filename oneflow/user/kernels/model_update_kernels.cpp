@@ -159,7 +159,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
