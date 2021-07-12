@@ -18,17 +18,19 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import Tensor
 import warnings
 from typing import Union, Iterable
+import numpy as np
 
-_tensor_or_tensors = Union[flow.Tensor, Iterable[flow.Tensor]]
+_tensor_or_tensors = Union[Tensor, Iterable[Tensor]]
 
 
 @oneflow_export("nn.utils.clip_grad_norm")
 @experimental_api
 def clip_grad_norm(
         parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
-        error_if_nonfinite: bool = False) -> flow.Tensor:
+        error_if_nonfinite: bool = False) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
     concatenated into a single vector.
@@ -60,13 +62,13 @@ def clip_grad_norm(
         >>> out1 = m(x1)
         >>> out1 = out1.sum()
         >>> out1.backward()
-        >>> total_norm = flow.nn.utils.clip_grad_norm(x1.parameters(), 1.0)
+        >>> total_norm = flow.nn.utils.clip_grad_norm(x1.parameters(), 0.8, 1)
         >>> total_norm
-        tensor([1.317 , 1.7627, 2.0634], dtype=oneflow.float32)
+        tensor([[0.8 , 0.8, 0.8], [0.8, 0.8, 0.8]] , dtype=oneflow.float32)
 
     """
 
-    if isinstance(parameters, flow.Tensor):
+    if isinstance(parameters, Tensor):
         parameters = [parameters]
     parameters = [p for p in parameters if p.grad is not None]
     max_norm = float(max_norm)
@@ -76,10 +78,11 @@ def clip_grad_norm(
     device = parameters[0].grad.device
     if norm_type == float("inf"):
         norms = [p.grad.detach().abs().max().to(device) for p in parameters]
-        total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
+        total_norm = norms[0] if len(norms) == 1 else flow.max(flow.experimental.stack(norms))
     else:
-        total_norm = flow.linalg.norm(flow.stack([flow.linalg.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
-    if total_norm.numpy().isnan() or total_norm.numpy().isinf():
+        norm_type = int(norm_type)
+        total_norm = flow.experimental.linalg.norm(flow.experimental.stack([flow.experimental.linalg.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
+    if np.isnan(total_norm.numpy()) or np.isinf(total_norm.numpy()):
         if error_if_nonfinite:
             raise RuntimeError(
                 f'The total norm of order {norm_type} for gradients from '
