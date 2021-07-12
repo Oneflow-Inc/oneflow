@@ -41,11 +41,12 @@ Maybe<void> ParseParallelDistributionFromConf(const VariableOpConf& conf,
 
 }  // namespace
 
-void VariableOp::InitFromOpConf() {
+Maybe<void> VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
   bool is_trainable = op_conf().variable_conf().trainable();
   EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> VariableOp::InferLogicalOutBlobDescs(

@@ -253,6 +253,20 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
+Maybe<void> DeprecatedLogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+  return LogicalRun([&](InstructionsBuilder* instruction_builder) -> Maybe<void> {
+    Build(instruction_builder);
+    return Maybe<void>::Ok();
+  });
+}
+
+Maybe<void> DeprecatedPhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+  return PhysicalRun([&](InstructionsBuilder* instruction_builder) -> Maybe<void> {
+    Build(instruction_builder);
+    return Maybe<void>::Ok();
+  });
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -335,14 +349,14 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def(
       "LogicalRun",
       [](const std::function<void(InstructionsBuilder*)>& Build) {
-        return LogicalRun(Build).GetOrThrow();
+        return DeprecatedLogicalRun(Build).GetOrThrow();
       },
       py::call_guard<py::gil_scoped_release>());
 
   m.def(
       "PhysicalRun",
       [](const std::function<void(InstructionsBuilder*)>& Build) {
-        return PhysicalRun(Build).GetOrThrow();
+        return DeprecatedPhysicalRun(Build).GetOrThrow();
       },
       py::call_guard<py::gil_scoped_release>());
 }

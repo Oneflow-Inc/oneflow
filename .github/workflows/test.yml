@@ -114,8 +114,6 @@ jobs:
           set -x
           echo "CC=clang-12" >> $GITHUB_ENV
           echo "CXX=clang++-12" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp;oneflow/core/kernel/kernel_util;oneflow/core/kernel/new_kernel_util" >> $GITHUB_ENV
       - name: Build Clang plug-in
         run: |
           cd tools/clang-plugin
@@ -126,41 +124,28 @@ jobs:
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Build (CMake configure)
+      - name: Build (third party)
         run: |
           mkdir build
+          cd build
+          # clang-12 produces many warnings on oneflow, -w to suppress them
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DTHIRD_PARTY=ON \
+            -DONEFLOW=OFF \
+            -DCMAKE_CXX_FLAGS="-w"
+          cmake --build . -j$(nproc)
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+        run: |
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-      - name: Build (third party)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
-          cmake --build . -j$(nproc) --target oneflow_deps
-      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
+            -DTHIRD_PARTY=OFF \
+            -DONEFLOW=ON \
+            -DCMAKE_CXX_FLAGS="-w -fplugin=${{ env.clang_plugin_path }}"
           cmake --build . -j$(nproc)
-      - name: Tar core
-        if: always()
-        continue-on-error: true
-        run: |
-          set -ex
-          tar -cvf build_core.tar ${PWD}/build/**/core.*
-      - name: Upload core
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: core-build-oneflow-with-clang-plugin
-          path: |
-            build.tar
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -498,7 +483,7 @@ jobs:
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
-        if: failure() && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp

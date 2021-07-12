@@ -80,6 +80,8 @@ def env_init():
             scope_util.InitScopeStack()
         else:
             exit(0)
+    else:
+        scope_util.InitScopeStack()
     return True
 
 
