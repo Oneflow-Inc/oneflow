@@ -33,6 +33,16 @@ import oneflow._oneflow_internal
 import traceback
 
 
+@oneflow_export("env.all_device_placement")
+def api_all_device_placement(device_type: str) -> None:
+    r"""Return a placement containing all devices of all machines under env.
+
+    Args:
+        device_type (str): cuda or cpu
+    """
+    return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+
+
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
     r"""If True, job will execute in eager mode, else use lazy mode(static graph).
@@ -61,13 +71,17 @@ def api_env_init() -> bool:
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
+    is_multi_client = oneflow._oneflow_internal.IsMultiClient()
     assert len(default_env_proto.machine) > 0
-    CompleteEnvProto(default_env_proto)
-    c_api_util.InitEnv(default_env_proto)
-    if oneflow._oneflow_internal.CurrentMachineId() == 0:
-        scope_util.InitScopeStack()
+    CompleteEnvProto(default_env_proto, is_multi_client)
+    c_api_util.InitEnv(default_env_proto, is_multi_client)
+    if not is_multi_client:
+        if oneflow._oneflow_internal.CurrentMachineId() == 0:
+            scope_util.InitScopeStack()
+        else:
+            exit(0)
     else:
-        exit(0)
+        scope_util.InitScopeStack()
     return True
 
 
@@ -77,7 +91,7 @@ def init_default_physical_env():
     if log_dir:
         default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
     default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto)
+    CompleteEnvProto(default_physical_env_proto, False)
     c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
@@ -239,7 +253,9 @@ def do_nothing(*args, **kwargs):
     return False
 
 
-def CompleteEnvProto(env_proto):
+def CompleteEnvProto(env_proto, is_multi_client):
+    if is_multi_client:
+        _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto)
     if env_proto.HasField("ctrl_port") == False:
         if len(env_proto.machine) == 1:
             env_proto.ctrl_port = _FindFreePort()
@@ -292,9 +308,6 @@ def _MakeBootstrapConf(bootstrap_info: dict):
     bootstrap_conf.world_size = config_world_size
     assert "rank" in bootstrap_info
     bootstrap_conf.rank = bootstrap_info["rank"]
-    global config_num_process_per_node
-    assert config_num_process_per_node >= 1
-    bootstrap_conf.num_process_per_node.value = config_num_process_per_node
     if "host" in bootstrap_info:
         bootstrap_conf.host = bootstrap_info["host"]
     global config_bootstrap_ctrl_port
@@ -309,12 +322,7 @@ def _MakeBootstrapConf(bootstrap_info: dict):
 # only used by CI
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def MakeBootstrapConfs(
-    node_list,
-    master_port,
-    world_size=0,
-    ctrl_port=-1,
-    node_size=-1,
-    num_process_per_node=-1,
+    node_list, master_port, world_size=0, ctrl_port=-1, node_size=-1
 ):
     r"""Set ctrl_bootstrap_conf' info.
 
@@ -346,9 +354,6 @@ def MakeBootstrapConfs(
     global config_node_size
     if node_size != -1:
         config_node_size = node_size
-    global config_num_process_per_node
-    if num_process_per_node != -1:
-        config_num_process_per_node = num_process_per_node
     rank = 0
     for rank_host in node_list:
         assert isinstance(rank_host, str)
@@ -388,6 +393,42 @@ def GetEnvDefaultParallelConf(device_tag):
     return device_tag2default_parallel_conf[device_tag]
 
 
+def HasAllMultiClientEnvVars():
+    return (
+        os.getenv("MASTER_ADDR")
+        and os.getenv("MASTER_PORT")
+        and os.getenv("WORLD_SIZE")
+        and os.getenv("RANK")
+        and os.getenv("LOCAL_RANK")
+    )
+
+
+def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
+    assert HasAllMultiClientEnvVars()
+
+    def str2int(env_config):
+        assert env_config.isdigit()
+        return int(env_config)
+
+    bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
+    master_addr = ctrl_bootstrap_pb.Address()
+    master_addr.host = os.getenv("MASTER_ADDR")
+    master_addr.port = str2int(os.getenv("MASTER_PORT"))
+    bootstrap_conf.master_addr.CopyFrom(master_addr)
+    bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
+    bootstrap_conf.rank = str2int(os.getenv("RANK"))
+    env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
+
+    cpp_logging_conf = env_pb.CppLoggingConf()
+    if os.getenv("GLOG_log_dir"):
+        cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
+    if os.getenv("GLOG_logtostderr"):
+        cpp_logging_conf.logtostderr = os.getenv("GLOG_logtostderr")
+    if os.getenv("GLOG_logbuflevel"):
+        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+    env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
+
+
 device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
@@ -399,8 +440,5 @@ config_world_size = 0
 config_bootstrap_ctrl_port = 0
 
 config_node_size = 0
-
-# One process per machine by default
-config_num_process_per_node = 1
 
 global_ctrl_bootstrap_confs = []

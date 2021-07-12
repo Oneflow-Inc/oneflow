@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -46,6 +47,8 @@ class StatefulLocalOpKernel;
 class TensorTuple;
 class MirroredTensor;
 }  // namespace one
+
+class NNGraphIf;
 
 namespace detail {
 
@@ -91,6 +94,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
+
+  Maybe<void> RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                         const one::EagerBlobObjectListPtr& outputs,
+                         const one::EagerBlobObjectListPtr& parameters,
+                         const std::shared_ptr<NNGraphIf>& nn_graph) const;
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -247,7 +255,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const AttrMap& attrs,
+                                const one::OpExprInterpContext& ctx,
                                 const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
                                 const std::string& instr_type_name);
 
@@ -443,9 +451,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow
 

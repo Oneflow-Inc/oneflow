@@ -61,41 +61,34 @@ public:
     }
 
     for (const auto &x : stmt->children()) {
+      std::string typeStr;
       if (ExprWithCleanups *expr = dyn_cast<ExprWithCleanups>(x)) {
-        std::string type = expr->getType().getAsString();
-        if (type.substr(0, 12) == "class Maybe<" ||
-            type.substr(0, 6) == "Maybe<") {
-          DiagnosticsEngine &DE = Context->getDiagnostics();
-          unsigned DiagID =
-              DE.getCustomDiagID(DiagnosticsEngine::Error,
-                                 "This function returns Maybe but the return "
-                                 "value is ignored. Wrap it with JUST(..)?");
-          auto DB = DE.Report(expr->getBeginLoc(), DiagID);
-          DB.AddSourceRange(
-              clang::CharSourceRange::getCharRange(expr->getSourceRange()));
-        }
+        typeStr = expr->getType().getAsString();
       }
       if (CallExpr *call = dyn_cast<CallExpr>(x)) {
-        std::string returnType;
         llvm::CrashRecoveryContext CRC;
-        CRC.RunSafely([&call, &returnType, this]() {
+        CRC.RunSafely([&call, &typeStr, this]() {
+          QualType returnType;
           if (auto *callee = call->getDirectCallee()) {
-            returnType = callee->getReturnType().getAsString();
+            returnType = callee->getReturnType();
           } else {
-            returnType = call->getCallReturnType(*this->Context).getAsString();
+            returnType = call->getCallReturnType(*this->Context);
+          }
+          if (!returnType.isNull() && returnType->isClassType()) {
+            typeStr = returnType.getAsString();
           }
         });
-        if (returnType.substr(0, 12) == "class Maybe<" ||
-            returnType.substr(0, 6) == "Maybe<") {
-          DiagnosticsEngine &DE = Context->getDiagnostics();
-          unsigned DiagID =
-              DE.getCustomDiagID(DiagnosticsEngine::Error,
-                                 "This function returns Maybe but the return "
-                                 "value is ignored. Wrap it with JUST(..)?");
-          auto DB = DE.Report(call->getBeginLoc(), DiagID);
-          DB.AddSourceRange(
-              clang::CharSourceRange::getCharRange(call->getSourceRange()));
-        }
+      }
+      if (typeStr.substr(0, 12) == "class Maybe<" ||
+          typeStr.substr(0, 6) == "Maybe<") {
+        DiagnosticsEngine &DE = Context->getDiagnostics();
+        unsigned DiagID =
+            DE.getCustomDiagID(DiagnosticsEngine::Error,
+                               "This function returns Maybe but the return "
+                               "value is ignored. Wrap it with JUST(..)?");
+        auto DB = DE.Report(x->getBeginLoc(), DiagID);
+        DB.AddSourceRange(
+            clang::CharSourceRange::getCharRange(x->getSourceRange()));
       }
     }
     return true;
@@ -139,4 +132,3 @@ public:
 
 static FrontendPluginRegistry::Add<CheckUnusedMaybeAction>
     X("check-unused-maybe", "Check unused maybe");
-
