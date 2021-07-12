@@ -16,7 +16,7 @@
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
-#   "BoolList", "DataType", "Shape"
+#   "BoolList", "DataType", "Shape", "Generator", "TensorIndex"
 # }
 
 - name: "add_n"
@@ -597,3 +597,7 @@
 - name: "pad_grad"
   signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
   bind_python: False
+
+- name: "tensor_getitem"
+  signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
+  bind_python: True
