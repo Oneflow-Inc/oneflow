@@ -261,13 +261,13 @@ class Tensor:
         def check_grad(grad, new_grad):
             assert (
                 grad.shape == new_grad.shape
-            ), f"Shape of new grad is not equal, {grad.shape} vs {new_grad.shape}"
+            ), f"Shape of grads are not equal, {grad.shape} vs {new_grad.shape}"
             assert (
                 grad.device == new_grad.device
-            ), f"Device of new grad is not equal, {grad.device} vs {new_grad.device}"
+            ), f"Device of grads are not equal, {grad.device} vs {new_grad.device}"
             assert (
                 grad.dtype == new_grad.dtype
-            ), f"Data type of new grad is not equal, {grad.dtype} vs {new_grad.dtype}"
+            ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
 
         if self._local_or_consistent_tensor is not None:
             if new_grad is None:
