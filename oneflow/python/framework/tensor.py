@@ -259,11 +259,6 @@ class Tensor:
     @_auto_determine
     def grad(self, new_grad):
         def check_grad(grad, new_grad):
-<<<<<<< HEAD
-            assert grad.shape == new_grad.shape, "Shape of new grad is not equal"
-            assert grad.device == new_grad.device, "Device of new grad is not equal"
-            assert grad.dtype == new_grad.dtype, "Data type of new grad is not equal"
-=======
             assert (
                 grad.shape == new_grad.shape
             ), f"Shape of grads are not equal, {grad.shape} vs {new_grad.shape}"
@@ -273,16 +268,12 @@ class Tensor:
             assert (
                 grad.dtype == new_grad.dtype
             ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
->>>>>>> 230376f1ea84e669ac4370e09e8c7e9e68eb8ef7
+
 
         if self._local_or_consistent_tensor is not None:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
             else:
-<<<<<<< HEAD
-                new_grad_detach = new_grad.detach()
-=======
->>>>>>> 230376f1ea84e669ac4370e09e8c7e9e68eb8ef7
                 if isinstance(new_grad, Tensor):
                     if not new_grad.is_determined:
                         new_grad.determine()
