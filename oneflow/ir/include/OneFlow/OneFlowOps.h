@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 
 namespace mlir {
 namespace OpTrait {
@@ -80,7 +81,7 @@ class IsInvolutionOfIdenticalPlacement
 }  // namespace OpTrait
 
 namespace oneflow {
-std::unique_ptr<mlir::Pass> createLowerOneFlowToAffinePass();
+std::unique_ptr<mlir::Pass> createLowerOneFlowToTosaPass();
 }  // namespace oneflow
 
 #define GEN_PASS_CLASSES

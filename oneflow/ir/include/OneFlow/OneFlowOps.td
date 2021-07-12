@@ -202,8 +202,8 @@ def OutlineFuseCastScale : Pat<
   (OutlineFunction $mul_op, $cast_op)
 >;
 
-def LowerOneFlowToAffinePass : Pass<"lower-oneflow-to-affine", "ModuleOp"> {
+def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
-  let constructor = "mlir::oneflow::createLowerOneFlowToAffinePass()";
-  let dependentDialects = ["AffineDialect", "memref::MemRefDialect", "StandardOpsDialect"];
+  let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
+  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }

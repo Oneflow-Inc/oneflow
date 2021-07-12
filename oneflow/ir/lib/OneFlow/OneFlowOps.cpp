@@ -18,9 +18,13 @@ limitations under the License.
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -186,50 +190,18 @@ static MemRefType convertTensorToMemRef(TensorType type) {
   assert(type.hasRank() && "expected only ranked shapes");
   return MemRefType::get(type.getShape(), type.getElementType());
 }
-
-using LoopIterationFn =
-    function_ref<Value(OpBuilder& rewriter, ValueRange memRefOperands, ValueRange loopIvs)>;
-
-static Value insertAllocAndDealloc(MemRefType type, Location loc, PatternRewriter& rewriter) {
-  auto alloc = rewriter.create<memref::AllocOp>(loc, type);
-  auto* parentBlock = alloc->getBlock();
-  alloc->moveBefore(&parentBlock->front());
-  auto dealloc = rewriter.create<memref::DeallocOp>(loc, alloc);
-  dealloc->moveBefore(&parentBlock->back());
-  return alloc;
-}
-
-static void lowerOpToLoops(Operation* op, ValueRange operands, PatternRewriter& rewriter,
-                           LoopIterationFn processIteration) {
-  auto tensorType = (*op->result_type_begin()).cast<TensorType>();
-  auto loc = op->getLoc();
-  auto memRefType = convertTensorToMemRef(tensorType);
-  // TODO: remove alloc and dealloc
-  auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
-  SmallVector<int64_t, 4> lowerBounds(tensorType.getRank(), /*Value=*/0);
-  SmallVector<int64_t, 4> steps(tensorType.getRank(), /*Value=*/1);
-  buildAffineLoopNest(rewriter, loc, lowerBounds, tensorType.getShape(), steps,
-                      [&](OpBuilder& nestedBuilder, Location loc, ValueRange ivs) {
-                        Value valueToStore = processIteration(nestedBuilder, operands, ivs);
-                        nestedBuilder.create<AffineStoreOp>(loc, valueToStore, alloc, ivs);
-                      });
-  rewriter.replaceOp(op, alloc);
-}
-
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(ScalarMulByTensorOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
-    auto loc = op->getLoc();
-    lowerOpToLoops(op, operands, rewriter,
-                   [loc](OpBuilder& builder, ValueRange memRefOperands, ValueRange loopIvs) {
-                     typename ScalarMulByTensorOp::Adaptor adaptor(memRefOperands);
-                     auto loadedLhs = builder.create<AffineLoadOp>(loc, adaptor.x(), loopIvs);
-                     auto loadedRhs = builder.create<AffineLoadOp>(loc, adaptor.scalar(), loopIvs);
-                     return builder.create<MulFOp>(loc, loadedLhs, loadedRhs);
-                   });
+    rewriter.replaceOpWithNewOp<tosa::MulOp>(
+        op,
+        /* output */ op->getResultTypes().front().cast<TensorType>(),
+        /* input1 */ op.x(),
+        /* input2 */ op.scalar(),
+        /* shift */ rewriter.getIntegerAttr(rewriter.getI32Type(), 0));
     return success();
   }
 };
@@ -239,10 +211,10 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   using OpConversionPattern<CastOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(CastOp op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const final {
-    auto loc = op->getLoc();
-    typename CastOp::Adaptor adaptor(operands);
-    if (!adaptor.x().getType().dyn_cast<MemRefType>()) { return failure(); }
-    return failure();
+    rewriter.replaceOpWithNewOp<tosa::CastOp>(op,
+                                              /* output */ op.y().getType(),
+                                              /* input */ op.x());
+    return success();
   }
 };
 
@@ -269,29 +241,25 @@ class FuncOpConversion final : public OpConversionPattern<FuncOp> {
 };
 
 namespace {
-struct AffineLoweringPass : public LowerOneFlowToAffinePassBase<AffineLoweringPass> {
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
-  }
-  StringRef getName() const override { return "AffineLoweringPass"; }
+struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
 };
 }  // namespace
 
-std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToAffinePass() {
-  return std::make_unique<AffineLoweringPass>();
+std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToTosaPass() {
+  return std::make_unique<OneFlowLoweringToTosaPass>();
 }
 
-void AffineLoweringPass::runOnOperation() {
+void OneFlowLoweringToTosaPass::runOnOperation() {
   ConversionTarget target(getContext());
-  target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect>();
+  target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
-  target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-    for (auto arg : op.getArguments()) {
-      if (arg.getType().dyn_cast<TensorType>()) { return false; }
-    }
-    return true;
-  });
+  // target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+  //   for (auto arg : op.getArguments()) {
+  //     if (arg.getType().dyn_cast<TensorType>()) { return false; }
+  //   }
+  //   return true;
+  // });
   RewritePatternSet patterns(&getContext());
   // TODO: Add type converter
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, FuncOpConversion>(&getContext());
@@ -305,10 +273,13 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
   context.loadDialect<memref::MemRefDialect>();
+  context.loadDialect<tosa::TosaDialect>();
+  context.loadDialect<linalg::LinalgDialect>();
 
   mlir::PassManager pm(&context);
-  pm.addPass(createLowerOneFlowToAffinePass());
-  pm.dump();
+  pm.addPass(createLowerOneFlowToTosaPass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
   return pm.run(module.get());
 }
 

@@ -47,9 +47,11 @@ void registerTestOneFlowTraitsPass() {
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
-  mlir::registerLowerOneFlowToAffinePassPass();
+  mlir::registerLowerOneFlowToTosaPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
+  registry.insert<mlir::tosa::TosaDialect>();
+  registry.insert<mlir::linalg::LinalgDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
