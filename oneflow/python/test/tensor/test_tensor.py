@@ -264,13 +264,13 @@ class TestTensor(flow.unittest.TestCase):
         # TODO(Liang Depeng): change to MatMul module
         op = (
             flow.builtin_op("matmul")
-                .Input("a")
-                .Input("b")
-                .Attr("transpose_a", False)
-                .Attr("transpose_b", False)
-                .Attr("alpha", float(1.0))
-                .Output("out")
-                .Build()
+            .Input("a")
+            .Input("b")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", float(1.0))
+            .Output("out")
+            .Build()
         )
         y = op(x1, x2)[0]
         test_case.assertTrue(
@@ -981,7 +981,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_tensor_acos(test_case):
-        input = flow.Tensor(np.random.rand(8, 11, 9, 7) - 0.5, requires_grad=True, )
+        input = flow.Tensor(np.random.rand(8, 11, 9, 7) - 0.5, requires_grad=True,)
         of_out = input.acos()
         np_out = np.arccos(input.numpy())
         test_case.assertTrue(
@@ -1031,11 +1031,11 @@ class TestTensor(flow.unittest.TestCase):
             f = 1 + np.exp(x)
             y = x * ((f * f - 1) / (f * f + 1))
             y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
-                    (f * f + 1) * (f * f + 1)
+                (f * f + 1) * (f * f + 1)
             )
             return [y, y_grad]
 
-        np_input = np.random.randn(2, 4, 5, 6, )
+        np_input = np.random.randn(2, 4, 5, 6,)
         of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.mish()
 
@@ -1081,9 +1081,13 @@ class TestTensor(flow.unittest.TestCase):
         of_output = 2 * of_input
         of_output = of_output.sum()
         of_output.backward()
-        new_grad = flow.Tensor(np.full(np_input.shape, np.random.randn(1)), dtype=flow.float32)
+        new_grad = flow.Tensor(
+            np.full(np_input.shape, np.random.randn(1)), dtype=flow.float32
+        )
         of_input.grad = new_grad
-        test_case.assertTrue(np.allclose(of_input.grad.detach().numpy(), new_grad.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(
+            np.allclose(of_input.grad.detach().numpy(), new_grad.numpy(), 1e-5, 1e-5)
+        )
         of_input.grad = None
         test_case.assertTrue(of_input.grad is None)
 
@@ -1105,10 +1109,22 @@ class TestTensor(flow.unittest.TestCase):
         of_output = of_output.sum()
         of_output.backward()
         test_case.assertTrue(
-            np.allclose(of_input.grad.detach().numpy(), np.full(np_input.shape, rand_init + rand_scale), 1e-5, 1e-5))
+            np.allclose(
+                of_input.grad.detach().numpy(),
+                np.full(np_input.shape, rand_init + rand_scale),
+                1e-5,
+                1e-5,
+            )
+        )
         of_input.grad = of_input.grad * 2
         test_case.assertTrue(
-            np.allclose(of_input.grad.detach().numpy(), 2 * np.full(np_input.shape, rand_init + rand_scale), 1e-5, 1e-5))
+            np.allclose(
+                of_input.grad.detach().numpy(),
+                2 * np.full(np_input.shape, rand_init + rand_scale),
+                1e-5,
+                1e-5,
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -269,7 +269,6 @@ class Tensor:
                 grad.dtype == new_grad.dtype
             ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
 
-
         if self._local_or_consistent_tensor is not None:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
