@@ -612,6 +612,7 @@ class ImageBatchAlign(Module):
             .Attr("shape", shape)
             .Attr("data_type", dtype)
             .Attr("alignment", alignment)
+            .Attr("dynamic_out", False)
             .Build()
         )
 
