@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include "oneflow/api/python/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/random_generator.h"
 
@@ -25,13 +26,21 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
       .def("manual_seed", &one::Generator::set_current_seed)
-      .def("initial_seed", &one::Generator::current_seed);
+      .def("initial_seed", &one::Generator::current_seed)
+      .def("seed", &one::Generator::seed);
 
-  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed); });
-  m.def("create_generator",
-        [](const std::string& device) { return one::Generator::New(device).GetPtrOrThrow(); });
-  m.def("create_generator", [](const std::string& device, uint64_t seed) {
-    return one::Generator::New(device, seed).GetPtrOrThrow();
+  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
+  m.def("create_generator", [](const std::string& device_tag) {
+    std::string device_name = "";
+    int device_index = -1;
+    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
+    return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
+  });
+  m.def("default_generator", [](const std::string& device_tag) {
+    std::string device_name = "";
+    int device_index = -1;
+    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
+    return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
   });
 }
 

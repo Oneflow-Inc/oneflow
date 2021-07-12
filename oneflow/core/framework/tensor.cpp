@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 
@@ -51,8 +54,7 @@ namespace one {
   const auto& blob_desc = eager_blob_object->blob_desc();
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
-  const auto& autograd_meta = std::make_shared<AutogradMeta>(requires_grad, is_leaf);
-  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, autograd_meta);
+  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
   JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
   return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
 }
@@ -65,13 +67,29 @@ int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 
 int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
-std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
+std::shared_ptr<Tensor> MirroredTensor::data() const {
   std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
   return t;
 }
 
-Maybe<MirroredTensor> MirroredTensor::api_detach() const {
-  return std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+Maybe<Tensor> MirroredTensor::detach() const {
+  std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+  return tensor;
+}
+
+Maybe<Tensor> MirroredTensor::clone() const {
+  const auto& device_type = JUST(this->device())->type();
+  int64_t device_id = JUST(this->device())->device_id();
+  std::shared_ptr<OpExpr> copy_op_ = JUST(one::OpBuilder("copy")
+                                              .Input("in", 1)
+                                              .Attr("device_type", device_type)
+                                              .Attr("device_id", device_id)
+                                              .Output("out", 1)
+                                              .Build());
+  std::shared_ptr<MirroredTensor> input =
+      std::const_pointer_cast<MirroredTensor>(shared_from_this());
+  const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
+  return output;
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
@@ -100,13 +118,13 @@ int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
 
 int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 
-std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
+std::shared_ptr<Tensor> ConsistentTensor::data() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
-  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
+Maybe<Tensor> ConsistentTensor::detach() const {
+  std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 

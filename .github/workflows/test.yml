@@ -114,33 +114,37 @@ jobs:
           set -x
           echo "CC=clang-12" >> $GITHUB_ENV
           echo "CXX=clang++-12" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp;oneflow/core/kernel/kernel_util;oneflow/core/kernel/new_kernel_util" >> $GITHUB_ENV
       - name: Build Clang plug-in
         run: |
           cd tools/clang-plugin
           mkdir build
           cd build
-          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
           make -j$(nproc)
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Build (CMake configure)
+      - name: Build (third party)
         run: |
           mkdir build
+          cd build
+          # clang-12 produces many warnings on oneflow, -w to suppress them
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DTHIRD_PARTY=ON \
+            -DONEFLOW=OFF \
+            -DCMAKE_CXX_FLAGS="-w"
+          cmake --build . -j$(nproc)
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+        run: |
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-      - name: Build (third party)
-        run: |
-          cd build
-          cmake --build . -j$(nproc) --target oneflow_deps
-      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
-        run: |
-          cd build
+            -DTHIRD_PARTY=OFF \
+            -DONEFLOW=ON \
+            -DCMAKE_CXX_FLAGS="-w -fplugin=${{ env.clang_plugin_path }}"
           cmake --build . -j$(nproc)
 
   wait_for_gpu_slot:
@@ -159,7 +163,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/gh-action-scheduler-v2@849c5f271f5a3673ea33ce6d75ce5ebc0b288b3d
+      - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
@@ -479,7 +483,7 @@ jobs:
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
-        if: failure() && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
