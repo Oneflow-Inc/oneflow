@@ -24,30 +24,12 @@ os.environ["WORLD_SIZE"] = "1"
 os.environ["RANK"] = "0"
 os.environ["LOCAL_RANK"] = "0"
 
-"""
-print(os.getenv("MASTER_ADDR"))
-
-is_multi_client = (os.getenv("MASTER_ADDR") and os.getenv("MASTER_PORT")
-  and os.getenv("WORLD_SIZE") and os.getenv("RANK") and os.getenv("LOCAL_RANK"))
-print("is_multi_client", is_multi_client)
-
-is_multi_client = ('MASTER_ADDR' in os.environ)
-print("is_multi_client2", is_multi_client)
-"""
-
 import oneflow
 import oneflow.experimental as flow
-
-# import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow._oneflow_internal
-
-# import oneflow._oneflow_internal.oneflow.core.operator.op_conf.InputOpConf as input_conf_cfg
-# import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel as sbp_parallel_cfg
 from oneflow.python.framework.multi_client_session import MultiClientSession
 import oneflow.python.framework.c_api_util as c_api_util
-
-# from oneflow.python.framework.function_util import FunctionConfig
 
 print("IsMultiClient?:", oneflow.distributed.is_multi_client())
 print(
@@ -56,49 +38,6 @@ print(
 )
 
 oneflow.enable_eager_execution()
-
-"""
-@flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-"""
-
-
-class TestInputOpExpr(flow.unittest.TestCase):
-    def test_input_op_expr(test_case):
-        test_case.assertTrue(oneflow.distributed.is_multi_client())
-        x = flow.Tensor(1, 1, 10, 10)
-        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        session.TryInit()
-
-        oneflow.enable_eager_execution(False)
-
-        distribute_strategy = distribute_util.DistributeConsistentStrategy()
-        oneflow._oneflow_internal.JobBuildAndInferCtx_Open("cc_test_input_op_expr_job")
-
-        distribute_strategy = distribute_util.DistributeConsistentStrategy()
-        with distribute_strategy:
-            op_conf = op_conf_util.OperatorConf()
-            op_conf.input_conf.out = "out"
-            op_conf.input_conf.blob_conf.shape.dim.extend(x.shape)
-            op_conf.input_conf.blob_conf.is_dynamic = False
-            sbp_parallel = sbp_parallel_pb.SbpParallel()
-            sbp_parallel.split_parallel.axis = 0
-            op_conf.input_conf.blob_conf.parallel_distribution.sbp_parallel.extend(
-                [sbp_parallel]
-            )
-            op_conf.name = "cc_Input_0"
-            input_op = oneflow._oneflow_internal.one.InputOpExpr(
-                op_conf.name, op_conf, [], ["out"]
-            )
-            out_tensor = input_op([])[0]
-            print("out_tensor:", out_tensor)
-
 
 if __name__ == "__main__":
     # unittest.main()
@@ -111,42 +50,28 @@ if __name__ == "__main__":
 
     oneflow.enable_eager_execution(False)
 
-    # distribute_strategy = distribute_util.DistributeConsistentStrategy()
     oneflow._oneflow_internal.JobBuildAndInferCtx_Open("cc_test_input_op_expr_job")
     job_conf = oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
     job_conf.set_job_name("cc_test_input_op_expr_job")
     job_conf.mutable_predict_conf()
     c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
-    # distribute_strategy = distribute_util.DistributeConsistentStrategy()
-    # with distribute_strategy:
-    # op_conf = op_conf_util.OperatorConf()
-    input_conf = oneflow._oneflow_internal.oneflow.core.operator.op_conf.InputOpConf()
-    input_conf.set_out("out")
-    for dim in x.shape:
-        input_conf.mutable_blob_conf().mutable_shape().add_dim(dim)
-    input_conf.mutable_blob_conf().set_data_type(
-        oneflow._oneflow_internal.oneflow.core.common.data_type.DataType.kFloat
-    )
-    input_conf.mutable_blob_conf().set_is_dynamic(False)
-    """
-    sbp_parallel = oneflow._oneflow_internal.sbp.split(0)
-    input_conf.mutable_blob_conf().mutable_parallel_distribution().add_sbp_parallel(sbp_parallel)
-    """
-    """
-    sbp_parallel_cfg.SbpParallel()
-    sbp_parallel.split_parallel.axis = 0
-    input_conf.blob_conf.parallel_distribution.sbp_parallel.extend(
-        [sbp_parallel]
-    )
-    """
     op_name = "cc_Input_0"
+    input_conf = (
+        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+    )
+    input_conf.set_in_0("EagerTensorInput")
+    input_conf.set_out_0("out_0")
     print("input_conf:", input_conf)
     print(type(input_conf))
 
-    input_op = oneflow._oneflow_internal.one.InputOpExpr(
-        op_name, input_conf, [], ["out_0"]
+    input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+        op_name, input_conf, ["in_0"], ["out_0"]
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-    out_tensor = input_op.apply([], attrs)[0]
-    print("out_tensor:", out_tensor)
+
+    if not x.is_determined:
+        x.determine()
+
+    out_tensor = input_op.apply([x._local_or_consistent_tensor], attrs)[0]
+    print("out_tensor shape:", out_tensor.shape)
