@@ -75,10 +75,10 @@ class UpsampleNearest1DCPUKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
+class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleLinearGrad1DCPUKernel() = default;
-  ~UpsampleLinearGrad1DCPUKernel() = default;
+  UpsampleNearestGrad1DCPUKernel() = default;
+  ~UpsampleNearestGrad1DCPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -106,7 +106,7 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_1d_grad")                                     \
-      .SetCreateFn<UpsampleLinearGrad1DCPUKernel<dtype>>()                             \
+      .SetCreateFn<UpsampleNearestGrad1DCPUKernel<dtype>>()                            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

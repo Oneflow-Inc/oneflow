@@ -87,10 +87,10 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class UpsampleLinearGrad3DCPUKernel final : public user_op::OpKernel {
+class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleLinearGrad3DCPUKernel() = default;
-  ~UpsampleLinearGrad3DCPUKernel() = default;
+  UpsampleNearestGrad3DCPUKernel() = default;
+  ~UpsampleNearestGrad3DCPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -123,7 +123,7 @@ class UpsampleLinearGrad3DCPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                     \
-      .SetCreateFn<UpsampleLinearGrad3DCPUKernel<dtype>>()                             \
+      .SetCreateFn<UpsampleNearestGrad3DCPUKernel<dtype>>()                            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

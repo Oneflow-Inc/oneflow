@@ -289,9 +289,9 @@ REGISTER_USER_OP("upsample_nearest_1d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 3) {
-        LOG(FATAL) << "upsample_nearest_1d_grad only supports NCH";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 3)
+          << "upsample_nearest_1d_grad only supports NCH";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })

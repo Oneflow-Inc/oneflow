@@ -89,16 +89,16 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class UpsampleLinearGrad3DGPUKernel final : public user_op::OpKernel {
+class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
  public:
-  UpsampleLinearGrad3DGPUKernel() = default;
-  ~UpsampleLinearGrad3DGPUKernel() = default;
+  UpsampleNearestGrad3DGPUKernel() = default;
+  ~UpsampleNearestGrad3DGPUKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -125,7 +125,7 @@ class UpsampleLinearGrad3DGPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_nearest_3d_grad")                                     \
-      .SetCreateFn<UpsampleLinearGrad3DGPUKernel<dtype>>()                             \
+      .SetCreateFn<UpsampleNearestGrad3DGPUKernel<dtype>>()                            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

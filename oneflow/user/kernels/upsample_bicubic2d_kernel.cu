@@ -132,7 +132,7 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
