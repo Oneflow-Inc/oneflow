@@ -34,11 +34,11 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
