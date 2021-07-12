@@ -227,8 +227,12 @@ class FuncOpConversion final : public OpConversionPattern<FuncOp> {
     TypeConverter::SignatureConversion conversion(func_type.getNumInputs());
     // TODO: handle input output alias here by adding extra input arg
     for (auto arg_type : llvm::enumerate(func_type.getInputs())) {
-      auto converted = convertTensorToMemRef(arg_type.value().cast<TensorType>());
-      conversion.addInputs(arg_type.index(), converted);
+      if (auto tensor_type = arg_type.value().cast<TensorType>()) {
+        auto converted = convertTensorToMemRef(arg_type.value().cast<TensorType>());
+        conversion.addInputs(arg_type.index(), converted);
+      } else {
+        conversion.addInputs(arg_type.index(), arg_type.value());
+      }
     }
 
     rewriter.applySignatureConversion(&func.getBody(), conversion);
@@ -262,7 +266,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   // });
   RewritePatternSet patterns(&getContext());
   // TODO: Add type converter
-  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, FuncOpConversion>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
@@ -349,7 +353,8 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
 
       // create a function to be lowered
       SmallVector<Type, 3> types(created->getOperandTypes());
-      types.push_back(created->getResultTypes().front());
+      // TODO: handle alias here
+      types.push_back(convertTensorToMemRef(created->getResultTypes().front().cast<TensorType>()));
       auto func_type = rewriter.getFunctionType(types, llvm::None);
       auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
 
@@ -361,11 +366,13 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
           builder.create<CastOp>(cast_op->getLoc(), /* resultTypes */ cast_op->getResultTypes(),
                                  /* operands */ entry_block.getArguments().take_front(),
                                  /* attributes */ cast_op->getAttrs());
-      builder.create<ScalarMulByTensorOp>(
+      auto scalar_mul = builder.create<ScalarMulByTensorOp>(
           mul_op->getLoc(), /* resultTypes */ mul_op->getResultTypes(),
           /* operands */
           SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block.getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
+      builder.create<memref::TensorStoreOp>(mul_op->getLoc(), scalar_mul.y(),
+                                            entry_block.getArgument(2));
       builder.create<ReturnOp>(mul_op->getLoc());
       // TODO: decare terminator
       // TODO: skip outline functions when translating beck to job
