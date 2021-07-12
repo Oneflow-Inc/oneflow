@@ -28,29 +28,31 @@ namespace user_op {
     ~DimScatter##binop##Kernel() override = default;                                              \
                                                                                                   \
    private:                                                                                       \
-    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper, \
+    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,                 \
+                  const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,                                 \
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,  \
-                  int32_t dim, int64_t upper_bound, const IDX_T* index, const IN_T* src,                             \
+                  int32_t dim, int64_t upper_bound, const IDX_T* index, const IN_T* src,          \
                   IN_T* output) const override {                                                  \
       DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                     \
-          ctx, src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index, src, output);     \
+          ctx, src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound,  \
+          index, src, output);                                                                    \
     }                                                                                             \
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      \
   }
 
-#define REGISTER_DIM_SCATTER_LIKE_KERNEL(device, dtype, itype, optypename, binop)    \
-  REGISTER_USER_KERNEL(optypename)                                                       \
-      .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+#define REGISTER_DIM_SCATTER_LIKE_KERNEL(device, dtype, itype, optypename, binop)       \
+  REGISTER_USER_KERNEL(optypename)                                                      \
+      .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
                        & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-#define REGISTER_DIM_SCATTER_BINOP_LIKE_KERNELS_DEVICE(device, optypename, binop)    \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, float, int32_t, optypename, binop)   \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, double, int32_t, optypename, binop)  \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, int32_t, int32_t, optypename, binop) \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, float, int64_t, optypename, binop)   \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, double, int64_t, optypename, binop)  \
+#define REGISTER_DIM_SCATTER_BINOP_LIKE_KERNELS_DEVICE(device, optypename, binop) \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, float, int32_t, optypename, binop)     \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, double, int32_t, optypename, binop)    \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, int32_t, int32_t, optypename, binop)   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, float, int64_t, optypename, binop)     \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(device, double, int64_t, optypename, binop)    \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(device, int32_t, int64_t, optypename, binop)
 
 #define REGISTER_DIM_SCATTER_LIKE_CPUKERNELS(optypename, binop) \
@@ -58,7 +60,7 @@ namespace user_op {
 
 #ifdef WITH_CUDA
 #define REGISTER_DIM_SCATTER_LIKE_GPUKERNELS(optypename, binop)                            \
-  REGISTER_DIM_SCATTER_BINOP_LIKE_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);          \
+  REGISTER_DIM_SCATTER_BINOP_LIKE_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);     \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
 #else
@@ -69,20 +71,19 @@ namespace user_op {
   REGISTER_DIM_SCATTER_LIKE_CPUKERNELS(optypename, binop); \
   REGISTER_DIM_SCATTER_LIKE_GPUKERNELS(optypename, binop);
 
+#define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype, optypename, binop)             \
+  REGISTER_USER_KERNEL(optypename)                                                       \
+      .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value))
 
-#define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype, optypename, binop)      \
-  REGISTER_USER_KERNEL(optypename)                                                        \
-      .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value)) \
-
-#define REGISTER_DIM_SCATTER_BINOP_KERNELS_DEVICE(device, optypename, binop)    \
-  REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t, optypename, binop);   \
-  REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t, optypename, binop); \
-  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t, optypename, binop); \
-  REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t, optypename, binop);   \
-  REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t, optypename, binop);  \
+#define REGISTER_DIM_SCATTER_BINOP_KERNELS_DEVICE(device, optypename, binop) \
+  REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t, optypename, binop);    \
+  REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t, optypename, binop);   \
+  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t, optypename, binop);  \
+  REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t, optypename, binop);    \
+  REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t, optypename, binop);   \
   REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int64_t, optypename, binop);
 
 #define REGISTER_DIM_SCATTER_CPUKERNELS(optypename, binop) \
@@ -90,14 +91,14 @@ namespace user_op {
 
 #ifdef WITH_CUDA
 #define REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop)                            \
-  REGISTER_DIM_SCATTER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);          \
+  REGISTER_DIM_SCATTER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);     \
   REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
   REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
 #else
 #define REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop)
 #endif  // WITH_CUDA
 
-#define REGISTER_SCATTER_KERNEL(optypename, binop)   \
+#define REGISTER_SCATTER_KERNEL(optypename, binop)    \
   REGISTER_DIM_SCATTER_CPUKERNELS(optypename, binop); \
   REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop);
 
@@ -106,10 +107,11 @@ class DimScatterBaseKernel : public user_op::OpKernel {
  public:
   DimScatterBaseKernel() = default;
   ~DimScatterBaseKernel() override = default;
-  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
-                        const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, 
-                        int64_t elem_cnt, int32_t dim, int64_t upper_bound, const IDX_T* index, const IN_T* src,
-                        IN_T* output) const = 0;
+  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+                        const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                        const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+                        int64_t elem_cnt, int32_t dim, int64_t upper_bound, const IDX_T* index,
+                        const IN_T* src, IN_T* output) const = 0;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -132,7 +134,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
     } else {
-      std::cout<<"Unimplemented Error"<<std::endl;
+      std::cout << "Unimplemented Error" << std::endl;
       throw Error::Unimplemented();
     }
 
@@ -150,11 +152,10 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     int64_t upper_bound = 0;
-    if(input_tensor){
-      upper_bound = input_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
-    }
-    else{
-      upper_bound = like_tensor->shape().At(dim); // ensure the idx is smaller than upperbound
+    if (input_tensor) {
+      upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
+    } else {
+      upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
     }
 
     BinaryOp(ctx->device_ctx(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,

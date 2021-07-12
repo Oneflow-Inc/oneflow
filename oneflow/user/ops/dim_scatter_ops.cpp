@@ -38,8 +38,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_LE_OR_RETURN(src_num_axes, kDimGatherMaxDimCount);
   int64_t index_num_axes = index->shape().NumAxes();
   CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
-  
-  int64_t output_num_axes = 0; 
+
+  int64_t output_num_axes = 0;
   if (input) {
     output_num_axes = input->shape().NumAxes();
   } else if (like) {
@@ -48,23 +48,22 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     throw Error::Unimplemented();
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
-  
+
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if(i==dim) continue; 
-    if(input){
+    if (i == dim) continue;
+    if (input) {
       CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
-      }
-    else{
+    } else {
       CHECK_LE_OR_RETURN(index->shape().At(i), like->shape().At(i));
-      }
     }
-  
+  }
+
   // check index.shape(i) <= src.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if(i==dim) continue; 
+    if (i == dim) continue;
     CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
-    }
+  }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
@@ -81,13 +80,13 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   int64_t output_num_axes = input->shape().NumAxes();
   int64_t index_num_axes = index->shape().NumAxes();
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
-  
+
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if(i==dim) continue; 
+    if (i == dim) continue;
     CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
   }
-  
+
   TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = input->shape();
   return Maybe<void>::Ok();
@@ -95,26 +94,24 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
-
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
-  
+
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InputScalarArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
-                               const user_op::UserOpConfWrapper&) {
+                                     const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
-  
+
   return Maybe<void>::Ok();
 }
 
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_input) {
-  const user_op::TensorDesc& index_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
+  const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
   int64_t index_num_axes = index_tensor.shape().NumAxes();
   const int32_t dim = ctx->Attr<int32_t>("dim");
 
@@ -165,10 +162,9 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
   const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-  if(input){
+  if (input) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
-  }
-  else{
+  } else {
     CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
   }
   *ctx->OutputDType("output", 0) = ctx->InputDType("src", 0);
@@ -188,105 +184,103 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
   REGISTER_USER_OP(optypename)                 \
       .Input("like")                           \
       .Input("index")                          \
-      .Input("src")                          \
+      .Input("src")                            \
       .Output("output")                        \
       .Attr<int32_t>("dim")                    \
       .SetTensorDescInferFn(InferTensorDesc)   \
       .SetInputArgModifyFn(InputArgModifierFn) \
-      .SetDataTypeInferFn(InferDtype) \
+      .SetDataTypeInferFn(InferDtype)          \
       .SetGetSbpFn(SetSbpLike)
 
-
-#define REGISTER_SCATTER_OP(optypename)       \
-  REGISTER_USER_OP(optypename)                        \
-      .Input("input")                                 \
-      .Input("index") \
-      .Input("src")                           \
-      .Output("output")                               \
-      .Attr<int32_t>("dim")                           \
-      .SetTensorDescInferFn(InferTensorDesc)          \
+#define REGISTER_SCATTER_OP(optypename)        \
+  REGISTER_USER_OP(optypename)                 \
+      .Input("input")                          \
+      .Input("index")                          \
+      .Input("src")                            \
+      .Output("output")                        \
+      .Attr<int32_t>("dim")                    \
+      .SetTensorDescInferFn(InferTensorDesc)   \
       .SetInputArgModifyFn(InputArgModifierFn) \
-      .SetDataTypeInferFn(InferDtype) \
+      .SetDataTypeInferFn(InferDtype)          \
       .SetGetSbpFn(SetSbpScatter)
 
 #define REGISTER_SCATTER_SCALAR_OP(optypename)       \
-  REGISTER_USER_OP(optypename)                        \
-      .Input("input")                                 \
-      .Input("index")                                 \
-      .Attr<float>("src_scalar")                      \
-      .Output("output")                               \
-      .Attr<int32_t>("dim")                           \
-      .SetTensorDescInferFn(InferScalarTensorDesc)          \
+  REGISTER_USER_OP(optypename)                       \
+      .Input("input")                                \
+      .Input("index")                                \
+      .Attr<float>("src_scalar")                     \
+      .Output("output")                              \
+      .Attr<int32_t>("dim")                          \
+      .SetTensorDescInferFn(InferScalarTensorDesc)   \
       .SetInputArgModifyFn(InputScalarArgModifierFn) \
-      .SetDataTypeInferFn(InferScalarDtype) \
+      .SetDataTypeInferFn(InferScalarDtype)          \
       .SetGetSbpFn(SetSbpScatter)
 
-#define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
-  REGISTER_USER_OP_GRAD(optypename)                                                      \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                 \
-        const TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0); \
-        const TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0); \
-        const int64_t ndim = src.shape().NumAxes(); \
-        bool backprop_flag = true;  \
-        FOR_RANGE(int64_t, i, 0, ndim) { \
-          if(index.shape().At(i)!=src.shape().At(i)){ \
-            backprop_flag = false; \
-            break; \
-          } \
-        }\
-        if(backprop_flag){ \
-          const auto op_src_grad_name = ctx->FwOp().op_name() + "_src_grad";                       \
-          ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-            return builder.OpTypeName("dim_gather")                                        \
-                .InputBind("index", ctx->FwOp().input("index", 0))                         \
-                .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
-                .Output("output")                                                          \
-                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                             \
-                .Build();                                                                  \
-          });                                                                              \
-          ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                            \
-                                    [&ctx, &op_src_grad_name]() -> const std::string& {        \
-                                      return ctx->GetOp(op_src_grad_name).output("output", 0); \
-                                    });                                                        \
-          const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
+#define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                                \
+  REGISTER_USER_OP_GRAD(optypename)                                                              \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                          \
+        const TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0);                \
+        const TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0);            \
+        const int64_t ndim = src.shape().NumAxes();                                              \
+        bool backprop_flag = true;                                                               \
+        FOR_RANGE(int64_t, i, 0, ndim) {                                                         \
+          if (index.shape().At(i) != src.shape().At(i)) {                                        \
+            backprop_flag = false;                                                               \
+            break;                                                                               \
+          }                                                                                      \
+        }                                                                                        \
+        if (backprop_flag) {                                                                     \
+          const auto op_src_grad_name = ctx->FwOp().op_name() + "_src_grad";                     \
+          ctx->DefineOp(op_src_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {          \
+            return builder.OpTypeName("dim_gather")                                              \
+                .InputBind("index", ctx->FwOp().input("index", 0))                               \
+                .InputBind("input", ctx->FwOp().output_grad("output", 0))                        \
+                .Output("output")                                                                \
+                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                                   \
+                .Build();                                                                        \
+          });                                                                                    \
+          ctx->FwOp().InputGradBind(user_op::OpArg("src", 0),                                    \
+                                    [&ctx, &op_src_grad_name]() -> const std::string& {          \
+                                      return ctx->GetOp(op_src_grad_name).output("output", 0);   \
+                                    });                                                          \
+          const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                 \
           ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-            return builder.OpTypeName("dim_scatter_scalar_update")                                        \
-                .InputBind("index", ctx->FwOp().input("index", 0))                         \
-                .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
-                .Output("output")                                                          \
-                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
-                .Attr("src_scalar", static_cast<float>(0.0))                             \
-                .Build();                                                                  \
-          });                                                                              \
-          ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+            return builder.OpTypeName("dim_scatter_scalar_update")                               \
+                .InputBind("index", ctx->FwOp().input("index", 0))                               \
+                .InputBind("input", ctx->FwOp().output_grad("output", 0))                        \
+                .Output("output")                                                                \
+                .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                                   \
+                .Attr("src_scalar", static_cast<float>(0.0))                                     \
+                .Build();                                                                        \
+          });                                                                                    \
+          ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                                  \
                                     [&ctx, &op_input_grad_name]() -> const std::string& {        \
                                       return ctx->GetOp(op_input_grad_name).output("output", 0); \
-                                    });  \
-          } \
-        else{ \
-          std::cout<<"The backward pass is implemented only for src.shape == index.shape."<<std::endl;\
-          throw Error::Unimplemented(); \
-        }\
+                                    });                                                          \
+        } else {                                                                                 \
+          std::cout << "The backward pass is implemented only for src.shape == index.shape."     \
+                    << std::endl;                                                                \
+          throw Error::Unimplemented();                                                          \
+        }                                                                                        \
       });
 
-
-#define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                        \
-  REGISTER_USER_OP_GRAD(optypename)                                                      \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
-        const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                       \
+#define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                       \
+  REGISTER_USER_OP_GRAD(optypename)                                                            \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                        \
+        const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                 \
         ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-          return builder.OpTypeName("dim_scatter_scalar_update")                                        \
-              .InputBind("index", ctx->FwOp().input("index", 0))                         \
-              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
-              .Output("output")                                                          \
-              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                 \
-              .Attr("src_scalar", static_cast<float>(0.0))                             \
-              .Build();                                                                  \
-        });                                                                              \
-        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+          return builder.OpTypeName("dim_scatter_scalar_update")                               \
+              .InputBind("index", ctx->FwOp().input("index", 0))                               \
+              .InputBind("input", ctx->FwOp().output_grad("output", 0))                        \
+              .Output("output")                                                                \
+              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                                   \
+              .Attr("src_scalar", static_cast<float>(0.0))                                     \
+              .Build();                                                                        \
+        });                                                                                    \
+        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                                  \
                                   [&ctx, &op_input_grad_name]() -> const std::string& {        \
                                     return ctx->GetOp(op_input_grad_name).output("output", 0); \
-                                  });                                                        \
+                                  });                                                          \
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
@@ -300,6 +294,6 @@ REGISTER_SCATTER_SCALAR_OP("dim_scatter_scalar_add");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
 
-REGISTER_USER_OP_GRAD_SCATTER_SCALAR("dim_scatter_scalar_update"); 
+REGISTER_USER_OP_GRAD_SCATTER_SCALAR("dim_scatter_scalar_update");
 }  // namespace user_op
 }  // namespace oneflow

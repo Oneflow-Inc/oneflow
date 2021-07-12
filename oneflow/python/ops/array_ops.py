@@ -2648,6 +2648,7 @@ def nvtx_end(
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
+
 def _check_scatter_blobs(input, dim, index, src):
     _input_num_axes = len(input.shape)
     _index_num_axes = len(index.shape)
@@ -2662,7 +2663,7 @@ def _check_scatter_blobs(input, dim, index, src):
     assert dim < _index_num_axes, ValueError(
         "Value of dim is out of range(dim should be less than the num axes of index)"
     )
-    
+
     for i in range(0, _input_num_axes):
         assert index.shape[i] <= input.shape[i], ValueError(
             "Shape of input should be larger than index"
@@ -2739,7 +2740,7 @@ def dim_scatter_update(
 
     """
 
-    if type(src) is oneflow._oneflow_internal.LazyConsistentBlob: 
+    if type(src) is oneflow._oneflow_internal.LazyConsistentBlob:
         _check_scatter_blobs(input, dim, index, src)
         return (
             flow.user_op_builder(
@@ -2755,21 +2756,23 @@ def dim_scatter_update(
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
-    else: 
+    else:
         return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatterScalarUpdate_")
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("DimScatterScalarUpdate_")
+            )
+            .Op("dim_scatter_scalar_update")
+            .Input("input", [input])
+            .Input("index", [index])
+            .Attr("src_scalar", float(src))
+            .Output("output")
+            .Attr("dim", int(dim))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
         )
-        .Op("dim_scatter_scalar_update")
-        .Input("input", [input])
-        .Input("index", [index])
-        .Attr("src_scalar", float(src))
-        .Output("output")
-        .Attr("dim", int(dim))
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
 
 
 @oneflow_export("dim_scatter_add")
