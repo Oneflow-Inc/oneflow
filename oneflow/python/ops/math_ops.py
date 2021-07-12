@@ -2049,6 +2049,7 @@ def polyval(
 
 
 @oneflow_export("math.in_top_k", "in_top_k")
+@stable_api
 def in_top_k(
     targets: oneflow._oneflow_internal.BlobDesc,
     predictions: oneflow._oneflow_internal.BlobDesc,
