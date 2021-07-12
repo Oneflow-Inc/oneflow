@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -486,6 +487,65 @@ class DiagGradFunctor{
 };
 
 
+class TensorGetItemFunctor {
+ public:
+  TensorGetItemFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    const auto& regular_index = JUST(RegularTensorIndex(index, *(x->shape())));
+    int64_t ndims = x->shape()->NumAxes();
+    CHECK_GE_OR_RETURN(regular_index->size(), ndims) << "Tensor index failed to be regularlized.";
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    int dim = 0;
+    DimVector result_dims;
+    for (int i = 0; i < regular_index->size(); ++i) {
+      const auto& index_item = regular_index->at(i);
+      CHECK_OR_RETURN(!index_item.IsEllipsis())
+          << "Tensor index should not have ellipsis once regularlized.";
+      if (index_item.IsSlice()) {
+        CHECK_LT_OR_RETURN(dim, ndims);
+        start[dim] = index_item.slice().start();
+        end[dim] = index_item.slice().end();
+        step[dim] = index_item.slice().step();
+        int64_t length = (end[dim] - start[dim] + step[dim] - 1) / step[dim];
+        result_dims.emplace_back(length);
+        dim++;
+      } else if (index_item.IsInteger()) {
+        CHECK_LT_OR_RETURN(dim, ndims);
+        start[dim] = index_item.integer();
+        end[dim] = start[dim] + 1;
+        step[dim] = 1;
+        dim++;
+      } else if (index_item.IsNone()) {
+        result_dims.emplace_back(1);
+      } else if (index_item.IsBoolean()) {
+        CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
+        result_dims.emplace_back(1);
+      }
+    }
+    CHECK_EQ_OR_RETURN(dim, ndims)
+        << "Specified dims count for regularlized tensor index should equal to tensor dimension "
+        << ndims;
+
+    bool is_identity = [&]() {
+      for (int i = 0; i < ndims; ++i) {
+        if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
+      }
+      return true;
+    }();
+    std::shared_ptr<one::Tensor> result;
+    if (is_identity) {
+      result = JUST(functional::Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
+    } else {
+      result = JUST(functional::Slice(x, start, end, step));
+    }
+
+    Shape shape(result_dims);
+    if (shape.NumAxes() != 0 && shape != *(result->shape())) {
+      return functional::Reshape(result, shape);
+    }
+    return result;
+  }
+};
 
 }  // namespace impl
 
@@ -516,6 +576,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
+  m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
 };
 
 }  // namespace functional
