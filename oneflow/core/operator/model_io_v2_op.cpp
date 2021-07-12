@@ -21,11 +21,12 @@ namespace oneflow {
 
 class ModelInitV2Op : public Operator {
  public:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_model_init_v2_conf());
     FOR_RANGE(int64_t, i, 0, op_conf().model_init_v2_conf().ref_size()) {
       EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
     }
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -59,12 +60,13 @@ REGISTER_OP(OperatorConf::kModelInitV2Conf, ModelInitV2Op);
 
 class ModelLoadV2Op : public Operator {
  public:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_model_load_v2_conf());
     EnrollInputBn("path", false);
     FOR_RANGE(int64_t, i, 0, op_conf().model_load_v2_conf().ref_size()) {
       EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
     }
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -109,10 +111,11 @@ class ModelSaveV2Op final : public Operator {
   ModelSaveV2Op() = default;
   ~ModelSaveV2Op() override = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_model_save_v2_conf());
     EnrollInputBn("path", false);
     EnrollRepeatedInputBn("in", false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(

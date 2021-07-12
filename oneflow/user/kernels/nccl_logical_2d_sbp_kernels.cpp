@@ -324,9 +324,9 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
 
 size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
   size_t ret = 0;
-  const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
-      GetCudaAlignedSize(in_tensor->shape().elem_cnt() * GetSizeOfDataType(in_tensor->data_type()));
+      GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
   const cfg::SbpParallel& in_sbp =
       ctx->ParallelDistribution4ArgNameAndIndex("in", 0).sbp_parallel(1);
   const cfg::SbpParallel& out_sbp =

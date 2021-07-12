@@ -31,7 +31,7 @@ namespace functional {
 
 namespace impl {
 
-class AddFunctor : public BinaryFunctor {
+class AddFunctor : public InplaceableBinaryFunctor {
  public:
   AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
 };
@@ -50,7 +50,7 @@ class PowFunctor : public BinaryFunctor {
   }
 };
 
-class BroadcastAddFunctor : public BinaryFunctor {
+class BroadcastAddFunctor : public InplaceableBinaryFunctor {
  public:
   BroadcastAddFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
@@ -131,7 +131,7 @@ class BroadcastLessEqualFunctor : public BinaryFunctor {
   }
 };
 
-class ScalarAddByTensorFunctor : public BinaryFunctor {
+class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
     op_ = CHECK_JUST(
