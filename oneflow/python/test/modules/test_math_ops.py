@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from automated_test_util import *
 
 
 def _test_variance_keepdim(test_case, shape, device):
@@ -448,6 +449,30 @@ class TestAsin(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_asin(test_case, *arg)
             _test_arcsin(test_case, *arg)
+
+    def test_flow_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "asin", device=device,
+            )
+
+    def test_flow_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arcsin", device=device,
+            )
+
+    def test_flow_tensor_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "asin", device=device,
+            )
+
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arcsin", device=device,
+            )
 
 
 def _test_asinh(test_case, shape, device):
