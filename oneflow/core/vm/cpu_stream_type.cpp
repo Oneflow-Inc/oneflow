@@ -33,8 +33,7 @@ void CpuStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
-}  // namespace
-   // voidCpuStreamType::InitInstructionStatus(constStream&stream,InstructionStatusBuffer*status_buffer)const
+}
 
 void CpuStreamType::DeleteInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {

@@ -236,6 +236,18 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   return object_id;
 }
 
+Maybe<void> InstructionsBuilder::RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                                            const one::EagerBlobObjectListPtr& outputs,
+                                            const one::EagerBlobObjectListPtr& parameters,
+                                            const std::shared_ptr<NNGraphIf>& nn_graph) const {
+  static std::string instr_name("RunLazyJob");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::RunLazyJobPhyInstrOperand>(inputs, outputs, parameters, nn_graph);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
 Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
     const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -886,7 +898,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -898,7 +910,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -929,7 +941,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -1564,7 +1576,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1572,19 +1584,19 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   const auto& eager_symbol_list = sess->eager_symbol_list();
   InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
                                            eager_symbol_list.get(), _ReleaseLogicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   JUST(Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   if (debug::RecordingInstructions()) {
     OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
       debug::RecordInstruction(instruction_msg);
