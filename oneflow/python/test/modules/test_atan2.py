@@ -20,6 +20,7 @@ import numpy as np
 
 from test_util import GenArgList
 import oneflow.experimental as flow
+from automated_test_util import *
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):
@@ -120,6 +121,23 @@ class TestAtan2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_atan2_backward(test_case, *arg)
 
+    def test_flow_atan2_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "atan2",
+                extra_annotations={"other": flow.Tensor},
+                extra_generators={"input": random_tensor(ndim=1, dim1=1), "other": random_tensor(ndim=1, dim1=1)},
+                device=device,
+            )
+
+    # def test_flow_tensor_atan2_with_random_data(test_case):
+    #     for device in ["cpu", "cuda"]:
+    #         test_tensor_against_pytorch(
+    #             test_case, 
+    #             "atan2", 
+    #             device=device, 
+    #         )
 
 if __name__ == "__main__":
     unittest.main()

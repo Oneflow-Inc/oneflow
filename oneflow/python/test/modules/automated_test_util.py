@@ -220,6 +220,10 @@ def test_against_pytorch(
                 if rng.random() < 1 / 3:
                     continue
             flow_data, torch_data = generate(name)
+            if isinstance(torch_data, torch.Tensor):
+                torch_data = torch_data.to(device)
+            if isinstance(flow_data, flow.Tensor):
+                flow_data = flow_data.to(device)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
 
