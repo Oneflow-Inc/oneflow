@@ -244,7 +244,7 @@ class InferenceSession(object):
                 "not supported device tag {}".format(self.option_.device_tag)
             )
 
-        self.config_proto_.io_conf.enable_legacy_model_io = True
+        self.config_proto_.resource.enable_legacy_model_io = True
 
     def set_checkpoint_path(self, checkpoint_path):
         self._check_status(self.SessionStatus.OPEN)
