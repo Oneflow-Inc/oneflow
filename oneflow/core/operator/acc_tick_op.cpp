@@ -27,11 +27,12 @@ Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& G
 
 }  // namespace
 
-void AccTickOp::InitFromOpConf() {
+Maybe<void> AccTickOp::InitFromOpConf() {
   CHECK(op_conf().has_acc_tick_conf());
 
   EnrollInputBn("one", false);
   EnrollOutputBn("acc", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> AccTickOp::InferLogicalOutBlobDescs(

@@ -58,11 +58,12 @@ class BroadcastToCompatibleWithOp final : public Operator {
   BroadcastToCompatibleWithOp() = default;
   ~BroadcastToCompatibleWithOp() override = default;
 
-  void InitFromOpConf() {
+  Maybe<void> InitFromOpConf() {
     CHECK(op_conf().has_broadcast_to_compatible_with_conf());
     EnrollInputBn("x");
     EnrollRepeatedInputBn("compatible", false);
     EnrollOutputBn("y");
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
