@@ -28,34 +28,34 @@ OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
   return x > threshold ? x : threshold;
 }
 
-// #if defined(__CUDACC__)
-// __device__ __forceinline__ half MaxWithLogThreshold(half x) {
+#if defined(__HIP_DEVICE_COMPILE__)
+__device__ __forceinline__ half MaxWithLogThreshold(half x) {
 // #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-//   half threshold = hexp2(__float2half(-14.0));
-//   if (__hgt(x, threshold)) { return x; }
-//   return threshold;
+  half threshold = hexp2(__float2half(-14.0));
+  if (__hgt(x, threshold)) { return x; }
+  return threshold;
 // #else
 //   printf("use half need nvcc arch >= 530");
 //   assert(false);
 // #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-// }
-// #endif
+}
+#endif
 
 template<typename T>
 OF_DEVICE_FUNC T SafeLog(T x) {
   return logf(MaxWithLogThreshold(x));
 }
 
-// #if defined(__CUDACC__)
-// __device__ __forceinline__ half SafeLog(half x) {
+#if defined(__HIP_DEVICE_COMPILE__)
+__device__ __forceinline__ half SafeLog(half x) {
 // #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-//   return hlog(MaxWithLogThreshold(x));
+  return hlog(MaxWithLogThreshold(x));
 // #else
 //   printf("use half need nvcc arch >= 530");
 //   assert(false);
 // #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-// }
-// #endif
+}
+#endif
 
 }  // namespace oneflow
 

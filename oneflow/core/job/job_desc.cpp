@@ -62,7 +62,7 @@ Maybe<void> JobDesc::Init() {
       << "Please compile ONEFLOW with RDMA";
 #endif
 
-#ifndef WITH_CUDA
+#if !defined(WITH_CUDA) && !defined(WITH_ROCM)
   CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
 #endif
   CheckFunctionConfig(job_conf_);

@@ -43,6 +43,8 @@ class RocmDeviceCtx : public DeviceCtx {
   const hipblasHandle_t& hipblas_pmd_handle() const override {
     return *(rocm_handler_->hipblas_pmd_handle());
   }
+
+  const miopenHandle_t& miopen_handle() const override { return *(rocm_handler_->miopen_handle()); }
   
   void SyncDevice() override { OF_ROCM_CHECK(hipStreamSynchronize(rocm_stream())); }
 

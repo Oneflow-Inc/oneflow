@@ -33,7 +33,7 @@ void ForeignWatchKernel<device_type>::ForwardDataContent(
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kCPU,
                             ForeignWatchKernel<DeviceType::kCPU>);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kGPU,
                             ForeignWatchKernel<DeviceType::kGPU>);
 #endif

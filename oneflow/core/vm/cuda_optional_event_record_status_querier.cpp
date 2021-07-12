@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 namespace vm {
-
+#if defined(WITH_CUDA)
 bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
   cudaSetDevice(device_id_);
   return cudaEventQuery(event_) == cudaSuccess;
@@ -35,6 +35,22 @@ void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   }
   launched_ = true;
 }
+#elif defined(WITH_ROCM)
+bool CudaOptionalEventRecordStatusQuerier::event_completed() const {
+  hipSetDevice(device_id_);
+  return hipEventQuery(event_) == hipSuccess;
+}
+
+void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
+  if (has_event_record_) {
+    hipSetDevice(device_id_);
+    OF_ROCM_CHECK(
+        hipEventCreateWithFlags(&event_, hipEventBlockingSync | hipEventDisableTiming));
+    OF_ROCM_CHECK(hipEventRecord(event_, device_ctx->rocm_stream()));
+  }
+  launched_ = true;
+}
+#endif
 
 }  // namespace vm
 }  // namespace oneflow

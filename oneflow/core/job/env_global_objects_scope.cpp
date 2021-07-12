@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -64,12 +65,16 @@ void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 int32_t GetDefaultGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
+#ifdef WITH_CUDA
   int device_count = 0;
   cudaGetDeviceCount(&device_count);
   return device_count;
+#elif WITH_ROCM
+  int device_count = 0;
+  hipGetDeviceCount(&device_count);
+  return device_count;
+#else
+  return 0;
 #endif
 }
 
@@ -92,6 +97,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto, bool is_multi
   InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
+#elif WITH_ROCM
+  InitGlobalRocmDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
@@ -177,6 +184,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
+#elif WITH_ROCM
+  Global<hipDeviceProp_t>::Delete();
 #endif
   google::ShutdownGoogleLogging();
 }

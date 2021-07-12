@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 

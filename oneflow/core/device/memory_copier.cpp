@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
+
 namespace oneflow {
 
 namespace {
@@ -299,8 +300,218 @@ void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
 }
 #endif
 
+#ifdef WITH_ROCM
+
+namespace {
+
+bool CanCurDevAccessPointer(const void* ptr) {
+  int device_id;
+  OF_ROCM_CHECK(hipGetDevice(&device_id));
+  hipPointerAttribute_t attributes;
+  OF_ROCM_CHECK(hipPointerGetAttributes(&attributes, ptr));
+  return (attributes.memoryType == hipMemoryTypeDevice && attributes.device == device_id)
+         || (attributes.memoryType == hipMemoryTypeHost);
+}
+
+template<int32_t NDIMS, typename I>
+struct SOA {
+  I val[NDIMS];
+};
+
+template<int32_t NDIMS, typename T, typename I>
+__global__ void CopyNDGpu(const int n, T* dst, const T* src,
+                          NdIndexOffsetHelper<I, NDIMS> dst_helper,
+                          NdIndexOffsetHelper<I, NDIMS> src_helper,
+                          NdIndexOffsetHelper<I, NDIMS> copy_helper, SOA<NDIMS, I> dst_pos,
+                          SOA<NDIMS, I> src_pos) {
+  ROCM_1D_KERNEL_LOOP_T(I, i, n) {
+    I copy_idx[NDIMS];
+    I src_idx[NDIMS];
+    I dst_idx[NDIMS];
+    copy_helper.OffsetToNdIndex(i, copy_idx);
+#pragma unroll
+    for (I j = 0; j < NDIMS; j++) {
+      src_idx[j] = src_pos.val[j] + copy_idx[j];
+      dst_idx[j] = dst_pos.val[j] + copy_idx[j];
+    }
+    const I src_offset = src_helper.NdIndexToOffset(src_idx);
+    const I dst_offset = dst_helper.NdIndexToOffset(dst_idx);
+    dst[dst_offset] = src[src_offset];
+  }
+}
+
+size_t GetPackSize(const MemoryCopyNdDesc& desc, const void* dst, const void* src) {
+  const int64_t mask = desc.src_shape.dim_vec().back() | desc.dst_shape.dim_vec().back()
+                       | desc.extent.dim_vec().back() | desc.src_pos.dim_vec().back()
+                       | desc.dst_pos.dim_vec().back()
+                       | static_cast<int64_t>(reinterpret_cast<uintptr_t>(dst))
+                       | static_cast<int64_t>(reinterpret_cast<uintptr_t>(src));
+  if ((mask & 0xF) == 0) {
+    return 16;
+  } else if ((mask & 0x7) == 0) {
+    return 8;
+  } else if ((mask & 0x3) == 0) {
+    return 4;
+  } else if ((mask & 0x1) == 0) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+}  // namespace
+
+template<int32_t NDIMS, typename P, typename I>
+void CopyNDByPackByIndexTypeGpu(DeviceCtx* ctx, void* dst, const void* src,
+                                const MemoryCopyNdDesc& desc) {
+  CHECK_EQ(desc.dst_pos.NumAxes(), NDIMS);
+  CHECK_EQ(desc.src_pos.NumAxes(), NDIMS);
+  CHECK_EQ(desc.dst_shape.NumAxes(), NDIMS);
+  CHECK_EQ(desc.src_shape.NumAxes(), NDIMS);
+  CHECK_EQ(desc.extent.NumAxes(), NDIMS);
+  constexpr size_t pack_size = sizeof(P);
+  I dst_shape_dim_arr[NDIMS];
+  I src_shape_dim_arr[NDIMS];
+  I extent_dim_arr[NDIMS];
+  SOA<NDIMS, I> src_pos;
+  SOA<NDIMS, I> dst_pos;
+  FOR_RANGE(int64_t, i, 0, NDIMS) {
+    if (i == NDIMS - 1) {
+      dst_pos.val[i] = desc.dst_pos.dim_vec().at(i) / pack_size;
+      src_pos.val[i] = desc.src_pos.dim_vec().at(i) / pack_size;
+      dst_shape_dim_arr[i] = desc.dst_shape.dim_vec().at(i) / pack_size;
+      src_shape_dim_arr[i] = desc.src_shape.dim_vec().at(i) / pack_size;
+      extent_dim_arr[i] = desc.extent.dim_vec().at(i) / pack_size;
+    } else {
+      dst_pos.val[i] = desc.dst_pos.dim_vec().at(i);
+      src_pos.val[i] = desc.src_pos.dim_vec().at(i);
+      dst_shape_dim_arr[i] = desc.dst_shape.dim_vec().at(i);
+      src_shape_dim_arr[i] = desc.src_shape.dim_vec().at(i);
+      extent_dim_arr[i] = desc.extent.dim_vec().at(i);
+    }
+  }
+  NdIndexOffsetHelper<I, NDIMS> dst_helper(dst_shape_dim_arr);
+  NdIndexOffsetHelper<I, NDIMS> src_helper(src_shape_dim_arr);
+  NdIndexOffsetHelper<I, NDIMS> copy_helper(extent_dim_arr);
+  const int64_t elem_cnt = desc.extent.elem_cnt() / pack_size;
+  CopyNDGpu<NDIMS, P, I>
+      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          elem_cnt, reinterpret_cast<P*>(dst), reinterpret_cast<const P*>(src), dst_helper,
+          src_helper, copy_helper, dst_pos, src_pos);
+}
+
+template<int32_t NDIMS, typename P>
+void CopyNDByPackGpu(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+  if (std::max(desc.dst_shape.elem_cnt(), desc.src_shape.elem_cnt())
+      > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
+    CopyNDByPackByIndexTypeGpu<NDIMS, P, int64_t>(ctx, dst, src, desc);
+  } else {
+    CopyNDByPackByIndexTypeGpu<NDIMS, P, int32_t>(ctx, dst, src, desc);
+  }
+}
+
+template<int32_t NDIMS>
+void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) {
+  const size_t pack_size = GetPackSize(desc, dst, src);
+  if (pack_size == 1) {
+    CopyNDByPackGpu<NDIMS, uint8_t>(ctx, dst, src, desc);
+  } else if (pack_size == 2) {
+    CopyNDByPackGpu<NDIMS, uint16_t>(ctx, dst, src, desc);
+  } else if (pack_size == 4) {
+    CopyNDByPackGpu<NDIMS, uint32_t>(ctx, dst, src, desc);
+  } else if (pack_size == 8) {
+    CopyNDByPackGpu<NDIMS, uint64_t>(ctx, dst, src, desc);
+  } else if (pack_size == 16) {
+    static_assert(sizeof(uint4) == 16, "");
+    CopyNDByPackGpu<NDIMS, uint4>(ctx, dst, src, desc);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+#define SPECIALIZE_COPY_ND_GPU_IMPL(NDIMS)                                        \
+  template void CopyNDGpuImpl<NDIMS>(DeviceCtx * ctx, void* dst, const void* src, \
+                                     const MemoryCopyNdDesc& desc);
+SPECIALIZE_COPY_ND_GPU_IMPL(2)
+SPECIALIZE_COPY_ND_GPU_IMPL(3)
+SPECIALIZE_COPY_ND_GPU_IMPL(4)
+SPECIALIZE_COPY_ND_GPU_IMPL(5)
+SPECIALIZE_COPY_ND_GPU_IMPL(6)
+
+void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
+                                 const MemoryCopyNdDesc& desc) const {
+  CheckMemoryCopyNdDesc(desc);
+  const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
+  const bool use_nd_impl =
+      CanCurDevAccessPointer(dst) && CanCurDevAccessPointer(src) && (num_axes != 1);
+  if (use_nd_impl) {
+    CopyND(ctx, dst, src, desc);
+  } else {
+    if (num_axes == 1) {
+      Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0),
+             (unsigned char*)src + desc.src_pos.At(0), desc.extent.At(0));
+    } else if (num_axes == 2) {
+      const size_t dst_pitch = desc.dst_shape.At(1);
+      const size_t src_pitch = desc.src_shape.At(1);
+      const size_t width = desc.extent.At(1);
+      const size_t height = desc.extent.At(0);
+      void* dst_2d = (unsigned char*)dst + desc.dst_pos.At(0) * dst_pitch + desc.dst_pos.At(1);
+      const void* src_2d =
+          (const unsigned char*)src + desc.src_pos.At(0) * src_pitch + desc.src_pos.At(1);
+      Copy2D(ctx, dst_2d, dst_pitch, src_2d, src_pitch, width, height);
+    } else if (num_axes == 3) {
+      Copy3D(ctx, dst, src, desc);
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+}
+
+void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
+  OF_ROCM_CHECK(hipMemcpyAsync(dst, src, count, hipMemcpyDefault, ctx->rocm_stream()));
+}
+
+void CudaAsyncMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                                   size_t src_pitch, size_t width, size_t height) const {
+  OF_ROCM_CHECK(hipMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, hipMemcpyDefault,
+                                  ctx->rocm_stream()));
+}
+
+void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+                                   const MemoryCopyNdDesc& desc) const {
+  hipMemcpy3DParms params{};
+  params.srcPos = make_hipPos(desc.src_pos.At(2), desc.src_pos.At(1), desc.src_pos.At(0));
+  params.srcPtr = make_hipPitchedPtr(const_cast<void*>(src), desc.src_shape.At(2),
+                                      desc.src_shape.At(2), desc.src_shape.At(1));
+  params.dstPos = make_hipPos(desc.dst_pos.At(2), desc.dst_pos.At(1), desc.dst_pos.At(0));
+  params.dstPtr =
+      make_hipPitchedPtr(dst, desc.dst_shape.At(2), desc.dst_shape.At(2), desc.dst_shape.At(1));
+  params.extent = make_hipExtent(desc.extent.At(2), desc.extent.At(1), desc.extent.At(0));
+  params.kind = hipMemcpyDefault;
+  OF_ROCM_CHECK(hipMemcpy3DAsync(&params, ctx->rocm_stream()));
+}
+
+void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                                   const MemoryCopyNdDesc& desc) const {
+  const int32_t num_axes = desc.src_shape.NumAxes();
+  if (num_axes == 2) {
+    CopyNDGpuImpl<2>(ctx, dst, src, desc);
+  } else if (num_axes == 3) {
+    CopyNDGpuImpl<3>(ctx, dst, src, desc);
+  } else if (num_axes == 4) {
+    CopyNDGpuImpl<4>(ctx, dst, src, desc);
+  } else if (num_axes == 5) {
+    CopyNDGpuImpl<5>(ctx, dst, src, desc);
+  } else if (num_axes == 6) {
+    CopyNDGpuImpl<6>(ctx, dst, src, desc);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+#endif
+
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
 #endif
 

@@ -68,7 +68,7 @@ struct NdarrayApplyBroadcastUnaryCoreWrapper<DeviceType::kGPU, T, NDIMS, unary_f
   template struct NdarrayApplyBroadcastUnaryCoreWrapper<                \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, unary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_UNARY_FUNC_GPU,
-                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, DIM_SEQ,
                                  ARITHMETIC_UNARY_FUNC_SEQ)
 
 #endif

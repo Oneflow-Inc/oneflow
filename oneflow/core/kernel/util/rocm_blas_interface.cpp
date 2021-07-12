@@ -165,25 +165,25 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                      const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                      int batch_size, int m, int n, int k, const double alpha, const half* a,
                      const half* b, const double beta, half* c) {
-//   int a_stride, b_stride, c_stride;
-//   int lda, ldb, ldc;
-//   hipblasOperation_t cublas_trans_a, cublas_trans_b;
-//   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
-//       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
+  int a_stride, b_stride, c_stride;
+  int lda, ldb, ldc;
+  hipblasOperation_t cublas_trans_a, cublas_trans_b;
+  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
 //   if (GetCudaSmVersion() >= 500) {
-//     const float alpha_f = static_cast<float>(alpha);
-//     const float beta_f = static_cast<float>(beta);
+    const float alpha_f = static_cast<float>(alpha);
+    const float beta_f = static_cast<float>(beta);
 // #if CUDA_VERSION >= 11000
-//     cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
+    hipblasGemmAlgo_t algo = HIPBLAS_GEMM_DEFAULT;
 // #else
 //     cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
 // #endif
-//     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-//         ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
-//         reinterpret_cast<const void*>(b), CUDA_R_16F, ldb, b_stride,
-//         reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
-//         reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
+    OF_HIPBLAS_CHECK(hipblasGemmStridedBatchedEx(
+        ctx->hipblas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        reinterpret_cast<const void*>(b), HIPBLAS_R_16F, ldb, b_stride,
+        reinterpret_cast<const void*>(a), HIPBLAS_R_16F, lda, a_stride, &beta_f,
+        reinterpret_cast<void*>(c), HIPBLAS_R_16F, ldc, c_stride, batch_size, HIPBLAS_R_32F, algo));
 //   } else {
 //     const half alpha_h = static_cast<half>(alpha);
 //     const half beta_h = static_cast<half>(beta);

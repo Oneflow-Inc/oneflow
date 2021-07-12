@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -45,7 +45,7 @@ bool AsyncCudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
-
+#if defined(WITH_CUDA)
 void AsyncCudaStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
@@ -59,6 +59,21 @@ void AsyncCudaStreamType::Compute(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
+#elif defined(WITH_ROCM)
+void AsyncCudaStreamType::Compute(Instruction* instruction) const {
+  auto* stream = instruction->mut_stream();
+  hipSetDevice(stream->device_id());
+  {
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
+    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+    instr_type_id.instruction_type().Compute(instruction);
+    OF_ROCM_CHECK(hipGetLastError());
+  }
+  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+}
+#endif
 
 ObjectMsgPtr<StreamDesc> AsyncCudaStreamType::MakeStreamDesc(const Resource& resource,
                                                              int64_t this_machine_id) const {

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 
 namespace oneflow {
 
@@ -25,7 +26,7 @@ class DeviceCtx;
 
 namespace vm {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 class CudaOptionalEventRecordStatusQuerier {
  public:
   ~CudaOptionalEventRecordStatusQuerier() = default;
@@ -52,7 +53,11 @@ class CudaOptionalEventRecordStatusQuerier {
   std::atomic<bool> launched_;
   std::atomic<bool> has_event_record_;
   int64_t device_id_;
+#if defined(WITH_CUDA)
   cudaEvent_t event_;
+#elif defined(WITH_ROCM)
+  hipEvent_t event_;
+#endif
 };
 
 #endif

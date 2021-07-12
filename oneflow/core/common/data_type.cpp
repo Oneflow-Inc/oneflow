@@ -72,7 +72,7 @@ void CheckDataType() {
   static_assert(sizeof(int32_t) == sizeof(int), "sizeof(int32_t) != sizeof(int)");
   static_assert(sizeof(int64_t) == sizeof(long long), "sizeof(int64_t) != sizeof(long long)");
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #define CHECK_DEVICE_FP16(get_val)                              \
   do {                                                          \

@@ -69,6 +69,23 @@ const hipblasHandle_t* RocmStreamHandle::hipblas_tensor_op_math_handle() {
   return hipblas_tensor_op_math_handle_.get();
 }
 
+const miopenHandle_t* RocmStreamHandle::miopen_handle() {
+  if (!miopen_handle_) {
+    // if (IsCuda9OnTuringDevice()) {
+      OF_ROCM_CHECK(hipDeviceSynchronize());
+      OF_ROCM_CHECK(hipGetLastError());
+    // }
+    miopen_handle_.reset(new miopenHandle_t);
+    OF_MIOPEN_CHECK(miopenCreate(miopen_handle_.get()));
+    // if (IsCuda9OnTuringDevice()) {
+      OF_ROCM_CHECK(hipDeviceSynchronize());
+      hipGetLastError();
+    // }
+    OF_MIOPEN_CHECK(miopenSetStream(*miopen_handle_, *rocm_stream()));
+  }
+  return miopen_handle_.get();
+}
+
 void RocmStreamHandle::AddCallBack(std::function<void()> callback) {
   RocmCBEvent cb_event;
   cb_event.callback = std::move(callback);

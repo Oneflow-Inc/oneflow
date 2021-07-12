@@ -46,6 +46,7 @@ class DeviceCtx {
   virtual const hipblasHandle_t& hipblas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
+  virtual const miopenHandle_t& miopen_handle() const { UNIMPLEMENTED(); }
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }

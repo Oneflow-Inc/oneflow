@@ -7,6 +7,7 @@
 
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
+#include <miopen/miopen.h>
 
 namespace oneflow {
 
@@ -19,6 +20,12 @@ namespace oneflow {
   for (hipblasStatus_t _of_hipblas_check_status = (condition);                                       \
        _of_hipblas_check_status != HIPBLAS_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << " (" << _of_hipblas_check_status << ") "
+
+#define OF_MIOPEN_CHECK(condition)                                                                \
+  for (miopenStatus_t _of_cudnn_check_status = (condition);                                       \
+       _of_cudnn_check_status != miopenStatusSuccess;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << miopenGetErrorString(_of_cudnn_check_status) \
+             << " (" << _of_cudnn_check_status << ") "
 
 template<typename T>
 void RocmCheck(T error);
@@ -63,17 +70,17 @@ size_t GetAvailableGpuMemSize(int dev_id);
 #define ROCM_WORK_TYPE_SEQ       \
   OF_PP_MAKE_TUPLE_SEQ(kCompute) \
   OF_PP_MAKE_TUPLE_SEQ(kCopyH2D) \
-  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H)
-//   OF_PP_MAKE_TUPLE_SEQ(kNccl)    \
-//   OF_PP_MAKE_TUPLE_SEQ(kMix)     \
-//   OF_PP_MAKE_TUPLE_SEQ(kDecodeH2D)
+  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H) \
+  OF_PP_MAKE_TUPLE_SEQ(kNccl)    \
+  OF_PP_MAKE_TUPLE_SEQ(kMix)     \
+  OF_PP_MAKE_TUPLE_SEQ(kDecodeH2D)
 
-enum class RocmWorkType {
+enum class CudaWorkType {
 #define DECLARE_ROCM_WORK_TYPE(type) type,
   OF_PP_FOR_EACH_TUPLE(DECLARE_ROCM_WORK_TYPE, ROCM_WORK_TYPE_SEQ)
 };
 
-inline size_t GetRocmWorkTypeSize() { return OF_PP_SEQ_SIZE(ROCM_WORK_TYPE_SEQ); }
+inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(ROCM_WORK_TYPE_SEQ); }
 
 void NumaAwareRocmMallocHost(int32_t dev, void** ptr, size_t size);
 
@@ -87,8 +94,8 @@ void RocmDeviceSetCpuAffinity(int32_t dev);
 
 #define ROCM_DATA_TYPE_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(float, HIPBLAS_R_32F)  \
-  OF_PP_MAKE_TUPLE_SEQ(double, HIPBLAS_R_64F)
-//   OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
+  OF_PP_MAKE_TUPLE_SEQ(double, HIPBLAS_R_64F) \
+  OF_PP_MAKE_TUPLE_SEQ(float16, HIPBLAS_R_16F)
 
 hipblasDatatype_t GetRocmDataType(DataType);
 
@@ -111,16 +118,6 @@ class RocmCurrentDeviceGuard final {
  private:
   int32_t saved_dev_id_ = -1;
 };
-
-}  // namespace oneflow
-
-#else
-
-namespace oneflow {
-
-enum class RocmWorkType {};
-
-inline size_t GetRocmWorkTypeSize() { return 0; }
 
 }  // namespace oneflow
 

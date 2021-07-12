@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_device_context.h"
@@ -46,6 +46,7 @@ bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
+#if defined(WITH_CUDA)
 // Launches a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
@@ -60,6 +61,22 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
+#elif defined(WITH_ROCM)
+// Launches a cuda kernel
+void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
+  auto* stream = instruction->mut_stream();
+  hipSetDevice(stream->device_id());
+  {
+    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
+    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+    instr_type_id.instruction_type().Compute(instruction);
+    OF_ROCM_CHECK(hipGetLastError());
+  }
+  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+}
+#endif
 
 // Specifies copy_d2h stream description of the virtual machine to be used.
 ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,

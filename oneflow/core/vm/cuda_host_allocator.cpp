@@ -33,3 +33,24 @@ void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 }  // namespace oneflow
 
 #endif
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/vm/cuda_host_allocator.h"
+#include "oneflow/core/device/rocm_util.h"
+
+namespace oneflow {
+namespace vm {
+
+void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  OF_ROCM_CHECK(hipHostMalloc(mem_ptr, size));
+}
+
+void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  OF_ROCM_CHECK(hipHostFree(mem_ptr));
+}
+
+}  // namespace vm
+}  // namespace oneflow
+
+#endif

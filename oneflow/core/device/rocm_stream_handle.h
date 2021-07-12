@@ -38,6 +38,7 @@ class RocmStreamHandle final {
   const hipblasHandle_t* hipblas_pmh_handle();
   const hipblasHandle_t* hipblas_pmd_handle();
   const hipblasHandle_t* hipblas_tensor_op_math_handle();
+  const miopenHandle_t* miopen_handle();
 
   void AddCallBack(std::function<void()> callback);
 
@@ -49,6 +50,7 @@ class RocmStreamHandle final {
   std::unique_ptr<hipblasHandle_t> hipblas_pmh_handle_;
   std::unique_ptr<hipblasHandle_t> hipblas_pmd_handle_;
   std::unique_ptr<hipblasHandle_t> hipblas_tensor_op_math_handle_;
+  std::unique_ptr<miopenHandle_t> miopen_handle_;
 };
 
 #endif  // WITH_ROCM

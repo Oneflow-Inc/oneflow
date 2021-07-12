@@ -55,6 +55,7 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
+  LOG(INFO) << dev_type;
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(*this));
   return Maybe<void>::Ok();

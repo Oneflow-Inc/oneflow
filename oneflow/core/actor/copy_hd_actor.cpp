@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
