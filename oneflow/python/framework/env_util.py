@@ -75,13 +75,6 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto, is_multi_client)
     c_api_util.InitEnv(default_env_proto, is_multi_client)
-    if not is_multi_client:
-        if oneflow._oneflow_internal.CurrentMachineId() == 0:
-            scope_util.InitScopeStack()
-        else:
-            exit(0)
-    else:
-        scope_util.InitScopeStack()
     return True
 
 
