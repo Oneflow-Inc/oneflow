@@ -53,5 +53,6 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::StandardOpsDialect>();
   registry.insert<mlir::tosa::TosaDialect>();
   registry.insert<mlir::linalg::LinalgDialect>();
+  registry.insert<mlir::memref::MemRefDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
