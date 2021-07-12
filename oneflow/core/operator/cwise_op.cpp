@@ -17,10 +17,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void CWiseOp::InitFromOpConf() {
+Maybe<void> CWiseOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in_0");
   VirtualInitFromOpConf();
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> CWiseOp::InferLogicalOutBlobDescs(

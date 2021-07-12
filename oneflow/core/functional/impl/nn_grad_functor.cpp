@@ -109,6 +109,57 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PoolingNdGradFunctor {
+ public:
+  PoolingNdGradFunctor() {
+    for (const auto& mode : {"max"}) {
+      for (int ndims = 2; ndims <= 3; ++ndims) {
+        const auto& op_type_name = GetOpTypeName(mode, ndims);
+        op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
+                                                    .Input("x")
+                                                    .Input("y")
+                                                    .Input("indice")
+                                                    .Input("dy")
+                                                    .Output("dx")
+                                                    .Build());
+      }
+    }
+  }
+  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
+    return mode + "pool_" + std::to_string(ndims) + "d_grad";
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& indice,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
+                           const bool& return_indices, const bool& ceil_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
+    JUST(attrs.SetAttr<bool>("return_indices", return_indices));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    const auto& op_type_name = GetOpTypeName(mode, ndims);
+    const auto& it = op_expr_map_.find(op_type_name);
+    CHECK_OR_RETURN(it != op_expr_map_.end())
+        << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, indice, dy}, attrs);
+  }
+
+ protected:
+  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
 class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
@@ -149,6 +200,28 @@ class PoolNdGradFunctor {
 
  protected:
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
+class SmoothL1LossGradFunctor {
+ public:
+  SmoothL1LossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad")
+                         .Input("loss_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("prediction_grad")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
+                           const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("beta", beta));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {loss_grad, prediction, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class PadGradFunctor {
@@ -202,6 +275,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+  m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
+  m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
 };
 
