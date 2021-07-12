@@ -174,6 +174,11 @@ class TestTanh(flow.unittest.TestCase):
                 test_case, "tanh", device=device,
             )
 
+    def test_tensor_tanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "tanh", device=device,
+            )
 
 def _test_elu_function_impl(test_case, shape, device):
     m = flow.nn.ELU()

@@ -462,6 +462,18 @@ class TestAsin(flow.unittest.TestCase):
                 test_case, "arcsin", device=device,
             )
 
+    def test_flow_tensor_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "asin", device=device,
+            )
+
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arcsin", device=device,
+            )
+
 
 def _test_asinh(test_case, shape, device):
     np_input = np.random.randn(*shape)
