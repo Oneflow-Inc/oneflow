@@ -29,7 +29,7 @@ class UserOp final : public Operator {
 
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferInternalBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;

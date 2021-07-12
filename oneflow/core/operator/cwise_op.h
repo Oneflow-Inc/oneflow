@@ -26,7 +26,7 @@ class CWiseOp : public Operator {
   CWiseOp() = default;
   virtual ~CWiseOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
