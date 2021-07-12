@@ -23,7 +23,6 @@ import os
 import oneflow.experimental as flow
 import torch
 import numpy as np
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 TEST_MODULE = 0
 TEST_FLOW = 1
@@ -53,8 +52,6 @@ def _random_tensor():
     return random_tensor()(None)
 
 
-@oneflow_export("autotest.random_tensor")
-@experimental_api
 def random_tensor(ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None):
     assert ndim is None or 1 <= ndim <= 5
     if ndim is None:
@@ -78,8 +75,6 @@ def random_tensor(ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None)
     return generator
 
 
-@oneflow_export("autotest.choose")
-@experimental_api
 def choose(x):
     def generator(_):
         val = random_util.choice(x)
@@ -88,8 +83,6 @@ def choose(x):
     return generator
 
 
-@oneflow_export("autotest.random")
-@experimental_api
 def random(low, high):
     def generator(annotation):
         if hasattr(annotation, "__origin__"):
@@ -132,8 +125,6 @@ def random(low, high):
     return generator
 
 
-@oneflow_export("autotest.constant")
-@experimental_api
 def constant(val):
     def generator(_):
         return val, val
@@ -313,8 +304,6 @@ def test_against_pytorch(
         n -= 1
 
 
-@oneflow_export("autotest.test_module_against_pytorch")
-@experimental_api
 def test_module_against_pytorch(
     test_case,
     callable_name,
@@ -346,8 +335,6 @@ def test_module_against_pytorch(
     )
 
 
-@oneflow_export("autotest.test_flow_against_pytorch")
-@experimental_api
 def test_flow_against_pytorch(
     test_case,
     callable_name,
@@ -379,8 +366,6 @@ def test_flow_against_pytorch(
     )
 
 
-@oneflow_export("autotest.test_tensor_against_pytorch")
-@experimental_api
 def test_tensor_against_pytorch(
     test_case,
     callable_name,
