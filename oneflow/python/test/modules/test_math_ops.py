@@ -521,6 +521,30 @@ class TestAsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_asinh(test_case, *arg)
             _test_arcsinh(test_case, *arg)
+    
+    def test_flow_asinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "asinh", device=device,
+            )
+
+    def test_flow_arcsinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arcsinh", device=device,
+            )
+
+    def test_flow_tensor_asinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "asinh", device=device,
+            )
+
+    def test_flow_tensor_arcsinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arcsinh", device=device,
+            )
 
 
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
