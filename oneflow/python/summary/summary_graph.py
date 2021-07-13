@@ -23,7 +23,6 @@ import logging
 import oneflow as flow
 
 
-@oneflow_export("summary.Graph")
 class Graph(object):
     r"""The class of Graph
 

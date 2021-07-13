@@ -23,7 +23,6 @@ from oneflow.python.oneflow_export import oneflow_export
 _VT = TypeVar("_VT")
 
 
-@oneflow_export("inter_job_reuse_mem_strategy")
 def inter_job_reuse_mem_strategy(
     strategy_str: str, job_set: Optional[JobSet] = None, **kwargs: _VT
 ) -> None:

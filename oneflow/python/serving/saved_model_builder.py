@@ -30,7 +30,6 @@ import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("saved_model.ModelBuilder")
 class ModelBuilder(object):
     DEFAULT_CHECKPOINT_DIR = "variables"
     DEFAULT_SAVED_MODEL_FILE_BASENAME = "saved_model"
@@ -147,7 +146,6 @@ class ModelBuilder(object):
             writer.write(text_format.MessageToString(self.saved_model_proto_))
 
 
-@oneflow_export("saved_model.GraphBuilder")
 class GraphBuilder(object):
     def __init__(self, name: str, model_builder: typing.Optional[ModelBuilder] = None):
         if not isinstance(name, str):
@@ -225,7 +223,6 @@ class GraphBuilder(object):
         return self
 
 
-@oneflow_export("saved_model.SignatureBuilder")
 class SignatureBuilder(object):
     def __init__(self, name: str, graph_builder: typing.Optional[GraphBuilder] = None):
         if not isinstance(name, str):

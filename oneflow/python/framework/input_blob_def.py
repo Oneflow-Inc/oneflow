@@ -262,7 +262,6 @@ def _MakePushNdarrayCallback(ndarray):
     return Copy
 
 
-@oneflow_export("FixedTensorDef")
 class DeprecatedFixedTensorDef(FixedTensorDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
@@ -281,7 +280,6 @@ class DeprecatedFixedTensorDef(FixedTensorDef):
         super().__init__(*args, **kwargs)
 
 
-@oneflow_export("MirroredTensorDef")
 class DeprecatedMirroredTensorDef(MirroredTensorDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]

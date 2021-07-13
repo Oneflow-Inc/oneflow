@@ -30,8 +30,6 @@ import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
 
-@oneflow_export("repeat")
-@stable_api
 def api_repeat(
     input: oneflow._oneflow_internal.BlobDesc,
     repeat_num: int,
@@ -58,7 +56,6 @@ def repeat(input, repeat_num, name=None):
     )
 
 
-@oneflow_export("acc")
 def api_acc(
     one: oneflow._oneflow_internal.BlobDesc,
     max_acc_num: int,
@@ -83,7 +80,6 @@ def acc(one, max_acc_num, name=None):
     )
 
 
-@oneflow_export("unpack")
 def api_unpack(
     input: oneflow._oneflow_internal.BlobDesc,
     unpack_num: int,
@@ -110,7 +106,6 @@ def unpack(input, unpack_num, name=None):
     )
 
 
-@oneflow_export("pack")
 def api_pack(
     input: oneflow._oneflow_internal.BlobDesc, pack_num: int, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -135,7 +130,6 @@ def pack(input, pack_num, name=None):
     )
 
 
-@oneflow_export("parallel_cast")
 def api_parallel_cast(
     input: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
@@ -181,7 +175,6 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("hierarchical_parallel_cast")
 def api_hierarchical_parallel_cast(
     input: oneflow._oneflow_internal.BlobDesc,
     parallel_distribution: Sequence[str],

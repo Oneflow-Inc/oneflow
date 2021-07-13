@@ -22,7 +22,6 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 
 
-@oneflow_export("experimental.scope.config")
 def api_scope_config(**kwargs):
     name2default = session_ctx.GetDefaultSession().scope_attr_name2default_val
 
@@ -44,14 +43,12 @@ def api_scope_config(**kwargs):
     return ScopeContext(scope)
 
 
-@oneflow_export("current_scope")
 def api_current_scope():
     r""" Return current scope
     """
     return oneflow._oneflow_internal.GetCurrentScope()
 
 
-@oneflow_export("scope.current_scope")
 @oneflow_deprecate()
 def deprecated_current_scope(*args, **kwargs):
     print(

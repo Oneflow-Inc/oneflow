@@ -432,7 +432,6 @@ class Session(object):
         oneflow._oneflow_internal.ClearSessionById(self.id)
 
 
-@oneflow_export("find_or_create_module")
 def api_find_or_create_module(
     module_name: str, create: Callable[[], None], reuse: bool = False
 ):
@@ -465,7 +464,6 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-@oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
     """Get current setting of the job, if enable eager execution mode ,then return True
 
@@ -475,7 +473,6 @@ def api_eager_execution_enabled() -> bool:
     return oneflow._oneflow_internal.EagerExecutionEnabled()
 
 
-@oneflow_export("clear_default_session")
 def api_clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
     """
@@ -489,7 +486,6 @@ def clear_default_session():
     session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 
-@oneflow_export("sync_default_session")
 def api_sync_default_session() -> None:
     r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
     """
@@ -519,7 +515,6 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-@oneflow_export("InitEagerGlobalSession")
 def TmpInitEagerGlobalSession():
     config_pb = _GetDefaultConfigProto()
     config_proto_str = text_format.MessageToString(config_pb)

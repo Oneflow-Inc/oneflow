@@ -41,7 +41,6 @@ import traceback
 import sys
 
 
-@oneflow_export("FunctionConfig", "function_config", "ExecutionConfig")
 class FunctionConfig(object):
     r"""OneFlow function's configurations.
     """
@@ -85,7 +84,6 @@ class FunctionConfig(object):
         return FunctionConfigSetter
 
 
-@oneflow_export("global_function")
 def api_oneflow_function(
     type: str = "predict", function_config: FunctionConfig = None,
 ) -> Callable[[Callable], Callable]:
