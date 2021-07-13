@@ -295,7 +295,7 @@ def test_against_pytorch(
             )
             test_case.assertTrue(
                 is_allclose,
-                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}",
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}",
             )
 
         allclose_or_fail(flow_res, torch_res)
