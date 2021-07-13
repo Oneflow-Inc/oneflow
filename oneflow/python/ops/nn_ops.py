@@ -3955,6 +3955,39 @@ def softsign(
     x: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
+    r"""The SoftSign activation. 
+
+    The formula is: 
+    
+    .. math::  
+    
+        SoftSign(x) = \frac{1}{1 + |x|}
+    
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    
+    For example:
+    
+    .. code-block:: python 
+    
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+    
+    
+        @flow.global_function()
+        def softsign_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.softsign(x)
+    
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = softsign_job(x)
+        # output [-0.7777778  0.5        0.7777778]
+
+    """
     if name is None:
         name = id_util.UniqueStr("Softsign_")
     return (
