@@ -221,7 +221,6 @@ class DataLoader(Generic[T_co]):
         prefetch_factor: int = 2,
         persistent_workers: bool = False
     ):
-        # flow._C._log_api_usage_once("python.data_loader")  # type: ignore
 
         if num_workers < 0:
             raise ValueError(
@@ -253,7 +252,6 @@ class DataLoader(Generic[T_co]):
         # samplers first, so that they don't learn that this combo doesn't work
         # after spending time fixing the custom sampler errors.
         if isinstance(dataset, IterableDataset):
-            print(">>>>>>>>>>>>>>>>>>>>> if isinstance(dataset, IterableDataset):")
             self._dataset_kind = _DatasetKind.Iterable
             # NOTE [ Custom Samplers and IterableDataset ]
             #
@@ -469,6 +467,7 @@ class _BaseDataLoaderIter(object):
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
         self._base_seed = flow.Tensor([0], dtype=flow.int64).uniform_().numpy().item()
+        # TODO: flow.empty()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
         self._persistent_workers = loader.persistent_workers
         self._num_yielded = 0
@@ -491,7 +490,6 @@ class _BaseDataLoaderIter(object):
         raise NotImplementedError
 
     def __next__(self) -> Any:
-        # with flow.autograd.profiler.record_function(self._profile_name):
         if self._sampler_iter is None:
             self._reset()
         data = self._next_data()

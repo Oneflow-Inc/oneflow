@@ -72,9 +72,7 @@ def default_collate(batch):
 
     elem = batch[0]
     elem_type = type(elem)
-    if isinstance(elem, flow.Tensor) or isinstance(
-        elem, flow._oneflow_internal.LocalTensor
-    ):
+    if isinstance(elem, flow.Tensor) or isinstance(elem, flow._oneflow_internal.Tensor):
         # TODO: tensor.storage()._new_shared(numel)
         return flow.experimental.stack(batch, dim=0)
     elif (
