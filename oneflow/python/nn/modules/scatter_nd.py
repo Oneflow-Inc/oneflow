@@ -19,7 +19,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
-from typing import Optional, List, Tuple, Union
+from typing import Union
 
 @oneflow_export("scatter_nd")
 @experimental_api
