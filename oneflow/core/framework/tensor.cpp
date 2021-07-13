@@ -20,9 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 
@@ -80,16 +78,9 @@ Maybe<Tensor> MirroredTensor::detach() const {
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
-  std::shared_ptr<OpExpr> copy_op_ = JUST(one::OpBuilder("copy")
-                                              .Input("in", 1)
-                                              .Attr("device_type", device_type)
-                                              .Attr("device_id", device_id)
-                                              .Output("out", 1)
-                                              .Build());
   std::shared_ptr<MirroredTensor> input =
       std::const_pointer_cast<MirroredTensor>(shared_from_this());
-  const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
-  return output;
+  return JUST(functional::Copy(input, device_type, device_id));
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
