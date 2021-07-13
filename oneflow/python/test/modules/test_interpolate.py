@@ -302,7 +302,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_interpolate_nearest_3d,
             _test_interpolate_bilinear_2d,
             # _test_interpolate_bicubic_2d,
-            # _test_interpolate_trilinear_3d,
+            _test_interpolate_trilinear_3d,
         ]
         arg_dict["device"] = [
             "cpu",

@@ -28,15 +28,11 @@ __global__ void UpsampleTrilinear3DForward(const int64_t elem_cnt, const T* in_d
                                            NdIndexOffsetHelper<int64_t, 5> in_helper,
                                            NdIndexOffsetHelper<int64_t, 5> out_helper,
                                            const int64_t in_depth, const int64_t in_height,
-                                           const int64_t in_width, const float scale_d,
-                                           const float scale_h, const float scale_w,
-                                           const bool align_corners, T* out_dptr) {
+                                           const int64_t in_width, const T rdepth, const T rheight,
+                                           const T rwidth, const bool align_corners, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, d, h, w;
     out_helper.OffsetToNdIndex(index, n, c, d, h, w);
-    const T rdepth = GetAreaPixelScale(in_depth, d, align_corners, scale_d);
-    const T rheight = GetAreaPixelScale(in_height, h, align_corners, scale_h);
-    const T rwidth = GetAreaPixelScale(in_width, w, align_corners, scale_w);
 
     const T t1r = GetAreaPixel(rdepth, d, align_corners);
     const int64_t t1 = t1r;
@@ -78,15 +74,11 @@ __global__ void UpsampleTrilinear3DBackward(const int64_t elem_cnt, const T* dy_
                                             NdIndexOffsetHelper<int64_t, 5> dy_helper,
                                             NdIndexOffsetHelper<int64_t, 5> dx_helper,
                                             const int64_t in_depth, const int64_t in_height,
-                                            const int64_t in_width, const float scale_d,
-                                            const float scale_h, const float scale_w,
-                                            const bool align_corners, T* dx_dptr) {
+                                            const int64_t in_width, const T rdepth, const T rheight,
+                                            const T rwidth, const bool align_corners, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, d, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
-    const T rdepth = GetAreaPixelScale(in_depth, d, align_corners, scale_d);
-    const T rheight = GetAreaPixelScale(in_height, h, align_corners, scale_h);
-    const T rwidth = GetAreaPixelScale(in_width, w, align_corners, scale_w);
 
     const T t1r = GetAreaPixel(rdepth, d, align_corners);
     const int64_t t1 = t1r;
@@ -156,10 +148,23 @@ class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
                                                y_blob->shape().At(2), y_blob->shape().At(3),
                                                y_blob->shape().At(4));
+
+    const int64_t in_depth = x_blob->shape().At(2);
+    const int64_t in_height = x_blob->shape().At(3);
+    const int64_t in_width = x_blob->shape().At(4);
+
+    const int64_t out_depth = y_blob->shape().At(2);
+    const int64_t out_height = y_blob->shape().At(3);
+    const int64_t out_width = y_blob->shape().At(4);
+
+    const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
     RUN_CUDA_KERNEL((UpsampleTrilinear3DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
-                    x_blob->shape().At(3), x_blob->shape().At(4), 1.f / depth_scale,
-                    1.f / height_scale, 1.f / width_scale, align_corners, y_blob->mut_dptr<T>());
+                    x_blob->shape().At(3), x_blob->shape().At(4), scale_depth, scale_height,
+                    scale_width, align_corners, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -188,10 +193,23 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 5> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
                                               dx_blob->shape().At(2), dx_blob->shape().At(3),
                                               dx_blob->shape().At(4));
+
+    const int64_t in_depth = dx_blob->shape().At(2);
+    const int64_t in_height = dx_blob->shape().At(3);
+    const int64_t in_width = dx_blob->shape().At(4);
+
+    const int64_t out_depth = dy_blob->shape().At(2);
+    const int64_t out_height = dy_blob->shape().At(3);
+    const int64_t out_width = dy_blob->shape().At(4);
+
+    const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
     RUN_CUDA_KERNEL((UpsampleTrilinear3DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
-                    dx_blob->shape().At(3), dx_blob->shape().At(4), 1.f / depth_scale,
-                    1.f / height_scale, 1.f / width_scale, align_corners, dx_blob->mut_dptr<T>());
+                    dx_blob->shape().At(3), dx_blob->shape().At(4), scale_depth, scale_height,
+                    scale_width, align_corners, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
