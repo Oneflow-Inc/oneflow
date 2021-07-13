@@ -170,7 +170,7 @@ def assert_is_valid_distribute(
     ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
-
+@oneflow_export("distributed.get_local_rank")
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
 
@@ -195,10 +195,12 @@ def get_world_size():
     return oneflow._oneflow_internal.GetWorldSize()
 
 
+@oneflow_export("distributed.is_multi_client")
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
 
 
+@oneflow_export("sbp.split")
 def split_sbp(
     axis: int,
 ) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:

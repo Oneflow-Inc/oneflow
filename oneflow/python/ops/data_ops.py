@@ -391,9 +391,6 @@ def decode_random(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export(
-    "data.image_decoder_random_crop_resize", "data.ImageDecoderRandomCropResize"
-)
 def image_decoder_random_crop_resize(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     target_width: int,

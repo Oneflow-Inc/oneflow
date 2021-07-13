@@ -73,9 +73,6 @@ def OFRecordBytesDecoder(
     )
 
 
-@oneflow_export(
-    "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
-)
 def api_ofrecord_image_decoder_random_crop(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     blob_name: str,
@@ -1632,9 +1629,6 @@ def object_bbox_scale(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip"
-)
 def object_segm_poly_flip(
     poly: oneflow._oneflow_internal.BlobDesc,
     image_size: oneflow._oneflow_internal.BlobDesc,
@@ -1778,9 +1772,6 @@ def object_segm_poly_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale"
-)
 def object_segm_poly_scale(
     poly: oneflow._oneflow_internal.BlobDesc,
     scale: oneflow._oneflow_internal.BlobDesc,
@@ -1923,10 +1914,6 @@ def object_segm_poly_scale(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_to_mask",
-    "object_segmentation_polygon_to_mask",
-)
 def object_segm_poly_to_mask(
     poly: oneflow._oneflow_internal.BlobDesc,
     poly_index: oneflow._oneflow_internal.BlobDesc,

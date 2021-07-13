@@ -1592,10 +1592,6 @@ def broadcast_to_compatible_with(
     return remote_blob_util.RemoteBlob(ret_lbi)
 
 
-@oneflow_export(
-    "math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp"
-)
-@stable_api
 def clip_by_value(
     values: oneflow._oneflow_internal.BlobDesc,
     min_value: Optional[Union[int, float]] = None,
@@ -1927,9 +1923,6 @@ def fused_scale_tril(
     )
 
 
-@oneflow_export(
-    "math.fused_scale_tril_softmax_dropout", "nn.fused_scale_tril_softmax_dropout"
-)
 def fused_scale_tril_softmax_dropout(
     x: oneflow._oneflow_internal.BlobDesc,
     diagonal: int = 0,
