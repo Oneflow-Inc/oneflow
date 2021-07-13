@@ -17,10 +17,7 @@ import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
-
-from typing import Optional, List, Tuple
 
 
 class Gather_nd(Module):
@@ -30,27 +27,27 @@ class Gather_nd(Module):
             flow.builtin_op("gather_nd").Input("params").Input("indices").Output("out").Build()
         )
 
-    def forward(self, input, indices):
+    def forward(self, input, index):
 
-        return self.gather_nd_op(input,indices)[0]
+        return self.gather_nd_op(input,index)[0]
 
 
 @oneflow_export("gather_nd")
 @experimental_api
-def gather_nd_op(input, indices):
-    r"""This operator is a high-dimensional extension of `gather`, `indices` is a K-dimensional
-    tensor, which is regarded as a index of input Blob `input`.
+def gather_nd_op(input, index):
+    r"""This operator is a high-dimensional extension of `gather`, `index` is a K-dimensional
+    tensor, which is regarded as a index of input Tensor `input`.
 
     Each element defines a slice of `input`:
 
     .. math::
 
-        output[i_{0},i_{1},...,i_{K-2}] = input[indices(i_{0},i_{1},...,i_{K-2})]
+        output[i_{0},i_{1},...,i_{K-2}] = input[index(i_{0},i_{1},...,i_{K-2})]
 
 
     Args:
-        input: The input Blob.
-        indices: The slice indices.
+        input: The input Tensor.
+        index: The slice indices.
 
     For example:
 
@@ -61,20 +58,20 @@ def gather_nd_op(input, indices):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[1, 2,3], [4, 5,6],[7,8,9]]), dtype=flow.float)
-        >>> indices_1 = flow.Tensor(np.array([[0], [2]]), dtype=flow.int)
-        >>> out_1 = flow.gather_nd(input,indices_1)
+        >>> index_1 = flow.Tensor(np.array([[0], [2]]), dtype=flow.int)
+        >>> out_1 = flow.gather_nd(input,index_1)
         >>> print(out_1.shape)
         flow.Size([2, 3])
-        >>> print(out_1)
+        >>> out_1
         tensor([[1., 2., 3.],
                 [7., 8., 9.]], dtype=oneflow.float32)
-        >>> indices_2 = flow.Tensor(np.array([[0,2], [2,1]]), dtype=flow.int)
-        >>> out_2 = flow.gather_nd(input,indices_2)
-        >>> print(out_2)
+        >>> index_2 = flow.Tensor(np.array([[0,2], [2,1]]), dtype=flow.int)
+        >>> out_2 = flow.gather_nd(input,index_2)
+        >>> out_2
         tensor([3., 8.], dtype=oneflow.float32)
 
     """
-    return Gather_nd()(input,indices)
+    return Gather_nd()(input,index)
 
 
 if __name__ == "__main__":

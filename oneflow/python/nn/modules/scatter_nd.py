@@ -17,20 +17,18 @@ import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
 from typing import Optional, List, Tuple, Union
 
-
 @oneflow_export("scatter_nd")
 @experimental_api
 class Scatter_nd(Module):
-    r"""This operator inserts the elements in `updates` according to the `indices` and create a new Blob.
+    r"""This operator inserts the elements in `updates` according to the `index` and create a new Tensor.
 
     Args:
-        indices: The indice of `updates`. Its type should be `flow.int`.
-        updates: The update Blob.
+        index: The indices of `updates`. Its type should be `flow.int`.
+        updates: The update Tensor.
         shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero.
 
     For example:
@@ -42,10 +40,10 @@ class Scatter_nd(Module):
         >>> flow.enable_eager_execution()
 
         >>> scatter_nd_layer = flow.scatter_nd([8])
-        >>> indices = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
+        >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
         >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
-        >>> out = scatter_nd_layer(indices,update)
-        >>> print(out)
+        >>> out = scatter_nd_layer(index,update)
+        >>> out
         tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
 
     """
@@ -55,7 +53,7 @@ class Scatter_nd(Module):
             raise ValueError("shape must be list!")
         self.shape = shape
 
-    def forward(self, indices, updates):
+    def forward(self, index, updates):
         self._op = (
             flow.builtin_op("scatter_nd")
             .Input("indices")
@@ -65,7 +63,7 @@ class Scatter_nd(Module):
             .Build()
         )
 
-        res = self._op(indices,updates)[0]
+        res = self._op(index,updates)[0]
         return res
 
 
