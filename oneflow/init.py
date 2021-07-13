@@ -65,6 +65,7 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 from oneflow.python.framework.session_util import Session
 from oneflow.python.framework.multi_client_session import MultiClientSession
 

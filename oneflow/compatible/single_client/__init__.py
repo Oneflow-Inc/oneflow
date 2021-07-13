@@ -50,7 +50,6 @@ from oneflow.compatible.single_client.python.framework import session_context
 from oneflow.compatible.single_client.python.framework import env_util
 
 oneflow._oneflow_internal.DestroyEnv()
-oneflow._oneflow_internal.GlobalScopeStackPop()
 oneflow._oneflow_internal.SetIsMultiClient(False)
 env_util.init_default_physical_env()
 session_context.OpenDefaultSession(
