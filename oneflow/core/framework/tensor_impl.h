@@ -66,7 +66,7 @@ class TensorImpl {
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
-  Maybe<TensorArg> now_grad_arg() const;
+  Maybe<TensorArg> current_grad() const;
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return autograd_meta_->retain_grad(); }
