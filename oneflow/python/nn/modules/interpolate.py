@@ -65,8 +65,15 @@ class INTERPOLATE(Module):
         else:
             pass
 
-        if self.mode != "nearest" and self.mode != "bilinear":
-            raise ValueError('interpolation must be "nearest" or "bilinear".')
+        if (
+            self.mode != "nearest"
+            and self.mode != "bilinear"
+            and self.mode != "linear"
+            and self.mode != "area"
+        ):
+            raise ValueError(
+                'interpolation must be "nearest" or "bilinear" or "linear" or "area".'
+            )
 
         if self.mode == "nearest" and self.align_corners:
             raise ValueError('interpolation "nearest" does not support align_corners.')
@@ -142,7 +149,7 @@ class INTERPOLATE(Module):
 
         if len(x.shape) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
-            return flow.F.upsample(
+            return flow.F.upsample_bilinear_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
@@ -152,7 +159,7 @@ class INTERPOLATE(Module):
 
         if len(x.shape) == 5 and self.mode == "trilinear":
             assert self.align_corners is not None
-            return flow.F.UpsampleTrilinear3DFunctor(
+            return flow.F.upsample_trilinear_3d(
                 x,
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],

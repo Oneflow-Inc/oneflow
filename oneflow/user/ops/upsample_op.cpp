@@ -27,6 +27,7 @@ REGISTER_USER_OP("upsample_linear_1d")
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float scale_factor = ctx->Attr<float>("scale_factor");
+
       if (ctx->Attr<std::string>("data_format") != "channels_first"
           || x_desc->shape().NumAxes() != 3) {
         LOG(FATAL) << "upsample_linear_1d only supports NCH";
@@ -265,9 +266,9 @@ REGISTER_USER_OP("upsample_linear_1d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 3) {
-        LOG(FATAL) << "upsample_linear_1d_grad only supports NCH";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 3)
+          << "upsample_linear_1d_grad only supports NCH";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })

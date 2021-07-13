@@ -48,15 +48,12 @@ __global__ void UpsampleNearest3DBackward(const int64_t elem_cnt, const T* dy_dp
                                           const int64_t in_width, const float scale_d,
                                           const float scale_h, const float scale_w, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-    for (int64_t index = 0; index < elem_cnt; ++index) {
-      int64_t n, c, d, h, w;
-      dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
-      const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
-      const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
-      const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
-      cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w),
-                        dy_dptr[index]);
-    }
+    int64_t n, c, d, h, w;
+    dy_helper.OffsetToNdIndex(index, n, c, d, h, w);
+    const int64_t dx_h = GetNearestInputIndex(h, scale_h, in_height);
+    const int64_t dx_w = GetNearestInputIndex(w, scale_w, in_width);
+    const int64_t in_d = GetNearestInputIndex(d, scale_d, in_depth);
+    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, in_d, dx_h, dx_w), dy_dptr[index]);
   }
 }
 

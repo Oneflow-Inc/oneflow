@@ -70,8 +70,6 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
                       static_cast<T>(params.w_lerp * dbottom));
     const T dtop = dy - dbottom;
     T* dx_dptr_top_offset = dx_dptr + top_offset;
-    *(dx_dptr_top_offset + params.left_w_index) += static_cast<T>((1 - params.w_lerp) * dtop);
-    *(dx_dptr_top_offset + params.right_w_index) += static_cast<T>(params.w_lerp * dtop);
     cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
                       static_cast<T>((1 - params.w_lerp) * dtop));
     cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,

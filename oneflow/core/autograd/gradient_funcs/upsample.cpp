@@ -313,5 +313,99 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bicubic_2d", UpsampleBicubic2D);
 
+struct UpsampleNearest3DInterpState : public OpExprInterpState {
+  bool requires_grad;
+  float depth_scale;
+  float height_scale;
+  float width_scale;
+  std::string data_format;
+};
+
+class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UpsampleNearest3DInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->depth_scale = JUST(composed_attrs.GetAttr<float>("depth_scale"));
+    ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
+    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UpsampleNearest3DInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    if (ctx->requires_grad) {
+      MutableAttrMap attrs;
+      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+      in_grads->resize(1);
+      in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(out_grads.at(0), x, ctx->depth_scale,
+                                                               ctx->height_scale, ctx->width_scale,
+                                                               ctx->data_format));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_3d", UpsampleNearest3D);
+
+struct UpsampleTrilinear3DInterpState : public OpExprInterpState {
+  bool requires_grad;
+  float depth_scale;
+  float height_scale;
+  float width_scale;
+  bool align_corners;
+  std::string data_format;
+};
+
+class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UpsampleTrilinear3DInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->depth_scale = JUST(composed_attrs.GetAttr<float>("depth_scale"));
+    ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
+    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
+    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UpsampleTrilinear3DInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    if (ctx->requires_grad) {
+      MutableAttrMap attrs;
+      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+      in_grads->resize(1);
+      in_grads->at(0) = JUST(functional::UpsampleTrilinear3DGrad(
+          out_grads.at(0), x, ctx->depth_scale, ctx->height_scale, ctx->width_scale,
+          ctx->align_corners, ctx->data_format));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_trilinear_3d", UpsampleTrilinear3D);
+
 }  // namespace one
 }  // namespace oneflow

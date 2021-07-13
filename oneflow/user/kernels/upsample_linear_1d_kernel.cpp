@@ -61,7 +61,7 @@ class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
-    const bool align_corners = ctx->Attr<float>("align_corners");
+    const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 3> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2));
@@ -90,7 +90,7 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
-    const bool align_corners = ctx->Attr<float>("align_corners");
+    const bool align_corners = ctx->Attr<bool>("align_corners");
 
     NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2));
