@@ -908,10 +908,7 @@ def _input_args_is_numpy(*args):
 
 
 def _input_args_is_consistent_or_local(*args):
-    return len(args) == 1 and isinstance(
-        args[0],
-        (oneflow._oneflow_internal.ConsistentTensor, oneflow._oneflow_internal.Tensor,),
-    )
+    return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
 
 def _input_args_is_tensor(*args):

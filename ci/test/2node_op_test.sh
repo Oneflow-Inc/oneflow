@@ -10,7 +10,7 @@ test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
 rm -rf $test_tmp_dir
 mkdir -p $test_tmp_dir
 chmod -R o+w $test_tmp_dir
-cp -r $src_dir/oneflow/python/test $test_tmp_dir
+cp -r $src_dir/oneflow/compatible/single_client/python/test $test_tmp_dir
 cd $test_tmp_dir
 
 ONEFLOW_TEST_DEVICE_NUM=1 python3 test/ops/test_assign.py --failfast --verbose
