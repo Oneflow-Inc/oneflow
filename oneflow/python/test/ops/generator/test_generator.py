@@ -80,7 +80,6 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         for gen in test_gens:
             test_case.assertTrue(auto_gen.initial_seed() == gen.initial_seed())
 
-
     def test_generator_manual_seed(test_case):
         auto_gen = flow.default_generator(device="auto")
         cpu_gen = flow.default_generator(device="cpu")
