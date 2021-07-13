@@ -47,7 +47,7 @@ def default_collate(batch):
     elem = batch[0]
     elem_type = type(elem)
     # print("collate.py >> default_collate() >> elem_type = type(elem) >> ", elem_type)
-    if isinstance(elem, flow.Tensor) or isinstance(elem, flow._oneflow_internal.LocalTensor):
+    if isinstance(elem, flow.Tensor) or isinstance(elem, flow._oneflow_internal.Tensor):
         # out = None
         # if utils.data.get_worker_info() is not None:
             # If we're in a background process, concatenate directly into a
@@ -63,9 +63,9 @@ def default_collate(batch):
             if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
                 raise TypeError(default_collate_err_msg_format.format(elem.dtype))
 
-            return default_collate([flow.Tensor(b) for b in batch])
+            return default_collate([flow.tensor(b) for b in batch])
         elif elem.shape == ():  # scalars
-            return flow.Tensor(batch)
+            return flow.tensor(batch)
     elif isinstance(elem, float):
         return flow.tensor(batch, dtype=flow.float64)
     elif isinstance(elem, int):

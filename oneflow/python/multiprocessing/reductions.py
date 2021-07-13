@@ -351,5 +351,4 @@ def init_reductions():
 
     # TODO: Maybe this should be in tensor_classes? :)
     ForkingPickler.register(Tensor, reduce_tensor)
-    ForkingPickler.register(oneflow._oneflow_internal.LocalTensor, reduce_tensor)
     ForkingPickler.register(Parameter, reduce_tensor)
