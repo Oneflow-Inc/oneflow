@@ -905,7 +905,7 @@ class LeakyReLU(Module):
 @oneflow_export("nn.Mish")
 @experimental_api
 class Mish(Module):
-    r"""Applies the element-wise function:
+    r"""Mish activation: A Self Regularized Non-Monotonic Neural Activation Function.
 
     .. math::
         \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
@@ -943,44 +943,21 @@ class Mish(Module):
         return flow.F.mish(x)
 
 
-@oneflow_export("mish")
-@experimental_api
-def mish_op(x):
-    r"""Applies the element-wise function:
-
-    .. math::
-        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
-
-    .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
-
-    See :mod:`oneflow.experimental.nn.Mish`
-    """
-
-    return Mish()(x)
-
-
-@register_tensor_op("mish")
-@experimental_api
-def mish_op_tensor(x):
-    r"""
-    mish() -> Tensor
-    See :func:`oneflow.experimental.mish`
-    """
-
-    return Mish()(x)
-
-
 @oneflow_export("nn.SiLU")
 @experimental_api
 class SiLU(Module):
-    r"""Applies the element-wise function:
+    r"""SiLU(Swish) activation:
 
     .. math::
-        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+        \text{SiLU}(x) = x * sigmoid(x)
 
     .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+        See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
+        where the SiLU (Sigmoid Linear Unit) was originally coined, and see
+        `Sigmoid-Weighted Linear Units for Neural Network Function Approximation
+        in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
+        a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
+        where the SiLU was experimented with later.
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
@@ -997,11 +974,11 @@ class SiLU(Module):
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> mish = flow.nn.Mish()
+        >>> silu = flow.nn.SiLU()
 
-        >>> out = mish(input)
+        >>> out = silu(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.9277, 1.0908, 1.0881], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):
@@ -1017,11 +994,22 @@ class SiLU(Module):
 class SELU(Module):
     r"""Applies the element-wise function:
 
-    .. math::
-        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+    The formula is: 
+    
+    .. math::  
+    
+        \text{SELU}(x) = \begin{cases}
+				scale * (x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
+    		    \end{cases}
 
-    .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+    .. warning::
+        When using ``kaiming_normal`` or ``kaiming_normal_`` for initialisation,
+        ``nonlinearity='linear'`` should be used instead of ``nonlinearity='selu'``
+        in order to get `Self-Normalizing Neural Networks`_.
+        See :func:`torch.nn.init.calculate_gain` for more information.
+
+    More details can be found in the paper `Self-Normalizing Neural Networks <https://arxiv.org/abs/1706.02515>`_.
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
@@ -1038,11 +1026,11 @@ class SELU(Module):
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> mish = flow.nn.Mish()
+        >>> selu = flow.nn.SELU()
 
-        >>> out = mish(input)
+        >>> out = selu(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):
@@ -1056,15 +1044,18 @@ class SELU(Module):
 @oneflow_export("selu")
 @experimental_api
 def selu_op(x):
-    r"""Applies the element-wise function:
+    r"""The SELU activation.
 
-    .. math::
-        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+    The formula is: 
+    
+    .. math::  
+    
+        \text{SELU}(x) = \begin{cases}
+				scale * (x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
+    		    \end{cases}
 
-    .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
-
-    See :mod:`oneflow.experimental.nn.Mish`
+    See :mod:`oneflow.experimental.nn.SELU`
     """
 
     return SELU()(x)
@@ -1072,13 +1063,13 @@ def selu_op(x):
 @oneflow_export("nn.Softsign")
 @experimental_api
 class Softsign(Module):
-    r"""Applies the element-wise function:
+    r"""The SoftSign activation.
 
-    .. math::
-        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
-
-    .. note::
-        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+    The formula is: 
+    
+    .. math::  
+    
+        SoftSign(x) = \frac{x}{1 + |x|}
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
@@ -1095,11 +1086,11 @@ class Softsign(Module):
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> mish = flow.nn.Mish()
+        >>> softsign = flow.nn.Softsign()
 
-        >>> out = mish(input)
+        >>> out = softsign(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):

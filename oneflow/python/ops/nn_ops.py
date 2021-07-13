@@ -3955,7 +3955,7 @@ def softsign(
     
     .. math::  
     
-        SoftSign(x) = \frac{1}{1 + |x|}
+        SoftSign(x) = \frac{x}{1 + |x|}
     
     Args:
         x (oneflow_api.BlobDesc): The input Tensor. 
