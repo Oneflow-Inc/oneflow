@@ -112,10 +112,12 @@ jobs:
           mkdir build
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          cmake --build . -j$(nproc) --target generate_functional of_cfgobj
+          # cmake --build . -j$(nproc) --target generate_functional of_cfgobj generate_py_cfg
       - name: Run Maybe-related checks by clang-tidy
         run: |
           ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
