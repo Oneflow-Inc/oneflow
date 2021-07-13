@@ -24,7 +24,6 @@ from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow._oneflow_internal
 
 
-@oneflow_export("pad")
 def pad(
     x: oneflow._oneflow_internal.BlobDesc,
     paddings: Sequence[int],
@@ -115,7 +114,6 @@ def pad(
     )
 
 
-@oneflow_export("pad_grad")
 def pad_grad(
     x: oneflow._oneflow_internal.BlobDesc,
     paddings: Sequence[int],
@@ -153,7 +151,6 @@ def pad_grad(
     )
 
 
-@oneflow_export("same_padding")
 def same_padding(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Sequence[int],
@@ -237,8 +234,6 @@ def same_padding(
     )
 
 
-@oneflow_export("reflection_pad2d")
-@stable_api
 def reflection_pad2d(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
@@ -319,7 +314,6 @@ def reflection_pad2d(
     )
 
 
-@oneflow_export("replication_pad2d")
 def replication_pad2d(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
@@ -392,7 +386,6 @@ def replication_pad2d(
     )
 
 
-@oneflow_export("constant_pad2d")
 def constant_pad2d(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
@@ -481,7 +474,6 @@ def constant_pad2d(
     )
 
 
-@oneflow_export("zero_pad2d")
 def zero_pad2d(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],

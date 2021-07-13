@@ -28,7 +28,6 @@ from typing import Optional, Union
 import oneflow._oneflow_internal
 
 
-@oneflow_export("distributed_partial_fc_sample")
 def distributed_partial_fc_sample(
     weight: oneflow._oneflow_internal.BlobDesc,
     label: oneflow._oneflow_internal.BlobDesc,

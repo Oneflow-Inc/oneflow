@@ -26,7 +26,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("layers.prelu")
 def prelu(
     inputs: oneflow._oneflow_internal.BlobDesc,
     alpha_initializer: Optional[initializer_conf_util.InitializerConf] = None,
