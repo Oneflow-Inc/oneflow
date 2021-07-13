@@ -101,9 +101,9 @@ class MultiClientSession(object):
 
         if check_success is False:
             caller_func_name = inspect.stack()[1].function
-            allowed_status = ",".join(status)
+            allowed_status = " or ".join([str(stat) for stat in status])
             raise ValueError(
-                "The calling to {} is only allowed when status is {}, current status is {}".format(
+                "The calling to {} is only allowed when status is {}, but current status is {}".format(
                     caller_func_name, allowed_status, self.status_
                 )
             )

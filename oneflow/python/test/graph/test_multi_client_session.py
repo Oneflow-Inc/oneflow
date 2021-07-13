@@ -29,12 +29,26 @@ from oneflow.python.framework.multi_client_session import MultiClientSession
 
 
 class TestMultiClientSession(unittest.TestCase):
-    def test(self):
+    def test_case1(self):
+        # print("test_case1")
         self.assertTrue(flow.distributed.is_multi_client())
         # print(f"is_multi_client: {flow.distributed.is_multi_client()}")
 
         sess = session_ctx.GetDefaultSession()
         # print(f"sess type: {type(sess)}")
+        self.assertTrue(isinstance(sess, MultiClientSession))
+
+        sess.TryInit()
+        self.assertEqual(sess.status, sess.Status.INITED)
+
+        # sess.TryClose()
+        # self.assertEqual(sess.status, sess.Status.CLOSED)
+
+    def test_case2(self):
+        print("test_case2")
+        self.assertTrue(flow.distributed.is_multi_client())
+
+        sess = session_ctx.GetDefaultSession()
         self.assertTrue(isinstance(sess, MultiClientSession))
 
         sess.TryInit()
