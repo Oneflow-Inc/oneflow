@@ -52,7 +52,7 @@ class MultiClientSession(object):
             self.status_ = self.Status.INITED
 
     def TryClose(self):
-        if self.status_ == self.Status.INITED:
+        if self.status_ != self.Status.CLOSED:
             oneflow._oneflow_internal.DestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
 
@@ -73,7 +73,7 @@ class MultiClientSession(object):
     @property
     def resource(self):
         self._check_status(self.Status.INITED)
-        return oneflow.env.current_resource()
+        return c_api_util.CurrentResource()
 
     @property
     def function_flag_name2default_val(self):
@@ -110,12 +110,7 @@ class MultiClientSession(object):
 
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
-        config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
-        if oneflow._oneflow_internal.flags.with_cuda():
-            config_proto.resource.gpu_device_num = 1
-        else:
-            config_proto.resource.cpu_device_num = 1
-            config_proto.resource.gpu_device_num = 0
+        config_proto.resource.SetInParent()
         config_proto.session_id = self.id
         return config_proto
 
