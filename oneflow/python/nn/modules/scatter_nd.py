@@ -45,7 +45,7 @@ class Scatter_nd(Module):
         tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
 
     """
-    def __init__(self, shape):
+    def __init__(self, shape:list):
         super().__init__()
         if not isinstance(shape, list):
             raise ValueError("shape must be list!")
