@@ -458,6 +458,35 @@ class TriuFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DiagFunctor {
+ public:
+  DiagFunctor() { op_ = CHECK_JUST(one::OpBuilder("diag").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DiagGradFunctor {
+ public:
+  DiagGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("diag_grad").Input("dy").Input("in").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
@@ -545,6 +574,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleFunctor>("Upsample");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::TriuFunctor>("Triu");
+  m.add_functor<impl::DiagFunctor>("Diag");
+  m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
 };
 
