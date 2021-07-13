@@ -185,7 +185,7 @@ struct SoftSignGradFunctor {
   OF_DEVICE_FUNC explicit SoftSignGradFunctor(){}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     T val = (static_cast<T>(1) + abs(x));
-    return static_cast<T>(1) / (val * val); 
+    return dy / (val * val); 
   }
 };
 
