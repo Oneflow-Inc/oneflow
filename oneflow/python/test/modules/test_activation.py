@@ -217,12 +217,13 @@ class TestELUModule(flow.unittest.TestCase):
     def test_elu_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(
-                test_case, 
+                test_case,
                 "nn.ELU",
                 extra_annotations={"alpha": float},
                 extra_generators={"alpha": random(0, 6)},
                 device=device,
             )
+
 
 def _np_gelu(x):
     return 0.5 * x * (1 + special.erf(x / np.sqrt(2)))
@@ -701,13 +702,13 @@ class TestSoftplusModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @unittest.skip("Pytorch Softplus has bug")
     def test_softplus_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(
-                test_case, 
-                "nn.Softplus", 
+                test_case,
+                "nn.Softplus",
                 extra_annotations={"beta": int, "threshold": int},
                 extra_generators={"beta": random(3, 4), "threshold": random(1, 2)},
                 device=device,
