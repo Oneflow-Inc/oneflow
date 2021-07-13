@@ -940,7 +940,7 @@ class Mish(Module):
         super().__init__()
 
     def forward(self, x):
-        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+        return flow.F.mish(x)
 
 
 @oneflow_export("mish")
@@ -970,6 +970,144 @@ def mish_op_tensor(x):
 
     return Mish()(x)
 
+
+@oneflow_export("nn.SiLU")
+@experimental_api
+class SiLU(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.silu(x)
+
+
+@oneflow_export("nn.SELU")
+@experimental_api
+class SELU(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.selu(x)
+
+
+@oneflow_export("selu")
+@experimental_api
+def selu_op(x):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    See :mod:`oneflow.experimental.nn.Mish`
+    """
+
+    return SELU()(x)
+
+@oneflow_export("nn.Softsign")
+@experimental_api
+class Softsign(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.softsign(x)
 
 if __name__ == "__main__":
     import doctest
