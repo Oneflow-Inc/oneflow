@@ -667,7 +667,7 @@ def sin_op(tensor):
 
     """
 
-    return Sin()(tensor)
+    return Sin(inplace=False)(tensor)
 
 
 @register_tensor_op("sin")
@@ -681,14 +681,14 @@ def sin_op_tensor(tensor):
     
     """
 
-    return Sin()(tensor)
+    return Sin(inplace=False)(tensor)
 
 
 @register_tensor_op("sin_")
 @experimental_api
-def inplace_sin_op_tensor():
+def inplace_sin_op_tensor(x):
     r"""
-    Inplace version of :func:`oneflow.experimental.sin`
+    In-place version of :func:`oneflow.experimental.sin`
     
     """
 
