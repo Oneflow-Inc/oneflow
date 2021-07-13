@@ -102,12 +102,16 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
       - name: Download OneFlow custom clang-tidy
         run: |
           wget https://github.com/daquexian/llvm-project/releases/download/v0.0.1/clang-tidy
           wget https://raw.githubusercontent.com/daquexian/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
           chmod +x clang-tidy run-clang-tidy.py
-      - name: Generate files
+      - name: Build third party libs and generate files
         run: |
           mkdir build
           cd build
