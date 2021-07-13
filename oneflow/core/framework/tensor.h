@@ -82,7 +82,7 @@ class Tensor {
   virtual bool retain_grad() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
-  virtual Maybe<TensorArg> now_grad_arg() const = 0;
+  virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
   virtual std::shared_ptr<Tensor> data() const = 0;
@@ -116,7 +116,7 @@ class TensorIf : public Tensor {
 
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
-  // and now_grad_arg is temporary grad to shared data with different FunctionNode
+  // and current_grad is temporary grad to shared data with different FunctionNode
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
 
   // Setters for autograd
@@ -168,7 +168,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
-  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<TensorArg> current_grad() const override { return impl_->current_grad(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -261,7 +261,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
-  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<TensorArg> current_grad() const override { return impl_->current_grad(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
