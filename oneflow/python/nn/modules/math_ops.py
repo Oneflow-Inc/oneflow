@@ -633,6 +633,8 @@ class Sin(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            _check_inplace_valid(x)
         return flow.F.sin(x, self.inplace)
 
 
