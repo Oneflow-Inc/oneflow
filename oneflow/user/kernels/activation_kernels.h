@@ -128,9 +128,9 @@ struct MishGradFunctor {
   OF_DEVICE_FUNC explicit MishGradFunctor() {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     T sp = log(static_cast<T>(1) + exp(x));
-    T grad_sp = 1 - exp(-sp);
+    T grad_sp = static_cast<T>(1) - exp(-sp);
     T tsp = (exp(sp) - exp(-sp)) / (exp(sp) + exp(-sp));
-    T grad_tsp = (1 - tsp * tsp) * grad_sp;
+    T grad_tsp = (static_cast<T>(1) - tsp * tsp) * grad_sp;
     return dy * (x * grad_tsp + tsp);
   }
 };
