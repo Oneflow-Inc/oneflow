@@ -120,7 +120,7 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
-          cmake --build . -j$(nproc) --target oneflow_deps generate_functional of_cfgobj generate_py_cfg
+          cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
       - name: Run Maybe-related checks by clang-tidy
         run: |
           cd build
