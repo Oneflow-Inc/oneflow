@@ -134,13 +134,6 @@ class TestAtan2(flow.unittest.TestCase):
                 device=device,
             )
 
-    # def test_flow_tensor_atan2_with_random_data(test_case):
-    #     for device in ["cpu", "cuda"]:
-    #         test_tensor_against_pytorch(
-    #             test_case,
-    #             "atan2",
-    #             device=device,
-    #         )
 
 
 if __name__ == "__main__":
