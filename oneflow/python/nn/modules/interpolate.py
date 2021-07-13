@@ -70,9 +70,11 @@ class INTERPOLATE(Module):
             and self.mode != "bilinear"
             and self.mode != "linear"
             and self.mode != "area"
+            and self.mode != "bicubic"
+            and self.mode != "trilinear"
         ):
             raise ValueError(
-                'interpolation must be "nearest" or "bilinear" or "linear" or "area".'
+                'interpolation must be "nearest" or "bilinear" or "linear" or "area" or "bicubic" or "trilinear".'
             )
 
         if self.mode == "nearest" and self.align_corners:
@@ -150,6 +152,16 @@ class INTERPOLATE(Module):
         if len(x.shape) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
             return flow.F.upsample_bilinear_2d(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                align_corners=self.align_corners,
+                data_format="channels_first",
+            )
+
+        if len(x.shape) == 4 and self.mode == "bicubic":
+            assert self.align_corners is not None
+            return flow.F.upsample_bicubic_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],

@@ -776,7 +776,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleBicubic2DGradFunctor>("UpsampleBicubic2DGrad");
   m.add_functor<impl::UpsampleNearest3DFunctor>("UpsampleNearest3D");
   m.add_functor<impl::UpsampleNearest3DGradFunctor>("UpsampleNearest3DGrad");
-  m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear");
+  m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::TriuFunctor>("Triu");
