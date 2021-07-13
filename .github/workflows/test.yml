@@ -534,7 +534,7 @@ jobs:
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
-      - name: Multi clint module API test
+      - name: Module API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -542,7 +542,7 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
-      - name: Multi clint tensor API test
+      - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
