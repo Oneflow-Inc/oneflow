@@ -63,7 +63,6 @@ class AvgPool1d(Module):
         padding: _size_1_t = 0,
         ceil_mode: bool = False,
         count_include_pad: Optional[bool] = None,
-        name: Optional[str] = None,
     ):
         # TODO: fix cuDNN bugs in pooling_1d
         raise NotImplementedError
@@ -115,11 +114,10 @@ class AvgPool2d(Module):
         ceil_mode: bool = False,
         count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
-        name: Optional[str] = None,
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride) if (stride is not None) else kernel_size
+        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
 
         assert isinstance(padding, int) or isinstance(
             padding, tuple
@@ -140,7 +138,7 @@ class AvgPool2d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        res = flow.F.avg_pool_2d(
+        return flow.F.avg_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -150,7 +148,6 @@ class AvgPool2d(Module):
             ceil_mode=self.ceil_mode,
             data_format=self._channel_pos,
         )
-        return res
 
 
 @oneflow_export("nn.AvgPool3d")
@@ -220,14 +217,14 @@ class AvgPool3d(Module):
         divisor_override: Optional[int] = None,
     ):
         super().__init__()
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride) if (stride is not None) else kernel_size
+        kernel_size = _triple(kernel_size)
+        stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
 
         assert padding == (0, 0, 0), "padding>0 not supported yet"
         assert isinstance(padding, int) or isinstance(
             padding, tuple
         ), "padding can only int int or tuple of 3 ints."
-        padding = _pair(padding)
+        padding = _triple(padding)
         padding = [0, 0, *padding]
 
         assert count_include_pad is None, "count_include_pad not supported yet"
@@ -256,8 +253,7 @@ class AvgPool3d(Module):
         )
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return self._op(x)[0]
 
 
 @oneflow_export("nn.MaxPool1d")
@@ -314,7 +310,9 @@ class MaxPool1d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(tuple(kernel_size)[0])
-        self.stride = _pair(tuple(stride)[0]) if (stride is not None) else kernel_size
+        self.stride = (
+            _pair(tuple(stride)[0]) if (stride is not None) else _pair(kernel_size)
+        )
         data_format = "NCL"  # Only suport "NCL" for now!
         self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
         self.dilation = _GetSequence(dilation, 2, "dilation")
@@ -448,7 +446,7 @@ class MaxPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride) if (stride is not None) else kernel_size
+        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         data_format = "NCHW"  # Only suport "NCHW" for now!
         self.channel_pos = (
             "channels_first" if data_format == "NCHW" else "channels_last"
@@ -587,7 +585,7 @@ class MaxPool3d(Module):
     ):
         super().__init__()
         self.kernel_size = _triple(kernel_size)
-        self.stride = _triple(stride) if (stride is not None) else kernel_size
+        self.stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
         data_format = "NCDHW"
         self.channel_pos = (
             "channels_last" if data_format == "NDHWC" else "channels_first"

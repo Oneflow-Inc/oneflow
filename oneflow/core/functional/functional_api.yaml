@@ -128,6 +128,10 @@
   signature: "Tensor ReciprocalNoNan(Tensor x)"
   bind_python: True
 
+- name: "image_flip"
+  signature: "Tensor ImageFlip(Tensor x, Tensor flip_code)"
+  bind_python: True
+
 - name: "sin"
   signature: "Tensor Sin(Tensor x, *, Bool inplace=False)"
   bind_python: True
@@ -594,6 +598,15 @@
   signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
   bind_python: False
 
+- name: "diag"
+  signature: "Tensor Diag(Tensor x, *, Int32 diagonal=0)"
+  bind_python: True
+
+- name: "diag_grad"
+  signature: "Tensor DiagGrad(Tensor dy, Tensor in, *, Int32 diagonal=0)"
+  bind_python: False
+
 - name: "tensor_getitem"
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True
+
