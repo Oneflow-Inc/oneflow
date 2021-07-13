@@ -136,6 +136,26 @@ def _test_sin_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.cos(x.numpy()), 1e-5, 1e-5))
 
 
+def _test_inplace_sin(test_case, shape, device):
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
+    x_inplace = x + 1
+    np_out = np.sin(x_inplace.numpy())
+
+    id_old = id(x_inplace)
+    x_inplace.sin_()
+
+    test_case.assertEqual(id_old, id(x_inplace))
+    test_case.assertTrue(np.allclose(x_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_x_inplace = x_inplace.sum()
+    of_x_inplace.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.cos(x_inplace.numpy()), 1e-5, 1e-5)
+    )
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -146,6 +166,7 @@ class TestSin(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_sin,
             _test_sin_backward,
+            _test_inplace_sin,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
