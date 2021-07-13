@@ -31,7 +31,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("combined_margin_loss")
 def combined_margin_loss(
     x: oneflow._oneflow_internal.BlobDesc,
     label: oneflow._oneflow_internal.BlobDesc,

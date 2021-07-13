@@ -23,7 +23,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("categorical_ordinal_encode")
 def categorical_ordinal_encode(
     table: oneflow._oneflow_internal.BlobDesc,
     size: oneflow._oneflow_internal.BlobDesc,
@@ -102,7 +101,6 @@ def categorical_ordinal_encode(
     )
 
 
-@oneflow_export("layers.categorical_ordinal_encoder")
 def categorical_ordinal_encoder(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     capacity: int,

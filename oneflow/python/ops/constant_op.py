@@ -28,7 +28,6 @@ from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow._oneflow_internal
 
 
-@oneflow_export("constant")
 def constant(
     value: Union[int, float],
     dtype: Optional[flow.dtype] = None,
@@ -108,7 +107,6 @@ def constant(
     )
 
 
-@oneflow_export("constant_scalar")
 def constant_scalar(
     value: Union[int, float],
     dtype: Optional[flow.dtype] = None,
@@ -148,7 +146,6 @@ def constant_scalar(
     return flow.constant(value, dtype=dtype, shape=[1])
 
 
-@oneflow_export("constant_like")
 def constant_like(
     like: oneflow._oneflow_internal.BlobDesc,
     value: Union[int, float],
@@ -223,8 +220,6 @@ def constant_like(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("ones_like")
-@stable_api
 def ones_like(
     like: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,
@@ -268,9 +263,6 @@ def ones_like(
     """
     return constant_like(like, 1, dtype=dtype, name=name)
 
-
-@oneflow_export("zeros_like")
-@stable_api
 def zeros_like(
     like: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,

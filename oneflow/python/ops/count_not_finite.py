@@ -28,7 +28,6 @@ import oneflow._oneflow_internal
 from typing import Optional, Union, Sequence
 
 
-@oneflow_export("count_not_finite")
 def count_not_finite(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -45,7 +44,6 @@ def count_not_finite(
     )
 
 
-@oneflow_export("multi_count_not_finite")
 def multi_count_not_finite(
     x: Optional[Sequence[oneflow._oneflow_internal.BlobDesc]] = None,
     name: Optional[str] = None,
