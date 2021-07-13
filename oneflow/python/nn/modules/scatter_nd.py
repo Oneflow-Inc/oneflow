@@ -19,8 +19,6 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
-from typing import Union
-
 @oneflow_export("scatter_nd")
 @experimental_api
 class Scatter_nd(Module):
@@ -47,7 +45,7 @@ class Scatter_nd(Module):
         tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
 
     """
-    def __init__(self, shape: Union[list]):
+    def __init__(self, shape):
         super().__init__()
         if not isinstance(shape, list):
             raise ValueError("shape must be list!")

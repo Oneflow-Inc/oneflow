@@ -26,7 +26,6 @@ class Gather_nd(Module):
         self.gather_nd_op = (
             flow.builtin_op("gather_nd").Input("params").Input("indices").Output("out").Build()
         )
-
     def forward(self, input, index):
 
         return self.gather_nd_op(input,index)[0]

@@ -34,7 +34,6 @@ class ScatterNd : public OpExprGradFunction<ScatterNdInterpState> {
     ctx->requires_grad = inputs.at(1)->requires_grad();
     if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // indices
-      ctx->SaveTensorForBackward(inputs.at(1));  // update
     }
     return Maybe<void>::Ok();
   }
