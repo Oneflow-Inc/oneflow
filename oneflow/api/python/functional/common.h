@@ -20,11 +20,13 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
 
@@ -129,6 +131,11 @@ template<typename T>
   }
   return values;
 }
+
+Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
+const char* PyStringAsString(PyObject* object);
+
+Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object);
 
 }  // namespace detail
 
