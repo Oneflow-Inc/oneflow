@@ -29,8 +29,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("gather")
-@stable_api
+
 def gather(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -157,8 +156,7 @@ def gather(
         )
 
 
-@oneflow_export("flatten")
-@stable_api
+
 def flatten(
     input: oneflow._oneflow_internal.BlobDesc,
     start_dim: int = 0,
@@ -223,8 +221,7 @@ def infer_shape(x, shape):
     return shape
 
 
-@oneflow_export("reshape")
-@stable_api
+
 def reshape(
     x: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -303,7 +300,6 @@ def reshape(
         return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("reshape_like")
 def reshape_like(
     x: oneflow._oneflow_internal.BlobDesc,
     like: oneflow._oneflow_internal.BlobDesc,
@@ -362,7 +358,6 @@ def reshape_like(
     )
 
 
-@oneflow_export("dynamic_reshape")
 def dynamic_reshape(
     x: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -425,8 +420,7 @@ def dynamic_reshape(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("transpose")
-@stable_api
+
 def transpose(
     a: oneflow._oneflow_internal.BlobDesc,
     perm: Sequence[int] = None,
@@ -491,8 +485,7 @@ def transpose(
     )
 
 
-@oneflow_export("slice")
-@stable_api
+
 def slice(
     x: oneflow._oneflow_internal.BlobDesc,
     begin: Sequence[int],
@@ -630,7 +623,6 @@ def check_slice_tup_list(slice_tup_list, shape):
     return start_list, stop_list, step_list
 
 
-@oneflow_export("slice_v2")
 def slice_v2(
     x: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
@@ -691,8 +683,7 @@ def slice_v2(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("slice_update")
-@stable_api
+
 def api_slice_update(
     x: oneflow._oneflow_internal.BlobDesc,
     update: oneflow._oneflow_internal.BlobDesc,
@@ -816,7 +807,6 @@ def GetSliceAttrs(slice_tup_list, input_shape):
     return start_list, stop_list, step_list
 
 
-@oneflow_export("experimental.logical_slice")
 def logical_slice(
     x: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
@@ -841,7 +831,6 @@ def logical_slice(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("experimental.logical_slice_assign")
 def logical_slice_assign(
     x: oneflow._oneflow_internal.BlobDesc,
     value: oneflow._oneflow_internal.BlobDesc,
@@ -867,7 +856,6 @@ def logical_slice_assign(
     return op.InferAndTryRun()
 
 
-@oneflow_export("reverse")
 def reverse(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Union[int, Sequence[int]],
@@ -940,7 +928,6 @@ def reverse(
     return slice_v2(input, slice_tup_list, name)
 
 
-@oneflow_export("concat")
 def concat(
     inputs: Optional[Sequence[oneflow._oneflow_internal.BlobDesc]] = None,
     axis: int = 0,
@@ -1044,7 +1031,6 @@ def concat(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("gather_nd")
 def gather_nd(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -1163,7 +1149,6 @@ def gather_nd(
     return op.InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("scatter_nd")
 def scatter_nd(
     indices: oneflow._oneflow_internal.BlobDesc,
     updates: oneflow._oneflow_internal.BlobDesc,
@@ -1254,7 +1239,6 @@ def scatter_nd(
     return op.InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("tensor_scatter_nd_update")
 def tensor_scatter_nd_update(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -1323,7 +1307,6 @@ def tensor_scatter_nd_update(
     return op.InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("tensor_scatter_nd_add")
 def tensor_scatter_nd_add(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -1392,8 +1375,7 @@ def tensor_scatter_nd_add(
     return op.InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("argwhere")
-@stable_api
+
 def argwhere(
     condition: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,
@@ -1453,8 +1435,7 @@ def argwhere(
     return sync_dynamic_resize(output, output_size)
 
 
-@oneflow_export("nonzero")
-@stable_api
+
 def nonzero(
     a: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1477,8 +1458,7 @@ def nonzero(
     return transpose(indices, perm=(1, 0), name=tranpose_name)
 
 
-@oneflow_export("where")
-@stable_api
+
 def where(
     condition: oneflow._oneflow_internal.BlobDesc,
     x: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -1584,7 +1564,6 @@ def where(
         raise ValueError("it is not supported when exactly one of x or y is non-None")
 
 
-@oneflow_export("elem_cnt")
 def elem_cnt(
     inputs: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,
@@ -1639,7 +1618,6 @@ def elem_cnt(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("sync_dynamic_resize")
 def sync_dynamic_resize(
     inputs: oneflow._oneflow_internal.BlobDesc,
     size: oneflow._oneflow_internal.BlobDesc,
@@ -1701,8 +1679,7 @@ def sync_dynamic_resize(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("stack")
-@stable_api
+
 def stack(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc],
     axis: int = 0,
@@ -1771,7 +1748,6 @@ def stack(
     return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
-@oneflow_export("random.generate_random_batch_permutation_indices")
 def generate_random_batch_permutation_indices(
     value: oneflow._oneflow_internal.BlobDesc,
     seed: Optional[int] = None,
@@ -1830,7 +1806,6 @@ def generate_random_batch_permutation_indices(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("random.shuffle")
 def shuffle(
     value: oneflow._oneflow_internal.BlobDesc,
     seed: Optional[int] = None,
@@ -1873,7 +1848,6 @@ def shuffle(
     return flow.gather(value, generate_random_batch_permutation_indices(value, seed))
 
 
-@oneflow_export("identity")
 def identity(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1921,7 +1895,6 @@ def identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("identity_n")
 def identity_n(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
 ) -> List[oneflow._oneflow_internal.BlobDesc]:
@@ -1976,7 +1949,6 @@ def identity_n(
     )
 
 
-@oneflow_export("cast_to_static_shape")
 def cast_to_static_shape(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -2030,8 +2002,7 @@ def cast_to_static_shape(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("squeeze")
-@stable_api
+
 def squeeze(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -2114,8 +2085,7 @@ def squeeze(
     )
 
 
-@oneflow_export("expand")
-@stable_api
+
 def expand(
     x: oneflow._oneflow_internal.BlobDesc,
     expand_size: Sequence[int],
@@ -2208,7 +2178,6 @@ def expand(
     )
 
 
-@oneflow_export("expand_dims")
 def expand_dims(
     input: oneflow._oneflow_internal.BlobDesc, axis: int, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -2263,8 +2232,7 @@ def expand_dims(
     )
 
 
-@oneflow_export("broadcast_like")
-@stable_api
+
 def broadcast_like(
     x: oneflow._oneflow_internal.BlobDesc,
     like: oneflow._oneflow_internal.BlobDesc,
@@ -2367,8 +2335,7 @@ def broadcast_like(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("masked_fill")
-@stable_api
+
 def masked_fill(
     x: oneflow._oneflow_internal.BlobDesc,
     mask: oneflow._oneflow_internal.BlobDesc,
@@ -2417,7 +2384,6 @@ def masked_fill(
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
 
-@oneflow_export("dim_gather")
 def dim_gather(
     input: oneflow._oneflow_internal.BlobDesc,
     dim: int,
@@ -2506,7 +2472,6 @@ def dim_gather(
     )
 
 
-@oneflow_export("amp_white_identity")
 def amp_white_identity(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -2522,8 +2487,7 @@ def amp_white_identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("zeros")
-@stable_api
+
 def zeros(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
@@ -2567,8 +2531,7 @@ def zeros(
     return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")
 
 
-@oneflow_export("ones")
-@stable_api
+
 def ones(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
@@ -2611,7 +2574,6 @@ def ones(
     return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
 
 
-@oneflow_export("profiler.nvtx_start")
 def nvtx_start(
     x: oneflow._oneflow_internal.BlobDesc, mark_prefix: str, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -2630,7 +2592,6 @@ def nvtx_start(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("profiler.nvtx_end")
 def nvtx_end(
     x: oneflow._oneflow_internal.BlobDesc, mark_prefix: str, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
