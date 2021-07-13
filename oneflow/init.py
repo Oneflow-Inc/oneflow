@@ -49,7 +49,6 @@ from oneflow.python.version import __version__
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
-
 import oneflow.python.framework.register_python_callback
 
 import oneflow.python_gen.__export_symbols__
@@ -67,7 +66,6 @@ import oneflow.python.framework.env_util as env_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.session_util import Session
 from oneflow.python.framework.multi_client_session import MultiClientSession
-
 
 if env_util.HasAllMultiClientEnvVars():
     oneflow._oneflow_internal.SetIsMultiClient(True)
