@@ -22,7 +22,6 @@ import sys
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("random.gen_seed")
 def api_gen_random_seed(seed: typing.Optional[int] = None):
     api = enable_if.unique([consistent_gen_random_seed, mirrored_gen_random_seed])
     return api(seed)

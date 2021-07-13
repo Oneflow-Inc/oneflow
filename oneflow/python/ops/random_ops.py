@@ -24,7 +24,6 @@ import oneflow.python.framework.module as module_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("random.bernoulli")
 def Bernoulli(
     x: oneflow._oneflow_internal.BlobDesc,
     seed: Optional[int] = None,

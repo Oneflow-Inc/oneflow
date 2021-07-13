@@ -23,7 +23,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("quantization.min_max_observer")
 def min_max_observer(
     input: oneflow._oneflow_internal.BlobDesc,
     quantization_bit: int = 8,
@@ -127,7 +126,6 @@ def min_max_observer(
     return scale, zero_point
 
 
-@oneflow_export("quantization.moving_average_min_max_observer")
 def moving_average_min_max_observer(
     input: oneflow._oneflow_internal.BlobDesc,
     quantization_bit: int = 8,
@@ -268,7 +266,6 @@ def moving_average_min_max_observer(
     return scale, zero_point
 
 
-@oneflow_export("quantization.fake_quantization")
 def fake_quantization(
     input: oneflow._oneflow_internal.BlobDesc,
     scale: oneflow._oneflow_internal.BlobDesc,

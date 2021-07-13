@@ -27,7 +27,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("math.reduce_mean")
 def reduce_mean(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[collections.Sized, int]] = None,
