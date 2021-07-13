@@ -80,7 +80,8 @@ Maybe<void> Device::Init() {
 }
 
 /*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum());
+  return New(type,
+             GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
