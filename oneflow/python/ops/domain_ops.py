@@ -22,7 +22,6 @@ import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("nn.fused_self_attention_query_mul_key_and_value")
 def api_fused_self_attention_query_mul_key_and_value(
     x: oneflow._oneflow_internal.BlobDesc,
     head_size: int,

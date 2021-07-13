@@ -29,7 +29,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_export("data.ImagePreprocessor")
 class ImagePreprocessor(object):
     def __init__(self, preprocessor: str) -> None:
         assert isinstance(preprocessor, str)
@@ -45,7 +44,6 @@ class ImagePreprocessor(object):
         return self.preprocessor.lower() == "mirror"
 
 
-@oneflow_export("data.ImageResizePreprocessor")
 class ImageResizePreprocessor(object):
     def __init__(self, width: int, height: int) -> None:
         assert isinstance(width, int)
@@ -54,7 +52,6 @@ class ImageResizePreprocessor(object):
         self.height = height
 
 
-@oneflow_export("data.ImageCodec")
 class ImageCodec(object):
     def __init__(
         self,
@@ -92,13 +89,11 @@ class ImageCodec(object):
         return (False, -1, -1)
 
 
-@oneflow_export("data.RawCodec")
 class RawCodec(object):
     def __init__(self, auto_zero_padding: bool = False) -> None:
         self.auto_zero_padding = auto_zero_padding
 
 
-@oneflow_export("data.NormByChannelPreprocessor")
 class NormByChannelPreprocessor(object):
     def __init__(
         self,
@@ -120,7 +115,6 @@ class NormByChannelPreprocessor(object):
             return "NCHW"
 
 
-@oneflow_export("data.BlobConf")
 class BlobConf(object):
     def __init__(
         self,
@@ -190,8 +184,6 @@ class BlobConf(object):
             raise NotImplementedError
 
 
-@oneflow_export("data.decode_ofrecord")
-@oneflow_deprecate()
 def decode_ofrecord(
     ofrecord_dir: str,
     blobs: Sequence[BlobConf],
@@ -233,7 +225,6 @@ def decode_ofrecord(
     return tuple(result_blob_list)
 
 
-@oneflow_export("data.ofrecord_loader")
 def ofrecord_loader(
     ofrecord_dir: str,
     batch_size: int = 1,
@@ -263,7 +254,6 @@ def ofrecord_loader(
     )
 
 
-@oneflow_export("data.ofrecord_reader")
 def ofrecord_reader(
     ofrecord_dir: str,
     batch_size: int = 1,
@@ -355,7 +345,6 @@ def ofrecord_reader(
     )
 
 
-@oneflow_export("data.decode_random")
 def decode_random(
     shape: Sequence[int],
     dtype: flow.dtype,
@@ -456,7 +445,6 @@ def image_decoder_random_crop_resize(
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("data.onerec_reader")
 def onerec_reader(
     files,
     batch_size=1,
