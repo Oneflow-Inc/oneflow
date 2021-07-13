@@ -18,12 +18,14 @@ limitations under the License.
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
@@ -32,6 +34,7 @@ limitations under the License.
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -285,7 +288,11 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());
   pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
   pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
+  // pm.addPass(createFuncBufferizePass());
+  // pm.addPass(createMemRefToLLVMPass());
+  // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
   return pm.run(module.get());
 }
 
@@ -353,10 +360,9 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
           ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
       // create a function to be lowered
-      SmallVector<Type, 3> types(created->getOperandTypes());
       // TODO: handle alias here
-      types.push_back(convertTensorToMemRef(created->getResultTypes().front().cast<TensorType>()));
-      auto func_type = rewriter.getFunctionType(types, llvm::None);
+      auto func_type =
+          rewriter.getFunctionType(created->getOperandTypes(), created->getResultTypes());
       auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
 
       auto& entry_block = *function.addEntryBlock();
@@ -372,9 +378,7 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
           /* operands */
           SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block.getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
-      builder.create<memref::TensorStoreOp>(mul_op->getLoc(), scalar_mul.y(),
-                                            entry_block.getArgument(2));
-      builder.create<ReturnOp>(mul_op->getLoc());
+      builder.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
       // TODO: decare terminator
       // TODO: skip outline functions when translating beck to job
       jit_module->push_back(function);
