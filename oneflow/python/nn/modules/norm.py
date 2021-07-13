@@ -20,23 +20,30 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
-
-class Norm(Module):
+class Vector_Norm(Module):
     def __init__(self, ord=None, dim=None, keepdim=False) -> None:
         super().__init__()
 
-        self.ord = ord
+        self.ord = 2 if ord == None else ord
         self.dim = dim
         self.keepdim = keepdim
 
     def _vector_norm(self, x, ord, dim):
         if isinstance(ord, str) and ord in ["fro", "nuc"]:
             raise ValueError("Norm order {} is not supported for vectors".format(ord))
-        elif isinstance(ord, float) and ord in [float("inf"), float("-inf")]:
+        elif isinstance(ord, float):
             if ord == float("inf"):
                 return flow.experimental.max(flow.experimental.abs(x), dim=dim)
-            else:
+            elif ord == float("-inf"):
                 return flow.experimental.min(flow.experimental.abs(x), dim=dim)
+            else:
+                return flow.experimental.pow(
+                    flow.experimental.sum(
+                        flow.experimental.pow(flow.experimental.abs(x), ord), dim=dim
+                    ),
+                    1.0 / ord,
+                )
+
         elif isinstance(ord, int):
             if ord == 0:
                 # TODO: fix error when input are all zero vector
@@ -50,6 +57,19 @@ class Norm(Module):
                 )
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
+
+    def forward(self, x):
+        return self._vector_norm(x.reshape((1, -1))[0], ord = self.ord, dim=self.dim)
+
+
+
+class Matrix_Norm(Module):
+    def __init__(self, ord=None, dim=None, keepdim=False) -> None:
+        super().__init__()
+
+        self.ord = "fro" if ord == None else ord
+        self.dim = dim
+        self.keepdim = keepdim
 
     def _matrix_norm(self, x, ord, dim):
         if isinstance(ord, str) and ord in ["fro", "nuc"]:
@@ -87,6 +107,23 @@ class Norm(Module):
                 )
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
+
+    def forward(self, x):
+        if self.keepdim == True and self.dim != None:
+                return flow.experimental.unsqueeze(self._matrix_norm(x, ord = self.ord, dim=self.dim), self.dim)
+        return self._matrix_norm(x, ord = self.ord, dim=self.dim)
+
+
+class Norm(Module):
+    def __init__(self, ord=None, dim=None, keepdim=False) -> None:
+        super().__init__()
+
+        self.ord = ord
+        self.dim = dim
+        self.keepdim = keepdim
+        self._vector_norm = Vector_Norm(self.ord, self.dim, self.keepdim)._vector_norm
+        self._matrix_norm = Matrix_Norm(self.ord, self.dim, self.keepdim)._matrix_norm
+
 
     def _whether_keepdim(self, x):
         if self.keepdim == True and self.dim != None:
@@ -257,6 +294,22 @@ def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     """
     return Norm(ord, dim, keepdim)(input)
 
+@oneflow_export("linalg.vector_norm")
+@experimental_api
+def vector_norm_tensor_op(input, ord=None, dim=None, keepdim=False):
+    r"""
+    See :func:`oneflow.experimental.linalg.norm.`
+    """
+    return Vector_Norm(ord, dim, keepdim)(input)
+
+
+@oneflow_export("linalg.matrix_norm")
+@experimental_api
+def matrix_norm_tensor_op(input, ord=None, dim=None, keepdim=False):
+    r"""
+    See :func:`oneflow.experimental.linalg.norm.`
+    """
+    return Matrix_Norm(ord, dim, keepdim)(input)
 
 if __name__ == "__main__":
     import doctest
