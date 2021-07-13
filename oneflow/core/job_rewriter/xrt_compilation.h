@@ -20,10 +20,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#if defined(WITH_XLA) || defined(WITH_TENSORRT)
+#if defined(WITH_XLA) || defined(WITH_TENSORRT) || defined(WITH_TVM)
 #include "oneflow/xrt/api.h"
 #define OF_WITH_XRT
-#endif  // WITH_XLA || WITH_TENSORRT
+#endif  // WITH_XLA || WITH_TENSORRT || WITH_TVM
 
 namespace oneflow {
 
@@ -59,7 +59,8 @@ inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
   return xrt::XrtCompilationEnabled();
 #else
   return (config.has_use_xla_jit() && config.use_xla_jit())
-         || (config.has_use_tensorrt() && config.use_tensorrt());
+         || (config.has_use_tensorrt() && config.use_tensorrt())
+         || (config.has_use_tvm() && config.use_tvm());
 #endif  // OF_WITH_XRT
 }
 
