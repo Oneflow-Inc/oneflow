@@ -587,7 +587,7 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
-    m = flow.nn.MaxPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
+    m = flow.nn.MaxPool3d(kernel_size=kernel_size, padding=padding)
     m.to(flow.device(device))
     x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
     output = m(x)
