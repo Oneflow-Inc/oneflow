@@ -47,10 +47,17 @@ from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
 from oneflow.compatible.single_client.python.framework import session_util
 from oneflow.compatible.single_client.python.framework import session_context
+from oneflow.compatible.single_client.python.framework import env_util
 
+oneflow._oneflow_internal.DestroyEnv()
+oneflow._oneflow_internal.GlobalScopeStackPop()
+oneflow._oneflow_internal.SetIsMultiClient(False)
+env_util.init_default_physical_env()
 session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
 )
+
+del env_util
 del session_util
 del session_context
 
@@ -97,6 +104,7 @@ from oneflow.compatible.single_client.python.framework.session_context import (
 )
 
 atexit.register(TryCloseDefaultSession)
+
 del TryCloseDefaultSession
 del atexit
 del absolute_import

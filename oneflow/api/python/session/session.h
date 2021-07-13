@@ -110,7 +110,7 @@ inline Maybe<void> StopLazyGlobalSession() {
 
 inline Maybe<void> CreateMultiClientSessionContext() {
   CHECK_ISNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  Global<MultiClientSessionContext>::New();
+  Global<MultiClientSessionContext>::SetAllocated(new MultiClientSessionContext());
   return Maybe<void>::Ok();
 }
 

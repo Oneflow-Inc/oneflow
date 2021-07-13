@@ -69,27 +69,25 @@ from oneflow.python.framework.session_util import Session
 from oneflow.python.framework.multi_client_session import MultiClientSession
 
 
-if env_util.HasAllMultiClientEnvVars():
-    oneflow._oneflow_internal.SetIsMultiClient(True)
-    env_util.api_env_init()
-    session_ctx.OpenDefaultSession(
-        MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-    )
-else:
-    oneflow._oneflow_internal.SetIsMultiClient(False)
-    env_util.init_default_physical_env()
-    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+if not env_util.HasAllMultiClientEnvVars():
+    env_util.SetDefaultMultiClientEnvVars()
+oneflow._oneflow_internal.SetIsMultiClient(True)
+session_ctx.OpenDefaultSession(
+    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+)
+env_util.api_env_init()
 
 del env_util
 
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
-def _SyncOnMasterFn(is_multi_client, get_rank, sync):
-    def SyncOnMaster():
-        if is_multi_client or get_rank() == 0:
-            sync()
+def _SyncOnMasterFn():
+    import oneflow
 
-    return SyncOnMaster
+    if oneflow.python.framework.distribute.is_multi_client():
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+    elif oneflow.python.framework.distribute.get_rank() == 0:
+        oneflow._oneflow_internal.eager.single_client.Sync()
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
@@ -98,15 +96,8 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
-atexit.register(
-    _SyncOnMasterFn(
-        oneflow.python.framework.distribute.is_multi_client(),
-        oneflow.python.framework.distribute.get_rank,
-        oneflow._oneflow_internal.eager.multi_client.Sync
-        if oneflow.python.framework.distribute.is_multi_client()
-        else oneflow._oneflow_internal.eager.single_client.Sync,
-    )
-)
+atexit.register(_SyncOnMasterFn)
+
 del atexit
 
 if not oneflow._oneflow_internal.IsMultiClient():

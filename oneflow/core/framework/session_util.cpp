@@ -106,7 +106,12 @@ Maybe<void> ClearSessionById(int64_t id) {
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) != id2session_map->end());
   id2session_map->erase(id);
-  DefaultSessionId()->pop_back();
+  auto* sess_ids = DefaultSessionId();
+  int32_t i = 0;
+  for (; i < sess_ids->size(); ++i) {
+    if (sess_ids->at(i) == id) { break; }
+  }
+  sess_ids->erase(sess_ids->begin() + i);
   return Maybe<void>::Ok();
 }
 
