@@ -100,3 +100,9 @@ def clip_grad_norm(
         for p in parameters:
             p.grad = p.grad.detach().mul(clip_coef.to(p.grad.device))
     return total_norm
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
