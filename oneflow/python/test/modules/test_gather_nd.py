@@ -23,19 +23,20 @@ from test_util import GenArgList
 
 
 def _test_gather_nd(test_case, device):
-    input = np.array([[1, 2,3], [4, 5,6],[7,8,9]])
+    input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     indices = np.array([[0], [2]])
-    np_out = np.array([[1,2,3],[7,8,9]])
+    np_out = np.array([[1, 2, 3], [7, 8, 9]])
     output = flow.gather_nd(
         flow.Tensor(input, dtype=flow.float, device=flow.device(device)),
         flow.Tensor(indices, dtype=flow.int, device=flow.device(device)),
     )
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
+
 def _test_gather_nd_t(test_case, device):
-    input = np.array([[1, 2,3], [4, 5,6],[7,8,9]])
-    indices = np.array([[0,2], [2,1]])
-    np_out = np.array([3,8])
+    input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    indices = np.array([[0, 2], [2, 1]])
+    np_out = np.array([3, 8])
     output = flow.gather_nd(
         flow.Tensor(input, dtype=flow.float, device=flow.device(device)),
         flow.Tensor(indices, dtype=flow.int, device=flow.device(device)),
@@ -44,12 +45,14 @@ def _test_gather_nd_t(test_case, device):
 
 
 def _test_gather_nd_backward(test_case, device):
-    input = np.array([[1, 2,3], [4, 5,6],[7,8,9]])
+    input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     indices = np.array([[0], [2]])
-    np_out = np.array([[1,2,3],[7,8,9]])
+    np_out = np.array([[1, 2, 3], [7, 8, 9]])
 
-    np_grad = np.array([[1,1,1],[0,0,0],[1,1,1]])
-    of_input = flow.Tensor(input, requires_grad=True, dtype=flow.float, device=flow.device(device))
+    np_grad = np.array([[1, 1, 1], [0, 0, 0], [1, 1, 1]])
+    of_input = flow.Tensor(
+        input, requires_grad=True, dtype=flow.float, device=flow.device(device)
+    )
     output = flow.gather_nd(
         of_input, flow.Tensor(indices, dtype=flow.int, device=flow.device(device))
     )
@@ -61,12 +64,14 @@ def _test_gather_nd_backward(test_case, device):
 
 
 def _test_gather_nd_backward_t(test_case, device):
-    input = np.array([[1, 2,3], [4, 5,6],[7,8,9]])
-    indices = np.array([[0,2], [2,1]])
-    np_out = np.array([3,8])
+    input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    indices = np.array([[0, 2], [2, 1]])
+    np_out = np.array([3, 8])
 
-    np_grad = np.array([[0,0,1],[0,0,0],[0,1,0]])
-    of_input = flow.Tensor(input, requires_grad=True, dtype=flow.float, device=flow.device(device))
+    np_grad = np.array([[0, 0, 1], [0, 0, 0], [0, 1, 0]])
+    of_input = flow.Tensor(
+        input, requires_grad=True, dtype=flow.float, device=flow.device(device)
+    )
     output = flow.gather_nd(
         of_input, flow.Tensor(indices, dtype=flow.int, device=flow.device(device))
     )

@@ -19,6 +19,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
+
 @oneflow_export("scatter_nd")
 @experimental_api
 class Scatter_nd(Module):
@@ -45,7 +46,8 @@ class Scatter_nd(Module):
         tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
 
     """
-    def __init__(self, shape:list):
+
+    def __init__(self, shape: list):
         super().__init__()
         if not isinstance(shape, list):
             raise ValueError("shape must be list!")
@@ -57,11 +59,11 @@ class Scatter_nd(Module):
             .Input("indices")
             .Input("updates")
             .Output("out")
-            .Attr("shape",self.shape)
+            .Attr("shape", self.shape)
             .Build()
         )
 
-        res = self._op(index,updates)[0]
+        res = self._op(index, updates)[0]
         return res
 
 
