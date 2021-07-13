@@ -123,9 +123,9 @@ class TestSin(flow.unittest.TestCase):
     def test_sin(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            # _test_sin,
-            # _test_sin_backward,
-            _test_sin_,
+            _test_sin,
+            _test_sin_backward,
+            _test_inplace_sin,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
