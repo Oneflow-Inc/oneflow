@@ -40,7 +40,6 @@ import inspect
 import numpy as np
 
 
-@oneflow_export("watch")
 def Watch(
     blob_watched: oneflow._oneflow_internal.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
@@ -166,7 +165,6 @@ def LazyConsistentWatch(blob_watched, handler):
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
 
 
-@oneflow_export("watch_diff")
 def WatchDiff(
     blob_watched: oneflow._oneflow_internal.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,

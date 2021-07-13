@@ -28,7 +28,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("math.two_stage_reduce_max")
 def api_two_stage_reduce_max(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -45,7 +44,6 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
     return two_stage_reduce(x, axis, keepdims, "reduce_max", name)
 
 
-@oneflow_export("math.two_stage_reduce_min")
 def api_two_stage_reduce_min(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
