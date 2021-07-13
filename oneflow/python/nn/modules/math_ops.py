@@ -628,11 +628,12 @@ def arcsinh_op_tensor(input):
 
 
 class Sin(Module):
-    def __init__(self) -> None:
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
-        return flow.F.sin(x)
+        return flow.F.sin(x, self.inplace)
 
 
 @oneflow_export("sin")
@@ -681,6 +682,20 @@ def sin_op_tensor(tensor):
     """
 
     return Sin()(tensor)
+
+
+@register_tensor_op("sin_")
+@experimental_api
+def inplace_sin_op_tensor():
+    r"""
+
+    sin_() -> Tensor
+
+    Inplace version of :func:`oneflow.experimental.sin`
+    
+    """
+
+    return Sin(inplace=True)(x)
 
 
 class Cos(Module):

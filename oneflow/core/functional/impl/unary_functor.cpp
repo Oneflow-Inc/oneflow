@@ -27,7 +27,7 @@ namespace functional {
 namespace impl {
 
 #define UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name)                          \
-  class class_name##Functor : public UnaryFunctor {                                  \
+  class class_name##Functor : public InplaceableUnaryFunctor {                       \
    public:                                                                           \
     class_name##Functor() {                                                          \
       op_ = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Output("y").Build()); \
