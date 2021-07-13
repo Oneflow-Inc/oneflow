@@ -16,13 +16,13 @@ limitations under the License.
 #include "iostream"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
-OF_DEVICE_FUNC static int64_t GetLinearInputIndex(const int64_t out_dim_idx, const float scale,
-                                                  bool align_corners) {
+template<typename T>
+OF_DEVICE_FUNC T GetLinearInputIndex(const int64_t out_dim_idx, const T scale, bool align_corners) {
   if (align_corners) {
-    return scale * out_dim_idx;
+    return static_cast<T>(scale * out_dim_idx);
   } else {
-    int64_t src_idx = static_cast<int64_t>(scale * (out_dim_idx + 0.5) - 0.5);
-    return src_idx < 0 ? 0 : src_idx;
+    T src_idx = scale * (out_dim_idx + 0.5) - 0.5;
+    return static_cast<T>(src_idx < 0 ? 0 : src_idx);
   }
 }
 

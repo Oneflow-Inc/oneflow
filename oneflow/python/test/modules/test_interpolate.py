@@ -31,6 +31,13 @@ def _test_interpolate_linear_1d(test_case, device):
     )
     m = flow.nn.functional.interpolate(scale_factor=2.0, mode="linear")
     of_out = m(input)
+    print(of_out.numpy())
+    np_out = [[[1.0, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.0]]]
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[2.0, 2.0, 2.0, 2.0]]]
+    test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
 def _test_interpolate_nearest_1d(test_case, device):

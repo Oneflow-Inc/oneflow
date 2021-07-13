@@ -25,26 +25,37 @@ namespace {
 template<typename T>
 static void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
                                     NdIndexOffsetHelper<int64_t, 3> in_helper,
-                                    NdIndexOffsetHelper<int64_t, 3> out_helper,
+                                    NdIndexOffsetHelper<int64_t, 3> out_helper, const int in_height,
                                     const float scale_factor, bool align_corners, T* out_dptr) {
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h;
     out_helper.OffsetToNdIndex(index, n, c, h);
-    const int64_t in_h = GetLinearInputIndex(h, scale_factor, align_corners);
-    out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h)];
+    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const int64_t h1 = h1r;
+    const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+    const T h1lambda = h1r - h1;
+    const T h0lambda = static_cast<T>(1.) - h1lambda;
+    out_dptr[index] = h0lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1)]
+                      + h1lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1 + h1p)];
   }
 }
 
 template<typename T>
 static void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                      NdIndexOffsetHelper<int64_t, 3> dy_helper,
-                                     NdIndexOffsetHelper<int64_t, 3> dx_helper,
+                                     NdIndexOffsetHelper<int64_t, 3> dx_helper, const int in_height,
                                      const float scale_factor, bool align_corners, T* dx_dptr) {
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
-    const int64_t dx_h = GetLinearInputIndex(h, scale_factor, align_corners);
-    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h)) += dy_dptr[index];
+    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const int64_t h1 = h1r;
+    const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+    const T h1lambda = h1r - h1;
+    const T h0lambda = static_cast<T>(1.) - h1lambda;
+
+    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1)) += h0lambda * dy_dptr[index];
+    *(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1 + h1p)) += h1lambda * dy_dptr[index];
   }
 }
 
@@ -70,8 +81,8 @@ class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_blob->shape().At(2);
     const int64_t out_height = y_blob->shape().At(2);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, scale_height,
-                               align_corners, y_blob->mut_dptr<T>());
+    UpsampleLinear1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
+                               scale_height, align_corners, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -100,8 +111,8 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t in_height = dx_blob->shape().At(2);
     const int64_t out_height = dy_blob->shape().At(2);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, scale_height,
-                                align_corners, dx_blob->mut_dptr<T>());
+    UpsampleLinear1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
+                                scale_height, align_corners, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
