@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_XRT_TVM_OPS_OP_KERNEL_H_
 #define ONEFLOW_XRT_TVM_OPS_OP_KERNEL_H_
 
@@ -19,14 +34,13 @@ class TVMOpKernel : public OpKernel<TVMOpContext> {
   virtual ~TVMOpKernel() = default;
 };
 
-
 // TODO: add tvm cpu support
-#define REGISTER_TVM_OP_KERNEL(OpName, KernelType) \
+#define REGISTER_TVM_OP_KERNEL(OpName, KernelType)                                            \
   static OpKernelRegistrar<TVMOpContext> _tvm_op_kernel_##OpName##_ __attribute__((unused)) = \
-  OpKernelRegistrar<TVMOpContext> (#OpName) \
-  .SetField(XrtEngine::TVM) \
-  .SetDevice({XrtDevice::GPU_CUDA}) \
-  .SetFactory([]() -> OpKernel<TVMOpContext>* {return new KernelType; })
+      OpKernelRegistrar<TVMOpContext>(#OpName)                                                \
+          .SetField(XrtEngine::TVM)                                                           \
+          .SetDevice({XrtDevice::GPU_CUDA})                                                   \
+          .SetFactory([]() -> OpKernel<TVMOpContext>* { return new KernelType; })
 
 using TVMOpKernelPtr = std::shared_ptr<OpKernel<TVMOpContext>>;
 
@@ -35,8 +49,8 @@ inline TVMOpKernelPtr BuildTVMOpKernel(const std::string& op_name) {
   return TVMOpKernelPtr(OpKernelBuilder<TVMOpContext>()(field, op_name));
 }
 
-} // of_tvm
-} // xrt
-} // oneflow
+}  // namespace of_tvm
+}  // namespace xrt
+}  // namespace oneflow
 
-#endif // ONEFLOW_XRT_TVM_OPS_OP_KERNEL_H_
+#endif  // ONEFLOW_XRT_TVM_OPS_OP_KERNEL_H_

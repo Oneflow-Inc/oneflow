@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/tvm/graph_compiler.h"
 #include "oneflow/xrt/tvm/executable.h"
 #include "oneflow/xrt/tvm/ops/op_context.h"
@@ -14,7 +29,7 @@ namespace {
 
 tvm::Array<tvm::relay::IndexExpr> ConvertShapeToTVM(const oneflow::Shape& shape) {
   tvm::Array<tvm::relay::IndexExpr> ret;
-  for (int i = 0;i < shape.NumAxes(); ++i) {
+  for (int i = 0; i < shape.NumAxes(); ++i) {
     ret.push_back(tvm::relay::IndexExpr(static_cast<int32_t>(shape.At(i))));
   }
   return ret;
@@ -35,20 +50,19 @@ tvm::relay::DataType ConvertDataTypeToTVM(DataType dtype) {
 }
 
 void ConvertEntryParamsToTVMExpr(const std::vector<Parameter>& entry_params,
-    util::Map<std::string, tvm::relay::Expr>* tensor_name2expr,
-    tvm::Array<tvm::relay::Var>* graph_input_vars) {
+                                 util::Map<std::string, tvm::relay::Expr>* tensor_name2expr,
+                                 tvm::Array<tvm::relay::Var>* graph_input_vars) {
   for (const auto& para : entry_params) {
-    auto tensor_type = tvm::relay::TensorTypeNode::make(
-        ConvertShapeToTVM(para.shape()),
-        ConvertDataTypeToTVM(para.data_type()));
-    auto var = tvm::relay::VarNode::make(para.name(),
-        tensor_type);
+    auto tensor_type = tvm::relay::TensorTypeNode::make(ConvertShapeToTVM(para.shape()),
+                                                        ConvertDataTypeToTVM(para.data_type()));
+    auto var = tvm::relay::VarNode::make(para.name(), tensor_type);
     CHECK(tensor_name2expr->emplace(para.name(), var).second);
     graph_input_vars->push_back(var);
   }
 }
 
-tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& return_params,
+tvm::relay::Expr ConvertReturnParamsToTVMExpr(
+    const std::vector<Parameter>& return_params,
     const util::Map<std::string, tvm::relay::Expr>& tensor_name2expr) {
   tvm::Array<tvm::relay::Expr> fields;
   for (const auto& para : return_params) {
@@ -61,8 +75,7 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(const std::vector<Parameter>& retu
   return tvm::relay::Tuple(n);
 }
 
-std::tuple<tvm::runtime::Module, std::string>
-    BuildGraphModule(tvm::relay::Function graph_func) {
+std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Function graph_func) {
   auto create_fn = tvm::runtime::Registry::Get("relay.build_module._BuildModule");
   tvm::runtime::Module builder = (*create_fn)();
   auto build_fn = builder.GetFunction("build", false);
@@ -70,21 +83,22 @@ std::tuple<tvm::runtime::Module, std::string>
   auto get_mod_fn = builder.GetFunction("get_module", false);
 
   tvm::Map<tvm::Integer, tvm::Target> target_map = {
-    {DLDeviceType::kDLGPU, tvm::Target::Create("cuda -model=1080ti")}}; //TODO(niuchong): support more devs and targets
+      {DLDeviceType::kDLGPU,
+       tvm::Target::Create(
+           "cuda -model=1080ti")}};  // TODO(niuchong): support more devs and targets
   build_fn(graph_func, target_map, tvm::Target::Create("llvm"));
   tvm::runtime::Module built_mod = get_mod_fn();
   std::string graph_json = json_fn();
   return std::make_tuple(std::move(built_mod), std::move(graph_json));
 }
 
-}
+}  // namespace
 
 TVMGraphCompiler::TVMGraphCompiler(const std::string& name) : GraphCompiler::Impl(name) {}
 
-std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
-                                    const std::vector<Parameter> &entry_params,
-                                    const std::vector<Parameter> &return_params,
-                                    const std::vector<InputOutputAlias> &aliases) {
+std::shared_ptr<Executable> TVMGraphCompiler::Compile(
+    const XrtGraph* graph, const std::vector<Parameter>& entry_params,
+    const std::vector<Parameter>& return_params, const std::vector<InputOutputAlias>& aliases) {
   util::Map<std::string, tvm::relay::Expr> tensor_name2expr;
   tvm::Array<tvm::relay::Var> graph_input_vars;
   LOG(WARNING) << "Compile Xrt graph with TVM";
@@ -111,26 +125,27 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(const XrtGraph *graph,
         const std::string& produce_key = out_arg.meta_data().produce_key;
         tvm::relay::Expr op_expr = ctx.GetExpr4OutputName(produce_key);
         CHECK(op_expr.defined()) << "Get an empty tvm expresion for output: " << produce_key
-          << " of node: " << node->name();
+                                 << " of node: " << node->name();
         CHECK(tensor_name2expr.emplace(out_arg.name(), op_expr).second);
       }
     }
   });
 
   auto outputs = ConvertReturnParamsToTVMExpr(return_params, tensor_name2expr);
-  auto graph_func = tvm::relay::FunctionNode::make(graph_input_vars, outputs, 
-      tvm::relay::Type(), {});
+  auto graph_func =
+      tvm::relay::FunctionNode::make(graph_input_vars, outputs, tvm::relay::Type(), {});
 
   tvm::runtime::Module built_mod;
   std::string graph_json;
   std::tie(built_mod, graph_json) = BuildGraphModule(graph_func);
 
   return std::make_shared<TVMExecutable>(this->name_, entry_params.size(), return_params,
-      graph_json, built_mod, XrtDevice::GPU_CUDA); // only support GPU_CUDA now
+                                         graph_json, built_mod,
+                                         XrtDevice::GPU_CUDA);  // only support GPU_CUDA now
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TVM, TVMGraphCompiler);
 
-}
-}
-}
+}  // namespace of_tvm
+}  // namespace xrt
+}  // namespace oneflow

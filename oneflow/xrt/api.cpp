@@ -193,7 +193,7 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& functio
 void InitXrtConfigurations(const XrtConfig& config) {
   if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
   if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
-  if (config.has_use_tvm()) {FLAGS_use_tvm = config.use_tvm(); }
+  if (config.has_use_tvm()) { FLAGS_use_tvm = config.use_tvm(); }
   // Set xla configurations.
   if (config.has_tensorrt_config()) {
     const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
