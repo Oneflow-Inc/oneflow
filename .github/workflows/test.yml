@@ -124,6 +124,7 @@ jobs:
       - name: Run Maybe-related checks by clang-tidy
         run: |
           cd build
+          rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_C_COMPILER=clang-12 \
             -DCMAKE_CXX_COMPILER=clang++-12 \
