@@ -23,7 +23,6 @@ import oneflow._oneflow_internal
 from typing import Optional, Tuple
 
 
-@oneflow_export("smooth_l1_loss")
 def smooth_l1_loss(
     prediction: oneflow._oneflow_internal.BlobDesc,
     label: oneflow._oneflow_internal.BlobDesc,
@@ -87,7 +86,6 @@ def smooth_l1_loss(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("ctc_loss")
 def ctc_loss(
     log_probs: oneflow._oneflow_internal.BlobDesc,
     targets: oneflow._oneflow_internal.BlobDesc,
@@ -210,7 +208,6 @@ def ctc_loss(
         return loss
 
 
-@oneflow_export("nn.ctc_greedy_decoder")
 def ctc_greedy_decoder(
     log_probs: oneflow._oneflow_internal.BlobDesc,
     input_lengths: oneflow._oneflow_internal.BlobDesc,

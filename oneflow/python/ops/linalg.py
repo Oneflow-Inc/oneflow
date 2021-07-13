@@ -28,8 +28,6 @@ import oneflow._oneflow_internal
 from typing import Optional
 
 
-@oneflow_export("matmul", "linalg.matmul")
-@stable_api
 def matmul(
     a: oneflow._oneflow_internal.BlobDesc,
     b: oneflow._oneflow_internal.BlobDesc,
