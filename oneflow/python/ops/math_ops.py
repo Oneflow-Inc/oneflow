@@ -32,7 +32,6 @@ from oneflow.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
 
-@oneflow_export("math.add")
 def add(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -111,7 +110,6 @@ def _recursive_build_add_n(inputs, name=None):
         return _recursive_build_add_n(new_inputs)
 
 
-@oneflow_export("math.add_n")
 def add_n(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -149,7 +147,6 @@ def add_n(
     return _recursive_build_add_n(inputs, name)
 
 
-@oneflow_export("math.subtract")
 def subtract(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -204,7 +201,6 @@ def subtract(
         return broadcast_sub(x, y, name)
 
 
-@oneflow_export("math.multiply")
 def multiply(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -260,7 +256,6 @@ def multiply(
         return broadcast_mul(x, y, name)
 
 
-@oneflow_export("math.divide")
 def divide(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -319,7 +314,6 @@ def divide(
         return broadcast_div(x, y, name)
 
 
-@oneflow_export("math.mod")
 def floor_mod(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -522,7 +516,6 @@ def broadcast_floor_mod(x, y, name=None):
     return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
-@oneflow_export("math.gelu")
 def gelu(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -570,7 +563,6 @@ def gelu(
     )
 
 
-@oneflow_export("math.relu", "nn.relu")
 def relu(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -619,7 +611,6 @@ def relu(
     )
 
 
-@oneflow_export("math.sigmoid")
 def sigmoid(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -669,7 +660,6 @@ def sigmoid(
     )
 
 
-@oneflow_export("math.sigmoid_grad")
 def sigmoid_grad(
     y: oneflow._oneflow_internal.BlobDesc,
     dy: oneflow._oneflow_internal.BlobDesc,
@@ -689,7 +679,6 @@ def sigmoid_grad(
     )
 
 
-@oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(
     data: oneflow._oneflow_internal.BlobDesc,
     segment_ids: oneflow._oneflow_internal.BlobDesc,
@@ -771,7 +760,6 @@ def unsorted_segment_sum(
     )
 
 
-@oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
 def unsorted_segment_sum_like(
     data: oneflow._oneflow_internal.BlobDesc,
     segment_ids: oneflow._oneflow_internal.BlobDesc,
@@ -834,7 +822,6 @@ def unsorted_segment_sum_like(
     )
 
 
-@oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
 def unsorted_batch_segment_sum(
     data: oneflow._oneflow_internal.BlobDesc,
     segment_ids: oneflow._oneflow_internal.BlobDesc,
@@ -901,8 +888,6 @@ def unsorted_batch_segment_sum(
     )
 
 
-@oneflow_export("cast")
-@stable_api
 def cast(
     x: oneflow._oneflow_internal.BlobDesc,
     dtype: flow.dtype,
@@ -954,7 +939,6 @@ def cast(
     )
 
 
-@oneflow_export("math.equal")
 def equal(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -994,7 +978,6 @@ def equal(
     return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
 
-@oneflow_export("math.not_equal")
 def not_equal(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1034,7 +1017,6 @@ def not_equal(
     return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
 
-@oneflow_export("math.less")
 def less(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1074,7 +1056,6 @@ def less(
     return build_broadcast_binary_op("broadcast_less", x, y, name)
 
 
-@oneflow_export("math.less_equal")
 def less_equal(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1114,7 +1095,6 @@ def less_equal(
     return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
 
-@oneflow_export("math.greater")
 def greater(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1154,7 +1134,6 @@ def greater(
     return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
 
-@oneflow_export("math.greater_equal")
 def greater_equal(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1194,7 +1173,6 @@ def greater_equal(
     return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
 
-@oneflow_export("math.logical_and")
 def logical_and(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1239,7 +1217,6 @@ def logical_and(
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
 
-@oneflow_export("math.minimum")
 def minimum(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1291,7 +1268,6 @@ def minimum(
         return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
-@oneflow_export("math.maximum")
 def maximum(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -1343,7 +1319,6 @@ def maximum(
         return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
-@oneflow_export("math.reduced_shape_elem_cnt")
 def elem_cnt(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -1439,7 +1414,6 @@ def _top_k_at_last_dim(
     )
 
 
-@oneflow_export("math.top_k")
 def top_k(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
@@ -1507,7 +1481,6 @@ def _argmax_at_last_dim(
     )
 
 
-@oneflow_export("math.argmax")
 def argmax(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
@@ -1562,7 +1535,6 @@ def argmax(
         return x
 
 
-@oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
 def broadcast_to_compatible_with(
     x: oneflow._oneflow_internal.BlobDesc,
     compatible: Sequence[oneflow._oneflow_internal.BlobDesc],
@@ -1720,7 +1692,6 @@ def clip_by_value(
     )
 
 
-@oneflow_export("math.l2_normalize")
 def l2_normalize(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[int] = None,
@@ -1783,7 +1754,6 @@ def l2_normalize(
     return y
 
 
-@oneflow_export("math.squared_difference")
 def squared_difference(
     x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
@@ -1828,7 +1798,6 @@ def squared_difference(
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
 
 
-@oneflow_export("math.gelu_grad")
 def gelu_grad(
     x: oneflow._oneflow_internal.BlobDesc,
     dy: oneflow._oneflow_internal.BlobDesc,
@@ -1848,7 +1817,6 @@ def gelu_grad(
     )
 
 
-@oneflow_export("math.tril", "nn.tril")
 def tril(
     x: oneflow._oneflow_internal.BlobDesc,
     diagonal: int = 0,
@@ -1914,7 +1882,6 @@ def tril(
     )
 
 
-@oneflow_export("math.fused_scale_tril", "nn.fused_scale_tril")
 def fused_scale_tril(
     x: oneflow._oneflow_internal.BlobDesc,
     diagonal: int = 0,
@@ -1997,7 +1964,6 @@ def fused_scale_tril_softmax_dropout(
     return y
 
 
-@oneflow_export("math.polyval")
 def polyval(
     coeffs: Union[List, Tuple],
     x: oneflow._oneflow_internal.BlobDesc,
@@ -2048,8 +2014,6 @@ def polyval(
     return p
 
 
-@oneflow_export("math.in_top_k", "in_top_k")
-@stable_api
 def in_top_k(
     targets: oneflow._oneflow_internal.BlobDesc,
     predictions: oneflow._oneflow_internal.BlobDesc,
@@ -2101,8 +2065,6 @@ def in_top_k(
     )
 
 
-@oneflow_export("range")
-@stable_api
 def range(
     start, limit=None, delta=1, dtype=None, name="range"
 ) -> oneflow._oneflow_internal.BlobDesc:
