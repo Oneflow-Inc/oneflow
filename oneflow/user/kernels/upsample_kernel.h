@@ -105,12 +105,12 @@ OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
                                             const int64_t height, const int64_t x,
                                             const int64_t y) {
   int64_t access_x = x;
-  access_x = access_x < 0 ? 0 : access_x;
   access_x = access_x > width - 1 ? width - 1 : access_x;
+  access_x = access_x < 0 ? 0 : access_x;
 
   int64_t access_y = y;
-  access_y = access_y < 0 ? 0 : access_y;
   access_y = access_y > height - 1 ? height - 1 : access_y;
+  access_y = access_y < 0 ? 0 : access_y;
 
   return data[access_y * width + access_x];
 }

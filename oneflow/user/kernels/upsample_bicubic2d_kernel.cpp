@@ -28,6 +28,7 @@ static void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dptr,
                                      NdIndexOffsetHelper<int64_t, 4> out_helper,
                                      const int64_t in_height, const int64_t in_width,
                                      const float scale_h, const float scale_w, T* out_dptr) {
+  std::cout << "bicubic2d begin" << std::endl;
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -54,6 +55,7 @@ static void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dptr,
     out_dptr[index] =
         cubic_interp1d<T>(coefficients[0], coefficients[1], coefficients[2], coefficients[3], t_y);
   }
+  std::cout << "bicubic2d end" << std::endl;
 }
 
 template<typename T>
@@ -81,8 +83,10 @@ static void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dptr,
 
     for (int64_t i = 0; i < 4; i++) {
       for (int64_t j = 0; j < 4; j++) {
-        *(dx_dptr + dx_helper.NdIndexToOffset(n, c, input_y - 1 + j, input_x - 1 + i)) +=
-            dy_dptr[index];
+        *(dx_dptr
+          + dx_helper.NdIndexToOffset(
+              n, c, std::max(std::min(input_y - 1 + j, dx_height - 1), (int64_t)0),
+              std::max(std::min(input_x - 1 + i, dx_width - 1), (int64_t)0))) += dy_dptr[index];
       }
     }
   }

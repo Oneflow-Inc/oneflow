@@ -207,20 +207,10 @@ def _test_interpolate_bicubic_2d(test_case, device):
         [
             [
                 [
-                    [1.0, 1.3148143291473389, 1.6851855516433716, 2.0],
-                    [
-                        1.629629135131836,
-                        1.9444431066513062,
-                        2.314814567565918,
-                        2.6296286582946777,
-                    ],
-                    [
-                        2.370370626449585,
-                        2.685184955596924,
-                        3.0555570125579834,
-                        3.370371103286743,
-                    ],
-                    [3.0, 3.3148138523101807, 3.6851863861083984, 4.0],
+                    [0.68359375, 1.015625, 1.5625, 1.89453125],
+                    [1.34765625, 1.6796875, 2.2265625, 2.55859375],
+                    [2.44140625, 2.7734375, 3.3203125, 3.65234375],
+                    [3.10546875, 3.4375, 3.984375, 4.31640625],
                 ]
             ]
         ]
@@ -229,14 +219,7 @@ def _test_interpolate_bicubic_2d(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = [
-        [
-            [
-                [4.000001907348633, 4.000000953674316],
-                [4.000000476837158, 3.9999990463256836],
-            ]
-        ]
-    ]
+    np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
@@ -388,7 +371,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_interpolate_nearest_2d,
             _test_interpolate_nearest_3d,
             _test_interpolate_bilinear_2d,
-            # _test_interpolate_bicubic_2d,
+            _test_interpolate_bicubic_2d,
             _test_interpolate_trilinear_3d,
             _test_interpolate_trilinear_3d_align_corners,
         ]
