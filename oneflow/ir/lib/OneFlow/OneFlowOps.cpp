@@ -281,14 +281,8 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
 }
 
-LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
-  context.getOrLoadDialect<oneflow::OneFlowDialect>();
-  context.loadDialect<StandardOpsDialect>();
-  context.loadDialect<memref::MemRefDialect>();
-  context.loadDialect<tosa::TosaDialect>();
-  context.loadDialect<linalg::LinalgDialect>();
-
-  mlir::PassManager pm(&context);
+LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
+  mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());
   pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
   pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
@@ -349,15 +343,14 @@ LogicalResult Lower(mlir::MLIRContext& context, OwningModuleRef& module) {
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
 
-      mlir::MLIRContext context;
-
       // TODO: is it a good idea to insert the sub-graph at entry block?
       // TODO: add dedicated op definition for this kind OneFlow_JitFunc
       // TODO: save input output alias info in OneFlow_JitFunc's attr
-      OpBuilder builder(&context);
+      auto* context = rewriter.getContext();
+      OpBuilder builder(context);
 
       OwningModuleRef jit_module(
-          ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+          ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
       // create a function to be lowered
       SmallVector<Type, 3> types(created->getOperandTypes());
