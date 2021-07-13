@@ -490,26 +490,55 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   }
   int cuda_stream_greatest_priority;
   OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
-  stream_id2device_id2device_ctx_.resize(num_streams_);
+  if (stream_id2device_id2device_ctx_.size() == 0) {
+    stream_id2device_id2device_ctx_.resize(num_streams_);
+  }
   for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
     auto& device_id2device_ctx_ = stream_id2device_id2device_ctx_.at(stream_id);
     for (const int64_t device_id : local_device_ids) {
-      device_id2device_ctx_.emplace(device_id, std::make_unique<NcclDeviceCtx>());
-    }
-    for (const int64_t device_id : local_device_ids) {
-      auto& device_ctx = device_id2device_ctx_.at(device_id);
-      OF_CUDA_CHECK(cudaSetDevice(device_id));
-      OF_CUDA_CHECK(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
-                                                 cuda_stream_greatest_priority));
-      OF_CUDA_CHECK(cudaMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
+      if (device_id2device_ctx_.find(device_id) == device_id2device_ctx_.end()) {
+        device_id2device_ctx_.emplace(device_id, std::make_unique<NcclDeviceCtx>());
+        auto& device_ctx = device_id2device_ctx_.at(device_id);
+        OF_CUDA_CHECK(cudaSetDevice(device_id));
+        OF_CUDA_CHECK(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
+                                                   cuda_stream_greatest_priority));
+        OF_CUDA_CHECK(cudaMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
+      }
     }
   }
 }
 
 #endif  // WITH_CUDA
 
-CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
-    : collective_boxing_plan_(plan.collective_boxing_plan()) {
+CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan) {
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
+    Plan plan;
+    CHECK(plan.mutable_collective_boxing_plan()
+              ->mutable_job_id2request_set()
+              ->insert(job_id7request_set)
+              .second);
+    new_plan_.push_back(plan);
+    this->AddPlan(new_plan_.back());
+  }
+}
+
+void CollectiveBoxingExecutor::DeletePlan(const Plan& plan) {
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
+    const int64_t job_id = job_id7request_set.first;
+    if (job_id7request_set.second.request_size() == 0) { continue; }
+    const auto& it = job_id2group_states_.find(job_id);
+    CHECK(it != job_id2group_states_.end());
+    const std::vector<GroupState>& group_states = it->second;
+    for (const auto& group_state : group_states) {
+      for (const auto& request : group_state.requests) {
+        name2request_state_.erase(request->op_desc().name());
+      }
+    }
+    job_id2group_states_.erase(job_id);
+  }
+}
+
+void CollectiveBoxingExecutor::AddPlan(const Plan& plan) {
   HashMap<int32_t, int64_t> backend2count;
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     for (const auto& request : job_id7request_set.second.request()) {
@@ -518,19 +547,17 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
   }
 #ifdef WITH_CUDA
   if (backend2count.count(static_cast<int32_t>(Backend::kBackendNCCL) != 0)) {
-    auto it =
-        backends_
-            .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
-            .first;
-    it->second->Init(collective_boxing_plan_);
+    auto it = backends_.find(Backend::kBackendNCCL);
+    if (it == backends_.end()) {
+      it = backends_
+               .emplace(Backend::kBackendNCCL,
+                        std::make_unique<NcclCollectiveBoxingExecutorBackend>())
+               .first;
+    }
+    it->second->Init(plan.collective_boxing_plan());
   }
 #endif
-  Init();
-  DumpSummary();
-}
-
-void CollectiveBoxingExecutor::Init() {
-  for (const auto& job_id7request_set : collective_boxing_plan_.job_id2request_set()) {
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const CollectiveBoxingConf collective_boxing_conf =
         Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
     const int64_t job_id = job_id7request_set.first;
@@ -563,9 +590,10 @@ void CollectiveBoxingExecutor::Init() {
       auto* backend = it->second.get();
       std::vector<std::vector<const RequestDesc*>> groups;
       backend->GroupRequests(rough_group, &groups);
+      std::vector<GroupState>& group_states = job_id2group_states_[job_id];
       for (const auto& group : groups) {
-        std::set<int64_t> request_ids;
-        const int64_t group_id = group_id2group_state_.size();
+        const int64_t group_id = group_states.size();
+        int64_t request_id = 0;
         for (const auto* request : group) {
           std::set<int64_t> local_ranks;
           for (int64_t rank = 0; rank < request->device_set().device_size(); ++rank) {
@@ -573,39 +601,44 @@ void CollectiveBoxingExecutor::Init() {
               local_ranks.emplace(rank);
             }
           }
-          const int64_t request_id = name2request_id_.size();
-          CHECK(name2request_id_.emplace(request->op_desc().name(), request_id).second);
-          request_id2request_state_.emplace_back(
-              RequestState(request, job_id, group_id, local_ranks));
-          request_ids.emplace(request_id);
+          CHECK(name2request_state_
+                    .emplace(request->op_desc().name(),
+                             RequestState(request, job_id, group_id, request_id, local_ranks))
+                    .second);
+          request_id++;
         }
-        group_id2group_state_.emplace_back(backend, request_ids, group);
-        job_id2group_ids_[job_id].push_back(group_id);
+        group_states.emplace_back(GroupState(backend, group));
       }
     }
   }
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
+    if (job_id7request_set.second.request_size() > 0) { DumpSummary(job_id7request_set.first); }
+  }
 }
 
-void CollectiveBoxingExecutor::DumpSummary() const {
+void CollectiveBoxingExecutor::DumpSummary(const int64_t& job_id) const {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
-  auto group_ls = TeePersistentLogStream::Create("boxing/collective/group");
-  for (int64_t group_id = 0; group_id < group_id2group_state_.size(); ++group_id) {
+  auto group_ls = TeePersistentLogStream::Create(StrCat("boxing/collective/job_", job_id));
+  auto group_states_it = job_id2group_states_.find(job_id);
+  CHECK(group_states_it != job_id2group_states_.end());
+  const std::vector<GroupState>& group_states = group_states_it->second;
+  for (int64_t group_id = 0; group_id < group_states.size(); ++group_id) {
     group_ls << "group id: " << std::to_string(group_id) << "\n";
-    for (const auto& request : group_id2group_state_.at(group_id).requests) {
-      group_ls->Write(*request);
-    }
+    for (const auto& request : group_states.at(group_id).requests) { group_ls->Write(*request); }
   }
 }
 
 void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
                                        const RuntimeRequestInfo& request_info) {
   const std::string& name = rank_desc.op_desc().name();
-  auto it = name2request_id_.find(name);
-  CHECK(it != name2request_id_.end());
+  auto it = name2request_state_.find(name);
+  CHECK(it != name2request_state_.end());
+  auto group_states_it = job_id2group_states_.find(it->second.job_id);
+  CHECK(group_states_it != job_id2group_states_.end());
+  std::vector<GroupState>& group_states = group_states_it->second;
   std::unique_lock<std::mutex> lock(mutex_);
   {
-    const int64_t request_id = it->second;
-    RequestState& request_state = request_id2request_state_.at(it->second);
+    RequestState& request_state = it->second;
     if (current_job_id_ == -1) {
       current_job_id_ = request_state.job_id;
       current_group_idx_in_job_ = 0;
@@ -615,25 +648,23 @@ void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
 
     request_state.AddReadyRank(rank_desc, request_info);
     if (request_state.IsReady()) {
-      group_id2group_state_.at(request_state.group_id).AddReadyRequest(request_id);
+      group_states.at(request_state.group_id).AddReadyRequest(request_state.request_id);
     }
   }
-  const std::vector<int64_t>& group_ids = job_id2group_ids_.at(current_job_id_);
   int64_t num_launched_groups = 0;
   while (true) {
-    const int64_t group_id = group_ids.at(current_group_idx_in_job_);
-    auto& group_state = group_id2group_state_.at(group_id);
+    auto& group_state = group_states.at(current_group_idx_in_job_);
     if (group_state.IsReady()) {
       std::vector<std::map<int64_t, RuntimeRequestInfo>> ranks;
-      ranks.reserve(group_state.request_ids.size());
-      for (const int64_t request_id : group_state.request_ids) {
-        auto& rank = request_id2request_state_.at(request_id).ready_ranks;
+      ranks.reserve(group_state.requests.size());
+      for (const auto& request : group_state.requests) {
+        auto& rank = name2request_state_.at(request->op_desc().name()).ready_ranks;
         ranks.emplace_back(std::move(rank));
         rank.clear();
       }
       group_state.backend->ExecuteGroup(group_state.requests, ranks);
       group_state.ready_request_ids.clear();
-      current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % group_ids.size();
+      current_group_idx_in_job_ = (current_group_idx_in_job_ + 1) % group_states.size();
       num_launched_groups += 1;
     } else {
       break;
@@ -657,12 +688,13 @@ bool CollectiveBoxingExecutor::RequestState::IsReady() const {
 }
 
 void CollectiveBoxingExecutor::GroupState::AddReadyRequest(int64_t request_id) {
-  CHECK(request_ids.find(request_id) != request_ids.end());
+  CHECK_GE(request_id, 0);
+  CHECK_LT(request_id, requests.size());
   CHECK(ready_request_ids.emplace(request_id).second);
 }
 
 bool CollectiveBoxingExecutor::GroupState::IsReady() const {
-  return ready_request_ids.size() == request_ids.size();
+  return ready_request_ids.size() == requests.size();
 }
 
 }  // namespace collective

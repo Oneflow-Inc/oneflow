@@ -52,25 +52,30 @@ class CollectiveBoxingExecutor final {
   ~CollectiveBoxingExecutor() = default;
 
   void Enqueue(const RankDesc& rank_desc, const RuntimeRequestInfo& request_info);
+  void AddPlan(const Plan& plan);
+  void DeletePlan(const Plan& plan);
+  void TestAddPlan(const Plan& plan);
 
  private:
   friend class Global<CollectiveBoxingExecutor>;
   explicit CollectiveBoxingExecutor(const Plan& plan);
 
   void Init();
-  void DumpSummary() const;
+  void DumpSummary(const int64_t& job_id) const;
 
   struct RequestState {
-    RequestState(const RequestDesc* p_request_desc, int64_t p_job_id, int64_t p_group_id,
-                 std::set<int64_t> p_local_ranks)
-        : request_desc(p_request_desc),
-          job_id(p_job_id),
-          group_id(p_group_id),
-          local_ranks(std::move(p_local_ranks)),
+    RequestState(const RequestDesc* request_desc, int64_t job_id, int64_t group_id,
+                 int64_t request_id, std::set<int64_t> local_ranks)
+        : request_desc(request_desc),
+          job_id(job_id),
+          group_id(group_id),
+          request_id(request_id),
+          local_ranks(std::move(local_ranks)),
           ready_ranks() {}
     const RequestDesc* const request_desc;
     const int64_t job_id;
     const int64_t group_id;
+    const int64_t request_id;
     const std::set<int64_t> local_ranks;
     std::map<int64_t, RuntimeRequestInfo> ready_ranks;
 
@@ -79,14 +84,9 @@ class CollectiveBoxingExecutor final {
   };
 
   struct GroupState {
-    GroupState(CollectiveBoxingExecutorBackend* p_backend, std::set<int64_t> p_request_ids,
-               std::vector<const RequestDesc*> p_requests)
-        : backend(p_backend),
-          request_ids(std::move(p_request_ids)),
-          requests(std::move(p_requests)),
-          ready_request_ids() {}
+    GroupState(CollectiveBoxingExecutorBackend* backend, std::vector<const RequestDesc*> requests)
+        : backend(backend), requests(std::move(requests)), ready_request_ids() {}
     CollectiveBoxingExecutorBackend* const backend;
-    const std::set<int64_t> request_ids;
     const std::vector<const RequestDesc*> requests;
     std::set<int64_t> ready_request_ids;
 
@@ -96,15 +96,12 @@ class CollectiveBoxingExecutor final {
 
   std::mutex mutex_;
 
-  const CollectiveBoxingPlan collective_boxing_plan_;
   std::map<Backend, std::unique_ptr<CollectiveBoxingExecutorBackend>> backends_;
-  HashMap<std::string, int64_t> name2request_id_;
-  std::vector<RequestState> request_id2request_state_;
-  std::map<int64_t, std::vector<int64_t>> job_id2group_ids_;
-  std::vector<GroupState> group_id2group_state_;
-
+  HashMap<std::string, RequestState> name2request_state_;
+  std::map<int64_t, std::vector<GroupState>> job_id2group_states_;
   int64_t current_job_id_ = -1;
   int64_t current_group_idx_in_job_ = -1;
+  std::vector<Plan> new_plan_;
 };
 
 }  // namespace collective
