@@ -37,9 +37,9 @@ Maybe<Tensor> TensorImpl::acc_grad() const {
   return autograd_meta_->acc_grad();
 }
 
-Maybe<TensorArg> TensorImpl::now_grad_arg() const {
+Maybe<TensorArg> TensorImpl::current_grad() const {
   CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->now_grad_arg();
+  return autograd_meta_->current_grad();
 }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
