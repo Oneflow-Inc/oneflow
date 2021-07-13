@@ -27,7 +27,7 @@ namespace functional {
 namespace impl {
 #define INPLACEABLE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", Sin)
 
-#define UNARY_FUNC_SEQ                                    \
+#define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                       \
@@ -73,8 +73,9 @@ namespace impl {
 #define INPLACEABLE_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceableUnaryFunctor)
 #define UNARY_FUNCOTRS(op_type_name, class_name) \
-  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name,     \
-                            UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
+  UNARY_ELEMENTWISE_FUNCTOR(                     \
+      op_type_name, class_name,                  \
+      UnaryFunctor)  // TODO(yaochi): replace UNARY_FUNC_SEQ with INPLACEABLE_UNARY_FUNC_SEQ SEQ
 
 OF_PP_FOR_EACH_TUPLE(INPLACEABLE_UNARY_FUNCOTRS, INPLACEABLE_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
