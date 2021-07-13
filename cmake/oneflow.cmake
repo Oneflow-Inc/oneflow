@@ -298,7 +298,10 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/compatible
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/oneflow/compatible" "${of_pyscript_dir}/oneflow/compatible"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/oneflow/compatible_single_client_python" "${of_pyscript_dir}/oneflow/compatible/single_client/python"
+    COMMAND "${CMAKE_COMMAND}" -E copy
+        "${PROJECT_SOURCE_DIR}/oneflow/single_client_init.py" "${of_pyscript_dir}/oneflow/compatible/single_client/__init__.py"
+    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/conver_single_client_name_space.py" "${of_pyscript_dir}/oneflow/compatible"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/distributed"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python/distributed/launch.py" "${of_pyscript_dir}/oneflow/distributed/launch.py"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
@@ -319,7 +322,7 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py" "python"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
-        "${PROJECT_SOURCE_DIR}/oneflow/compatible" "${of_pyscript_dir}/oneflow/compatible/single_client/python_gen/__export_symbols__.py" "compatible")
+        "${of_pyscript_dir}/oneflow/compatible" "${of_pyscript_dir}/oneflow/compatible/single_client/python_gen/__export_symbols__.py" "compatible")
 
 # source this file to add oneflow in PYTHONPATH
 file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH")

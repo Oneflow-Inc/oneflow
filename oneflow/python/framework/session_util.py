@@ -482,8 +482,12 @@ def api_clear_default_session() -> None:
 
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
-    session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+    is_multi_client = oneflow._oneflow_internal.IsMultiClient()
+    if not is_multi_client:
+        session_ctx.TryCloseDefaultSession()
+        session_ctx.OpenDefaultSession(
+            Session(oneflow._oneflow_internal.NewSessionId())
+        )
 
 
 def api_sync_default_session() -> None:

@@ -390,6 +390,14 @@ def HasAllMultiClientEnvVars():
     return has_all_env_vars
 
 
+def SetDefaultMultiClientEnvVars():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = str(_FindFreePort())
+    os.environ["WORLD_SIZE"] = "1"
+    os.environ["RANK"] = "0"
+    os.environ["LOCAL_RANK"] = "0"
+
+
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     assert HasAllMultiClientEnvVars()
 
