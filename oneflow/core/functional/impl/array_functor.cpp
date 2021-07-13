@@ -474,9 +474,10 @@ class DiagFunctor {
 class DiagGradFunctor {
  public:
   DiagGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("diag_grad").Input("dy").Input("in").Output("dx").Build()); 
+    op_ = CHECK_JUST(one::OpBuilder("diag_grad").Input("dy").Input("in").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("diagonal", diagonal));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
@@ -485,7 +486,6 @@ class DiagGradFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class TensorGetItemFunctor {
  public:

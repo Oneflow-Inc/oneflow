@@ -21,7 +21,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Diag(Module):
-    def __init__(self, diagonal = 0):
+    def __init__(self, diagonal=0):
         super().__init__()
         self.diagonal = diagonal
 
@@ -78,6 +78,7 @@ def diag_op_tensor(input, diagonal = 0):
     """
 
     return Diag(diagonal)(input)
+
 
 if __name__ == "__main__":
     import doctest
