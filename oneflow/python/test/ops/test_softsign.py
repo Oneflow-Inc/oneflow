@@ -38,12 +38,12 @@ def _compare_softsign_with_np(input_shape, device_type, machine_ids, device_coun
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_softsign(x):
-        return x / (1+np.abs(x))
+        return x / (1 + np.abs(x))
 
     np_out_softsign = np_softsign(input_1)
 
     def np_diff(x):
-        return 1 / np.square(1+abs(x))
+        return 1 / np.square(1 + abs(x))
 
     _np_grad = np_diff(input_1)
 

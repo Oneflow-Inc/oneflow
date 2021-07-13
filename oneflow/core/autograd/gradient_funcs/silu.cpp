@@ -27,8 +27,8 @@ class Silu : public OpExprGradFunction<SiluInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(SiluInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(SiluInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();

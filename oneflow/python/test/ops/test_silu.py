@@ -51,7 +51,7 @@ def _compare_silu_with_np(input_shape, device_type, machine_ids, device_counts):
 
         _sig = np_sigmoid(x)
 
-        return _sig*(1 + x*(1-_sig))
+        return _sig * (1 + x * (1 - _sig))
 
     _np_grad = np_diff(input_1)
 
@@ -111,10 +111,7 @@ class Testsilu1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_silu_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 32),
-            device_type="gpu",
-            machine_ids="0:0",
-            device_counts=1,
+            shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1,
         )
         for arg in GenArgList(arg_dict):
             _compare_silu_with_np(*arg)
@@ -125,10 +122,7 @@ class Teststack1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_silu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 8, 8, 4),
-            device_type="gpu",
-            machine_ids="0:0-1",
-            device_counts=2,
+            shape=(3, 8, 8, 4), device_type="gpu", machine_ids="0:0-1", device_counts=2,
         )
         for arg in GenArgList(arg_dict):
             _compare_silu_with_np(*arg)

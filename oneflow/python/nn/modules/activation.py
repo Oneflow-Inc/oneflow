@@ -998,10 +998,11 @@ class SELU(Module):
     
     .. math::  
     
-        \text{SELU}(x) = \begin{cases}
-				scale * (x & \text{ if } x \gt 0  \\
-                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
-    		    \end{cases}
+        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
+
+    with :math:`\alpha = 1.6732632423543772848170429916717` and
+    
+    :math:`\text{scale} = 1.0507009873554804934193349852946`.
 
     .. warning::
         When using ``kaiming_normal`` or ``kaiming_normal_`` for initialisation,
@@ -1060,6 +1061,7 @@ def selu_op(x):
 
     return SELU()(x)
 
+
 @oneflow_export("nn.Softsign")
 @experimental_api
 class Softsign(Module):
@@ -1099,6 +1101,7 @@ class Softsign(Module):
 
     def forward(self, x):
         return flow.F.softsign(x)
+
 
 if __name__ == "__main__":
     import doctest

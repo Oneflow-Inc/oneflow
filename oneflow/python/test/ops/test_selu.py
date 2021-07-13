@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import numpy as np
 import oneflow.typing as tp
@@ -7,7 +22,8 @@ from collections import OrderedDict
 import os
 
 
-def _compare_selu_with_np(input_shape, device_type, value_type, machine_ids, device_counts
+def _compare_selu_with_np(
+    input_shape, device_type, value_type, machine_ids, device_counts
 ):
     scale = 1.0507009873554804934193349852946
     alpha = 1.6732632423543772848170429916717
@@ -148,9 +164,7 @@ def _compare_selu_with_np(input_shape, device_type, value_type, machine_ids, dev
         assert np.allclose(of_out_selu, np_out_selu, atol=1e-5)
 
 
-def _gen_arg_dict(
-    shape, device_type, value_type, machine_ids, device_counts
-):
+def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]

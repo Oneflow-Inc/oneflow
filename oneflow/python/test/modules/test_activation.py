@@ -797,9 +797,11 @@ class TestMishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 def _np_silu_grad(x):
     _sig = 1 / (1 + np.exp(-x))
-    return _sig*(1 + x*(1 - _sig))
+    return _sig * (1 + x * (1 - _sig))
+
 
 def _test_silu_impl(test_case, shape, device):
     m = flow.nn.SiLU()
@@ -817,6 +819,7 @@ def _test_silu_impl(test_case, shape, device):
         np.allclose(of_input.grad.numpy(), _np_silu_grad(np_input), 1e-5, 1e-5)
     )
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -824,24 +827,25 @@ def _test_silu_impl(test_case, shape, device):
 class TestSiluModule(flow.unittest.TestCase):
     def test_silu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_silu_impl
-        ]
+        arg_dict["test_fun"] = [_test_silu_impl]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
 
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 def _np_selu(x):
     scale = 1.0507009873554804934193349852946
     alpha = 1.6732632423543772848170429916717
-    return np.where(x < 0, scale*alpha*(np.exp(x)-1), scale*x)
+    return np.where(x < 0, scale * alpha * (np.exp(x) - 1), scale * x)
+
 
 def _np_selu_grad(x):
     scale = 1.0507009873554804934193349852946
     alpha = 1.6732632423543772848170429916717
-    return np.where(x < 0, scale*alpha*np.exp(x), scale)
+    return np.where(x < 0, scale * alpha * np.exp(x), scale)
+
 
 def _test_selu_impl(test_case, shape, device):
     m = flow.nn.SELU()
@@ -859,6 +863,7 @@ def _test_selu_impl(test_case, shape, device):
         np.allclose(of_input.grad.numpy(), _np_selu_grad(np_input), 1e-5, 1e-5)
     )
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -866,9 +871,7 @@ def _test_selu_impl(test_case, shape, device):
 class TestSeluModule(flow.unittest.TestCase):
     def test_selu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_selu_impl
-        ]
+        arg_dict["test_fun"] = [_test_selu_impl]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
 
         arg_dict["device"] = ["cpu", "cuda"]

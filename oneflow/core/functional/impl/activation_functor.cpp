@@ -217,7 +217,9 @@ class SiluFunctor : public UnaryFunctor {
 
 class SiluGradFunctor : public BinaryFunctor {
  public:
-  SiluGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("dy").Input("x").Output("dx").Build()); }
+  SiluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
 };
 
 class MishFunctor : public UnaryFunctor {
@@ -227,7 +229,9 @@ class MishFunctor : public UnaryFunctor {
 
 class MishGradFunctor : public BinaryFunctor {
  public:
-  MishGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("dy").Input("x").Output("dx").Build()); }
+  MishGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("dy").Input("x").Output("dx").Build());
+  }
 };
 
 class SeluFunctor : public UnaryFunctor {
@@ -237,17 +241,23 @@ class SeluFunctor : public UnaryFunctor {
 
 class SeluGradFunctor : public BinaryFunctor {
  public:
-  SeluGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("dy").Input("x").Output("dx").Build()); }
+  SeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
 };
 
 class SoftSignFunctor : public UnaryFunctor {
  public:
-  SoftSignFunctor() { op_ = CHECK_JUST(one::OpBuilder("softsign").Input("in").Output("out").Build()); }
+  SoftSignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign").Input("in").Output("out").Build());
+  }
 };
 
 class SoftSignGradFunctor : public BinaryFunctor {
  public:
-  SoftSignGradFunctor() { op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("dy").Input("x").Output("dx").Build()); }
+  SoftSignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("dy").Input("x").Output("dx").Build());
+  }
 };
 
 }  // namespace impl

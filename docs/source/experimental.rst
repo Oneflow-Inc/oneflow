@@ -36,8 +36,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Softplus
 .. autofunction:: oneflow.experimental.nn.LogSoftmax
 .. autofunction:: oneflow.experimental.nn.Mish
-.. autofunction:: oneflow.experimental.mish
-.. autofunction:: oneflow.experimental.Tensor.mish
 .. autofunction:: oneflow.experimental.acosh
 .. autofunction:: oneflow.experimental.Tensor.acosh
 .. autofunction:: oneflow.experimental.arccosh
@@ -242,3 +240,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.bernoulli
 .. autofunction:: oneflow.experimental.in_top_k
 .. autofunction:: oneflow.experimental.Tensor.in_top_k
+.. autofunction:: oneflow.experimental.nn.SiLU
+.. autofunction:: oneflow.experimental.nn.SELU
+.. autofunction:: oneflow.experimental.nn.Softsign

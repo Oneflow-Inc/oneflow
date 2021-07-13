@@ -3842,8 +3842,7 @@ def mish(
 
 @oneflow_export("nn.silu")
 def silu(
-    x: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The SiLU activation function.
 
@@ -3889,10 +3888,10 @@ def silu(
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("nn.selu")
 def selu(
-    x: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The SELU activation. 
 
@@ -3900,15 +3899,14 @@ def selu(
     
     .. math::  
     
-        \text{SELU}(x) = \begin{cases}
-				scale * (x & \text{ if } x \gt 0  \\
-                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
-    		    \end{cases}
+        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
+
+    with :math:`\alpha = 1.6732632423543772848170429916717` and
     
+    :math:`\text{scale} = 1.0507009873554804934193349852946`.
+
     Args:
         x (oneflow_api.BlobDesc): The input Tensor. 
-        scale (float, optional): The `scale` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
-        alpha (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
         name (Optional[str], optional): The name for the operator. Defaults to None.
     
     Returns:
@@ -3944,10 +3942,10 @@ def selu(
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("nn.softsign")
 def softsign(
-    x: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The SoftSign activation. 
 
@@ -3993,6 +3991,7 @@ def softsign(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
 
 @oneflow_export("nn.hardswish")
 def hardswish(
