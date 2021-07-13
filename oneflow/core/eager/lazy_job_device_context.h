@@ -24,12 +24,13 @@ namespace oneflow {
 
 namespace vm {
 
-class LazyJobDeviceCtx : public DeviceCtx {
+class LazyJobDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyJobDeviceCtx);
   LazyJobDeviceCtx() = default;
   ~LazyJobDeviceCtx() override = default;
 
+#ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const override {
     UNIMPLEMENTED();
     return *(const cudaStream_t*)nullptr;
@@ -50,6 +51,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
     UNIMPLEMENTED();
     return *(const cudnnHandle_t*)nullptr;
   }
+#endif
 
   void SyncDevice() override { UNIMPLEMENTED(); }
 
@@ -64,7 +66,7 @@ class LazyJobDeviceCtx : public DeviceCtx {
   std::mutex* mut_mutex() { return &mutex_; }
   std::condition_variable* mut_cond() { return &cond_; }
 
-  void WaitUntilQeueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraphIf>& nn_graph) {
+  void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(const std::shared_ptr<NNGraphIf>& nn_graph) {
     std::unique_lock<std::mutex> lock(mutex_);
     if (queue_.empty()) { return; }
     const auto& last_nn_graph = queue_.front().lock();

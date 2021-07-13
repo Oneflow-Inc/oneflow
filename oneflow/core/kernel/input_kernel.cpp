@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -34,7 +34,7 @@ class InputKernel final : public KernelIf<device_type> {
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    if (GlobalProcessCtx::IsMultiClient()) {
+    if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       const auto& job_name = this->job_desc().job_name();
       const auto& op_name = this->op_conf().name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();

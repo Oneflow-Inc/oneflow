@@ -39,7 +39,7 @@ def register_local_tensor_method(name=None):
             op_name = method.__name__
         else:
             op_name = name
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return decorator
@@ -259,17 +259,26 @@ class Tensor:
     @_auto_determine
     def grad(self, new_grad):
         def check_grad(grad, new_grad):
-            assert grad.shape == new_grad.shape, "Shape of new grad is not equal"
-            assert grad.device == new_grad.device, "Device of new grad is not equal"
-            assert grad.dtype == new_grad.dtype, "Data type of new grad is not equal"
-            assert type(grad) == type(new_grad), "Type of new grad is not equal"
+            assert (
+                grad.shape == new_grad.shape
+            ), f"Shape of grads are not equal, {grad.shape} vs {new_grad.shape}"
+            assert (
+                grad.device == new_grad.device
+            ), f"Device of grads are not equal, {grad.device} vs {new_grad.device}"
+            assert (
+                grad.dtype == new_grad.dtype
+            ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
 
         if self._local_or_consistent_tensor is not None:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
             else:
-                new_grad_detach = new_grad.detach()._local_or_consistent_tensor
-                check_grad(self._local_or_consistent_tensor.grad, new_grad_detach)
+                if isinstance(new_grad, Tensor):
+                    if not new_grad.is_determined:
+                        new_grad.determine()
+                    new_grad = new_grad._local_or_consistent_tensor
+                new_grad_detach = new_grad.detach()
+                check_grad(self.grad, new_grad_detach)
                 self._local_or_consistent_tensor.set_grad(new_grad_detach)
 
     @property
@@ -441,28 +450,7 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __getitem__(self, key):
-        # TODO: support inplace __getitem__
-        assert (
-            isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
-        ), "Unsupported key type!"
-
-        squeeze_dims = None
-        if isinstance(key, tuple):
-            key = self._transform_ellipsis_type(key)
-            squeeze_dims = list(
-                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
-            )
-        elif isinstance(key, int):
-            squeeze_dims = [0]
-        else:
-            # do nothing
-            pass
-
-        start, stop, step, _ = self._get_slice_obj(key)
-        res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        if squeeze_dims is not None:
-            res = res.squeeze(dim=squeeze_dims)
-        return res
+        return flow.F.tensor_getitem(self, key)
 
     @_auto_determine
     @register_local_tensor_method()
@@ -473,6 +461,8 @@ class Tensor:
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
         elif isinstance(key, int):
+            if key < 0:
+                key = self.shape[0] + key
             unsqueeze_dims = [0]
         else:
             unsqueeze_dims = []
@@ -541,6 +531,10 @@ class Tensor:
     @register_local_tensor_method()
     def __add__(self, other):
         return self.add(other)
+
+    @register_local_tensor_method()
+    def __iadd__(self, other):
+        return self.add_(other)
 
     @register_local_tensor_method()
     def __radd__(self, other):
@@ -860,7 +854,7 @@ def _default_initializer_for_determining(tensor):
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             shape,
             dtype,
             undetermined_tensor.device,
@@ -883,7 +877,7 @@ def _numpy_initializer_for_determining(tensor):
     if undetermined_tensor.is_consistent:
         raise NotImplementedError()
     else:
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -905,13 +899,7 @@ def _input_args_is_numpy(*args):
 
 
 def _input_args_is_consistent_or_local(*args):
-    return len(args) == 1 and isinstance(
-        args[0],
-        (
-            oneflow._oneflow_internal.ConsistentTensor,
-            oneflow._oneflow_internal.LocalTensor,
-        ),
-    )
+    return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
 
 def _input_args_is_tensor(*args):
@@ -929,7 +917,7 @@ def _input_args_is_shape(*args):
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return set_tensor_op

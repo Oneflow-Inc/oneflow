@@ -16,14 +16,14 @@ limitations under the License.
 #include "oneflow/core/kernel/output_kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (GlobalProcessCtx::IsMultiClient()) {
+  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& job_name = this->job_desc().job_name();
     const auto& op_name = this->op_conf().name();
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
@@ -43,7 +43,7 @@ void OutputKernel<device_type>::ForwardDataContent(
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (GlobalProcessCtx::IsMultiClient()) {
+  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
     BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
