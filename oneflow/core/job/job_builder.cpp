@@ -323,7 +323,7 @@ Maybe<void> JobBuilder::ForEachOperator(
     CHECK_OR_RETURN(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
     std::shared_ptr<Operator> op = JUST(ConstructOp(*pair.second, device_type));
-    Handler(*op);
+    JUST(Handler(*op));
   }
   return Maybe<void>::Ok();
 }
