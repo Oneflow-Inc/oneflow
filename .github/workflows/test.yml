@@ -470,13 +470,13 @@ jobs:
         id: distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Single client op test  (distributed, 2nd try)
+      - name: Single client op test (distributed, 2nd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Single client op test  (distributed, 3rd try)
+      - name: Single client op test (distributed, 3rd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
