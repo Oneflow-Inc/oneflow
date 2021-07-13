@@ -36,6 +36,7 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
 
   auto regular_index = std::make_shared<TensorIndex>();
   int64_t dim = 0;
+  printf("index size:%d\n", index.size());
   for (int i = 0; i < index.size(); ++i) {
     const auto& index_item = index.at(i);
     if (index_item.IsSlice()) {
@@ -50,12 +51,14 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
       if (start < 0) { start = 0; }
       if (end < 0) { end += shape.At(dim); }
       if (end < start) { end = start; }
+      printf("dim:%d, start:%d, end:%d, step:%d,  in tensor_index IsSlice\n", dim, start, end, step);
       regular_index->emplace_back(detail::IndexItem(start, end, step));
       dim++;
     } else if (index_item.IsInteger()) {
       CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
+      printf("dim:%d, interger:%d in tensor_index IsInterger\n", dim, integer);
       CHECK_OR_RETURN(integer >= 0 && integer < shape.At(dim))
           << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
           << " with size " << shape.At(dim);
@@ -64,6 +67,7 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
     } else if (index_item.IsEllipsis()) {
       int64_t unspecified_ndims = ndims - specified_ndims;
       unspecified_ndims = std::min(ndims - dim, unspecified_ndims);
+      printf("unspecified_ndims:%d, dim:%d, ndims:%d in IsEllipsis\n", unspecified_ndims, dim, ndims);
       for (int j = 0; j < unspecified_ndims; ++j) {
         regular_index->emplace_back(detail::IndexItem(0, shape.At(dim + j), 1));
       }
@@ -71,6 +75,7 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
     } else {
       // None or Boolean.
       if (index_item.IsBoolean()) {
+        printf("in tensor_index boolean\n");
         CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
       }
       regular_index->emplace_back(index_item);

@@ -441,6 +441,8 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __getitem__(self, key):
+        if key >= self.shape[0]:
+            raise IndexError(f"Index should be in [0, {self.shape[0]}), but got {key}")
         return flow.F.tensor_getitem(self, key)
 
     @_auto_determine

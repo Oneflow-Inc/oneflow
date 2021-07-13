@@ -462,6 +462,8 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    if (index.at(0).IsInteger())
+        printf("TensorIndex& index:%d\n", index.at(0).integer());
     const auto& regular_index = JUST(RegularTensorIndex(index, *(x->shape())));
     int64_t ndims = x->shape()->NumAxes();
     CHECK_GE_OR_RETURN(regular_index->size(), ndims) << "Tensor index failed to be regularlized.";
@@ -478,6 +480,7 @@ class TensorGetItemFunctor {
         end[dim] = index_item.slice().end();
         step[dim] = index_item.slice().step();
         int64_t length = (end[dim] - start[dim] + step[dim] - 1) / step[dim];
+        printf("dim:%d, start:%d, end:%d, step:%d, length:%d in IsSlice\n", dim, start, end, step, length);
         result_dims.emplace_back(length);
         dim++;
       } else if (index_item.IsInteger()) {
@@ -485,10 +488,13 @@ class TensorGetItemFunctor {
         start[dim] = index_item.integer();
         end[dim] = start[dim] + 1;
         step[dim] = 1;
+        printf("dim:%d, start:%d, end:%d, step:%d, in IsInteger\n", dim, start, end, step);
         dim++;
       } else if (index_item.IsNone()) {
+        printf("is None\n");
         result_dims.emplace_back(1);
       } else if (index_item.IsBoolean()) {
+        printf("in IsBoolean\n");
         CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
         result_dims.emplace_back(1);
       }
