@@ -288,6 +288,93 @@ def _test_interpolate_trilinear_3d(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+def _test_interpolate_trilinear_3d_align_corners(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 9).reshape((1, 1, 2, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.functional.interpolate(
+        scale_factor=2.0, mode="trilinear", align_corners=True
+    )
+    of_out = m(input)
+    np_out = np.array(
+        [
+            [
+                [
+                    [
+                        [1.0, 1.3333332538604736, 1.6666667461395264, 2.0],
+                        [
+                            1.6666666269302368,
+                            2.0,
+                            2.3333334922790527,
+                            2.6666665077209473,
+                        ],
+                        [
+                            2.3333332538604736,
+                            2.6666665077209473,
+                            3.0,
+                            3.3333334922790527,
+                        ],
+                        [3.0, 3.3333332538604736, 3.6666667461395264, 4.0],
+                    ],
+                    [
+                        [
+                            2.3333334922790527,
+                            2.6666665077209473,
+                            3.0,
+                            3.3333332538604736,
+                        ],
+                        [3.0, 3.3333330154418945, 3.6666665077209473, 4.0],
+                        [
+                            3.6666665077209473,
+                            4.0,
+                            4.333333492279053,
+                            4.6666669845581055,
+                        ],
+                        [4.333333492279053, 4.666666030883789, 5.0, 5.3333330154418945],
+                    ],
+                    [
+                        [3.6666667461395264, 4.0, 4.333333492279053, 4.666666507720947],
+                        [4.333333492279053, 4.666666507720947, 5.0, 5.3333330154418945],
+                        [5.0, 5.333333492279053, 5.6666669845581055, 6.0],
+                        [
+                            5.6666669845581055,
+                            6.0,
+                            6.333333492279053,
+                            6.6666669845581055,
+                        ],
+                    ],
+                    [
+                        [5.0, 5.3333330154418945, 5.666666507720947, 6.0],
+                        [
+                            5.666666507720947,
+                            5.999999523162842,
+                            6.3333330154418945,
+                            6.666666507720947,
+                        ],
+                        [6.333333492279053, 6.666666030883789, 7.0, 7.333333492279053],
+                        [7.0, 7.3333330154418945, 7.6666669845581055, 8.0],
+                    ],
+                ]
+            ]
+        ]
+    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [
+            [
+                [[7.999999523162842, 8.0], [7.999999523162842, 8.0]],
+                [[8.0, 8.0], [8.0, 8.0]],
+            ]
+        ]
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -303,6 +390,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_interpolate_bilinear_2d,
             # _test_interpolate_bicubic_2d,
             _test_interpolate_trilinear_3d,
+            _test_interpolate_trilinear_3d_align_corners,
         ]
         arg_dict["device"] = [
             "cpu",
