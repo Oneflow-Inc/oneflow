@@ -14,41 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os
 
 import numpy as np
+
+# To enable MultiClient
+os.environ["MASTER_ADDR"] = "127.0.0.1"
+os.environ["MASTER_PORT"] = "12139"
+os.environ["WORLD_SIZE"] = "1"
+os.environ["RANK"] = "0"
+os.environ["LOCAL_RANK"] = "0"
 
 import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
-
-
-def _multi_client_execute(f):
-    def deco(*args):
-        import oneflow._oneflow_internal
-        import oneflow.python.framework.env_util as env_util
-        import oneflow.python.framework.session_util as session_util
-        import oneflow.python.framework.session_context as session_ctx
-        from oneflow.python.framework.multi_client_session import MultiClientSession
-
-        prev_is_multi_client = oneflow._oneflow_internal.IsMultiClient()
-
-        session_ctx.TryCloseDefaultSession()
-        oneflow._oneflow_internal.SetIsMultiClient(True)
-        session_ctx.OpenDefaultSession(
-            MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-        )
-
-        out = f(*args)
-
-        oneflow._oneflow_internal.SetIsMultiClient(prev_is_multi_client)
-        session_ctx.TryCloseDefaultSession()
-        session_ctx.OpenDefaultSession(
-            session_util.Session(oneflow._oneflow_internal.NewSessionId())
-        )
-
-        return out
-
-    return deco
 
 
 class SubModule(flow.nn.Module):
@@ -194,7 +173,6 @@ class TestGraph(flow.unittest.TestCase):
         for i in range(0, 3):
             create_graph(i)
 
-    @_multi_client_execute
     def test_graph_build_ctx(test_case):
 
         # check lazy_mode
