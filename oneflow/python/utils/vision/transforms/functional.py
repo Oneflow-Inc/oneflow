@@ -12,7 +12,7 @@ try:
 except ImportError:
     accimage = None
 
-import oneflow.experimental as flow
+import oneflow as flow
 from oneflow.experimental import Tensor
 
 from . import functional_pil as F_pil
@@ -109,7 +109,6 @@ def to_tensor(pic):
     img = flow.Tensor(
         np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True), dtype=dtype,
     )
-    flow.sub
 
     if pic.mode == '1':
         img = 255 * img
@@ -120,6 +119,50 @@ def to_tensor(pic):
     if img.dtype == flow.int:
         res = res.to(dtype=default_float_dtype).div(255)
     return res 
+
+
+def normalize(tensor: Tensor, mean: List[float], std: List[float], inplace: bool = False) -> Tensor:
+    """Normalize a float tensor image with mean and standard deviation.
+    This transform does not support PIL Image.
+    .. note::
+        This transform acts out of place by default, i.e., it does not mutates the input tensor.
+    See :class:`~torchvision.transforms.Normalize` for more details.
+    Args:
+        tensor (Tensor): Float tensor image of size (C, H, W) or (B, C, H, W) to be normalized.
+        mean (sequence): Sequence of means for each channel.
+        std (sequence): Sequence of standard deviations for each channel.
+        inplace(bool,optional): Bool to make this operation inplace.
+    Returns:
+        Tensor: Normalized Tensor image.
+    """
+    if not isinstance(tensor, flow.Tensor) and not isinstance(tensor, flow._oneflow_internal.Tensor):
+        raise TypeError('Input tensor should be a oneflow tensor. Got {}.'.format(type(tensor)))
+
+    if not tensor.dtype == flow.float:
+        raise TypeError('Input tensor should be a float tensor. Got {}.'.format(tensor.dtype))
+
+    if tensor.ndim < 3:
+        raise ValueError('Expected tensor to be a tensor image of size (..., C, H, W). Got tensor.size() = '
+                         '{}.'.format(tensor.size()))
+
+    if not inplace:
+        tensor = tensor.clone()
+
+    dtype = tensor.dtype
+    mean = flow.tensor(mean, dtype=dtype, device=tensor.device)
+    std = flow.tensor(std, dtype=dtype, device=tensor.device)
+    # TODO: tensor.any(); tensor.view()
+    # if (std == 0).any():
+    #     raise ValueError('std evaluated to zero after conversion to {}, leading to division by zero.'.format(dtype))
+    if mean.ndim == 1:
+        mean = mean.unsqueeze(1).unsqueeze(1)
+        # mean = mean.view(-1, 1, 1)
+    if std.ndim == 1:
+        std = std.unsqueeze(1).unsqueeze(1)
+        # std = std.view(-1, 1, 1)
+    tensor = tensor.sub(tensor).div(std)
+    # tensor.sub_(mean).div_(std)
+    return tensor
 
 
 def resize(img: Tensor, size: List[int], interpolation: InterpolationMode = InterpolationMode.BILINEAR) -> Tensor:
