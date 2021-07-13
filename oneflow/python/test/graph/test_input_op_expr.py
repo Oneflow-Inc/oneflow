@@ -38,8 +38,8 @@ class TestFeedInputTensor(unittest.TestCase):
         test_case.assertTrue(
             oneflow.python.framework.env_util.HasAllMultiClientEnvVars()
         )
-        # TODO(chengcheng):  Using new lazy mode
-        oneflow.enable_eager_execution()
+
+        oneflow.enable_eager_execution()  # TODO(chengcheng): delete enable_eager_exec
 
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
@@ -48,34 +48,38 @@ class TestFeedInputTensor(unittest.TestCase):
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
 
-        oneflow.enable_eager_execution(False)
+        with oneflow._oneflow_internal.lazy_mode.gard(True):
 
-        oneflow._oneflow_internal.JobBuildAndInferCtx_Open("cc_test_input_op_expr_job")
-        job_conf = oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-        job_conf.set_job_name("cc_test_input_op_expr_job")
-        job_conf.mutable_predict_conf()
-        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
+                "cc_test_input_op_expr_job"
+            )
+            job_conf = (
+                oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
+            )
+            job_conf.set_job_name("cc_test_input_op_expr_job")
+            job_conf.mutable_predict_conf()
+            c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
-        op_name = "cc_Input_0"
-        input_conf = (
-            oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-        )
-        input_conf.set_in_0("EagerTensorInput")
-        input_conf.set_out_0("out_0")
+            op_name = "cc_Input_0"
+            input_conf = (
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+            )
+            input_conf.set_in_0("EagerTensorInput")
+            input_conf.set_out_0("out_0")
 
-        input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-            op_name, input_conf, ["in_0"], ["out_0"]
-        )
-        attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+            input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+                op_name, input_conf, ["in_0"], ["out_0"]
+            )
+            attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-        if not x.is_determined:
-            x.determine()
-        x_tensor_in_c = x._local_or_consistent_tensor
+            if not x.is_determined:
+                x.determine()
+            x_tensor_in_c = x._local_or_consistent_tensor
 
-        out_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
-        test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
-        test_case.assertTrue(out_tensor.is_lazy)
-        test_case.assertTrue(out_tensor.is_consistent)
+            out_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
+            test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
+            test_case.assertTrue(out_tensor.is_lazy)
+            test_case.assertTrue(out_tensor.is_consistent)
 
 
 if __name__ == "__main__":
