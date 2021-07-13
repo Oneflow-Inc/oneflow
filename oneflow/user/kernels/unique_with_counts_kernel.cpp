@@ -46,10 +46,10 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+    const auto& x = ctx->InputTensorDesc("x", 0);
     int64_t workspace_size_in_bytes;
     UniqueKernelUtil<device_type, T, K>::GetUniqueWithCountsWorkspaceSizeInBytes(
-        nullptr, x->shape().elem_cnt(), &workspace_size_in_bytes);
+        nullptr, x.shape().elem_cnt(), &workspace_size_in_bytes);
 
     return workspace_size_in_bytes;
   };
