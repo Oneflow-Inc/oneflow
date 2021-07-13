@@ -111,6 +111,8 @@ jobs:
         run: |
           mkdir build
           cd build
+          # clang-tidy has builtin includes, but doesn't work here
+          # https://clang.llvm.org/docs/LibTooling.html#builtin-includes
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_C_COMPILER=clang-12 \
             -DCMAKE_CXX_COMPILER=clang++-12 \
@@ -118,7 +120,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          # cmake --build . -j$(nproc) --target generate_functional of_cfgobj generate_py_cfg
+          cmake --build . -j$(nproc) --target oneflow_deps generate_functional of_cfgobj generate_py_cfg
       - name: Run Maybe-related checks by clang-tidy
         run: |
           ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
