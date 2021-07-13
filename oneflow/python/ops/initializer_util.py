@@ -27,7 +27,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
 
 
-@oneflow_export("empty_initializer")
 def empty_initializer(
     dtype: flow.dtype = flow.float,
 ) -> initializer_conf_util.InitializerConf:
@@ -37,7 +36,6 @@ def empty_initializer(
     return initializer
 
 
-@oneflow_export("constant_initializer")
 def constant_initializer(
     value: float = 0, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:
@@ -131,7 +129,6 @@ def constant_initializer(
     return initializer
 
 
-@oneflow_export("zeros_initializer")
 def zeros_initializer(
     dtype: flow.dtype = flow.float,
 ) -> initializer_conf_util.InitializerConf:
@@ -209,7 +206,6 @@ def zeros_initializer(
     return constant_initializer(0.0, dtype)
 
 
-@oneflow_export("ones_initializer")
 def ones_initializer(
     dtype: flow.dtype = flow.float,
 ) -> initializer_conf_util.InitializerConf:
@@ -287,7 +283,6 @@ def ones_initializer(
     return constant_initializer(1.0, dtype)
 
 
-@oneflow_export("random_uniform_initializer")
 def random_uniform_initializer(
     minval: float = 0, maxval: float = 1, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:
@@ -386,7 +381,6 @@ def random_uniform_initializer(
     return initializer
 
 
-@oneflow_export("random_normal_initializer")
 def random_normal_initializer(
     mean: float = 0.0,
     stddev: float = 1.0,
@@ -479,7 +473,6 @@ def random_normal_initializer(
     return initializer
 
 
-@oneflow_export("truncated_normal_initializer")
 def truncated_normal_initializer(
     mean: float = 0.0, stddev: float = 1.0
 ) -> initializer_conf_util.InitializerConf:
@@ -562,7 +555,6 @@ def truncated_normal_initializer(
     return initializer
 
 
-@oneflow_export("glorot_uniform_initializer", "xavier_uniform_initializer")
 def glorot_uniform_initializer(
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
@@ -654,7 +646,6 @@ def glorot_uniform_initializer(
     return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
 
-@oneflow_export("glorot_normal_initializer", "xavier_normal_initializer")
 def glorot_normal_initializer(
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
@@ -746,7 +737,6 @@ def glorot_normal_initializer(
     return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
 
-@oneflow_export("variance_scaling_initializer")
 def variance_scaling_initializer(
     scale: float = 1.0,
     mode: str = "fan_in",
@@ -859,7 +849,6 @@ def variance_scaling_initializer(
     return initializer
 
 
-@oneflow_export("kaiming_initializer")
 def kaiming_initializer(
     shape: Sequence[int],
     distribution: str = "random_normal",
