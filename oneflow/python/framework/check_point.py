@@ -31,7 +31,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import List, Union
 
 
-@oneflow_export("train.CheckPoint")
 class CheckPoint(object):
     """Create a `CheckPoint` object to manage checkpoint manually.
 
@@ -157,7 +156,6 @@ def _MakeModelSaveJobFunc(path):
     )
 
 
-@oneflow_export("train.SimpleCheckPointManager")
 class SimpleCheckPointManager(object):
     r"""`SimpleCheckPointManager` is a simple automatic checkpoint manager.
 

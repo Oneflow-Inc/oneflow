@@ -21,7 +21,6 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("truncated_normal")
 def truncated_normal_initializer(
     stddev: float = 1.0,
 ) -> initializer_conf_util.InitializerConf:

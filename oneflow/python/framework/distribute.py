@@ -27,8 +27,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_export("distribute.mirrored_strategy")
-@oneflow_deprecate()
 def deprecated_mirrored_strategy():
     print(
         "WARNING:",
@@ -41,7 +39,6 @@ def deprecated_mirrored_strategy():
     return DistributeMirroredStrategy()
 
 
-@oneflow_export("scope.mirrored_view")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
@@ -55,8 +52,6 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, True)
 
 
-@oneflow_export("distribute.mirrored_strategy_enabled")
-@oneflow_deprecate()
 def deprecated_mirrored_strategy_enabled():
     print(
         "WARNING:",
@@ -69,7 +64,6 @@ def deprecated_mirrored_strategy_enabled():
     return MirroredStrategyEnabled()
 
 
-@oneflow_export("scope.mirrored_view_enabled")
 def MirroredStrategyEnabled() -> bool:
     r"""
 
@@ -80,8 +74,6 @@ def MirroredStrategyEnabled() -> bool:
     return distribute_ctx.IsMirroredStrategyEnabled()
 
 
-@oneflow_export("distribute.consistent_strategy")
-@oneflow_deprecate()
 def deprecated_consistent_strategy():
     print(
         "WARNING:",
@@ -94,7 +86,6 @@ def deprecated_consistent_strategy():
     return DistributeConsistentStrategy()
 
 
-@oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
 
@@ -109,8 +100,6 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, False)
 
 
-@oneflow_export("distribute.consistent_strategy_enabled")
-@oneflow_deprecate()
 def deprecated_consistent_strategy_enabled():
     print(
         "WARNING:",
@@ -123,7 +112,6 @@ def deprecated_consistent_strategy_enabled():
     return ConsistentStrategyEnabled()
 
 
-@oneflow_export("scope.consistent_view_enabled")
 def ConsistentStrategyEnabled() -> bool:
     r"""
 
@@ -134,7 +122,6 @@ def ConsistentStrategyEnabled() -> bool:
     return distribute_ctx.IsConsistentStrategyEnabled()
 
 
-@oneflow_export("distribute.split")
 def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     r"""Generate a split scheme in which op will be splitted at `axis`.
 
@@ -152,7 +139,6 @@ def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     return oneflow._oneflow_internal.distribute.split(axis)
 
 
-@oneflow_export("distribute.broadcast")
 def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     r"""Generate a broadcast scheme.
 
@@ -166,7 +152,6 @@ def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     return oneflow._oneflow_internal.distribute.broadcast()
 
 
-@oneflow_export("distribute.auto")
 def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     r"""Generate a broadcast scheme.
 
@@ -177,7 +162,6 @@ def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     return oneflow._oneflow_internal.distribute.auto()
 
 
-@oneflow_export("distribute.assert_is_valid_distribute")
 def assert_is_valid_distribute(
     distribute: oneflow._oneflow_internal.distribute.Distribute,
 ) -> None:
@@ -187,12 +171,10 @@ def assert_is_valid_distribute(
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 
-@oneflow_export("distributed.get_local_rank")
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
 
 
-@oneflow_export("distributed.get_rank")
 def get_rank():
     r"""Returns the rank of current process group.
 
@@ -203,7 +185,6 @@ def get_rank():
     return oneflow._oneflow_internal.GetRank()
 
 
-@oneflow_export("distributed.get_world_size")
 def get_world_size():
     r"""Returns the number of processes in the current process group.
 
@@ -214,12 +195,10 @@ def get_world_size():
     return oneflow._oneflow_internal.GetWorldSize()
 
 
-@oneflow_export("distributed.is_multi_client")
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
 
 
-@oneflow_export("sbp.split")
 def split_sbp(
     axis: int,
 ) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:

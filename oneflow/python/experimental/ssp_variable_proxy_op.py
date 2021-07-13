@@ -21,7 +21,6 @@ import oneflow.python.framework.id_util as id_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("experimental.ssp_variable_proxy")
 def ssp_variable_proxy(
     var: oneflow._oneflow_internal.BlobDesc, buffer_size: int = 1, name=None
 ) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:

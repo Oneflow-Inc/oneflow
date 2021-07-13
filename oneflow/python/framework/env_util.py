@@ -33,7 +33,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_export("env.all_device_placement")
 def api_all_device_placement(device_type: str) -> None:
     r"""Return a placement containing all devices of all machines under env.
 
@@ -58,7 +57,6 @@ def enable_eager_environment(val=True):
     return oneflow._oneflow_internal.EnableEagerEnvironment(val)
 
 
-@oneflow_export("env.init")
 def api_env_init() -> bool:
     r"""Init environment for job
 
@@ -95,7 +93,6 @@ def init_default_physical_env():
     c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
-@oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
     r"""Get current resources, such as:machine nums, cpu/gpu device nums,
             epoch network threed num, rdma params...
@@ -111,7 +108,6 @@ def get_current_resource():
     return c_api_util.CurrentResource()
 
 
-@oneflow_export("current_machine_id")
 def api_get_current_machine_id():
     r"""Get machine id of current machine/node
 
@@ -126,7 +122,6 @@ def get_current_machine_id() -> int:
     return oneflow._oneflow_internal.CurrentMachineId()
 
 
-@oneflow_export("env.machine")
 def api_machine(*val: list) -> None:
     r"""Set machines' hostnames.
 
@@ -150,7 +145,6 @@ def machine(*val):
     default_env_proto.machine.extend(_MakeMachine(val))
 
 
-@oneflow_export("env.ctrl_port")
 def api_ctrl_port(val: int) -> None:
     r"""Set port number used to control the execution across multiple machines. Same on every machine.
 
@@ -166,7 +160,6 @@ def ctrl_port(val):
     default_env_proto.ctrl_port = val
 
 
-@oneflow_export("env.data_port")
 def api_data_port(val: int) -> None:
     r"""Set port number used to data transfer among multiple machines. Same on every machine.
 
@@ -182,7 +175,6 @@ def data_port(val):
     default_env_proto.data_port = val
 
 
-@oneflow_export("env.grpc_use_no_signal")
 @oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
     r"""Set rpc use signal or not (deprecate)
@@ -198,7 +190,6 @@ def api_grpc_use_no_signal(val: bool = True) -> None:
     return None
 
 
-@oneflow_export("env.log_dir")
 def api_log_dir(val: str) -> None:
     r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
 
@@ -214,7 +205,6 @@ def log_dir(val):
     default_env_proto.cpp_logging_conf.log_dir = val
 
 
-@oneflow_export("env.logtostderr")
 def api_logtostderr(val: int) -> None:
     r"""Set whether log messages go to stderr instead of logfiles
 
@@ -230,7 +220,6 @@ def logtostderr(val):
     default_env_proto.cpp_logging_conf.logtostderr = val
 
 
-@oneflow_export("env.logbuflevel")
 def api_logbuflevel(val: int) -> None:
     r"""Log messages at a level <= this flag are buffered.
             Log messages at a higher level are flushed immediately.
@@ -293,7 +282,6 @@ def _MakeMachine(machines):
 
 
 # only used by CI
-@oneflow_export("env.init_bootstrap_confs")
 def api_init_bootstrap_confs(*val: list, **kargs) -> None:
     return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val, **kargs)
 

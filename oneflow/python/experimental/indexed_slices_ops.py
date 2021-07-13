@@ -29,7 +29,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Tuple
 
 
-@oneflow_export("experimental.indexed_slices_reduce_sum")
 def indexed_slices_reduce_sum(
     indices: input_blob_util.ArgBlobDef,
     values: input_blob_util.ArgBlobDef,

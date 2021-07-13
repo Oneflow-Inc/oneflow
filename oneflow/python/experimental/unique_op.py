@@ -29,7 +29,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("experimental.unique_with_counts")
 def unique_with_counts(
     x: input_blob_util.ArgBlobDef,
     out_idx: flow.dtype = flow.int32,
