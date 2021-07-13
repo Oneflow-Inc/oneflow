@@ -144,7 +144,7 @@ class TestDiag(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_diag_forward(test_case, *arg[0:])
-    
+
     def test_diag_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -156,7 +156,7 @@ class TestDiag(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
 
 if __name__ == "__main__":
     unittest.main()
