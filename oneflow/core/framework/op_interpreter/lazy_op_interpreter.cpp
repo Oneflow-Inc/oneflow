@@ -60,6 +60,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  CHECK_OR_RETURN(input_tensor->is_eager());
 
   const auto& scope = JUST(GetCurrentScope());
   int64_t scope_symbol_id = JUST(scope->symbol_id());

@@ -121,10 +121,3 @@ class MultiClientSession(object):
     def _update_scope_attr_name2defaultVal(self):
         items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
         self.scope_attr_name2default_val_ = {k: v.default_val for k, v in items}
-
-    def AnyGlobalFunctionDefined(self):  # compatible with old version session
-        return False
-
-    @property
-    def is_running(self):  # compatible with old version session
-        return self.is_inited_
