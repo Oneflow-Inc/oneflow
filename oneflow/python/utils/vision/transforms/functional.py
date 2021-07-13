@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import math
 import numbers
 import warnings
@@ -18,9 +33,11 @@ from oneflow.experimental import Tensor
 from . import functional_pil as F_pil
 from . import functional_tensor as F_t
 
+
 class InterpolationMode(Enum):
     """Interpolation modes
     """
+
     NEAREST = "nearest"
     BILINEAR = "bilinear"
     BICUBIC = "bicubic"
@@ -28,6 +45,7 @@ class InterpolationMode(Enum):
     BOX = "box"
     HAMMING = "hamming"
     LANCZOS = "lanczos"
+
 
 def _interpolation_modes_from_int(i: int) -> InterpolationMode:
     inverse_modes_mapping = {
@@ -40,6 +58,7 @@ def _interpolation_modes_from_int(i: int) -> InterpolationMode:
     }
     return inverse_modes_mapping[i]
 
+
 pil_modes_mapping = {
     InterpolationMode.NEAREST: 0,
     InterpolationMode.BILINEAR: 2,
@@ -48,6 +67,7 @@ pil_modes_mapping = {
     InterpolationMode.HAMMING: 5,
     InterpolationMode.LANCZOS: 1,
 }
+
 
 def _is_pil_image(img: Any) -> bool:
     if accimage is not None:
@@ -73,11 +93,13 @@ def to_tensor(pic):
     Returns:
         Tensor: Converted image.
     """
-    if not(_is_pil_image(pic) or _is_numpy(pic)):
-        raise TypeError('pic should be PIL Image or ndarray. Got {}'.format(type(pic)))
+    if not (_is_pil_image(pic) or _is_numpy(pic)):
+        raise TypeError("pic should be PIL Image or ndarray. Got {}".format(type(pic)))
 
     if _is_numpy(pic) and not _is_numpy_image(pic):
-        raise ValueError('pic should be 2/3 dimensional. Got {} dimensions.'.format(pic.ndim))
+        raise ValueError(
+            "pic should be 2/3 dimensional. Got {} dimensions.".format(pic.ndim)
+        )
 
     # default_float_dtype = flow.get_default_dtype()
     default_float_dtype = flow.float32
@@ -100,7 +122,7 @@ def to_tensor(pic):
         return flow.Tensor(nppic).to(dtype=default_float_dtype)
 
     # handle PIL Image
-    mode_to_nptype = {'I': np.int32, 'I;16': np.int16, 'F': np.float32}
+    mode_to_nptype = {"I": np.int32, "I;16": np.int16, "F": np.float32}
     if mode_to_nptype.get(pic.mode, np.uint8) == np.uint8:
         dtype = flow.int32
     else:
@@ -110,7 +132,7 @@ def to_tensor(pic):
         np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True), dtype=dtype,
     )
 
-    if pic.mode == '1':
+    if pic.mode == "1":
         img = 255 * img
 
     img = img.reshape(shape=(pic.size[1], pic.size[0], len(pic.getbands())))
@@ -118,10 +140,12 @@ def to_tensor(pic):
     res = img.permute(2, 0, 1)
     if img.dtype == flow.int:
         res = res.to(dtype=default_float_dtype).div(255)
-    return res 
+    return res
 
 
-def normalize(tensor: Tensor, mean: List[float], std: List[float], inplace: bool = False) -> Tensor:
+def normalize(
+    tensor: Tensor, mean: List[float], std: List[float], inplace: bool = False
+) -> Tensor:
     """Normalize a float tensor image with mean and standard deviation.
     This transform does not support PIL Image.
     .. note::
@@ -135,15 +159,23 @@ def normalize(tensor: Tensor, mean: List[float], std: List[float], inplace: bool
     Returns:
         Tensor: Normalized Tensor image.
     """
-    if not isinstance(tensor, flow.Tensor) and not isinstance(tensor, flow._oneflow_internal.Tensor):
-        raise TypeError('Input tensor should be a oneflow tensor. Got {}.'.format(type(tensor)))
+    if not isinstance(tensor, flow.Tensor) and not isinstance(
+        tensor, flow._oneflow_internal.Tensor
+    ):
+        raise TypeError(
+            "Input tensor should be a oneflow tensor. Got {}.".format(type(tensor))
+        )
 
     if not tensor.dtype == flow.float:
-        raise TypeError('Input tensor should be a float tensor. Got {}.'.format(tensor.dtype))
+        raise TypeError(
+            "Input tensor should be a float tensor. Got {}.".format(tensor.dtype)
+        )
 
     if tensor.ndim < 3:
-        raise ValueError('Expected tensor to be a tensor image of size (..., C, H, W). Got tensor.size() = '
-                         '{}.'.format(tensor.size()))
+        raise ValueError(
+            "Expected tensor to be a tensor image of size (..., C, H, W). Got tensor.size() = "
+            "{}.".format(tensor.size())
+        )
 
     if not inplace:
         tensor = tensor.clone()
@@ -165,7 +197,11 @@ def normalize(tensor: Tensor, mean: List[float], std: List[float], inplace: bool
     return tensor
 
 
-def resize(img: Tensor, size: List[int], interpolation: InterpolationMode = InterpolationMode.BILINEAR) -> Tensor:
+def resize(
+    img: Tensor,
+    size: List[int],
+    interpolation: InterpolationMode = InterpolationMode.BILINEAR,
+) -> Tensor:
     r"""Resize the input image to the given size.
     If the image is torch Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions

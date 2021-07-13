@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 r""""Contains definitions of the methods used by the _BaseDataLoaderIter workers to
 collate samples fetched from dataset into Tensor(s).
 
@@ -9,9 +24,10 @@ import oneflow as flow
 import re
 import collections
 import oneflow.python.utils as utils
+
 string_classes = (str, bytes)
 
-np_str_obj_array_pattern = re.compile(r'[SaUO]')
+np_str_obj_array_pattern = re.compile(r"[SaUO]")
 
 
 def default_convert(data):
@@ -19,18 +35,25 @@ def default_convert(data):
     elem_type = type(data)
     if isinstance(data, flow.Tensor):
         return data
-    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
-            and elem_type.__name__ != 'string_':
+    elif (
+        elem_type.__module__ == "numpy"
+        and elem_type.__name__ != "str_"
+        and elem_type.__name__ != "string_"
+    ):
         # array of string classes and object
-        if elem_type.__name__ == 'ndarray' \
-                and np_str_obj_array_pattern.search(data.dtype.str) is not None:
+        if (
+            elem_type.__name__ == "ndarray"
+            and np_str_obj_array_pattern.search(data.dtype.str) is not None
+        ):
             return data
         return flow.Tensor(data)
     elif isinstance(data, collections.abc.Mapping):
         return {key: default_convert(data[key]) for key in data}
-    elif isinstance(data, tuple) and hasattr(data, '_fields'):  # namedtuple
+    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
         return elem_type(*(default_convert(d) for d in data))
-    elif isinstance(data, collections.abc.Sequence) and not isinstance(data, string_classes):
+    elif isinstance(data, collections.abc.Sequence) and not isinstance(
+        data, string_classes
+    ):
         return [default_convert(d) for d in data]
     else:
         return data
@@ -38,7 +61,8 @@ def default_convert(data):
 
 default_collate_err_msg_format = (
     "default_collate: batch must contain tensors, numpy arrays, numbers, "
-    "dicts or lists; found {}")
+    "dicts or lists; found {}"
+)
 
 
 def default_collate(batch):
@@ -50,15 +74,18 @@ def default_collate(batch):
     if isinstance(elem, flow.Tensor) or isinstance(elem, flow._oneflow_internal.Tensor):
         # out = None
         # if utils.data.get_worker_info() is not None:
-            # If we're in a background process, concatenate directly into a
-            # shared memory tensor to avoid an extra copy
-            # numel = sum([x.numel() for x in batch])
-            # storage = elem.storage()._new_shared(numel)
-            # out = elem.new(storage)
-        return flow.experimental.stack(batch, dim = 0)
-    elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
-            and elem_type.__name__ != 'string_':
-        if elem_type.__name__ == 'ndarray' or elem_type.__name__ == 'memmap':
+        # If we're in a background process, concatenate directly into a
+        # shared memory tensor to avoid an extra copy
+        # numel = sum([x.numel() for x in batch])
+        # storage = elem.storage()._new_shared(numel)
+        # out = elem.new(storage)
+        return flow.experimental.stack(batch, dim=0)
+    elif (
+        elem_type.__module__ == "numpy"
+        and elem_type.__name__ != "str_"
+        and elem_type.__name__ != "string_"
+    ):
+        if elem_type.__name__ == "ndarray" or elem_type.__name__ == "memmap":
             # array of string classes and object
             if np_str_obj_array_pattern.search(elem.dtype.str) is not None:
                 raise TypeError(default_collate_err_msg_format.format(elem.dtype))
@@ -74,14 +101,14 @@ def default_collate(batch):
         return batch
     elif isinstance(elem, collections.abc.Mapping):
         return {key: default_collate([d[key] for d in batch]) for key in elem}
-    elif isinstance(elem, tuple) and hasattr(elem, '_fields'):  # namedtuple
+    elif isinstance(elem, tuple) and hasattr(elem, "_fields"):  # namedtuple
         return elem_type(*(default_collate(samples) for samples in zip(*batch)))
     elif isinstance(elem, collections.abc.Sequence):
         # check to make sure that the elements in batch have consistent size
         it = iter(batch)
         elem_size = len(next(it))
         if not all(len(elem) == elem_size for elem in it):
-            raise RuntimeError('each element in list of batch should be of equal size')
+            raise RuntimeError("each element in list of batch should be of equal size")
         transposed = zip(*batch)
         return [default_collate(samples) for samples in transposed]
 

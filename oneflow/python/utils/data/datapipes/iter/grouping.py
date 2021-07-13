@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import functools
 import os
 import warnings
@@ -5,10 +20,10 @@ import warnings
 from oneflow.python.utils.data import IterDataPipe, functional_datapipe
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sized, Tuple, TypeVar
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
-@functional_datapipe('batch')
+@functional_datapipe("batch")
 class BatchIterDataPipe(IterDataPipe[List[T_co]]):
     r""" :class:`BatchIterDataPipe`.
 
@@ -25,11 +40,9 @@ class BatchIterDataPipe(IterDataPipe[List[T_co]]):
     drop_last: bool
     length: Optional[int]
 
-    def __init__(self,
-                 datapipe: IterDataPipe[T_co],
-                 batch_size: int,
-                 drop_last: bool = False,
-                 ) -> None:
+    def __init__(
+        self, datapipe: IterDataPipe[T_co], batch_size: int, drop_last: bool = False,
+    ) -> None:
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         super().__init__()
         self.datapipe = datapipe
@@ -56,12 +69,14 @@ class BatchIterDataPipe(IterDataPipe[List[T_co]]):
             if self.drop_last:
                 self.length = len(self.datapipe) // self.batch_size
             else:
-                self.length = (len(self.datapipe) + self.batch_size - 1) // self.batch_size
+                self.length = (
+                    len(self.datapipe) + self.batch_size - 1
+                ) // self.batch_size
             return self.length
         raise NotImplementedError
 
 
-@functional_datapipe('bucket_batch')
+@functional_datapipe("bucket_batch")
 class BucketBatchIterDataPipe(IterDataPipe[List[T_co]]):
     r""" :class:`BucketBatchIterDataPipe`.
 
@@ -82,13 +97,14 @@ class BucketBatchIterDataPipe(IterDataPipe[List[T_co]]):
     sort_key: Optional[Callable]
     length: Optional[int]
 
-    def __init__(self,
-                 datapipe: IterDataPipe[T_co],
-                 batch_size: int,
-                 drop_last: bool = False,
-                 bucket_size_mul: int = 100,
-                 sort_key: Optional[Callable] = None,
-                 ) -> None:
+    def __init__(
+        self,
+        datapipe: IterDataPipe[T_co],
+        batch_size: int,
+        drop_last: bool = False,
+        bucket_size_mul: int = 100,
+        sort_key: Optional[Callable] = None,
+    ) -> None:
         assert batch_size > 0, "Batch size is required to be larger than 0!"
         super().__init__()
         self.datapipe = datapipe
@@ -96,16 +112,22 @@ class BucketBatchIterDataPipe(IterDataPipe[List[T_co]]):
         self.drop_last = drop_last
         self.bucket_size = batch_size * bucket_size_mul
         self.sort_key = sort_key
-        if sort_key is not None and sort_key.__name__ == '<lambda>':
-            warnings.warn("Lambda function is not supported for pickle, "
-                          "please use regular python function instead.")
-        self.bucket_ds = BatchIterDataPipe(datapipe, batch_size=self.bucket_size, drop_last=False)
+        if sort_key is not None and sort_key.__name__ == "<lambda>":
+            warnings.warn(
+                "Lambda function is not supported for pickle, "
+                "please use regular python function instead."
+            )
+        self.bucket_ds = BatchIterDataPipe(
+            datapipe, batch_size=self.bucket_size, drop_last=False
+        )
         self.length = None
 
     def __iter__(self) -> Iterator[List[T_co]]:
         # Bucket without sorting remains same order, directly returns BatchDataset
         if self.sort_key is None:
-            yield from BatchIterDataPipe(self.datapipe, batch_size=self.batch_size, drop_last=self.drop_last)
+            yield from BatchIterDataPipe(
+                self.datapipe, batch_size=self.batch_size, drop_last=self.drop_last
+            )
         else:
             bucket: List[T_co]
             batch: List[T_co] = []
@@ -113,7 +135,7 @@ class BucketBatchIterDataPipe(IterDataPipe[List[T_co]]):
                 # In-place sort within bucket
                 bucket.sort(key=self.sort_key)
                 for start in range(0, len(bucket), self.batch_size):
-                    batch = bucket[start: start + self.batch_size]
+                    batch = bucket[start : start + self.batch_size]
                     if len(batch) == self.batch_size or not self.drop_last:
                         yield batch
 
@@ -124,7 +146,9 @@ class BucketBatchIterDataPipe(IterDataPipe[List[T_co]]):
             if self.drop_last:
                 self.length = len(self.datapipe) // self.batch_size
             else:
-                self.length = (len(self.datapipe) + self.batch_size - 1) // self.batch_size
+                self.length = (
+                    len(self.datapipe) + self.batch_size - 1
+                ) // self.batch_size
             return self.length
         raise NotImplementedError
 
@@ -136,9 +160,9 @@ def default_group_key_fn(dataitem: Tuple[str, Any]):
 
 
 def default_sort_data_fn(datalist: List[Tuple[str, Any]]):
-    txt_ext = ['.json', '.jsn', '.txt', '.text']
+    txt_ext = [".json", ".jsn", ".txt", ".text"]
 
-    def cmp_fn(a : Tuple[str, Any], b : Tuple[str, Any]):
+    def cmp_fn(a: Tuple[str, Any], b: Tuple[str, Any]):
         a_is_txt = os.path.splitext(a[0])[1] in txt_ext
         b_is_txt = os.path.splitext(b[0])[1] in txt_ext
 
@@ -158,7 +182,7 @@ def default_sort_data_fn(datalist: List[Tuple[str, Any]]):
     return sorted(datalist, key=functools.cmp_to_key(cmp_fn))
 
 
-@functional_datapipe('group_by_key')
+@functional_datapipe("group_by_key")
 class GroupByKeyIterDataPipe(IterDataPipe):
     r""" :class:`GroupByKeyIterDataPipe`.
 
@@ -183,14 +207,15 @@ class GroupByKeyIterDataPipe(IterDataPipe):
     length: int
 
     def __init__(
-            self,
-            datapipe: IterDataPipe[Tuple[str, Any]],
-            *,
-            group_size: int,
-            max_buffer_size: Optional[int] = None,
-            group_key_fn: Callable = default_group_key_fn,
-            sort_data_fn: Callable = default_sort_data_fn,
-            length: int = -1):
+        self,
+        datapipe: IterDataPipe[Tuple[str, Any]],
+        *,
+        group_size: int,
+        max_buffer_size: Optional[int] = None,
+        group_key_fn: Callable = default_group_key_fn,
+        sort_data_fn: Callable = default_sort_data_fn,
+        length: int = -1
+    ):
         super().__init__()
 
         assert group_size > 0
@@ -198,7 +223,9 @@ class GroupByKeyIterDataPipe(IterDataPipe):
         self.group_size = group_size
 
         # default max buffer size is group_size * 10
-        self.max_buffer_size = max_buffer_size if max_buffer_size is not None else group_size * 10
+        self.max_buffer_size = (
+            max_buffer_size if max_buffer_size is not None else group_size * 10
+        )
         assert self.max_buffer_size >= self.group_size
 
         self.group_key_fn = group_key_fn  # type: ignore
@@ -226,12 +253,17 @@ class GroupByKeyIterDataPipe(IterDataPipe):
                     if self.curr_buffer_size == self.max_buffer_size:
                         raise OverflowError(
                             "stream_buffer is overflow, please adjust the order of data "
-                            "in the input datapipe or increase the buffer size!")
+                            "in the input datapipe or increase the buffer size!"
+                        )
                     self.curr_buffer_size = self.curr_buffer_size + 1
 
             if self.curr_buffer_size > 0:
                 msg = "Not able to group [{}] with group size {}.".format(
-                    ','.join([v[0] for _, vs in self.stream_buffer.items() for v in vs]), str(self.group_size))
+                    ",".join(
+                        [v[0] for _, vs in self.stream_buffer.items() for v in vs]
+                    ),
+                    str(self.group_size),
+                )
                 raise RuntimeError(msg)
 
     def __len__(self) -> int:

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import oneflow as flow
 import oneflow.python.utils.data as data
@@ -7,15 +22,17 @@ from typing import Any, Callable, List, Optional, Tuple
 # https://github.com/pytorch/vision/commit/d1f1a5445dcbbd0d733dc38a32d9ae153337daae
 
 string_classes = (str, bytes)
+
+
 class VisionDataset(data.Dataset):
     _repr_indent = 4
 
     def __init__(
-            self,
-            root: str,
-            transforms: Optional[Callable] = None,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
+        self,
+        root: str,
+        transforms: Optional[Callable] = None,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
     ) -> None:
         if isinstance(root, string_classes):
             root = os.path.expanduser(root)
@@ -24,8 +41,10 @@ class VisionDataset(data.Dataset):
         has_transforms = transforms is not None
         has_separate_transform = transform is not None or target_transform is not None
         if has_transforms and has_separate_transform:
-            raise ValueError("Only transforms or transform/target_transform can "
-                             "be passed as argument")
+            raise ValueError(
+                "Only transforms or transform/target_transform can "
+                "be passed as argument"
+            )
 
         # for backwards-compatibility
         self.transform = transform
@@ -50,19 +69,24 @@ class VisionDataset(data.Dataset):
         if hasattr(self, "transforms") and self.transforms is not None:
             body += [repr(self.transforms)]
         lines = [head] + [" " * self._repr_indent + line for line in body]
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _format_transform_repr(self, transform: Callable, head: str) -> List[str]:
         lines = transform.__repr__().splitlines()
-        return (["{}{}".format(head, lines[0])] +
-                ["{}{}".format(" " * len(head), line) for line in lines[1:]])
+        return ["{}{}".format(head, lines[0])] + [
+            "{}{}".format(" " * len(head), line) for line in lines[1:]
+        ]
 
     def extra_repr(self) -> str:
         return ""
 
 
 class StandardTransform(object):
-    def __init__(self, transform: Optional[Callable] = None, target_transform: Optional[Callable] = None) -> None:
+    def __init__(
+        self,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+    ) -> None:
         self.transform = transform
         self.target_transform = target_transform
 
@@ -75,17 +99,17 @@ class StandardTransform(object):
 
     def _format_transform_repr(self, transform: Callable, head: str) -> List[str]:
         lines = transform.__repr__().splitlines()
-        return (["{}{}".format(head, lines[0])] +
-                ["{}{}".format(" " * len(head), line) for line in lines[1:]])
+        return ["{}{}".format(head, lines[0])] + [
+            "{}{}".format(" " * len(head), line) for line in lines[1:]
+        ]
 
     def __repr__(self) -> str:
         body = [self.__class__.__name__]
         if self.transform is not None:
-            body += self._format_transform_repr(self.transform,
-                                                "Transform: ")
+            body += self._format_transform_repr(self.transform, "Transform: ")
         if self.target_transform is not None:
-            body += self._format_transform_repr(self.target_transform,
-                                                "Target transform: ")
+            body += self._format_transform_repr(
+                self.target_transform, "Target transform: "
+            )
 
-        return '\n'.join(body)
-
+        return "\n".join(body)

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 # This file takes partial of the implementation from NVIDIA's webdataset at here:
 # https://github.com/tmbdev/webdataset/blob/master/webdataset/autodecode.py
 
@@ -74,6 +89,7 @@ imagespecs = {
     "pilrgba": ("pil", None, "rgba"),
 }
 
+
 def handle_extension(extensions, f):
     """
     Returns a decoder handler function for the list of extensions.
@@ -96,9 +112,10 @@ def handle_extension(extensions, f):
             if len(target) > len(extension):
                 continue
 
-            if extension[-len(target):] == target:
+            if extension[-len(target) :] == target:
                 return f(data)
             return None
+
     return g
 
 
@@ -127,8 +144,11 @@ class ImageHandler:
     - pilrgb: pil None rgb
     - pilrgba: pil None rgba
     """
+
     def __init__(self, imagespec):
-        assert imagespec in list(imagespecs.keys()), "unknown image specification: {}".format(imagespec)
+        assert imagespec in list(
+            imagespecs.keys()
+        ), "unknown image specification: {}".format(imagespec)
         self.imagespec = imagespec.lower()
 
     def __call__(self, key, data):
@@ -139,14 +159,18 @@ class ImageHandler:
         try:
             import numpy as np
         except ImportError as e:
-            raise ModuleNotFoundError("Package `numpy` is required to be installed for default image decoder."
-                                      "Please use `pip install numpy` to install the package")
+            raise ModuleNotFoundError(
+                "Package `numpy` is required to be installed for default image decoder."
+                "Please use `pip install numpy` to install the package"
+            )
 
         try:
             import PIL.Image
         except ImportError as e:
-            raise ModuleNotFoundError("Package `PIL` is required to be installed for default image decoder."
-                                      "Please use `pip install Pillow` to install the package")
+            raise ModuleNotFoundError(
+                "Package `PIL` is required to be installed for default image decoder."
+                "Please use `pip install Pillow` to install the package"
+            )
 
         imagespec = self.imagespec
         atype, etype, mode = imagespecs[imagespec]
@@ -159,14 +183,22 @@ class ImageHandler:
                 return img
             elif atype == "numpy":
                 result = np.asarray(img)
-                assert result.dtype == np.uint8, "numpy image array should be type uint8, but got {}".format(result.dtype)
+                assert (
+                    result.dtype == np.uint8
+                ), "numpy image array should be type uint8, but got {}".format(
+                    result.dtype
+                )
                 if etype == "uint8":
                     return result
                 else:
                     return result.astype("f") / 255.0
             elif atype == "flow":
                 result = np.asarray(img)
-                assert result.dtype == np.uint8, "numpy image array should be type uint8, but got {}".format(result.dtype)
+                assert (
+                    result.dtype == np.uint8
+                ), "numpy image array should be type uint8, but got {}".format(
+                    result.dtype
+                )
 
                 if etype == "uint8":
                     result = np.array(result.transpose(2, 0, 1))
@@ -175,6 +207,7 @@ class ImageHandler:
                     result = np.array(result.transpose(2, 0, 1))
                     return flow.tensor(result) / 255.0
             return None
+
 
 def imagehandler(imagespec):
     return ImageHandler(imagespec)
@@ -193,9 +226,11 @@ def flow_video(key, data):
     try:
         import flowvision.io
     except ImportError as e:
-        raise ModuleNotFoundError("Package `flowvision` is required to be installed for default video file loader."
-                                  "Please use `pip install flowvision` or `conda install flowvision -c oneflow`"
-                                  "to install the package")
+        raise ModuleNotFoundError(
+            "Package `flowvision` is required to be installed for default video file loader."
+            "Please use `pip install flowvision` or `conda install flowvision -c oneflow`"
+            "to install the package"
+        )
 
     with tempfile.TemporaryDirectory() as dirname:
         fname = os.path.join(dirname, f"file.{extension}")
@@ -217,16 +252,17 @@ def flow_audio(key, data):
     try:
         import flowaudio  # type: ignore
     except ImportError as e:
-        raise ModuleNotFoundError("Package `flowaudio` is required to be installed for default audio file loader."
-                                  "Please use `pip install flowaudio` or `conda install flowaudio -c oneflow`"
-                                  "to install the package")
+        raise ModuleNotFoundError(
+            "Package `flowaudio` is required to be installed for default audio file loader."
+            "Please use `pip install flowaudio` or `conda install flowaudio -c oneflow`"
+            "to install the package"
+        )
 
     with tempfile.TemporaryDirectory() as dirname:
         fname = os.path.join(dirname, f"file.{extension}")
         with open(fname, "wb") as stream:
             stream.write(data)
             return flowaudio.load(fname)
-
 
 
 ################################################################

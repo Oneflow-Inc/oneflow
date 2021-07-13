@@ -1,7 +1,23 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import warnings
 
 import oneflow.experimental as flow
 from oneflow.experimental import Tensor
+
 # from oneflow.experimental.nn.functional import grid_sample, conv2d, interpolate, pad as flow_pad
 from typing import Optional, Tuple, List
 
@@ -30,7 +46,9 @@ def _get_image_num_channels(img: Tensor) -> int:
     raise TypeError("Input ndim should be 2 or more. Got {}".format(img.ndim))
 
 
-def _cast_squeeze_in(img: Tensor, req_dtypes: List[flow.dtype]) -> Tuple[Tensor, bool, bool, flow.dtype]:
+def _cast_squeeze_in(
+    img: Tensor, req_dtypes: List[flow.dtype]
+) -> Tuple[Tensor, bool, bool, flow.dtype]:
     need_squeeze = False
     # make image NCHW
     if img.ndim < 4:
@@ -46,7 +64,9 @@ def _cast_squeeze_in(img: Tensor, req_dtypes: List[flow.dtype]) -> Tuple[Tensor,
     return img, need_cast, need_squeeze, out_dtype
 
 
-def _cast_squeeze_out(img: Tensor, need_cast: bool, need_squeeze: bool, out_dtype: flow.dtype):
+def _cast_squeeze_out(
+    img: Tensor, need_cast: bool, need_squeeze: bool, out_dtype: flow.dtype
+):
     if need_squeeze:
         img = img.squeeze(dim=0)
 
@@ -74,8 +94,10 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
         size = list(size)
 
     if isinstance(size, list) and len(size) not in [1, 2]:
-        raise ValueError("Size must be an int or a 1 or 2 element tuple/list, not a "
-                         "{} element tuple/list".format(len(size)))
+        raise ValueError(
+            "Size must be an int or a 1 or 2 element tuple/list, not a "
+            "{} element tuple/list".format(len(size))
+        )
 
     w, h = _get_image_size(img)
 
@@ -95,19 +117,24 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
         if (w <= h and w == size_w) or (h <= w and h == size_h):
             return img
 
-    img, need_cast, need_squeeze, out_dtype = _cast_squeeze_in(img, [flow.float32, flow.float64])
+    img, need_cast, need_squeeze, out_dtype = _cast_squeeze_in(
+        img, [flow.float32, flow.float64]
+    )
 
     # Define align_corners to avoid warnings
     align_corners = False if interpolation in ["bilinear", "bicubic"] else None
 
     # TODO: nn.functional.interpolate
-    raise NotImplementedError("Not support for now because nn.functional.interpolate is not ready!")
+    raise NotImplementedError(
+        "Not support for now because nn.functional.interpolate is not ready!"
+    )
     # img = interpolate(img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners)
 
     if interpolation == "bicubic" and out_dtype == flow.uint8:
         img = img.clamp(min=0, max=255)
 
-    img = _cast_squeeze_out(img, need_cast=need_cast, need_squeeze=need_squeeze, out_dtype=out_dtype)
+    img = _cast_squeeze_out(
+        img, need_cast=need_cast, need_squeeze=need_squeeze, out_dtype=out_dtype
+    )
 
     return img
-

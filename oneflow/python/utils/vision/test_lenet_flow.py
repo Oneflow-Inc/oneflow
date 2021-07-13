@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import time
 
@@ -11,7 +26,8 @@ from datasets.mnist import FashionMNIST
 # ref: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
 flow.enable_eager_execution()
 
-def load_data_fashion_mnist(batch_size, resize=None, root='./test/FashionMNIST'):
+
+def load_data_fashion_mnist(batch_size, resize=None, root="./test/FashionMNIST"):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
     trans = []
@@ -20,12 +36,20 @@ def load_data_fashion_mnist(batch_size, resize=None, root='./test/FashionMNIST')
     trans.append(transforms.ToTensor())
     transform = transforms.Compose(trans)
 
-    mnist_train = FashionMNIST(root=root, train=True, transform=transform, download=True)
-    mnist_test = FashionMNIST(root=root, train=False, transform=transform, download=True)
+    mnist_train = FashionMNIST(
+        root=root, train=True, transform=transform, download=True
+    )
+    mnist_test = FashionMNIST(
+        root=root, train=False, transform=transform, download=True
+    )
     num_workers = 0
 
-    train_iter = data.DataLoader(mnist_train, batch_size, shuffle=True, num_workers=num_workers)
-    test_iter = data.DataLoader(mnist_test, batch_size, shuffle=False, num_workers=num_workers)
+    train_iter = data.DataLoader(
+        mnist_train, batch_size, shuffle=True, num_workers=num_workers
+    )
+    test_iter = data.DataLoader(
+        mnist_test, batch_size, shuffle=False, num_workers=num_workers
+    )
     return train_iter, test_iter
 
 
@@ -33,19 +57,19 @@ class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(1, 6, 5), # in_channels, out_channels, kernel_size
+            nn.Conv2d(1, 6, 5),  # in_channels, out_channels, kernel_size
             nn.Sigmoid(),
-            nn.MaxPool2d(2, 2), # kernel_size, stride
+            nn.MaxPool2d(2, 2),  # kernel_size, stride
             nn.Conv2d(6, 16, 5),
             nn.Sigmoid(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2, 2),
         )
         self.fc = nn.Sequential(
-            nn.Linear(16*4*4, 120),
+            nn.Linear(16 * 4 * 4, 120),
             nn.Sigmoid(),
             nn.Linear(120, 84),
             nn.Sigmoid(),
-            nn.Linear(84, 10)
+            nn.Linear(84, 10),
         )
 
     def forward(self, img):
@@ -53,11 +77,12 @@ class LeNet(nn.Module):
         output = self.fc(feature.reshape(shape=[img.shape[0], -1]))
         return output
 
+
 # define LeNet module
 class LeNet5(nn.Module):
     def __init__(self, n_classes):
         super(LeNet5, self).__init__()
-        self.feature_extractor = nn.Sequential(            
+        self.feature_extractor = nn.Sequential(
             nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5, stride=1),
             nn.Tanh(),
             nn.AvgPool2d(kernel_size=2),
@@ -65,7 +90,7 @@ class LeNet5(nn.Module):
             nn.Tanh(),
             nn.AvgPool2d(kernel_size=2),
             nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
-            nn.Tanh()
+            nn.Tanh(),
         )
         self.classifier = nn.Sequential(
             nn.Linear(in_features=120, out_features=84),
@@ -90,7 +115,7 @@ network = LeNet5(n_classes=10)
 for params in network.parameters():
     nn.init.normal_(params, mean=0, std=0.01)
 
-device = flow.device("cuda") # segmentfault in cpu mode
+device = flow.device("cuda")  # segmentfault in cpu mode
 network.to(device)
 
 
@@ -114,13 +139,15 @@ def evaluate_accuracy(net, device, data_iter):
             X = X.to(device=device, dtype=flow.float32)
             y = y.to(device=device, dtype=flow.int64)
             if isinstance(net, nn.Module):
-                net.eval() # 评估模式, 这会关闭dropout 
+                net.eval()  # 评估模式, 这会关闭dropout
                 acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
-                net.train() # 改回训练模式
-            else: # 自定义的模型, 3.13节之后不会用到, 不考虑GPU
-                if('is_training' in net.__code__.co_varnames): # 如果有is_training这个参数
+                net.train()  # 改回训练模式
+            else:  # 自定义的模型, 3.13节之后不会用到, 不考虑GPU
+                if "is_training" in net.__code__.co_varnames:  # 如果有is_training这个参数
                     # 将is_training设置成False
-                    acc_sum += (net(X, is_training=False).argmax(dim=1).numpy() == y.numpy()).sum()
+                    acc_sum += (
+                        net(X, is_training=False).argmax(dim=1).numpy() == y.numpy()
+                    ).sum()
                 else:
                     acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
@@ -134,7 +161,7 @@ def train_ch5(net, device, train_iter, test_iter, num_epochs):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
-            X.requires_grad=True
+            X.requires_grad = True
             X = X.to(device=device, dtype=flow.float32)
             y = y.to(device=device, dtype=flow.int64)
             y_hat = net(X)
@@ -150,9 +177,16 @@ def train_ch5(net, device, train_iter, test_iter, num_epochs):
             batch_count += 1
 
         test_acc = evaluate_accuracy(net, device, test_iter)
-        print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec'
-              % (epoch + 1, train_l_sum / batch_count, train_acc_sum / n, test_acc, time.time() - start))
-            
+        print(
+            "epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec"
+            % (
+                epoch + 1,
+                train_l_sum / batch_count,
+                train_acc_sum / n,
+                test_acc,
+                time.time() - start,
+            )
+        )
+
 
 train_ch5(network, device, train_iter, test_iter, num_epochs)
-

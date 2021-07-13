@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import warnings
 import oneflow.python.nn as nn
 from oneflow.python.utils.data import IterDataPipe, _utils, functional_datapipe
@@ -15,7 +30,7 @@ try:
 except ImportError:
     DILL_AVAILABLE = False
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
 # Default function to return each item directly
@@ -25,7 +40,7 @@ def default_fn(data):
     return data
 
 
-@functional_datapipe('map')
+@functional_datapipe("map")
 class MapIterDataPipe(IterDataPipe[T_co]):
     r""" :class:`MapIterDataPipe`.
 
@@ -41,18 +56,21 @@ class MapIterDataPipe(IterDataPipe[T_co]):
     datapipe: IterDataPipe
     fn: Callable
 
-    def __init__(self,
-                 datapipe: IterDataPipe,
-                 fn: Callable = default_fn,
-                 fn_args: Optional[Tuple] = None,
-                 fn_kwargs: Optional[Dict] = None,
-                 ) -> None:
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        fn: Callable = default_fn,
+        fn_args: Optional[Tuple] = None,
+        fn_kwargs: Optional[Dict] = None,
+    ) -> None:
         super().__init__()
         self.datapipe = datapipe
         # Partial object has no attribute '__name__', but can be pickled
-        if hasattr(fn, '__name__') and fn.__name__ == '<lambda>' and not DILL_AVAILABLE:
-            warnings.warn("Lambda function is not supported for pickle, please use "
-                          "regular python function or functools.partial instead.")
+        if hasattr(fn, "__name__") and fn.__name__ == "<lambda>" and not DILL_AVAILABLE:
+            warnings.warn(
+                "Lambda function is not supported for pickle, please use "
+                "regular python function or functools.partial instead."
+            )
         self.fn = fn  # type: ignore
         self.args = () if fn_args is None else fn_args
         self.kwargs = {} if fn_kwargs is None else fn_kwargs
@@ -82,7 +100,7 @@ class MapIterDataPipe(IterDataPipe[T_co]):
             self.fn = dill_function  # type: ignore
 
 
-@functional_datapipe('collate')
+@functional_datapipe("collate")
 class CollateIterDataPipe(MapIterDataPipe):
     r""" :class:`CollateIterDataPipe`.
 
@@ -120,16 +138,18 @@ class CollateIterDataPipe(MapIterDataPipe):
         >>> print(list(collated_ds))
         [tensor(3.), tensor(4.), tensor(5.), tensor(6.)]
     """
-    def __init__(self,
-                 datapipe: IterDataPipe,
-                 collate_fn: Callable = _utils.collate.default_collate,
-                 fn_args: Optional[Tuple] = None,
-                 fn_kwargs: Optional[Dict] = None,
-                 ) -> None:
+
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        collate_fn: Callable = _utils.collate.default_collate,
+        fn_args: Optional[Tuple] = None,
+        fn_kwargs: Optional[Dict] = None,
+    ) -> None:
         super().__init__(datapipe, fn=collate_fn, fn_args=fn_args, fn_kwargs=fn_kwargs)
 
 
-@functional_datapipe('transforms')
+@functional_datapipe("transforms")
 class TransformsIterDataPipe(MapIterDataPipe):
     r""" :class:`TransformsIterDataPipe`.
 
@@ -139,22 +159,29 @@ class TransformsIterDataPipe(MapIterDataPipe):
         datapipe: Iterable DataPipe being transformed
         transforms: A transform or a sequence of transforms from torchvision or torchaudio.
     """
-    def __init__(self,
-                 datapipe: IterDataPipe,
-                 transforms: Callable,
-                 ) -> None:
+
+    def __init__(self, datapipe: IterDataPipe, transforms: Callable,) -> None:
         # Type checking for transforms
-        transforms_types: Tuple = (nn.Module, )
+        transforms_types: Tuple = (nn.Module,)
         try:
             # Specific types of transforms other than `nn.Module` from torchvision
             import torchvision.transforms as tsfm
-            transforms_types += (tsfm.Compose, tsfm.RandomChoice, tsfm.RandomOrder,
-                                 tsfm.ToPILImage, tsfm.ToTensor, tsfm.Lambda)
+
+            transforms_types += (
+                tsfm.Compose,
+                tsfm.RandomChoice,
+                tsfm.RandomOrder,
+                tsfm.ToPILImage,
+                tsfm.ToTensor,
+                tsfm.Lambda,
+            )
         except ImportError:
             pass
 
         if not isinstance(transforms, transforms_types):
-            raise TypeError("`transforms` are required to be a callable from "
-                            "torchvision.transforms or torchaudio.transforms")
+            raise TypeError(
+                "`transforms` are required to be a callable from "
+                "torchvision.transforms or torchaudio.transforms"
+            )
 
         super().__init__(datapipe, fn=transforms)

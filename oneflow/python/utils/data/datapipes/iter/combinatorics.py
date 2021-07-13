@@ -1,9 +1,29 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import random
 
-from oneflow.python.utils.data import IterDataPipe, Sampler, SequentialSampler, functional_datapipe
+from oneflow.python.utils.data import (
+    IterDataPipe,
+    Sampler,
+    SequentialSampler,
+    functional_datapipe,
+)
 from typing import TypeVar, Type, Iterator, Sized, Optional, Tuple, Dict, List
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
 class SamplerIterDataPipe(IterDataPipe[T_co]):
@@ -18,14 +38,16 @@ class SamplerIterDataPipe(IterDataPipe[T_co]):
     datapipe: IterDataPipe
     sampler: Sampler
 
-    def __init__(self,
-                 datapipe: IterDataPipe,
-                 sampler: Type[Sampler] = SequentialSampler,
-                 sampler_args: Optional[Tuple] = None,
-                 sampler_kwargs: Optional[Dict] = None
-                 ) -> None:
-        assert isinstance(datapipe, Sized), \
-            "Sampler class requires input datapipe implemented `__len__`"
+    def __init__(
+        self,
+        datapipe: IterDataPipe,
+        sampler: Type[Sampler] = SequentialSampler,
+        sampler_args: Optional[Tuple] = None,
+        sampler_kwargs: Optional[Dict] = None,
+    ) -> None:
+        assert isinstance(
+            datapipe, Sized
+        ), "Sampler class requires input datapipe implemented `__len__`"
         super().__init__()
         self.datapipe = datapipe
         self.sampler_args = () if sampler_args is None else sampler_args
@@ -43,7 +65,7 @@ class SamplerIterDataPipe(IterDataPipe[T_co]):
         raise NotImplementedError
 
 
-@functional_datapipe('shuffle')
+@functional_datapipe("shuffle")
 class ShuffleIterDataPipe(IterDataPipe[T_co]):
     r""" :class:`ShuffleIterDataPipe`
 
@@ -71,10 +93,7 @@ class ShuffleIterDataPipe(IterDataPipe[T_co]):
     buffer_size: int
     _buffer: List[T_co]
 
-    def __init__(self,
-                 datapipe: IterDataPipe[T_co],
-                 *,
-                 buffer_size: int) -> None:
+    def __init__(self, datapipe: IterDataPipe[T_co], *, buffer_size: int) -> None:
         super().__init__()
         assert buffer_size > 0, "buffer_size should be larger than 0"
         self.datapipe = datapipe

@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import math
 import numbers
 import random
@@ -10,6 +25,7 @@ from .functional import InterpolationMode, _interpolation_modes_from_int
 
 import oneflow.experimental as flow
 from oneflow.experimental import Tensor
+
 
 class Normalize(flow.nn.Module):
     """Normalize a tensor image with mean and standard deviation.
@@ -42,7 +58,9 @@ class Normalize(flow.nn.Module):
         return F.normalize(tensor, self.mean, self.std, self.inplace)
 
     def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+        return self.__class__.__name__ + "(mean={0}, std={1})".format(
+            self.mean, self.std
+        )
 
 
 class Compose:
@@ -65,6 +83,7 @@ class Compose:
         Make sure to use only scriptable transformations, i.e. that work with ``torch.Tensor``, does not require
         `lambda` functions or ``PIL.Image``.
     """
+
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -74,11 +93,11 @@ class Compose:
         return img
 
     def __repr__(self):
-        format_string = self.__class__.__name__ + '('
+        format_string = self.__class__.__name__ + "("
         for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
+            format_string += "\n"
+            format_string += "    {0}".format(t)
+        format_string += "\n)"
         return format_string
 
 
@@ -105,7 +124,7 @@ class ToTensor:
         return F.to_tensor(pic)
 
     def __repr__(self):
-        return self.__class__.__name__ + '()'
+        return self.__class__.__name__ + "()"
 
 
 class Resize(flow.nn.Module):
@@ -158,5 +177,6 @@ class Resize(flow.nn.Module):
 
     def __repr__(self):
         interpolate_str = self.interpolation.value
-        return self.__class__.__name__ + '(size={0}, interpolation={1})'.format(self.size, interpolate_str)
-    
+        return self.__class__.__name__ + "(size={0}, interpolation={1})".format(
+            self.size, interpolate_str
+        )

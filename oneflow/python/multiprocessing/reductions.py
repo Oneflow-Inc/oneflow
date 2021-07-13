@@ -1,7 +1,23 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
+
 # import flow.utils.hooks
 # from flow._namedtensor_internals import check_serializing_named_tensor
 import os
@@ -9,6 +25,7 @@ import threading
 import multiprocessing
 from multiprocessing.util import register_after_fork
 from multiprocessing.reduction import ForkingPickler
+
 try:
     # Early load resource_sharer to prevent a partially initialized instance
     # from being inherited in a forked child process. The reduce_storage method
@@ -252,21 +269,21 @@ def reduce_tensor(tensor):
     #     shared_cache[handle] = StorageWeakRef(storage)
     #     # _backward_hooks purposely omitted here, see
     #     # Note [Don't serialize hooks]
-        # return (rebuild_cuda_tensor,
-        #         (type(tensor),
-        #          tensor.size(),
-        #          tensor.stride(),
-        #          tensor_offset,  # tensor offset in its storage
-        #          type(storage),
-        #          device,
-        #          handle,  # identifier which CUDA allocation is the storage in.
-        #          storage_size_bytes,  # size(in bytes) of the storage
-        #          storage_offset_bytes,  # offset(in bytes) of the storage in the CUDA allocation
-        #          tensor.requires_grad,
-        #          ref_counter_handle,
-        #          ref_counter_offset,
-        #          event_handle,
-        #          event_sync_required))
+    # return (rebuild_cuda_tensor,
+    #         (type(tensor),
+    #          tensor.size(),
+    #          tensor.stride(),
+    #          tensor_offset,  # tensor offset in its storage
+    #          type(storage),
+    #          device,
+    #          handle,  # identifier which CUDA allocation is the storage in.
+    #          storage_size_bytes,  # size(in bytes) of the storage
+    #          storage_offset_bytes,  # offset(in bytes) of the storage in the CUDA allocation
+    #          tensor.requires_grad,
+    #          ref_counter_handle,
+    #          ref_counter_offset,
+    #          event_handle,
+    #          event_sync_required))
 
     # _backward_hooks purposely omitted here, see Note [Don't serialize hooks]
     return flow.Tensor(tensor.numpy())
@@ -274,6 +291,7 @@ def reduce_tensor(tensor):
 
 def reduce_local_tensor(tensor):
     return tensor
+
 
 # def fd_id(fd):
 #     # Returns a tuple which uniquely identifies a file descriptor. In Mac OS,

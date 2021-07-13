@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import builtins
 from typing import Iterator, Union, Optional, Sequence, List, TypeVar, Generic, Sized
 import numpy as np
@@ -5,17 +20,30 @@ import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
 
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 # Defined in torch/csrc/Generator.cpp
 class Generator(object):
     _device = "cpu"
     device: _device
-    def __init__(self, device: Union[_device, str, None] = None) -> None: ...
-    def get_state(self) -> Tensor: ...
-    def set_state(self, _new_state: Tensor): ...
-    def manual_seed(self, seed: builtins.int): ...
-    def seed(self) -> builtins.int: ...
-    def initial_seed(self) -> builtins.int: ...
+
+    def __init__(self, device: Union[_device, str, None] = None) -> None:
+        ...
+
+    def get_state(self) -> Tensor:
+        ...
+
+    def set_state(self, _new_state: Tensor):
+        ...
+
+    def manual_seed(self, seed: builtins.int):
+        ...
+
+    def seed(self) -> builtins.int:
+        ...
+
+    def initial_seed(self) -> builtins.int:
+        ...
+
 
 class Sampler(Generic[T_co]):
     r"""Base class for all Samplers.
@@ -95,24 +123,35 @@ class RandomSampler(Sampler[int]):
     data_source: Sized
     replacement: bool
 
-    def __init__(self, data_source: Sized, replacement: bool = False,
-                 num_samples: Optional[int] = None, generator=None) -> None:
+    def __init__(
+        self,
+        data_source: Sized,
+        replacement: bool = False,
+        num_samples: Optional[int] = None,
+        generator=None,
+    ) -> None:
         self.data_source = data_source
         self.replacement = replacement
         self._num_samples = num_samples
         self.generator = generator
 
         if not isinstance(self.replacement, bool):
-            raise TypeError("replacement should be a boolean value, but got "
-                            "replacement={}".format(self.replacement))
+            raise TypeError(
+                "replacement should be a boolean value, but got "
+                "replacement={}".format(self.replacement)
+            )
 
         if self._num_samples is not None and not replacement:
-            raise ValueError("With replacement=False, num_samples should not be specified, "
-                             "since a random permute will be performed.")
+            raise ValueError(
+                "With replacement=False, num_samples should not be specified, "
+                "since a random permute will be performed."
+            )
 
         if not isinstance(self.num_samples, int) or self.num_samples <= 0:
-            raise ValueError("num_samples should be a positive integer "
-                             "value, but got num_samples={}".format(self.num_samples))
+            raise ValueError(
+                "num_samples should be a positive integer "
+                "value, but got num_samples={}".format(self.num_samples)
+            )
 
     @property
     def num_samples(self) -> int:
@@ -126,14 +165,23 @@ class RandomSampler(Sampler[int]):
         if self.generator is None:
             generator = Generator()
             # TODO
-            generator.manual_seed(int(flow.Tensor(1,dtype=flow.int64).xavier_uniform_().numpy()[0]))
+            generator.manual_seed(
+                int(flow.Tensor(1, dtype=flow.int64).xavier_uniform_().numpy()[0])
+            )
         else:
             generator = self.generator
         if self.replacement:
             # TODO: flow.randint
             for _ in range(self.num_samples // 32):
-                yield from flow.randint(high=n, size=(32,), dtype=flow.int64, generator=generator).tolist()
-            yield from flow.randint(high=n, size=(self.num_samples % 32,), dtype=flow.int64, generator=generator).tolist()
+                yield from flow.randint(
+                    high=n, size=(32,), dtype=flow.int64, generator=generator
+                ).tolist()
+            yield from flow.randint(
+                high=n,
+                size=(self.num_samples % 32,),
+                dtype=flow.int64,
+                generator=generator,
+            ).tolist()
         else:
             yield from np.random.permutation(n).tolist()
             # yield from flow.randperm(n, generator=generator).tolist()
@@ -156,7 +204,10 @@ class SubsetRandomSampler(Sampler[int]):
         self.generator = generator
 
     def __iter__(self):
-        return (self.indices[i] for i in flow.randperm(len(self.indices), generator=self.generator))
+        return (
+            self.indices[i]
+            for i in flow.randperm(len(self.indices), generator=self.generator)
+        )
 
     def __len__(self):
         return len(self.indices)
@@ -183,22 +234,36 @@ class WeightedRandomSampler(Sampler[int]):
     num_samples: int
     replacement: bool
 
-    def __init__(self, weights: Sequence[float], num_samples: int,
-                 replacement: bool = True, generator=None) -> None:
-        if not isinstance(num_samples, int) or isinstance(num_samples, bool) or \
-                num_samples <= 0:
-            raise ValueError("num_samples should be a positive integer "
-                             "value, but got num_samples={}".format(num_samples))
+    def __init__(
+        self,
+        weights: Sequence[float],
+        num_samples: int,
+        replacement: bool = True,
+        generator=None,
+    ) -> None:
+        if (
+            not isinstance(num_samples, int)
+            or isinstance(num_samples, bool)
+            or num_samples <= 0
+        ):
+            raise ValueError(
+                "num_samples should be a positive integer "
+                "value, but got num_samples={}".format(num_samples)
+            )
         if not isinstance(replacement, bool):
-            raise ValueError("replacement should be a boolean value, but got "
-                             "replacement={}".format(replacement))
+            raise ValueError(
+                "replacement should be a boolean value, but got "
+                "replacement={}".format(replacement)
+            )
         self.weights = flow.Tensor(weights, dtype=flow.double)
         self.num_samples = num_samples
         self.replacement = replacement
         self.generator = generator
 
     def __iter__(self):
-        rand_tensor = flow.multinomial(self.weights, self.num_samples, self.replacement, generator=self.generator)
+        rand_tensor = flow.multinomial(
+            self.weights, self.num_samples, self.replacement, generator=self.generator
+        )
         return iter(rand_tensor.tolist())
 
     def __len__(self):
@@ -225,13 +290,20 @@ class BatchSampler(Sampler[List[int]]):
         # Since collections.abc.Iterable does not check for `__getitem__`, which
         # is one way for an object to be an iterable, we don't do an `isinstance`
         # check here.
-        if not isinstance(batch_size, int) or isinstance(batch_size, bool) or \
-                batch_size <= 0:
-            raise ValueError("batch_size should be a positive integer value, "
-                             "but got batch_size={}".format(batch_size))
+        if (
+            not isinstance(batch_size, int)
+            or isinstance(batch_size, bool)
+            or batch_size <= 0
+        ):
+            raise ValueError(
+                "batch_size should be a positive integer value, "
+                "but got batch_size={}".format(batch_size)
+            )
         if not isinstance(drop_last, bool):
-            raise ValueError("drop_last should be a boolean value, but got "
-                             "drop_last={}".format(drop_last))
+            raise ValueError(
+                "drop_last should be a boolean value, but got "
+                "drop_last={}".format(drop_last)
+            )
         self.sampler = sampler
         self.batch_size = batch_size
         self.drop_last = drop_last
