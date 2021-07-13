@@ -3829,9 +3829,6 @@ def mish(
     """
     if name is None:
         name = id_util.UniqueStr("Mish_")
-    print(
-        "111"
-    )
     return (
         flow.user_op_builder(name)
         .Op("mish")
@@ -3869,10 +3866,7 @@ def silu(
         def silu_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy:
             return flow.nn.silu(x)
 
-
         x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
-
-
         out = silu_job(x)
         # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
 
