@@ -269,7 +269,6 @@ class DataLoader(Generic[T_co]):
         # samplers first, so that they don't learn that this combo doesn't work
         # after spending time fixing the custom sampler errors.
         if isinstance(dataset, IterableDataset):
-            print(">>>>>>>>>>>>>>>>>>>>> if isinstance(dataset, IterableDataset):")
             self._dataset_kind = _DatasetKind.Iterable
             # NOTE [ Custom Samplers and IterableDataset ]
             #
@@ -316,7 +315,6 @@ class DataLoader(Generic[T_co]):
                     )
                 )
         else:
-            print(">>>>>>>>>>>>>>>>>>>>> self._dataset_kind = _DatasetKind.Map")
             self._dataset_kind = _DatasetKind.Map
 
         if sampler is not None and shuffle:
@@ -346,12 +344,10 @@ class DataLoader(Generic[T_co]):
                 sampler = _InfiniteConstantSampler()
             else:  # map-style
                 if shuffle:
-                    print("DataLoader if shuffle >>>>> True")
                     # Cannot statically verify that dataset is Sized
                     # Somewhat related: see NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
                     sampler = RandomSampler(dataset, generator=generator)  # type: ignore
                 else:
-                    print("DataLoader if shuffle >>>>> False")
                     sampler = SequentialSampler(dataset)
 
         if batch_size is not None and batch_sampler is None:
@@ -365,12 +361,9 @@ class DataLoader(Generic[T_co]):
         self.generator = generator
 
         if collate_fn is None:
-            print("dataloader >> collate_fn is None!")
             if self._auto_collation:
-                print("dataloader >> self._auto_collation is True")
                 collate_fn = _utils.collate.default_collate
             else:
-                print("dataloader >> self._auto_collation is False")
                 collate_fn = _utils.collate.default_convert
 
         self.collate_fn = collate_fn
@@ -1021,7 +1014,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         if loader.multiprocessing_context is None:
             multiprocessing_context = multiprocessing
-            print("multiprocessing_context = multiprocessing")
         else:
             multiprocessing_context = loader.multiprocessing_context
 
@@ -1071,7 +1063,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._index_queues.append(index_queue)
             self._workers.append(w)
 
-        print("multiprocessing >>>>>>>>>>>>>>>>>>>> start success")
 
         if self._pin_memory:
             self._pin_memory_thread_done_event = threading.Event()
@@ -1097,8 +1088,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         # .pid can be None only before process is spawned (not the case, so ignore)
         # TODO:zhaoluyang _set_worker_pids
-        for w in self._workers:
-            print("worker.pid >>>>>>>>>>>>>>>>>> ", w.pid)
         # _utils.signal_handling._set_worker_pids(id(self), tuple(w.pid for w in self._workers))  # type: ignore[misc]
         # _utils.signal_handling._set_SIGCHLD_handler()
         self._worker_pids_set = True
@@ -1150,9 +1139,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Returns a 2-tuple:
         #   (bool: whether successfully get data, any: data if successful else None)
         try:
-            print("self._try_get_data() >>> start")
             data = self._data_queue.get(timeout=timeout)
-            print("self._try_get_data() >>> finish")
             return (True, data)
         except Exception as e:
             # At timeout and error, we manually check whether any worker has
@@ -1320,15 +1307,11 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # need to call `.task_done()` because we don't use `.join()`.
         else:
             while True:
-                print(
-                    "_MultiProcessingDataLoaderIter >> _get_data >> self._try_get_data()"
-                )
                 success, data = self._try_get_data()
                 if success:
                     return data
 
     def _next_data(self):
-        print("_MultiProcessingDataLoaderIter >>>>>>>>>>>>>>>>>>>>> _next_data()")
         while True:
             # If the worker responsible for `self._rcvd_idx` has already ended
             # and was unable to fulfill this task (due to exhausting an `IterableDataset`),
@@ -1340,7 +1323,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             while self._rcvd_idx < self._send_idx:
                 info = self._task_info[self._rcvd_idx]
                 worker_id = info[0]
-                print("_MultiProcessingDataLoaderIter >> worker_id", worker_id)
                 if (
                     len(info) == 2 or self._workers_status[worker_id]
                 ):  # has data or is still active
@@ -1361,13 +1343,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 return self._process_data(data)
 
             assert not self._shutdown and self._tasks_outstanding > 0
-            print(
-                "_MultiProcessingDataLoaderIter >> idx, data = self._get_data() >> start"
-            )
             idx, data = self._get_data()
-            print(
-                "_MultiProcessingDataLoaderIter >> idx, data = self._get_data() >> finish"
-            )
+
             self._tasks_outstanding -= 1
             if self._dataset_kind == _DatasetKind.Iterable:
                 # Check for _IterableDatasetStopIteration
