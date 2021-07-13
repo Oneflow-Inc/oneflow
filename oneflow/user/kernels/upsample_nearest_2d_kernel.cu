@@ -108,7 +108,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(dtype)                                    \
+#define REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(dtype)                                 \
   REGISTER_USER_KERNEL("upsample_nearest_2d")                                          \
       .SetCreateFn<UpsampleNearest2DGPUKernel<dtype>>()                                \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
@@ -118,7 +118,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(float)
-REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(double)
+REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(float)
+REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(double)
 
 }  // namespace oneflow

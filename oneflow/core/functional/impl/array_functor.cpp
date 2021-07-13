@@ -518,7 +518,7 @@ class UpsampleNearest2DGradFunctor {
  public:
   UpsampleNearest2DGradFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
+        one::OpBuilder("upsample_nearest_2d_grad").Input("dy").Input("x").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,

@@ -39,6 +39,29 @@ def _test_interpolate_nearest_1d(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
+def _test_interpolate_nearest_2d(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5).reshape((1, 1, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+    )
+    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="nearest")
+    of_out = m(input)
+    np_out = np.array(
+        [
+            [
+                [
+                    [1.0, 1.0, 2.0, 2.0],
+                    [1.0, 1.0, 2.0, 2.0],
+                    [3.0, 3.0, 4.0, 4.0],
+                    [3.0, 3.0, 4.0, 4.0],
+                ]
+            ]
+        ]
+    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -48,6 +71,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_interpolate_nearest_1d,
+            _test_interpolate_nearest_2d,
         ]
         arg_dict["device"] = [
             "cpu",

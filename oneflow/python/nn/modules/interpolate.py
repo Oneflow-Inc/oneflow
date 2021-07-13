@@ -110,12 +110,10 @@ class INTERPOLATE(Module):
             )
 
         if len(x.shape) == 4 and self.mode == "nearest":
-            flow.F.upsample(
+            return flow.F.upsample_nearest_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
-                align_corners=self.align_corners,
-                interpolation=self.mode,
                 data_format="channels_first",
             )
 
@@ -149,7 +147,6 @@ class INTERPOLATE(Module):
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
                 align_corners=self.align_corners,
-                interpolation=self.mode,
                 data_format="channels_first",
             )
 
