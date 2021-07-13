@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import enum
+import inspect
 from google.protobuf import text_format
 
 import oneflow._oneflow_internal
@@ -21,9 +23,12 @@ import oneflow.python.framework.c_api_util as c_api_util
 
 
 class MultiClientSession(object):
+    class Status(enum.Enum):
+        CREATED = 1
+        INITED = 2
+        CLOSED = 3
+
     def __init__(self, sess_id):
-        self.is_inited_ = False
-        self.is_closed_ = False
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
@@ -34,20 +39,28 @@ class MultiClientSession(object):
         self.scope_attr_name2default_val_ = {}
         self._update_scope_attr_name2defaultVal()
 
-    def TryInit(self):
-        if not self.is_inited_:
-            config_proto_str = text_format.MessageToString(self.config_proto)
-            oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
-            self.is_inited_ = True
-
-    def TryClose(self):
-        if not self.is_closed_:
-            oneflow._oneflow_internal.DestroyMultiClientSessionContext()
-            oneflow._oneflow_internal.ClearSessionById(self.id)
-            self.is_closed_ = True
+        self.status_ = self.Status.CREATED
 
     def __del__(self):
         self.TryClose()
+
+    def TryInit(self):
+        self._check_status(self.Status.CREATED, self.Status.INITED)
+        if self.status_ == self.Status.CREATED:
+            config_proto_str = text_format.MessageToString(self.config_proto)
+            oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
+            self.status_ = self.Status.INITED
+
+    def TryClose(self):
+        if self.status_ != self.Status.CLOSED:
+            oneflow._oneflow_internal.DestroyMultiClientSessionContext()
+            oneflow._oneflow_internal.ClearSessionById(self.id)
+
+        self.status_ = self.Status.CLOSED
+
+    @property
+    def status(self):
+        return self.status_
 
     @property
     def id(self):
@@ -58,6 +71,11 @@ class MultiClientSession(object):
         return self.config_proto_
 
     @property
+    def resource(self):
+        self._check_status(self.Status.INITED)
+        return c_api_util.CurrentResource()
+
+    @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
 
@@ -65,16 +83,34 @@ class MultiClientSession(object):
     def scope_attr_name2default_val(self):
         return self.scope_attr_name2default_val_
 
+    # compatible with single client session
+    @property
+    def is_running(self):
+        return self.status_ == self.Status.INITED
+
+    # compatible with single client session
+    def AnyGlobalFunctionDefined(self):
+        return False
+
+    def _check_status(self, *status):
+        check_success = False
+        for stat in status:
+            if self.status_ == stat:
+                check_success = True
+                break
+
+        if check_success is False:
+            caller_func_name = inspect.stack()[1].function
+            allowed_status = " or ".join([str(stat) for stat in status])
+            raise ValueError(
+                "The calling to {} is only allowed when status is {}, but current status is {}".format(
+                    caller_func_name, allowed_status, self.status_
+                )
+            )
+
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()
-        # NOTE(chengcheng): Only set for proto required key, and the value of gpu_device_num will
-        #  NOT used in MultiClientSessionContext.
-        config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
-        if oneflow._oneflow_internal.flags.with_cuda():
-            config_proto.resource.gpu_device_num = 1
-        else:
-            config_proto.resource.cpu_device_num = 1
-            config_proto.resource.gpu_device_num = 0
+        config_proto.resource.SetInParent()
         config_proto.session_id = self.id
         return config_proto
 

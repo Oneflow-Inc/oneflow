@@ -220,6 +220,10 @@ def test_against_pytorch(
                 if rng.random() < 1 / 3:
                     continue
             flow_data, torch_data = generate(name)
+            if isinstance(torch_data, torch.Tensor):
+                torch_data = torch_data.to(device)
+            if isinstance(flow_data, flow.Tensor):
+                flow_data = flow_data.to(device)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
 
@@ -291,7 +295,7 @@ def test_against_pytorch(
             )
             test_case.assertTrue(
                 is_allclose,
-                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}",
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}",
             )
 
         allclose_or_fail(flow_res, torch_res)
