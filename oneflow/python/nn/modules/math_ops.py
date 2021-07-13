@@ -688,9 +688,6 @@ def sin_op_tensor(tensor):
 @experimental_api
 def inplace_sin_op_tensor():
     r"""
-
-    sin_() -> Tensor
-
     Inplace version of :func:`oneflow.experimental.sin`
     
     """
