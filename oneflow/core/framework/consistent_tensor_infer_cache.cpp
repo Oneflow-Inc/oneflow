@@ -129,7 +129,7 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
   OperatorConf op_conf;
   JUST(user_op_expr.BuildOpConf(&op_conf, attrs));
   DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
-  return ConstructOp(op_conf, device_type);
+  return JUST(ConstructOp(op_conf, device_type));
 }
 
 }  // namespace
