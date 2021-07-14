@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
