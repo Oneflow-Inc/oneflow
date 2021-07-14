@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOWOPS_H
-#define ONEFLOW_ONEFLOWOPS_H
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -74,9 +74,10 @@ class IsInvolutionOfIdenticalPlacement
 };
 
 }  // namespace OpTrait
+
 }  // namespace mlir
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
-#endif  // ONEFLOW_ONEFLOWOPS_H
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
+#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -59,6 +60,7 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/Passes.h"
 
 namespace mlir {
 
@@ -608,6 +610,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
 
 LogicalResult Importer::ProcessJob() {
   auto func_type = builder_.getFunctionType(llvm::None, llvm::None);
+  // TODO: Add a OneFlow_JobOp with FunctionLike trait
   auto function = mlir::FuncOp::create(unknown_loc_, job_->job_conf().job_name(), func_type);
   auto& entryBlock = *function.addEntryBlock();
   builder_.setInsertionPointToStart(&entryBlock);
@@ -932,6 +935,17 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   return success();
 }
 
+LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
+                                 MLIRContext* context, OwningModuleRef& module) {
+  RewritePatternSet patterns(module->getContext());
+  oneflow::populateFuserPasses(patterns);
+  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
+    module->emitError("Failed to run fusers");
+    return failure();
+  }
+  return success();
+}
+
 OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
@@ -951,12 +965,17 @@ void RoundTripOneFlowJob(
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<memref::MemRefDialect>();
+  context.loadDialect<tosa::TosaDialect>();
+  context.loadDialect<linalg::LinalgDialect>();
+
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   Importer imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
+    if (failed(ApplyFuserPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {

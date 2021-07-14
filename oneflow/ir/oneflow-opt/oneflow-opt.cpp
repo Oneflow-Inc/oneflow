@@ -29,6 +29,8 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/Passes.h"
 
 namespace mlir {
 struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, FunctionPass> {
@@ -40,13 +42,19 @@ struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, Funct
 void registerTestOneFlowTraitsPass() {
   PassRegistration<TestOneFlowTraitFolder>("test-oneflow-trait-folder", "Run trait folding");
 }
+
 }  // namespace mlir
 
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
+  mlir::registerLowerOneFlowToTosaPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
+  registry.insert<mlir::tosa::TosaDialect>();
+  registry.insert<mlir::linalg::LinalgDialect>();
+  registry.insert<mlir::memref::MemRefDialect>();
+  registry.insert<mlir::LLVM::LLVMDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

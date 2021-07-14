@@ -3,6 +3,7 @@
 
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Pass/PassBase.td"
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
@@ -58,6 +59,9 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
 }
 
+// Why don't we merge ctrl in/out and data in/out into operand_segment/result_segment_sizes?
+// 1. We only need to erase operand_segment/result_segment_sizes when we are creating a concrete user op
+// 2. Isolating data and ctrl make debug easier and produced IR more human-readable
 class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
     let summary = "";
@@ -100,9 +104,18 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
+  let input = (ins AnyType:$x);
+  let output = (outs AnyType:$y);
+}
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {}
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$scalar
+  );
+  let output = (outs AnyType:$y);
+}
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
@@ -158,3 +171,39 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
 def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 #endif // ONEFLOW_OPS
+
+// JIT ops
+
+def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {}
+
+def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
+// TODO: remove attr binding if possible
+def OutlineFuseCastScale : Pat<
+  (
+    OneFlow_ScalarMulByTensorOp : $mul_op
+    (
+      OneFlow_CastOp : $cast_op
+        $cast_x,
+        $cast_op_name,
+        $cast_trainable,
+        $cast_device_tag,
+        $cast_device_name,
+        $cast_scope_symbol_id,
+        $cast_hierarchy
+    ),
+    $scalar,
+    $mul_op_name,
+    $mul_trainable,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
+  ),
+  (OutlineFunction $mul_op, $cast_op)
+>;
+
+def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
+  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
+}

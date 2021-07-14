@@ -42,16 +42,19 @@ if(NOT llvm_monorepo_POPULATED)
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
     -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
     -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
+    -DLLVM_ENABLE_EH=ON # turn this on to make it compatible with half (the library)
     -DLLVM_INCLUDE_EXAMPLES=OFF
     -DLLVM_INCLUDE_TESTS=OFF
     -DLLVM_INCLUDE_BENCHMARKS=OFF
-    -DLLVM_TARGETS_TO_BUILD=X86\;NVPTX
+    -DLLVM_TARGETS_TO_BUILD=host\;NVPTX
     -DLLVM_ENABLE_ASSERTIONS=ON
     -DLLVM_ENABLE_PROJECTS=mlir
     -DLLVM_APPEND_VC_REV=OFF
     -DLLVM_ENABLE_ZLIB=OFF
     -DLLVM_INSTALL_UTILS=ON
     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
+    -DLLVM_ENABLE_OCAMLDOC=OFF
+    -DLLVM_ENABLE_BINDINGS=OFF
     -G ${CMAKE_GENERATOR}
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret)
@@ -107,3 +110,4 @@ add_subdirectory(lib)
 add_subdirectory(test)
 add_subdirectory(oneflow-opt)
 add_subdirectory(oneflow-translate)
+add_subdirectory(oneflow-extension)

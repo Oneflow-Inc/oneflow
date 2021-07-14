@@ -19,6 +19,8 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
+#include "OneFlow/OneFlowOpsDialect.cpp.inc"
+
 void OneFlowDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

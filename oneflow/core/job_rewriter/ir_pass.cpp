@@ -84,6 +84,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
         user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
     CHECK(val) << " Cannot find op_type_name: " << op_type_name;
     user_op::UserOpDefWrapper op_def(val->op_def);
+    CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
     return op_def.GetAttrType(attr_name);
   }
 
