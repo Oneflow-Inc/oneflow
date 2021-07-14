@@ -13,11 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from contextlib import contextmanager
 import traceback
+
+from google.protobuf import text_format
+
+import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.attr_util as attr_util
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 
@@ -112,3 +116,7 @@ def ScopeContext(scope):
         assert oneflow._oneflow_internal.GetCurrentScope() is scope
         oneflow._oneflow_internal.GlobalScopeStackPop()
         assert oneflow._oneflow_internal.GetCurrentScope() is old_scope
+
+
+def to_proto(scope):
+    return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
