@@ -154,6 +154,11 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
+// NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
+using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;
+using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;
+using FetchOutputOpExpr = BuiltinOpExprImpl<FetchOutputOpConf>;
+
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
 using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
