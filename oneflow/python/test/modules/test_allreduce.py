@@ -34,7 +34,7 @@ class TestAllReduce(flow.unittest.TestCase):
             x = flow.Tensor([3, 4])
         else:
             raise ValueError
-        x = x.to(f'cuda:{flow.distributed.get_local_rank()}')
+        x = x.to(f"cuda:{flow.distributed.get_local_rank()}")
 
         nccl_allreduce_op = (
             flow.builtin_op("eager_nccl_all_reduce")
