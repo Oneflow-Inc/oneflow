@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from automated_test_util import *
 
 
 def _test_variance_keepdim(test_case, shape, device):
@@ -77,6 +78,47 @@ class TestVariance(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+def _test_sinh_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    np_x_grad = np.cosh(np_input)
+    of_out = flow.sinh(of_input)
+    np_out = np.sinh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class Testsinh(flow.unittest.TestCase):
+    def test_sinh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_sinh_impl(test_case, *arg)
+
+    def test_flow_sinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "sinh", device=device,
+            )
+
+    def test_flow_tensor_sinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "sinh", device=device,
+            )
+
+
 def _test_sin(test_case, shape, device):
     input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.sin(input)
@@ -94,6 +136,26 @@ def _test_sin_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.cos(x.numpy()), 1e-5, 1e-5))
 
 
+def _test_inplace_sin(test_case, shape, device):
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
+    x_inplace = x + 1
+    np_out = np.sin(x_inplace.numpy())
+
+    id_old = id(x_inplace)
+    x_inplace.sin_()
+
+    test_case.assertEqual(id_old, id(x_inplace))
+    test_case.assertTrue(np.allclose(x_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_x_inplace = x_inplace.sum()
+    of_x_inplace.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.cos(x_inplace.numpy()), 1e-5, 1e-5)
+    )
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -104,6 +166,7 @@ class TestSin(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_sin,
             _test_sin_backward,
+            _test_inplace_sin,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -449,6 +512,30 @@ class TestAsin(flow.unittest.TestCase):
             _test_asin(test_case, *arg)
             _test_arcsin(test_case, *arg)
 
+    def test_flow_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "asin", device=device,
+            )
+
+    def test_flow_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arcsin", device=device,
+            )
+
+    def test_flow_tensor_asin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "asin", device=device,
+            )
+
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arcsin", device=device,
+            )
+
 
 def _test_asinh(test_case, shape, device):
     np_input = np.random.randn(*shape)
@@ -496,6 +583,30 @@ class TestAsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_asinh(test_case, *arg)
             _test_arcsinh(test_case, *arg)
+
+    def test_flow_asinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "asinh", device=device,
+            )
+
+    def test_flow_arcsinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arcsinh", device=device,
+            )
+
+    def test_flow_tensor_asinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "asinh", device=device,
+            )
+
+    def test_flow_tensor_arcsinh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arcsinh", device=device,
+            )
 
 
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):

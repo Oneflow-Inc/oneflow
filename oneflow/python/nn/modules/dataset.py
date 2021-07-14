@@ -474,6 +474,69 @@ def get_ofrecord_handle(
     )()
 
 
+@oneflow_export("nn.image.flip")
+@experimental_api
+class ImageFlip(Module):
+    r"""This operator flips the images.
+
+    The flip code corresponds to the different flip mode:
+
+    0 (0x00): Non Flip
+
+    1 (0x01): Horizontal Flip
+
+    16 (0x10): Vertical Flip
+
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        images: The input images.
+        flip_code: The flip code.
+
+    Returns:
+        The result image.
+
+    For example:
+    
+    .. code-block:: python
+        
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> arr = np.array([
+        ...    [[[1, 2, 3], [3, 2, 1]],
+        ...     [[2, 3, 4], [4, 3, 2]]],
+        ...    [[[3, 4, 5], [5, 4, 3]],
+        ...     [[4, 5, 6], [6, 5, 4]]]])
+        >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
+        >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
+        >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
+        >>> output[0]
+        array([[[3., 2., 1.],
+                [1., 2., 3.]],
+        <BLANKLINE>
+               [[4., 3., 2.],
+                [2., 3., 4.]]], dtype=float32)
+        >>> output[1]
+        array([[[5., 4., 3.],
+                [3., 4., 5.]],
+        <BLANKLINE>
+               [[6., 5., 4.],
+                [4., 5., 6.]]], dtype=float32)
+    """
+
+    def __init__(self, flip_code):
+        super().__init__()
+        self.flip_code = flip_code
+
+    def forward(self, images):
+        flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
+
+        return flow.F.image_flip(images, flip_codes)
+
+
 @oneflow_export("nn.image.decode")
 @experimental_api
 class ImageDecode(Module):
@@ -567,8 +630,15 @@ class ImageBatchAlign(Module):
             .Attr("shape", shape)
             .Attr("data_type", dtype)
             .Attr("alignment", alignment)
+            .Attr("dynamic_out", False)
             .Build()
         )
 
     def forward(self, input):
         return self._op(input)[0]
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
