@@ -92,8 +92,8 @@ jobs:
         run: |
           exit 1
 
-  static_analysis_with_clang_tidy:
-    name: Static analysis with clang-tidy
+  static_analysis_with_clang:
+    name: Static analysis with clang
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
