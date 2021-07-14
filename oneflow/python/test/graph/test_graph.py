@@ -64,7 +64,7 @@ class CustomModule(flow.nn.Module):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGraph(flow.unittest.TestCase):
-    def test_add_nested_module(test_case):
+    def _test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
@@ -112,7 +112,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def test_graph_config(test_case):
+    def _test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -139,7 +139,7 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
-    def test_graph_name(test_case):
+    def _test_graph_name(test_case):
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -173,7 +173,7 @@ class TestGraph(flow.unittest.TestCase):
         for i in range(0, 3):
             create_graph(i)
 
-    def test_graph_build_ctx(test_case):
+    def _test_graph_build_ctx(test_case):
 
         # check lazy_mode
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
@@ -207,7 +207,7 @@ class TestGraph(flow.unittest.TestCase):
                 import oneflow.python.framework.scope_util as scope_util
 
                 scope = oneflow.current_scope()
-                scope_proto = scope_util.to_proto(scope)
+                scope_proto = graph_build_util.scope_to_proto(scope)
                 print("cur scope in build ", scope_proto)
                 test_case.assertEqual(session.id, scope_proto.session_id)
 
@@ -222,6 +222,83 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+
+    def test_block_scope(test_case):
+        class SubModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv1 = flow.nn.Conv2d(1, 1, 5)
+                self.relu = flow.nn.ReLU()
+        
+            def forward(self, x):
+                scope = oneflow.current_scope()
+                scope_proto = graph_build_util.scope_to_proto(scope)
+
+                # check scope activation checkpointing
+                ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                test_case.assertEqual(ck_bool, True)
+                # check scope stage id
+                stage_int = scope_proto.attr_name2attr_value["pipeline_stage_id_hint"].at_int64
+                test_case.assertEqual(stage_int, 0)
+
+                x = self.conv1(x)
+                x = self.relu(x)
+                return x
+        
+        class SubModule1(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc1 = flow.nn.Linear(36, 4)
+                self.register_buffer(
+                    "dummy_buff", flow.Tensor(1, 4),
+                )
+
+            def forward(self, x):
+                scope = oneflow.current_scope()
+                scope_proto = graph_build_util.scope_to_proto(scope)
+
+                # check scope activation checkpointing
+                ck_bool = scope_proto.attr_name2attr_value["checkpointing"]
+                test_case.assertEqual(ck_bool.WhichOneof("value"), None)
+                # check scope stage id
+                stage_int = scope_proto.attr_name2attr_value["pipeline_stage_id_hint"].at_int64
+                test_case.assertEqual(stage_int, 1)
+
+                x = oneflow.F.flatten(x, 1)
+                x = self.fc1(x) + self.dummy_buff
+                return x
+        
+        
+        class CustomModule1(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layer = SubModule()
+                self.layer1 = SubModule1()
+
+            def forward(self, x):
+                x = self.layer(x)
+                x = self.layer1(x)
+                return x
+
+
+        m = CustomModule1()
+        class CustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = m
+                # config scope
+                self.m.layer.config.stage_id = 0
+                self.m.layer.config.activation_checkpointing = True
+                self.m.layer1.config.stage_id = 1
+
+            def build(self, x):
+                return self.m(x)
+
+        g = CustomGraph()
+        print(repr(g))
+        x = flow.Tensor(1, 1, 10, 10)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        z = g.build(x)
 
 
 if __name__ == "__main__":

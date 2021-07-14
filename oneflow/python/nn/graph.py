@@ -202,7 +202,7 @@ class Block(object):
         self._name_prefix = prefix
         self._type = BlockType.NONE
         self._origin = value
-        self._config = BlockConfig()
+        self.config = BlockConfig()
 
         if isinstance(value, Module):
             self._type = BlockType.MODULE
@@ -238,14 +238,29 @@ class Block(object):
     def origin(self):
         return self._origin
 
+    def scope_context(self):
+        return graph_build_util.BlockScopeContext(self)
+
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
-        # TODO(): with oneflow_c_api.set_scope(self.config_):
-        return self._origin.__class__.__call__(self, *args)
+        # nn.Module.__call__ will call self.forward()
+        # so the scope is set in self.forward()
+        result = self._origin.__class__.__call__(self, *args)
+        return result 
 
     def forward(self, *args):
         assert self._type == BlockType.MODULE
-        return self._origin.__class__.forward(self, *args)
+        with self.scope_context():
+            # test start
+            scope = oneflow.current_scope()
+            scope_proto = graph_build_util.scope_to_proto(scope)
+            print("cur scope in build ", scope_proto)
+            # test end
+
+            scope = oneflow.current_scope()
+
+            result = self._origin.__class__.forward(self, *args)
+        return result
 
     def __setattr__(self, name: str, value=None) -> None:
         if value is None or not isinstance(value, Block):
@@ -336,9 +351,6 @@ class Block(object):
         main_str += ")"
         return main_str
 
-    @property
-    def scope(self):
-        return self._config.scope
 
 
 @oneflow_export("nn.graph.GraphConfig")
@@ -372,12 +384,7 @@ class GraphConfig(FunctionConfig):
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
-        self._activation_checkpointing = False
-
-    @property
-    def scope(self):
-        # TODO(xuxiaoyu): support generating Scope Object
-        print("BlockConfig.scope todo")
+        self._activation_checkpointing = None 
 
     @property
     def stage_id(self):
