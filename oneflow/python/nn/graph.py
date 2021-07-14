@@ -18,10 +18,14 @@ from collections import OrderedDict
 from typing import Union
 
 import oneflow._oneflow_internal
+import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.graph_build_util as graph_build_util
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.nn.module import Module
+from oneflow.python.framework.multi_client_session import MultiClientSession
 from oneflow.python.framework.tensor import Tensor
+from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
@@ -35,6 +39,7 @@ class Graph(object):
     def __init__(self):
         self.config = GraphConfig()
         self._generate_name()
+        self.config.proto.set_job_name(self._name)
         self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
@@ -48,6 +53,10 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
+
+    @property
+    def _graph_proto(self):
+        return c_api_util.GetCurrentJob()
 
     def build(self, *args):
         raise NotImplementedError()
@@ -81,17 +90,20 @@ class Graph(object):
             for n, b in b_gen:
                 yield prefix + n, b
 
-    def _compile(self):
+    def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(
-            tuple(t for _, t in self._named_state())
-        )
-        # TODO(xuxiaoyu)
-        # sess = session_ctx.GetDefaultSession()
-        # sess.TryInit()
-        # do job compile
+        state = tuple(t for _, t in self._named_state())
+        if len(state) > 0:
+            self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state)
+
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        session.TryInit()
+
+        with graph_build_util.graph_build_context(self.config.proto, session):
+            outputs = self.build(*args)
 
         self._is_compiled = True
 
@@ -127,7 +139,7 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block(self._name + ".", name, module)
+        self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
@@ -324,6 +336,10 @@ class Block(object):
         main_str += ")"
         return main_str
 
+    @property
+    def scope(self):
+        return self._config.scope
+
 
 @oneflow_export("nn.graph.GraphConfig")
 @experimental_api
@@ -355,9 +371,29 @@ class GraphConfig(FunctionConfig):
 @experimental_api
 class BlockConfig(object):
     def __init__(self):
-        # TODO(xuxiaoyu): implement config for block
-        # support generating Scope Object
-        pass
+        self._stage_id = None
+        self._activation_checkpointing = False
+
+    @property
+    def scope(self):
+        # TODO(xuxiaoyu): support generating Scope Object
+        print("BlockConfig.scope todo")
+
+    @property
+    def stage_id(self):
+        return self._stage_id
+
+    @stage_id.setter
+    def stage_id(self, value: int = None):
+        self._stage_id = value
+
+    @property
+    def activation_checkpointing(self):
+        return self._activation_checkpointing
+
+    @activation_checkpointing.setter
+    def activation_checkpointing(self, value: bool = False):
+        self._activation_checkpointing = value
 
 
 @oneflow_export("nn.graph.OptimizerConfig")
