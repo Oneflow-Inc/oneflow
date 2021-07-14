@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.oneflow.python.test.modules.automated_test_util import test_flow_against_pytorch, test_tensor_against_pytorch
 import unittest
 from collections import OrderedDict
 
@@ -74,6 +75,30 @@ class TestAtanh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_atanh_impl(test_case, *arg)
             _test_arctanh_impl(test_case, *arg)
+
+    def test_flow_atanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "atanh", device=device,
+            )
+
+    def test_flow_arctanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arctanh", device=device,
+            )
+
+    def test_flow_tensor_atanh_with_random_data(test_case):
+        for device in ["cpu","cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "atanh", device=device,
+            )
+
+    def test_flow_tensor_arctanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arctanh", device=device,
+            )
 
 
 if __name__ == "__main__":
