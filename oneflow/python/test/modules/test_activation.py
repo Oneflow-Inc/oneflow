@@ -898,13 +898,7 @@ class TestSiluModule(flow.unittest.TestCase):
 
     def test_silu_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
-                test_case,
-                "nn.SiLU",
-                device=device,
-                n=2,
-                extra_generators={"inplace": constant(False)},
-            )
+            test_module_against_pytorch(test_case, "nn.SiLU", device=device, n=2)
 
 
 def _np_selu(x):
@@ -952,13 +946,13 @@ class TestSeluModule(flow.unittest.TestCase):
 
     def test_selu_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
-                test_case,
-                "nn.SELU",
-                device=device,
-                n=2,
-                extra_generators={"inplace": constant(False)},
-            )
+            test_module_against_pytorch(test_case, "nn.SELU", device=device, n=2)
+
+
+class TestSoftSignModule(flow.unittest.TestCase):
+    def test_softsign_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Softsign", device=device, n=2)
 
 
 if __name__ == "__main__":

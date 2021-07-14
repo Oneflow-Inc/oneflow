@@ -936,7 +936,6 @@ class Mish(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
@@ -982,7 +981,6 @@ class SiLU(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
@@ -1035,7 +1033,6 @@ class SELU(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
@@ -1096,7 +1093,6 @@ class Softsign(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
