@@ -44,6 +44,7 @@ def _test_instruction_replay_impl(test_case, device, shape):
     oneflow._oneflow_internal.debug.clear_recorded_instructions()
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

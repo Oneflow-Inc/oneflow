@@ -96,6 +96,7 @@ def _test_ZeroPad2d(test_case, shape, padding, value, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

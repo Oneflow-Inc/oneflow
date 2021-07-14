@@ -87,6 +87,7 @@ def _test_dummy_module_to(test_case):
     test_case.assertEqual(m.dummy_para.grad.device, gpu0_device)
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

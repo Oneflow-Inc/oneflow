@@ -49,6 +49,7 @@ def _test_arange_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

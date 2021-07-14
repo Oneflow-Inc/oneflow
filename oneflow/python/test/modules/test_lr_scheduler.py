@@ -21,6 +21,7 @@ import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

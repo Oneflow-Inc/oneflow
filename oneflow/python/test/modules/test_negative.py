@@ -60,6 +60,7 @@ def _test_negative_backward(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

@@ -155,6 +155,7 @@ def _test_linear_backward_with_bias(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, x.grad.numpy(), 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

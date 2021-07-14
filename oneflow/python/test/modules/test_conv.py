@@ -1591,6 +1591,7 @@ def _test_conv2d_large_out_channel(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

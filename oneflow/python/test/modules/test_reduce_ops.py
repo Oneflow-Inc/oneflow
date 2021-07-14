@@ -66,6 +66,7 @@ def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

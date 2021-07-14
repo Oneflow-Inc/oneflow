@@ -37,6 +37,7 @@ def _test_exp_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out, 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

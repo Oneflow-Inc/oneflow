@@ -44,6 +44,7 @@ def _test_ones_like_int(test_case, shape, device):
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
