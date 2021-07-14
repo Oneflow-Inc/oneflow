@@ -89,12 +89,7 @@ inline Maybe<std::string> GetSerializedInterUserJobInfo() {
 }
 
 inline Maybe<const JobSet&> GetJobSet() {
-  JobBuildAndInferCtxMgr* job_ctx_mgr;
-  if (*Global<bool, EagerExecution>::Get()) {
-    job_ctx_mgr = Global<EagerJobBuildAndInferCtxMgr>::Get();
-  } else {
-    job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  }
+  auto* job_ctx_mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   return job_ctx_mgr->job_set();
 }
