@@ -52,6 +52,9 @@ class OpExprInterpreter {
   OpExprInterpreter() = default;
   virtual ~OpExprInterpreter() = default;
 
+  virtual bool is_lazy() const = 0;
+  virtual bool is_mirrored() const = 0;
+
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
     return Apply(op, inputs, outputs, OpExprInterpContext{attrs, nullptr});
@@ -70,6 +73,8 @@ class OpExprInterpreter {
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(CastToConsistentOp);        \
+  _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \
@@ -89,6 +94,9 @@ class LazyInterpreter : public OpExprInterpreter {
  public:
   LazyInterpreter() : OpExprInterpreter() {}
   virtual ~LazyInterpreter() = default;
+
+  bool is_lazy() const override { return true; }
+  bool is_mirrored() const override { UNIMPLEMENTED(); }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
@@ -119,6 +127,8 @@ class EagerInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
+  bool is_lazy() const override { return false; }
+
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
@@ -129,6 +139,8 @@ class EagerConsistentInterpreter : public EagerInterpreter {
   EagerConsistentInterpreter() : EagerInterpreter() {}
   virtual ~EagerConsistentInterpreter() = default;
 
+  bool is_mirrored() const override { return false; }
+
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
@@ -137,6 +149,8 @@ class EagerMirroredInterpreter : public EagerInterpreter {
  public:
   EagerMirroredInterpreter() : EagerInterpreter() {}
   virtual ~EagerMirroredInterpreter() = default;
+
+  bool is_mirrored() const override { return true; }
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);

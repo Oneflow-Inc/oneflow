@@ -284,5 +284,17 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
 
 Maybe<one::UserOpExpr> SoftmaxGradOp();
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
+
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_des);
+
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_des);
 }  // namespace op_expr_helper
 }  // namespace oneflow

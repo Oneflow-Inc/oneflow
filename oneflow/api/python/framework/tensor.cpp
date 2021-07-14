@@ -20,15 +20,23 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/session_util.h"
 
 namespace py = pybind11;
 
@@ -201,6 +209,86 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+// used in mirrored_tensor.to_consistent(sbp, placement)
+Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
+                                    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                    Symbol<ParallelDesc> parallel_desc) {
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
+  TensorTuple input_list;
+  input_list.emplace_back(mirrored_tensor);
+  std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+  const auto& op_expr = JUST(CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent")),
+                                                         sbp_parallels, parallel_desc));
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  return outputs->at(0);
+}
+
+// used consistent_tensor.to_local()
+Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
+  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  if (!parallel_desc->Containing(machine_id, device_id)) {
+    // should return UndefinesdLocalTensor here, the impl of which need to be discussed
+    return std::shared_ptr<Tensor>();
+  }
+  TensorTuple input_list;
+  input_list.emplace_back(consistent_tensor);
+  auto outputs = std::make_shared<one::TensorTuple>(1);
+  const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
+  const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
+                                                           *parallel_distribution, parallel_desc));
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  return outputs->at(0);
+}
+
+// used in consistent_tensor.to_consistent(sbp)
+Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
+                                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                       Symbol<ParallelDesc> parallel_desc) {
+  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+  TensorTuple input_list;
+  input_list.emplace_back(consistent_tensor);
+  auto outputs = std::make_shared<one::TensorTuple>(1);
+  std::vector<std::string> sbp_parallel_str_list(sbp_parallels.size());
+  {
+    for (int64_t i = 0; i < sbp_parallel_str_list.size(); ++i) {
+      sbp_parallel_str_list.at(i) = SbpParallelToString(*sbp_parallels.at(i));
+    }
+  }
+  const auto& parallel_distribution_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallel_str_list)
+               .Attr<std::string>("grad_mode", "restore")
+               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
+               .Build());
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*parallel_distribution_cast_op_expr, input_list, outputs.get(),
+                          AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  return outputs->at(0);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -266,7 +354,22 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
-      .def_property_readonly("placement", &TensorGetParallelDesc);
+      .def_property_readonly("placement", &TensorGetParallelDesc)
+      .def(
+          "to_consistent",
+          [](const std::shared_ptr<Tensor>& tensor,
+             const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+             Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<Tensor> {
+            return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
+            if (tensor->is_consistent()) {
+              return CastParallelDistribution(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
+            } else {
+              return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
+            }
+          })
+      .def("to_local", [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
+        return CastConsistentToLocal(tensor).GetPtrOrThrow();
+      });
 }
 
 }  // namespace one
