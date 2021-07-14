@@ -20,13 +20,16 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
@@ -43,10 +46,18 @@ using namespace mlir::oneflow;
 LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());
-  // pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  pm.addPass(createCSEPass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
+  pm.addPass(createTensorConstantBufferizePass());
+  pm.addPass(createFuncBufferizePass());
+  pm.addPass(createBufferResultsToOutParamsPass());
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
+  // pm.addNestedPass<FuncOp>(createLowerToCFGPass());
   // pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
   // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
-  // pm.addPass(createFuncBufferizePass());
   // pm.addPass(createMemRefToLLVMPass());
   // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
   return pm.run(module.get());
