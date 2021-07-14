@@ -298,7 +298,6 @@ class DataLoader(Generic[T_co]):
                     )
                 )
         else:
-            print(">>>>>>>>>>>>>>>>>>>>> self._dataset_kind = _DatasetKind.Map")
             self._dataset_kind = _DatasetKind.Map
 
         if sampler is not None and shuffle:
@@ -328,12 +327,10 @@ class DataLoader(Generic[T_co]):
                 sampler = _InfiniteConstantSampler()
             else:  # map-style
                 if shuffle:
-                    print("DataLoader if shuffle >>>>> True")
                     # Cannot statically verify that dataset is Sized
                     # Somewhat related: see NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
                     sampler = RandomSampler(dataset, generator=generator)  # type: ignore
                 else:
-                    print("DataLoader if shuffle >>>>> False")
                     sampler = SequentialSampler(dataset)
 
         if batch_size is not None and batch_sampler is None:
@@ -347,12 +344,9 @@ class DataLoader(Generic[T_co]):
         self.generator = generator
 
         if collate_fn is None:
-            print("dataloader >> collate_fn is None!")
             if self._auto_collation:
-                print("dataloader >> self._auto_collation is True")
                 collate_fn = _utils.collate.default_collate
             else:
-                print("dataloader >> self._auto_collation is False")
                 collate_fn = _utils.collate.default_convert
 
         self.collate_fn = collate_fn

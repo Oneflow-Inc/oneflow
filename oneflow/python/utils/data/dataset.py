@@ -206,8 +206,7 @@ class TensorDataset(Dataset[Tuple[Tensor, ...]]):
         self.tensors = tensors
 
     def __getitem__(self, index):
-        res = tuple(tensor[index] for tensor in self.tensors)
-        return res
+        return tuple(tensor[index] for tensor in self.tensors)
 
     def __len__(self):
         return self.tensors[0].size(0)
