@@ -73,17 +73,12 @@ class TestSumModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 
-    def test_flow_sum_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "sum", device=device,
-            )
-
-    def test_tensor_sum_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "sum", device=device,
-            )
+    def test_sum_against_pytorch(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, "sum", device=arg[1])
 
 
 if __name__ == "__main__":
