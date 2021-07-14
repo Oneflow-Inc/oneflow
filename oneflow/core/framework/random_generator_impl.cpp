@@ -89,7 +89,7 @@ Maybe<CPUGeneratorImpl> MakeGeneratorImpl<CPUGeneratorImpl>(uint64_t seed, int d
 
 #ifdef WITH_CUDA
 int GetCudaDeviceCount() {
-  /*static*/ int cuda_device_count;
+  /* static */ int cuda_device_count;
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
 }
