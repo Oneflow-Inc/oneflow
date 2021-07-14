@@ -66,6 +66,7 @@ class JobBuildAndInferCtx(object):
         else:
             return False
 
+
 class BlockScopeContext(object):
     def __init__(self, prev_scope, new_scope):
         assert prev_scope is not None
@@ -78,17 +79,18 @@ class BlockScopeContext(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope 
+            assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope
             oneflow._oneflow_internal.GlobalScopeStackPop()
-            assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope 
+            assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope
             return True
         else:
             return False
 
+
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
-   
+
     attr_dict = dict()
     if block.config.stage_id is not None:
         attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
@@ -96,6 +98,7 @@ def make_new_block_scope(prev_scope, block):
         attr_dict["checkpointing"] = block.config.activation_checkpointing
 
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
+
     def scope_proto_setter(scope_proto):
         # set attr
         for attr_name, py_value in attr_dict.items():
@@ -109,17 +112,16 @@ def make_new_block_scope(prev_scope, block):
         scope_proto.clear_scope_op_name_prefixes()
         scope_proto.add_scope_op_name_prefixes(block.name_prefix + block.name)
 
-
     new_scope = None
+
     def build_scope(builder):
         nonlocal new_scope
-        new_scope = builder.BuildScopeByProtoSetter(
-            prev_scope, scope_proto_setter
-        )
+        new_scope = builder.BuildScopeByProtoSetter(prev_scope, scope_proto_setter)
         assert new_scope is not None
 
     oneflow._oneflow_internal.deprecated.LogicalRun(build_scope)
     return new_scope
+
 
 def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())

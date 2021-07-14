@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from collections import OrderedDict
-from typing import Union
+from typing import Union, Optional, Iterator, Set
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -80,21 +80,20 @@ class Graph(object):
         self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
         Graph._child_init_cnt[child_name] += 1
 
-    def _named_state(self):
+    def _state(self):
         for _, b in self._blocks.items():
-            prefix = b.name + "."
-            p_gen = b.origin.named_parameters()
-            for n, p in p_gen:
-                yield prefix + n, p
-            b_gen = b.origin.named_buffers()
-            for n, b in b_gen:
-                yield prefix + n, b
+            pa_gen = b.parameters(recurse=True)
+            for pa in pa_gen:
+                yield pa
+            bu_gen = b.buffers(recurse=True)
+            for bu in bu_gen:
+                yield bu
 
     def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        state = tuple(t for _, t in self._named_state())
+        state = tuple(s.origin for s in self._state())
         if len(state) > 0:
             self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state)
 
@@ -103,6 +102,12 @@ class Graph(object):
         session.TryInit()
 
         with graph_build_util.graph_build_context(self.config.proto, session):
+            # Deal with parameter and buffer
+            for s in self._state():
+                with s.scope_context():
+                    # TODO(): build lazy tensor for parameter and buffer
+                    # s.lazy_origin = expr(s.origin)
+                    pass
             outputs = self.build(*args)
 
         self._is_compiled = True
@@ -208,7 +213,7 @@ class Block(object):
 
         if isinstance(value, Module):
             self._type = BlockType.MODULE
-            self._is_executing_forward = False 
+            self._is_executing_forward = False
             self._modules = OrderedDict()
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
@@ -242,15 +247,19 @@ class Block(object):
     @property
     def origin(self):
         return self._origin
-    
+
     @property
     def lazy_origin(self):
-        assert self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER, "Only Parameter or Buffer Block has lazy_origin"
+        assert (
+            self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin
 
     @lazy_origin.setter
-    def lazy_origin(self, lazy_tensor = None):
-        assert self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER, "Only Parameter or Buffer Block has lazy_origin"
+    def lazy_origin(self, lazy_tensor=None):
+        assert (
+            self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin"
         self._lazy_origin = lazy_tensor
 
     @property
@@ -273,24 +282,53 @@ class Block(object):
         # nn.Module.__call__ will call self.forward()
         # so the scope is set in self.forward()
         result = self._origin.__class__.__call__(self, *args)
-        return result 
+        return result
 
     def forward(self, *args):
         assert self._type == BlockType.MODULE
         self._is_executing_forward = True
         # TODO(xuxiaoyu): only build scope in lazy mode
         with self.scope_context():
-            # test start
-            scope = oneflow.current_scope()
-            scope_proto = graph_build_util.scope_to_proto(scope)
-            print("cur scope in build ", scope_proto)
-            # test end
-
-            scope = oneflow.current_scope()
-
             result = self._origin.__class__.forward(self, *args)
         self._is_executing_forward = False
         return result
+
+    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield self
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                for m in module.modules(memo):
+                    yield m
+
+    def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        memo = set()
+        modules = self.modules() if recurse else [self]
+        for module in modules:
+            members = get_members_fn(module)
+            for k, v in members:
+                if v is None or v in memo:
+                    continue
+                memo.add(v)
+                yield v
+
+    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        gen = self._members(lambda module: module._parameters.items(), recurse=recurse)
+        for elem in gen:
+            yield elem
+
+    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        gen = self._members(lambda module: module._buffers.items(), recurse=recurse)
+        for elem in gen:
+            yield elem
 
     def __setattr__(self, name: str, value=None) -> None:
         if value is None or not isinstance(value, Block):
@@ -377,6 +415,7 @@ class Block(object):
 
         main_str = (
             "("
+            + self._name_prefix
             + self._name
             + ":"
             + self._origin.__class__.__name__
@@ -388,7 +427,6 @@ class Block(object):
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
-
 
 
 @oneflow_export("nn.graph.GraphConfig")
@@ -422,7 +460,7 @@ class GraphConfig(FunctionConfig):
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
-        self._activation_checkpointing = None 
+        self._activation_checkpointing = None
 
     @property
     def stage_id(self):

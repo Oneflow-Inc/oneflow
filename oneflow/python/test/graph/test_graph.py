@@ -104,9 +104,7 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.m.layer.conv1.weight.type, "PARAMETER")
         # conv1.weight is Tensor, Graph.build(...) need weight to be Tensor
         g.m.layer.conv1._is_executing_forward = True
-        test_case.assertTrue(
-            isinstance(g.m.layer.conv1.weight, flow.Tensor)
-        )
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
         g.m.layer.conv1._is_executing_forward = False
         # conv1.kernel_size is original data in original module
         test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
@@ -136,9 +134,8 @@ class TestGraph(flow.unittest.TestCase):
         g.config.enable_fuse_add_to_output(True)
         g.config.enable_fuse_add_to_output(False)
 
-        # check _named_state get the right tensor
-        for n, t in g._named_state():
-            test_case.assertEqual(id(eval("g." + n + ".origin")), id(t))
+        for s in g._state():
+            print("g state: ", repr(s))
 
         # print repr of nn.Graph
         print(repr(g))
@@ -233,7 +230,7 @@ class TestGraph(flow.unittest.TestCase):
                 super().__init__()
                 self.conv1 = flow.nn.Conv2d(1, 1, 5)
                 self.relu = flow.nn.ReLU()
-        
+
             def forward(self, x):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
@@ -242,13 +239,15 @@ class TestGraph(flow.unittest.TestCase):
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                 test_case.assertEqual(ck_bool, True)
                 # check scope stage id
-                stage_int = scope_proto.attr_name2attr_value["pipeline_stage_id_hint"].at_int64
+                stage_int = scope_proto.attr_name2attr_value[
+                    "pipeline_stage_id_hint"
+                ].at_int64
                 test_case.assertEqual(stage_int, 0)
 
                 x = self.conv1(x)
                 x = self.relu(x)
                 return x
-        
+
         class SubModule1(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -260,29 +259,32 @@ class TestGraph(flow.unittest.TestCase):
             def forward(self, x):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
-                
+
                 # check scope symbol id
-                test_case.assertEqual(scope_proto.parent_scope_symbol_id, self.prev_scope.symbol_id)
+                test_case.assertEqual(
+                    scope_proto.parent_scope_symbol_id, self.prev_scope.symbol_id
+                )
 
                 # check scope activation checkpointing
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"]
                 test_case.assertEqual(ck_bool.WhichOneof("value"), None)
                 # check scope stage id
-                stage_int = scope_proto.attr_name2attr_value["pipeline_stage_id_hint"].at_int64
+                stage_int = scope_proto.attr_name2attr_value[
+                    "pipeline_stage_id_hint"
+                ].at_int64
                 test_case.assertEqual(stage_int, 1)
 
                 name = self.name_prefix + self.name
                 prefixes = []
                 for prefix in scope_proto.scope_op_name_prefixes:
                     prefixes.append(prefix)
-                name_in_scope = '.'.join(prefixes)
+                name_in_scope = ".".join(prefixes)
                 test_case.assertEqual(name, name_in_scope)
 
                 x = oneflow.F.flatten(x, 1)
                 x = self.fc1(x) + self.dummy_buff
                 return x
-        
-        
+
         class CustomModule1(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -294,8 +296,8 @@ class TestGraph(flow.unittest.TestCase):
                 x = self.layer1(x)
                 return x
 
-
         m = CustomModule1()
+
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -313,6 +315,19 @@ class TestGraph(flow.unittest.TestCase):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         z = g.build(x)
+
+        for s in g._state():
+            with s.scope_context():
+                scope = oneflow.current_scope()
+                scope_proto = graph_build_util.scope_to_proto(scope)
+
+                name = s.name_prefix + s.name
+                prefixes = []
+                for prefix in scope_proto.scope_op_name_prefixes:
+                    prefixes.append(prefix)
+                name_in_scope = ".".join(prefixes)
+                test_case.assertEqual(name, name_in_scope)
+                print(repr(s), "state scope name ", name_in_scope)
 
 
 if __name__ == "__main__":
