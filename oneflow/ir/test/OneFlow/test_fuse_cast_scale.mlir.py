@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 import oneflow.python.framework.dtype as dtype_util
 
 func_config = flow.FunctionConfig()
