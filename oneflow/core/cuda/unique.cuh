@@ -224,6 +224,7 @@ template<typename Key, typename Index>
 cudaError_t Launch(Flag flag, size_t n, const Key* in, Key* unique, Index* num_unique,
                    Index* inverse_indices, Index* counts, void* workspace, size_t workspace_size,
                    cudaStream_t stream) {
+  if (workspace_size == 0) { return cudaErrorInvalidValue; }
   return DispatchInputSorted<Key, Index>(flag, n, in, unique, num_unique, inverse_indices, counts,
                                          workspace, &workspace_size, stream);
 }
