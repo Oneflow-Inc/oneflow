@@ -48,7 +48,7 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
-//TODO(lambda7xx@gmail.com)
+// TODO(lambda7xx@gmail.com)
 struct Ibv_Send_Wr_Sge_Pair {
   ibv_send_wr wr;
   ibv_sge sge;
@@ -88,12 +88,12 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
-  //todo(lambda7xx@gmail.com)
+  // todo(lambda7xx@gmail.com)
   std::mutex num_msg_in_send_buf_mutex_;
-  uint32_t  num_msg_in_send_buf_;
-  uint32_t  max_send_wr_in_send_buf_;
+  uint32_t num_msg_in_send_buf_;
+  uint32_t max_send_wr_in_send_buf_;
   std::mutex msg_pendding_list_mutex_;
-  std::queue< Ibv_Send_Wr_Sge_Pair> msg_pendding_list_;
+  std::queue<Ibv_Send_Wr_Sge_Pair> msg_pendding_list_;
   std::mutex use_pendding_list_mutex_;
   bool use_pendding_list_;
 };
