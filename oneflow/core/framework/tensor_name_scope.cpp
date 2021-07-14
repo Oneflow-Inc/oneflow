@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-/*static*/ TensorNameScope* TensorNameScope::Global() {
+/* static */ TensorNameScope* TensorNameScope::Global() {
   static TensorNameScope scope;
   return &scope;
 }
