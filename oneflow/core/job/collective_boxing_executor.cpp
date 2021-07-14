@@ -510,6 +510,17 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
 
 #endif  // WITH_CUDA
 
+class CollectiveBoxingExecutorPlanToken {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingExecutorPlanToken);
+  CollectiveBoxingExecutorPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
+  ~CollectiveBoxingExecutorPlanToken() = default;
+  const std::vector<int64_t>& job_ids() const { return job_ids_; }
+
+ private:
+  std::vector<int64_t> job_ids_;
+};
+
 std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecutor::AddPlan(
     const Plan& plan) {
   HashMap<int32_t, int64_t> backend2count;

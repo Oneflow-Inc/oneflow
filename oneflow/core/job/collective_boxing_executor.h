@@ -27,6 +27,8 @@ namespace boxing {
 
 namespace collective {
 
+class CollectiveBoxingExecutorPlanToken;
+
 struct RuntimeRequestInfo {
   const void* send_buff;
   void* recv_buff;
@@ -44,17 +46,6 @@ class CollectiveBoxingExecutorBackend {
                              std::vector<std::vector<const RequestDesc*>>* groups);
   virtual void ExecuteGroup(const std::vector<const RequestDesc*>& group,
                             const std::vector<std::map<int64_t, RuntimeRequestInfo>>& ranks) = 0;
-};
-
-class CollectiveBoxingExecutorPlanToken {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingExecutorPlanToken);
-  CollectiveBoxingExecutorPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
-  ~CollectiveBoxingExecutorPlanToken() = default;
-  const std::vector<int64_t>& job_ids() const { return job_ids_; }
-
- private:
-  std::vector<int64_t> job_ids_;
 };
 
 class CollectiveBoxingExecutor final {
