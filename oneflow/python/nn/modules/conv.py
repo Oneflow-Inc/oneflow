@@ -621,8 +621,8 @@ class Conv3d(Module):
         self.padding = _triple(padding)
         self.dilation = _triple(dilation)
         self.groups = groups
-        assert in_channels % groups == 0
-        assert out_channels % groups == 0
+        assert in_channels % groups == 0, "in_channels must be divisible by groups"
+        assert out_channels % groups == 0, "out_channels must be divisible by groups"
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
