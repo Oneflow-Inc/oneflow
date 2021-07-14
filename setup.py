@@ -5,10 +5,13 @@ import sys
 import argparse
 import glob
 import platform
+import subprocess
+from contextlib import contextmanager
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.dist import Distribution
 from setuptools.command.install import install
+from setuptools.command.develop import develop
 
 
 # https://github.com/google/or-tools/issues/616
@@ -26,6 +29,12 @@ parser.add_argument(
     type="bool",
     default=False,
     help="Package xla libraries if true, otherwise not.",
+)
+parser.add_argument(
+    "--with_tvm",
+    type='bool',
+    default=False,
+    help="Package tvm libraries if true, otherwise not"
 )
 parser.add_argument("--build_dir", type=str, default="build")
 parser.add_argument("--package_name", type=str, default="oneflow")
@@ -91,6 +100,59 @@ def get_version():
     spec.loader.exec_module(m)
     return m.__version__
 
+@contextmanager
+def cd(path):
+    if not os.path.isabs(path):
+        raise RuntimeError("Can only cd to absolute path, got: {}".format(path))
+    orig_path = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(orig_path)
+
+class Develop(develop):
+    def run(self):
+        develop.run(self)
+
+        if (not args.with_tvm):
+            return
+
+        ROOT_DIR = os.path.realpath(os.path.dirname(__file__))
+        TVM_INSTALL_LIB_DIR = os.path.join(ROOT_DIR, 'third_party', 'tvm', 'lib')
+        TVM_SRC_DIR = os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm')
+        TVM_SRC_BUILD_DIR = os.path.join(TVM_SRC_DIR, 'build')
+
+        rm_src_build_dir = ['rm', '-rf', TVM_SRC_BUILD_DIR]
+        subprocess.check_call(rm_src_build_dir)
+
+        mkdir_src_build_dir = ['mkdir', TVM_SRC_BUILD_DIR]
+        subprocess.check_call(mkdir_src_build_dir)
+
+        # make sure the tvm libs used by oneflow xrt and tvm setup.py are the same one,
+        # because there will be two duplicate global static registar vars in two libs
+        # which lead to multi registry error, even they are same copied libs.
+        tvm_libs = glob.glob(os.path.join(TVM_INSTALL_LIB_DIR, '*'))
+        for lib in tvm_libs:
+            copy_tvm_files = [
+                'ln',
+                '-s',
+                '{}'.format(lib),
+                '{}'.format(os.path.join(TVM_SRC_BUILD_DIR, os.path.basename(lib))),
+            ]
+            subprocess.check_call(copy_tvm_files)
+
+        # must pass 'develop' other than 'install' to setup.py, cuz 'install' will copy tvm lib to
+        # site-packages directory to invalidate the symbol-link
+        with cd(os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm', 'python')):
+            subprocess.check_call("{} setup.py develop".format(sys.executable), shell=True)
+        with cd(os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm', 'topi', 'python')):
+            subprocess.check_call("{} setup.py develop".format(sys.executable), shell=True)
+
+cmd_class = {
+    "install": InstallPlatlib,
+    "develop": Develop,
+}
 
 setup(
     name=args.package_name,
@@ -102,5 +164,5 @@ setup(
     package_data=package_data,
     zip_safe=False,
     distclass=BinaryDistribution,
-    cmdclass={"install": InstallPlatlib},
+    cmdclass=cmd_class,
 )
