@@ -938,7 +938,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
 LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                  MLIRContext* context, OwningModuleRef& module) {
   RewritePatternSet patterns(module->getContext());
-  populateFuserPasses(patterns);
+  oneflow::populateFuserPasses(patterns);
   if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
     module->emitError("Failed to run fusers");
     return failure();

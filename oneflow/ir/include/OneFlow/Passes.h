@@ -13,8 +13,12 @@ namespace mlir {
 #define GEN_PASS_REGISTRATION
 #include "OneFlow/OneFlowPasses.h.inc"
 
-}  // namespace mlir
+namespace oneflow {
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+
+}  // namespace oneflow
+
+}  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
