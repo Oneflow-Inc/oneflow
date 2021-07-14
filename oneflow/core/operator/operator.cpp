@@ -1098,7 +1098,7 @@ Maybe<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type)
 }
 
 Maybe<Operator> ConstructOp(const OperatorConf& op_conf) {
-  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
+  if (IsCpuOnly(op_conf)) { return JUST(ConstructOp(op_conf, DeviceType::kCPU)); }
   return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
 
