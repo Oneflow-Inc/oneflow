@@ -450,14 +450,20 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __getitem__(self, key):
-        if isinstance(key, tuple):
-            key = self._transform_ellipsis_type(key)
-        if isinstance(key, int):
-            if key >= self.shape[0]:
-                raise IndexError(
-                    f"Index should be in [0, {self.shape[0]}), but got {key}"
-                )
         return flow.F.tensor_getitem(self, key)
+
+    @_auto_determine
+    @register_local_tensor_method()
+    def __iter__(self):
+        self.iter_count = -1
+        return self
+
+    @_auto_determine
+    def __next__(self):
+        self.iter_count += 1
+        if self.iter_count >= self.shape[0]:
+            raise StopIteration
+        return flow.F.tensor_getitem(self, self.iter_count)
 
     @_auto_determine
     @register_local_tensor_method()
