@@ -20,11 +20,13 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
 
@@ -114,7 +116,7 @@ T&& dereference(std::shared_ptr<T>&& val) {
 }
 
 template<typename T>
-/*static*/ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
+/* static */ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
   PyObject* obj = src.ptr();
   bool is_tuple = PyTuple_Check(obj);
   CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
@@ -129,6 +131,11 @@ template<typename T>
   }
   return values;
 }
+
+Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
+const char* PyStringAsString(PyObject* object);
+
+Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object);
 
 }  // namespace detail
 

@@ -21,6 +21,7 @@ from scipy import special
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_relu_impl(test_case, shape, device):
@@ -38,6 +39,19 @@ def _test_relu_impl(test_case, shape, device):
     of_out.backward()
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-5, 1e-5))
 
+    inplace_m = flow.nn.ReLU(inplace=True)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_input_inplace = of_input + 1
+    inplace_m(of_input_inplace)
+    np_out = np.maximum(0, np_input + 1)
+    test_case.assertTrue(np.allclose(of_input_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out_inplace = of_input_inplace.sum()
+    of_out_inplace.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -50,6 +64,12 @@ class TestReLUModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_relu_impl(test_case, *arg)
+
+    def test_relu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case, "nn.ReLU", device=device,
+            )
 
 
 def _test_relu6_impl(test_case, shape, device):
@@ -86,6 +106,12 @@ class TestReLU6Module(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_relu6_impl(test_case, *arg)
+
+    def test_relu6_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case, "nn.ReLU6", device=device,
+            )
 
 
 def _test_tanh_nn_impl(test_case, shape, device):
@@ -136,6 +162,24 @@ class TestTanh(flow.unittest.TestCase):
             _test_tanh_nn_impl(test_case, *arg)
             _test_tanh_function_impl(test_case, *arg)
 
+    def test_tanh_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case, "nn.Tanh", device=device,
+            )
+
+    def test_flow_tanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "tanh", device=device,
+            )
+
+    def test_tensor_tanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "tanh", device=device,
+            )
+
 
 def _test_elu_function_impl(test_case, shape, device):
     m = flow.nn.ELU()
@@ -169,6 +213,16 @@ class TestELUModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_elu_function_impl(test_case, *arg)
+
+    def test_elu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.ELU",
+                extra_annotations={"alpha": float},
+                extra_generators={"alpha": random(0, 6)},
+                device=device,
+            )
 
 
 def _np_gelu(x):
@@ -649,6 +703,17 @@ class TestSoftplusModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("Pytorch Softplus has bug")
+    def test_softplus_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.Softplus",
+                extra_annotations={"beta": int, "threshold": int},
+                extra_generators={"beta": random(3, 4), "threshold": random(1, 2)},
+                device=device,
+            )
+
 
 def _test_hardswish_impl(test_case, shape, device):
     m = flow.nn.Hardswish()
@@ -745,6 +810,16 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_leakyrelu_impl(test_case, *arg)
+
+    def test_leakyrelu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.LeakyReLU",
+                extra_annotations={"negative_slope": float},
+                extra_generators={"negative_slope": random(0, 6)},
+                device=device,
+            )
 
 
 def _test_mish(test_case, shape, device):
