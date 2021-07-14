@@ -80,7 +80,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   blob_conf->set_data_type(input_tensor->dtype());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   if (input_tensor->is_consistent()) {
-    GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor);
+    JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
   }
 
   auto infer_ctx = JUST(GetCurInferCtx());
