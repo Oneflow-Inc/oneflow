@@ -257,6 +257,25 @@ class Conv1d(Module):
             )
         return res
 
+    def extra_repr(self):
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.output_padding != (0,) * len(self.output_padding):
+            s += ", output_padding={output_padding}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
+        return s.format(**self.__dict__)
+
 
 @oneflow_export("nn.Conv2d")
 @experimental_api
@@ -465,6 +484,25 @@ class Conv2d(Module):
                 groups=self.groups,
             )
         return res
+
+    def extra_repr(self):
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.output_padding != (0,) * len(self.output_padding):
+            s += ", output_padding={output_padding}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
+        return s.format(**self.__dict__)
 
 
 if __name__ == "__main__":

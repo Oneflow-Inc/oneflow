@@ -140,6 +140,10 @@ class ReLU(Module):
             _check_inplace_valid(x)
         return flow.F.relu(x, self.inplace)
 
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
+
 
 @oneflow_export("nn.ReLU6")
 @experimental_api
@@ -182,9 +186,16 @@ class ReLU6(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("ReLU6 module do not support inplace now")
         return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Tanh")
@@ -308,9 +319,17 @@ class ELU(Module):
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
         self.alpha = alpha
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("ELU module do not support inplace now")
         return flow.F.elu(x, alpha=self.alpha)
+
+    def extra_repr(self):
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.GELU")
@@ -498,9 +517,16 @@ class Hardsigmoid(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("Hardsigmoid module do not support inplace now")
         return flow.F.hardsigmoid(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Softmax")
@@ -519,6 +545,9 @@ class Softmax(Module):
         if need_transpose:
             res = flow.F.transpose(res, perm=permute)
         return res
+
+    def extra_repr(self):
+        return f"axis={self.axis}"
 
 
 @oneflow_export("softmax")
@@ -637,7 +666,7 @@ class LogSoftmax(Module):
         return res
 
     def extra_repr(self):
-        return "dim={dim}".format(dim=self.dim)
+        return f"dim={self.dim}"
 
 
 @oneflow_export("nn.LogSigmoid")
@@ -735,6 +764,9 @@ class Softplus(Module):
             * flow.experimental.log(1.0 + flow.experimental.exp(self.beta * x)),
         )
 
+    def extra_repr(self):
+        return f"beta={self.beta}, threshold={self.threshold}"
+
 
 @oneflow_export("nn.Hardswish")
 @experimental_api
@@ -777,9 +809,16 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("Hardswish module do not support inplace now")
         return flow.F.hardswish(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Hardtanh")
@@ -853,9 +892,17 @@ class Hardtanh(Module):
 
         self.min_val = min_val
         self.max_val = max_val
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("Hardtanh module do not support inplace now")
         return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
+
+    def extra_repr(self):
+        param_str = f"min_val={self.min_val}, max_val={self.max_val}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.LeakyReLU")
@@ -897,9 +944,17 @@ class LeakyReLU(Module):
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
         self.negative_slope = negative_slope
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            raise RuntimeError("LeakyReLU module do not support inplace now")
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
+
+    def extra_repr(self):
+        param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.Mish")

@@ -123,6 +123,7 @@ class AvgPool2d(Module):
             padding, tuple
         ), "padding can only int int or tuple of 2 ints."
         padding = _pair(padding)
+        self.padding = padding
         padding = [0, 0, *padding]
 
         assert count_include_pad is None, "count_include_pad not supported yet"
@@ -147,6 +148,12 @@ class AvgPool2d(Module):
             padding_after=self._padding_after,
             ceil_mode=self.ceil_mode,
             data_format=self._channel_pos,
+        )
+
+    def extra_repr(self) -> str:
+        return (
+            "kernel_size={kernel_size}, stride={stride}, padding={padding}"
+            ", ceil_mode={ceil_mode}".format(**self.__dict__)
         )
 
 
@@ -317,6 +324,7 @@ class MaxPool1d(Module):
         self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
         self.dilation = _GetSequence(dilation, 2, "dilation")
         padding = _pair(tuple(padding)[0])
+        self.padding = padding
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
@@ -355,6 +363,11 @@ class MaxPool1d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}".format(
+            self.kernel_size, self.stride, self.padding
+        )
 
 
 @oneflow_export("nn.MaxPool2d")
@@ -456,6 +469,7 @@ class MaxPool2d(Module):
         self.ceil_mode = ceil_mode
 
         padding = _pair(padding)
+        self.padding = padding
         if len(padding) == 2:
             if data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
@@ -488,6 +502,11 @@ class MaxPool2d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
 
 
 @oneflow_export("nn.MaxPool3d")
@@ -592,6 +611,7 @@ class MaxPool3d(Module):
         )
         self.dilation = _GetSequence(dilation, 3, "dilation")
         padding = _triple(padding)
+        self.padding = padding
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
@@ -627,6 +647,11 @@ class MaxPool3d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
 
 
 if __name__ == "__main__":
