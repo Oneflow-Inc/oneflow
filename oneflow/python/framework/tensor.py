@@ -457,7 +457,7 @@ class Tensor:
         except ValueException as e:
             # The stop condition of for in python is IndexError,
             # so we have to catch ValueException from C++ and throw IndexError
-            raise IndexError()
+            raise IndexError(e)
 
     @_auto_determine
     @register_local_tensor_method()
