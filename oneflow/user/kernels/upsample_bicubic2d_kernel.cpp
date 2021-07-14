@@ -20,79 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-static void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dptr,
-                                     NdIndexOffsetHelper<int64_t, 4> in_helper,
-                                     NdIndexOffsetHelper<int64_t, 4> out_helper,
-                                     const int64_t in_height, const int64_t in_width,
-                                     const float scale_h, const float scale_w, T* out_dptr) {
-  std::cout << "bicubic2d begin" << std::endl;
-  for (int64_t index = 0; index < elem_cnt; ++index) {
-    int64_t n, c, h, w;
-    out_helper.OffsetToNdIndex(index, n, c, h, w);
-
-    T real_x = scale_w * w;
-    int64_t input_x = real_x;
-    T t_x = real_x - input_x;
-
-    T real_y = scale_h * h;
-    int64_t input_y = real_y;
-    T t_y = real_y - input_y;
-
-    T coefficients[4];
-
-    // Interpolate 4 times in the x direction
-    for (int64_t i = 0; i < 4; i++) {
-      coefficients[i] = cubic_interp1d<T>(
-          upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x - 1, input_y - 1 + i),
-          upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x + 0, input_y - 1 + i),
-          upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x + 1, input_y - 1 + i),
-          upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x + 2, input_y - 1 + i),
-          t_x);
-    }
-    out_dptr[index] =
-        cubic_interp1d<T>(coefficients[0], coefficients[1], coefficients[2], coefficients[3], t_y);
-  }
-  std::cout << "bicubic2d end" << std::endl;
-}
-
-template<typename T>
-static void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dptr,
-                                      NdIndexOffsetHelper<int64_t, 4> dy_helper,
-                                      NdIndexOffsetHelper<int64_t, 4> dx_helper,
-                                      const int64_t dx_height, const int64_t dx_width,
-                                      const float scale_h, const float scale_w, T* dx_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
-    int64_t n, c, h, w;
-    dy_helper.OffsetToNdIndex(index, n, c, h, w);
-
-    T real_x = scale_w * w;
-    int64_t input_x = real_x;
-    T t_x = real_x - input_x;
-
-    T real_y = scale_h * h;
-    int64_t input_y = real_y;
-    T t_y = real_y - input_y;
-
-    T x_coeffs[4], y_coeffs[4];
-
-    get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
-    get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
-
-    for (int64_t i = 0; i < 4; i++) {
-      for (int64_t j = 0; j < 4; j++) {
-        *(dx_dptr
-          + dx_helper.NdIndexToOffset(
-              n, c, std::max(std::min(input_y - 1 + j, dx_height - 1), (int64_t)0),
-              std::max(std::min(input_x - 1 + i, dx_width - 1), (int64_t)0))) += dy_dptr[index];
-      }
-    }
-  }
-}
-
-}  // namespace
 
 template<typename T>
 class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
@@ -104,24 +31,82 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    T* in_ptr = x_blob->dptr<T>();
+    T* out_ptr = y_blob->mut_dptr<T>();
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
-    const int64_t elem_cnt = y_blob->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
-                                              x_blob->shape().At(2), x_blob->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
-                                               y_blob->shape().At(2), y_blob->shape().At(3));
+
+    const int nbatch = x_blob->shape().At(0);
+    const int channels = x_blob->shape().At(1);
     const int64_t in_height = x_blob->shape().At(2);
     const int64_t in_width = x_blob->shape().At(3);
     const int64_t out_height = y_blob->shape().At(2);
     const int64_t out_width = y_blob->shape().At(3);
+
+    if(in_height == out_height && in_width == out_width){
+      for (int64_t output_y = 0; output_y < out_height; output_y++) {
+        for (int64_t output_x = 0; output_x < out_width; output_x++) {
+          scalar_t* in = &in_ptr[output_y * in_width + output_x];
+          scalar_t* out = &out_ptr[output_y * out_width + output_x];
+          for (int64_t c = 0; c < channels; ++c) {
+            in[0] = out[0];
+            in += in_width * in_height;
+            out += out_width * out_height;
+          }
+        }
+      }
+      return;
+    }
+
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    UpsampleBicubic2dForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
-                                x_blob->shape().At(2), x_blob->shape().At(3), scale_height,
-                                scale_width, y_blob->mut_dptr<T>());
+    
+    for (int64_t output_y = 0; output_y < out_height; output_y++) {
+      for(int64_t output_x = 0; output_x < out_width; output_x++) {
+        T *in = in_ptr;
+        T *out = out_ptr;
+
+        const T real_x = scale_width * output_x;
+        int64_t input_x = real_x;
+        const T t_x = real_x - input_x;
+
+        const T real_y = scale_height * output_y;
+        int64_t input_y = real_y;
+        const T t_y = real_y - input_y;
+
+         for (int64_t c = 0; c < channels * nbatch; c++) {
+            T coefficients[4];
+
+            // Interpolate 4 times in the x direction
+            for (int64_t i = 0; i < 4; i++) {
+              coefficients[i] = cubic_interp1d<T>(
+                  upsample_get_value_bounded<T>(
+                      in, in_width, in_height, input_x - 1, input_y - 1 + i),
+                  upsample_get_value_bounded<T>(
+                      in, in_width, in_height, input_x + 0, input_y - 1 + i),
+                  upsample_get_value_bounded<T>(
+                      in, in_width, in_height, input_x + 1, input_y - 1 + i),
+                  upsample_get_value_bounded<T>(
+                      in, in_width, in_height, input_x + 2, input_y - 1 + i),
+                  t_x);
+            }
+
+            // Interpolate in the y direction using x interpolations
+            out[output_y * out_width + output_x] = cubic_interp1d<T>(
+                coefficients[0],
+                coefficients[1],
+                coefficients[2],
+                coefficients[3],
+                t_y);
+
+            // Move to next channel
+            in += in_width * in_height;
+            out += out_width * out_height;
+          }
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -139,24 +124,79 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    T* in_ptr = dx_blob->dptr<T>();
+    T* out_ptr = dy_blob->mut_dptr<T>();
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
-                                              dy_blob->shape().At(2), dy_blob->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
-                                              dx_blob->shape().At(2), dx_blob->shape().At(3));
+
+    const int nbatch = dx_blob->shape().At(0);
+    const int channels = dx_blob->shape().At(1);
+    channels = channels * nbatch;
     const int64_t in_height = dx_blob->shape().At(2);
     const int64_t in_width = dx_blob->shape().At(3);
     const int64_t out_height = dy_blob->shape().At(2);
     const int64_t out_width = dy_blob->shape().At(3);
+
+    if(in_height == out_height && in_width == out_width){
+      for (int64_t output_y = 0; output_y < out_height; output_y++) {
+        for (int64_t output_x = 0; output_x < out_width; output_x++) {
+          T* in = &in_ptr[output_y * in_width + output_x];
+          T* out = &out_ptr[output_y * out_width + output_x];
+          for (int64_t c = 0; c < channels; ++c) {
+            in[0] = out[0];
+            in += in_width * in_height;
+            out += out_width * out_height;
+          }
+        }
+      }
+      return;
+    }
+
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    UpsampleBicubic2dBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
-                                 dx_blob->shape().At(2), dx_blob->shape().At(3), scale_height,
-                                 scale_width, dx_blob->mut_dptr<T>());
+    for (int64_t output_y = 0; output_y < out_height; output_y++) {
+      for (int64_t output_x = 0; output_x < out_width; output_x++) {
+        T* in = in_ptr;
+        T* out = out_ptr;
+
+        T real_x = scale_width * output_x;
+        int64_t input_x = real_x;
+        T t_x = real_x - input_x;
+
+        T real_y = scale_height * output_y;
+        int64_t input_y = real_y;
+        T t_y = real_y - input_y;
+
+        T x_coeffs[4];
+        T y_coeffs[4];
+
+        get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
+        get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
+
+        for (int64_t c = 0; c < channels; c++) {
+          T out_value = out[output_y * output_width + output_x];
+
+          for (int64_t i = 0; i < 4; i++) {
+            for (int64_t j = 0; j < 4; j++) {
+              upsample_increment_value_bounded<T>(
+                  in,
+                  input_width,
+                  input_height,
+                  input_x - 1 + i,
+                  input_y - 1 + j,
+                  out_value * y_coeffs[j] * x_coeffs[i]);
+            }
+          }
+
+          in += input_width * input_height;
+          out += output_width * output_height;
+        }
+      }
+    }
+    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

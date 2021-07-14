@@ -100,6 +100,19 @@ OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, 
   params->w_lerp = w1r - w1;
 }
 
+template <typename T>
+OF_DEVICE_FUNC void upsample_increment_value_bounded(
+    T* data,
+    int64_t width,
+    int64_t height,
+    int64_t x,
+    int64_t y,
+    T value) {
+  int64_t access_x = std::max(std::min(x, width - 1), static_cast<int64_t>(0));
+  int64_t access_y = std::max(std::min(y, height - 1), static_cast<int64_t>(0));
+  data[access_y * width + access_x] += value;
+}
+
 template<typename T>
 OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
                                             const int64_t height, const int64_t x,
@@ -148,3 +161,4 @@ OF_DEVICE_FUNC T cubic_interp1d(const T x0, const T x1, const T x2, const T x3, 
 
   return x0 * coeffs[0] + x1 * coeffs[1] + x2 * coeffs[2] + x3 * coeffs[3];
 }
+
