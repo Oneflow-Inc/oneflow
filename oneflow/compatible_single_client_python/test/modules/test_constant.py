@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
-from oneflow.compatible_single_client_python.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 
 import numpy as np
 

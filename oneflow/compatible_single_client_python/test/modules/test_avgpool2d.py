@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 
 from oneflow.compatible.single_client import experimental as flow
-from oneflow.compatible_single_client_python.nn.modules.utils import (
+from oneflow.compatible.single_client.python.nn.modules.utils import (
     _single,
     _pair,
     _triple,
