@@ -270,7 +270,7 @@ jobs:
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
           python_version: ${{ matrix.python_version }}
-      - name: Custom Op test (run by oneflow build docker)
+      - name: Single client custom Op test (run by oneflow build docker)
         if: matrix.test_suite == 'cpu' && env.is_built != '1'
         run: |
           set -x

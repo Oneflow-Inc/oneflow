@@ -82,8 +82,7 @@ class PythonKernelRegistry(object):
         self.kernels_[op_module_name] = module
 
 
-# _python_kernel_reg = PythonKernelRegistry()
-# oneflow._oneflow_internal.RegisterPyKernels(_python_kernel_reg.kernels_)
+_python_kernel_reg = PythonKernelRegistry()
 
 
 @oneflow_export("experimental.custom_op_module")

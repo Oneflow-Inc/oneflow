@@ -89,6 +89,13 @@ oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(
 )
 del boxing_util
 
+# register RegisterPyKernels
+from oneflow.compatible.single_client.python.ops.util import custom_op_module
+
+oneflow._oneflow_internal.RegisterPyKernels(
+    custom_op_module._python_kernel_reg.kernels_
+)
+del custom_op_module
 
 from oneflow.compatible.single_client.python.framework import register_class_method_util
 
