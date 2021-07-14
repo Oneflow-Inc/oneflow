@@ -145,6 +145,10 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   ~UserOpInferContext() override = default;
 
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
@@ -485,7 +489,7 @@ class UserOpInferParallelDistributionFnContext
 };
 
 Maybe<void> UserOp::InitFromOpConf() {
-  CHECK_OR_RETURN(op_conf().has_user_conf());
+  CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
     EnrollRepeatedInputBn(pair.first, pair.second.s_size());
     for (int32_t i = 0; i < pair.second.s_size(); ++i) {
