@@ -949,11 +949,5 @@ class TestSeluModule(flow.unittest.TestCase):
             test_module_against_pytorch(test_case, "nn.SELU", device=device, n=2)
 
 
-class TestSoftSignModule(flow.unittest.TestCase):
-    def test_softsign_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Softsign", device=device, n=2)
-
-
 if __name__ == "__main__":
     unittest.main()
