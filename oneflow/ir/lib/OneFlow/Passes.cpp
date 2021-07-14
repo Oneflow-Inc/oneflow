@@ -146,8 +146,6 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
           SmallVector<::mlir::Value, 2>({cast_op_.y(), entry_block.getArgument(1)}),
           /* attributes */ mul_op->getAttrs());
       builder.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
-      // TODO: decare terminator
-      // TODO: skip outline functions when translating beck to job
       jit_module->push_back(function);
       jit_module->dump();
 
