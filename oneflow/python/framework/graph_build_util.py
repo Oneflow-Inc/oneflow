@@ -58,10 +58,10 @@ class JobBuildAndInferCtx(object):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(self._job_conf)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # TODO(xuxiaoyu): open job optimization pass
+        # oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
         if exc_type is None:
-            # TODO(xuxiaoyu): open job optimization pass
-            # oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
-            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
             return True
         else:
             return False
@@ -75,13 +75,16 @@ class BlockScopeContext(object):
         self._new_scope = new_scope
 
     def __enter__(self):
+        print(">>>>>>>>>>> enter ", self._new_scope.symbol_id)
+        print("proto ", scope_to_proto(self._new_scope))
         oneflow._oneflow_internal.GlobalScopeStackPush(self._new_scope)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        print("<<<<<<<<<<<< exit", self._new_scope.symbol_id)
+        assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope
+        oneflow._oneflow_internal.GlobalScopeStackPop()
+        assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope
         if exc_type is None:
-            assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope
-            oneflow._oneflow_internal.GlobalScopeStackPop()
-            assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope
             return True
         else:
             return False

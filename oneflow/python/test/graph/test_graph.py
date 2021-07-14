@@ -229,9 +229,8 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.conv1 = flow.nn.Conv2d(1, 1, 5)
-                self.relu = flow.nn.ReLU()
 
-            def forward(self, x):
+            def forward(self):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
 
@@ -244,8 +243,7 @@ class TestGraph(flow.unittest.TestCase):
                 ].at_int64
                 test_case.assertEqual(stage_int, 0)
 
-                x = self.conv1(x)
-                x = self.relu(x)
+                x = self.conv1.weight
                 return x
 
         class SubModule1(flow.nn.Module):
@@ -256,7 +254,7 @@ class TestGraph(flow.unittest.TestCase):
                     "dummy_buff", flow.Tensor(1, 4),
                 )
 
-            def forward(self, x):
+            def forward(self):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
 
@@ -281,8 +279,13 @@ class TestGraph(flow.unittest.TestCase):
                 name_in_scope = ".".join(prefixes)
                 test_case.assertEqual(name, name_in_scope)
 
-                x = oneflow.F.flatten(x, 1)
-                x = self.fc1(x) + self.dummy_buff
+                x = self.dummy_buff
+                dummy_buff_scope_proto = graph_build_util.scope_to_proto(
+                    self._buffers["dummy_buff"].scope
+                )
+                test_case.assertEqual(
+                    dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
+                )
                 return x
 
         class CustomModule1(flow.nn.Module):
@@ -291,14 +294,14 @@ class TestGraph(flow.unittest.TestCase):
                 self.layer = SubModule()
                 self.layer1 = SubModule1()
 
-            def forward(self, x):
-                x = self.layer(x)
-                x = self.layer1(x)
-                return x
+            def forward(self):
+                x = self.layer()
+                y = self.layer1()
+                return x, y
 
         m = CustomModule1()
 
-        class CustomGraph(flow.nn.Graph):
+        class CustomGraph1(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
@@ -307,27 +310,28 @@ class TestGraph(flow.unittest.TestCase):
                 self.m.layer.config.activation_checkpointing = True
                 self.m.layer1.config.stage_id = 1
 
-            def build(self, x):
-                return self.m(x)
+            def build(self):
+                return self.m()
 
-        g = CustomGraph()
+        g = CustomGraph1()
         print(repr(g))
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        z = g.build(x)
+        z = g._compile()
+        print("z: ", z)
 
-        for s in g._state():
-            with s.scope_context():
-                scope = oneflow.current_scope()
-                scope_proto = graph_build_util.scope_to_proto(scope)
+        # for s in g._state():
+        #     with s.scope_context():
+        #         scope = oneflow.current_scope()
+        #         scope_proto = graph_build_util.scope_to_proto(scope)
 
-                name = s.name_prefix + s.name
-                prefixes = []
-                for prefix in scope_proto.scope_op_name_prefixes:
-                    prefixes.append(prefix)
-                name_in_scope = ".".join(prefixes)
-                test_case.assertEqual(name, name_in_scope)
-                print(repr(s), "state scope name ", name_in_scope)
+        #         name = s.name_prefix + s.name
+        #         prefixes = []
+        #         for prefix in scope_proto.scope_op_name_prefixes:
+        #             prefixes.append(prefix)
+        #         name_in_scope = ".".join(prefixes)
+        #         test_case.assertEqual(name, name_in_scope)
+        #         print(repr(s), "state scope name ", name_in_scope)
 
 
 if __name__ == "__main__":

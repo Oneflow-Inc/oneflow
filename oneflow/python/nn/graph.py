@@ -104,13 +104,17 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with parameter and buffer
             for s in self._state():
-                with s.scope_context():
-                    # TODO(): build lazy tensor for parameter and buffer
-                    # s.lazy_origin = expr(s.origin)
-                    pass
+
+                def to_lazy():
+                    # TODO(): Replace repr with OpExpr(s.origin)
+                    lazy_tensor = repr(s)
+                    return lazy_tensor
+
+                s.set_lazy_origin_lambda(to_lazy)
             outputs = self.build(*args)
 
         self._is_compiled = True
+        return outputs
 
     def _launch(self):
         # TODO(xuxiaoyu)
@@ -226,9 +230,11 @@ class Block(object):
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
             self._lazy_origin = None
+            self._lazy_origin_lambda = None
         elif isinstance(value, Tensor):
             self._type = BlockType.BUFFER
             self._lazy_origin = None
+            self._lazy_origin_lambda = None
         else:
             raise NotImplementedError()
 
@@ -251,16 +257,21 @@ class Block(object):
     @property
     def lazy_origin(self):
         assert (
-            self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin
 
-    @lazy_origin.setter
-    def lazy_origin(self, lazy_tensor=None):
+    def lazy_origin_lambda(self):
         assert (
-            self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin"
-        self._lazy_origin = lazy_tensor
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
+        return self._lazy_origin_lambda
+
+    def set_lazy_origin_lambda(self, fn=None):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
+        self._lazy_origin_lambda = fn
 
     @property
     def prev_scope(self):
@@ -372,23 +383,31 @@ class Block(object):
             if "_parameters" in self.__dict__:
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
+                    p_block = _parameters[name]
                     if self._is_executing_forward:
                         if graph_build_util.lazy_mode.is_enabled():
-                            return _parameters[name].lazy_origin
+                            # Create and return lazy tensor
+                            with p_block.scope_context():
+                                p_block._lazy_origin = p_block._lazy_origin_lambda()
+                            return p_block._lazy_origin
                         else:
-                            return _parameters[name].origin
+                            return p_block.origin
                     else:
-                        return _parameters[name]
+                        return p_block
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
+                    b_block = _buffers[name]
                     if self._is_executing_forward:
                         if graph_build_util.lazy_mode.is_enabled():
-                            return _buffers[name].lazy_origin
+                            # Create and return lazy tensor
+                            with b_block.scope_context():
+                                b_block._lazy_origin = b_block._lazy_origin_lambda()
+                            return b_block._lazy_origin
                         else:
-                            return _buffers[name].origin
+                            return b_block.origin
                     else:
-                        return _buffers[name]
+                        return b_block
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
 
