@@ -64,7 +64,7 @@ class CustomModule(flow.nn.Module):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGraph(flow.unittest.TestCase):
-    def _test_add_nested_module(test_case):
+    def test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
@@ -86,24 +86,26 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.name, g._c_nn_graph.name)
         # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
+        test_case.assertEqual(g.m.type, "MODULE")
         # g.m.name is "m"
         test_case.assertEqual(g.m.name, "m")
-        # g.m.dummy_buff is Tensor, Graph.build(...) need buffer to be Tensor
-        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.Tensor))
-        # g.m._buffers["dummy_buff"] is Block
-        test_case.assertTrue(
-            isinstance(g.m._buffers["dummy_buff"], flow.nn.graph.Block)
-        )
+        # g.m.dummy_buff is Block
+        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Block))
+        test_case.assertEqual(g.m.dummy_buff.type, "BUFFER")
+
         # conv1 is Block
         test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
         # conv1.name is "conv1"
         test_case.assertEqual(g.m.layer.conv1.name, "conv1")
+        # conv1.weight is Block
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Block))
+        test_case.assertEqual(g.m.layer.conv1.weight.type, "PARAMETER")
         # conv1.weight is Tensor, Graph.build(...) need weight to be Tensor
-        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
-        # conv1._parameters["weight"] is Block
+        g.m.layer.conv1._is_executing_forward = True
         test_case.assertTrue(
-            isinstance(g.m.layer.conv1._parameters["weight"], flow.nn.graph.Block)
+            isinstance(g.m.layer.conv1.weight, flow.Tensor)
         )
+        g.m.layer.conv1._is_executing_forward = False
         # conv1.kernel_size is original data in original module
         test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
 
@@ -112,7 +114,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def _test_graph_config(test_case):
+    def test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -134,12 +136,12 @@ class TestGraph(flow.unittest.TestCase):
 
         # check _named_state get the right tensor
         for n, t in g._named_state():
-            test_case.assertEqual(id(eval("g." + n)), id(t))
+            test_case.assertEqual(id(eval("g." + n + ".origin")), id(t))
 
         # print repr of nn.Graph
         print(repr(g))
 
-    def _test_graph_name(test_case):
+    def test_graph_name(test_case):
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -173,7 +175,7 @@ class TestGraph(flow.unittest.TestCase):
         for i in range(0, 3):
             create_graph(i)
 
-    def _test_graph_build_ctx(test_case):
+    def test_graph_build_ctx(test_case):
 
         # check lazy_mode
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)

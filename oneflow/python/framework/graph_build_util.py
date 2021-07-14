@@ -110,14 +110,14 @@ def _make_new_scope(prev_scope, block):
 
 
     new_scope = None
-    def BuildScope(builder):
+    def build_scope(builder):
         nonlocal new_scope
         new_scope = builder.BuildScopeByProtoSetter(
             prev_scope, scope_proto_setter
         )
         assert new_scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildScope)
+    oneflow._oneflow_internal.deprecated.LogicalRun(build_scope)
     return new_scope
 
 def scope_to_proto(scope):

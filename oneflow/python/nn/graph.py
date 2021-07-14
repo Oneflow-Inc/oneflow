@@ -206,6 +206,7 @@ class Block(object):
 
         if isinstance(value, Module):
             self._type = BlockType.MODULE
+            self._is_executing_forward = False 
             self._modules = OrderedDict()
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
@@ -217,8 +218,10 @@ class Block(object):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
+            self._lazy_origin = None
         elif isinstance(value, Tensor):
             self._type = BlockType.BUFFER
+            self._lazy_origin = None
         else:
             raise NotImplementedError()
 
@@ -237,6 +240,16 @@ class Block(object):
     @property
     def origin(self):
         return self._origin
+    
+    @property
+    def lazy_origin(self):
+        assert self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER, "Only Parameter or Buffer Block has lazy_origin"
+        return self._lazy_origin
+
+    @lazy_origin.setter
+    def lazy_origin(self, lazy_tensor = None):
+        assert self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER, "Only Parameter or Buffer Block has lazy_origin"
+        self._lazy_origin = lazy_tensor
 
     def scope_context(self):
         return graph_build_util.BlockScopeContext(self)
@@ -250,6 +263,8 @@ class Block(object):
 
     def forward(self, *args):
         assert self._type == BlockType.MODULE
+        self._is_executing_forward = True
+        # TODO(xuxiaoyu): only build scope in lazy mode
         with self.scope_context():
             # test start
             scope = oneflow.current_scope()
@@ -260,6 +275,7 @@ class Block(object):
             scope = oneflow.current_scope()
 
             result = self._origin.__class__.forward(self, *args)
+        self._is_executing_forward = False
         return result
 
     def __setattr__(self, name: str, value=None) -> None:
@@ -304,15 +320,23 @@ class Block(object):
             if "_parameters" in self.__dict__:
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
-                    # TODO(): return block when need config
-                    # return _parameters[name]
-                    return _parameters[name].origin
+                    if self._is_executing_forward:
+                        if graph_build_util.lazy_mode.is_enabled():
+                            return _parameters[name].lazy_origin
+                        else:
+                            return _parameters[name].origin
+                    else:
+                        return _parameters[name]
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
-                    # TODO(): return block when need config
-                    # return _buffers[name]
-                    return _buffers[name].origin
+                    if self._is_executing_forward:
+                        if graph_build_util.lazy_mode.is_enabled():
+                            return _buffers[name].lazy_origin
+                        else:
+                            return _buffers[name].origin
+                    else:
+                        return _buffers[name]
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
 
