@@ -114,18 +114,21 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
 
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            spatial_size=np.random.randint(10, 20)
+            spatial_size = np.random.randint(10, 20)
             test_module_against_pytorch(
                 test_case,
                 "nn.ConstantPad2d",
                 extra_annotations={"padding": int, "value": float},
                 extra_generators={
-                    "input": random_tensor(ndim=4, dim2=spatial_size, dim3=spatial_size),
+                    "input": random_tensor(
+                        ndim=4, dim2=spatial_size, dim3=spatial_size
+                    ),
                     "padding": random(0, 6),
-                    "value": random(0, 6)
+                    "value": random(0, 6),
                 },
                 device=device,
             )
+
 
 if __name__ == "__main__":
     unittest.main()
