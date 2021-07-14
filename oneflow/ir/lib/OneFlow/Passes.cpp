@@ -127,7 +127,6 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
           ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
       // create a function to be lowered
-      // TODO: handle alias here
       auto func_type =
           rewriter.getFunctionType(created->getOperandTypes(), created->getResultTypes());
       auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
