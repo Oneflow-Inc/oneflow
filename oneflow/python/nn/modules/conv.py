@@ -186,6 +186,7 @@ class Conv1d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
         self.padding = _single(padding)
@@ -266,8 +267,6 @@ class Conv1d(Module):
             s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
             s += ", dilation={dilation}"
-        if self.output_padding != (0,) * len(self.output_padding):
-            s += ", output_padding={output_padding}"
         if self.groups != 1:
             s += ", groups={groups}"
         if self.bias is None:
@@ -413,6 +412,7 @@ class Conv2d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
         self.padding = _pair(padding)
@@ -494,8 +494,6 @@ class Conv2d(Module):
             s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
             s += ", dilation={dilation}"
-        if self.output_padding != (0,) * len(self.output_padding):
-            s += ", output_padding={output_padding}"
         if self.groups != 1:
             s += ", groups={groups}"
         if self.bias is None:
