@@ -14,6 +14,15 @@ mkdir -p $test_tmp_dir
 cp -r $test_dir $test_tmp_dir
 cd ${test_tmp_dir}/$(basename $test_dir)
 
+gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+export ONEFLOW_TEST_DEVICE_NUM=1
+python3 $src_dir/ci/test/parallel_run.py \
+    --gpu_num=${gpu_num} \
+    --dir=${PWD} \
+    --timeout=1 \
+    --verbose \
+    --chunk=1
+
 export ONEFLOW_TEST_DEVICE_NUM=2
 for f in test/modules/test_*.py
 do
