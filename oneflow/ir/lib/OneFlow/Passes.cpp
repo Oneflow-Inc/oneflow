@@ -43,7 +43,7 @@ using namespace mlir::oneflow;
 LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  // pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
   // pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
   // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
   // pm.addPass(createFuncBufferizePass());
