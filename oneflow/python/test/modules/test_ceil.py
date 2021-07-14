@@ -34,10 +34,6 @@ def _test_ceil_impl(test_case, device, shape):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestCeilModule(flow.unittest.TestCase):
     def test_ceil(test_case):
         arg_dict = OrderedDict()

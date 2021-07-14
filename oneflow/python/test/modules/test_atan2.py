@@ -102,10 +102,6 @@ def _test_atan2_backward(test_case, device):
     test_y_grad()
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAtan2(flow.unittest.TestCase):
     def test_atan2_forward(test_case):
         arg_dict = OrderedDict()
