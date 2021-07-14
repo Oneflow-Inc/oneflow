@@ -42,9 +42,9 @@ class ScpDataset(Data.Dataset):
 class TestNumpyDataset(flow.unittest.TestCase):
     def test_numpy_dataset(test_case):
         dataset = ScpDataset()
-        dataloader = Data.DataLoader(dataset, batch_size=32, shuffle=True)
+        dataloader = Data.DataLoader(dataset, batch_size=16, shuffle=True)
         for X in dataloader:
-            print(X.shape)
+            test_case.assertEqual(X.shape, flow.Size([16, 200, 81]))
 
 
 if __name__ == "__main__":

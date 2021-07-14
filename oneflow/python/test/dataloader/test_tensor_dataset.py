@@ -45,13 +45,11 @@ class TestTensorDataset(flow.unittest.TestCase):
         true_b = 4.2
 
         net = LinearNet(num_inputs)
-        print(net)
         flow.nn.init.normal_(net.linear.weight, mean=0, std=0.01)
         flow.nn.init.constant_(net.linear.bias, val=0)
 
         loss = nn.MSELoss()
         optimizer = flow.optim.SGD(net.parameters(), lr=0.03)
-        print(optimizer)
 
         features = flow.tensor(
             np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float
@@ -62,9 +60,9 @@ class TestTensorDataset(flow.unittest.TestCase):
         )
 
         batch_size = 10
-        # 将训练数据的特征和标签组合
+        # combine features and labels
         dataset = Data.TensorDataset(features, labels)
-        # 随机读取小批量
+        # random get small batch
         data_iter = Data.DataLoader(dataset, batch_size, shuffle=True, num_workers=0)
 
         num_epochs = 10
@@ -75,7 +73,8 @@ class TestTensorDataset(flow.unittest.TestCase):
                 optimizer.zero_grad()
                 l.backward()
                 optimizer.step()
-            print("epoch %d, loss: %f" % (epoch, l.numpy()))
+            if epoch == num_epochs:
+                test_case.assertLess(l.numpy(), 0.00019)
 
 
 if __name__ == "__main__":
