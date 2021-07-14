@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_
-#define ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_
-
+#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
@@ -27,43 +27,25 @@ namespace functional {
 
 namespace impl {
 
-class UnaryFunctor {
+class ImageFlipFuntor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  ImageFlipFuntor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("image_flip").Input("in").Input("flip_code").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& flip_code) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, flip_code});
   }
 
- protected:
-  UnaryFunctor() = default;
-  virtual ~UnaryFunctor() = default;
-
-  std::shared_ptr<OpExpr> op_;
-};
-
-class InplaceableUnaryFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
-    if (inplace) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get()));
-      return outputs->at(0);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
-    }
-  }
-
- protected:
-  InplaceableUnaryFunctor() = default;
-  virtual ~InplaceableUnaryFunctor() = default;
-
+ private:
   std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
 
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::ImageFlipFuntor>("ImageFlip"); };
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_

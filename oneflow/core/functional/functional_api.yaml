@@ -128,8 +128,12 @@
   signature: "Tensor ReciprocalNoNan(Tensor x)"
   bind_python: True
 
+- name: "image_flip"
+  signature: "Tensor ImageFlip(Tensor x, Tensor flip_code)"
+  bind_python: True
+
 - name: "sin"
-  signature: "Tensor Sin(Tensor x)"
+  signature: "Tensor Sin(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "cos"
