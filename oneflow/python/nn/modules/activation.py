@@ -942,6 +942,34 @@ class Mish(Module):
         return flow.F.mish(x)
 
 
+@oneflow_export("mish")
+@experimental_api
+def mish_op(x):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+    
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+    
+    See :mod:`oneflow.experimental.nn.Mish`
+    """
+
+    return Mish()(x)
+
+
+@register_tensor_op("mish")
+@experimental_api
+def mish_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.mish`
+    """
+
+    return Mish()(x)
+
+
 @oneflow_export("nn.SiLU")
 @experimental_api
 class SiLU(Module):
@@ -977,7 +1005,7 @@ class SiLU(Module):
 
         >>> out = silu(input)
         >>> out
-        tensor([0.9277, 1.0908, 1.0881], dtype=oneflow.float32)
+        tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):
@@ -985,6 +1013,40 @@ class SiLU(Module):
 
     def forward(self, x):
         return flow.F.silu(x)
+
+
+@oneflow_export("silu")
+@experimental_api
+def silu_op(x):
+    r"""SiLU(Swish) activation:
+
+    .. math::
+        \text{SiLU}(x) = x * sigmoid(x)
+
+    .. note::
+        See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
+        where the SiLU (Sigmoid Linear Unit) was originally coined, and see
+        `Sigmoid-Weighted Linear Units for Neural Network Function Approximation
+        in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
+        a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
+        where the SiLU was experimented with later.
+
+    See :mod:`oneflow.experimental.nn.SiLU`
+
+    """
+
+    return SiLU()(x)
+
+
+@register_tensor_op("silu")
+@experimental_api
+def silu_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.silu`
+    """
+
+    return SiLU()(x)
 
 
 @oneflow_export("nn.SELU")
@@ -1059,6 +1121,16 @@ def selu_op(x):
     return SELU()(x)
 
 
+@register_tensor_op("selu")
+@experimental_api
+def selu_op_tensor(x):
+    r"""
+    selu() -> Tensor
+    See :func:`oneflow.experimental.selu`
+    """
+    return SELU()(x)
+
+
 @oneflow_export("nn.Softsign")
 @experimental_api
 class Softsign(Module):
@@ -1097,6 +1169,32 @@ class Softsign(Module):
 
     def forward(self, x):
         return flow.F.softsign(x)
+
+
+@oneflow_export("softsign")
+@experimental_api
+def softsign_op(x):
+    r"""The SoftSign activation.
+
+    The formula is: 
+    
+    .. math::  
+        SoftSign(x) = \frac{x}{1 + |x|}
+
+    See :mod:`oneflow.experimental.nn.Softsign`
+    """
+
+    return Softsign()(x)
+
+
+@register_tensor_op("softsign")
+@experimental_api
+def softsign_op_tensor(x):
+    r"""
+    softsign() -> Tensor
+    See :func:`oneflow.experimental.softsign`
+    """
+    return Softsign()(x)
 
 
 if __name__ == "__main__":
