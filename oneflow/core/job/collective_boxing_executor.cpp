@@ -497,8 +497,9 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
     auto& device_id2device_ctx_ = stream_id2device_id2device_ctx_.at(stream_id);
     for (const int64_t device_id : local_device_ids) {
       if (device_id2device_ctx_.find(device_id) == device_id2device_ctx_.end()) {
-        device_id2device_ctx_.emplace(device_id, std::make_unique<NcclDeviceCtx>());
-        auto& device_ctx = device_id2device_ctx_.at(device_id);
+        auto& device_ctx =
+            device_id2device_ctx_.emplace(device_id, std::make_unique<NcclDeviceCtx>())
+                .first->second;
         OF_CUDA_CHECK(cudaSetDevice(device_id));
         OF_CUDA_CHECK(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
                                                    cuda_stream_greatest_priority));

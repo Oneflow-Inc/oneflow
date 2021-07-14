@@ -100,7 +100,7 @@ class CollectiveBoxingExecutor final {
 
   std::map<Backend, std::unique_ptr<CollectiveBoxingExecutorBackend>> backends_;
   HashMap<std::string, RequestState> name2request_state_;
-  std::map<int64_t, std::vector<GroupState>> job_id2group_states_;
+  HashMap<int64_t, std::vector<GroupState>> job_id2group_states_;
   int64_t current_job_id_ = -1;
   int64_t current_group_idx_in_job_ = -1;
 };
