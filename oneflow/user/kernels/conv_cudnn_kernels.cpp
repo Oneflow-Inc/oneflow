@@ -314,7 +314,7 @@ REGISTER_USER_KERNEL("conv_filter_grad")
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
       const auto& dy = ctx->InputTensorDesc("dy", 0);
-      const auto& x = ctx->InputTensorDesc("x", 0); 
+      const auto& x = ctx->InputTensorDesc("x", 0);
       const auto* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
       const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
       return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(
