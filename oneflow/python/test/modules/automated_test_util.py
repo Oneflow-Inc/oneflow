@@ -164,6 +164,10 @@ def test_against_pytorch(
     def has_full_args_spec(callable):
         try:
             spec = inspect.getfullargspec(callable)
+            if spec.defaults == None:
+                spec.defaults = []
+            if spec.kwonlydefaults == None:
+                spec.kwonlydefaults = []
             return True
         except Exception:
             return False
