@@ -125,7 +125,9 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
   mirrored_tensor->set_requires_grad(requires_grad);
   mirrored_tensor->set_is_leaf(!requires_grad);
-  outputs->at(0) = mirrored_tensor;
+  const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(mirrored_tensor);
+  CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
+  outputs->at(0) = out_tensor;
   return Maybe<void>::Ok();
 }
 

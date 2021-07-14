@@ -107,6 +107,10 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
         return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
             .GetPtrOrThrow();
       }));
+  // NOTE(chengcheng): export for Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
+  PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");
+  PybindExportOpExpr<one::FeedVariableOpExpr, cfg::FeedVariableOpConf>(m, "FeedVariableOpExpr");
+  PybindExportOpExpr<one::FetchOutputOpExpr, cfg::FetchOutputOpConf>(m, "FetchOutputOpExpr");
 }
 
 }  // namespace oneflow

@@ -107,7 +107,10 @@ class LazyInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
 
  private:
-  DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
+  DECLARE_NORMAL_APPLY_FUNC(UserOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedInputOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
+  DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 

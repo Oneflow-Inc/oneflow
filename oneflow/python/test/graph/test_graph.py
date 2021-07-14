@@ -14,11 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os
 
 import numpy as np
 
-import oneflow.experimental as flow
+# To enable MultiClient
+os.environ["MASTER_ADDR"] = "127.0.0.1"
+os.environ["MASTER_PORT"] = "12139"
+os.environ["WORLD_SIZE"] = "1"
+os.environ["RANK"] = "0"
+os.environ["LOCAL_RANK"] = "0"
+
 import oneflow
+import oneflow.experimental as flow
+import oneflow.python.framework.graph_build_util as graph_build_util
 
 
 class SubModule(flow.nn.Module):
@@ -73,6 +82,8 @@ class TestGraph(flow.unittest.TestCase):
 
         # Graph init
         g = CustomGraph()
+        # check _c_nn_graph init
+        test_case.assertEqual(g.name, g._c_nn_graph.name)
         # g.m is Block
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         # g.m.name is "m"
@@ -128,19 +139,89 @@ class TestGraph(flow.unittest.TestCase):
         # print repr of nn.Graph
         print(repr(g))
 
-    def test_graph_compile(test_case):
+    def test_graph_name(test_case):
+        class ACustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return x
+
+        class BCustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                return x
+
+        class CBCustomGraph(BCustomGraph):
+            def __init__(self):
+                super().__init__()
+
+        def create_graph(cnt):
+            a = ACustomGraph()
+            test_case.assertEqual(a.name, "ACustomGraph_" + str(cnt))
+            b = BCustomGraph()
+            test_case.assertEqual(b.name, "BCustomGraph_" + str(cnt))
+            cb = CBCustomGraph()
+            test_case.assertEqual(cb.name, "CBCustomGraph_" + str(cnt))
+
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+        flow.nn.Graph._child_init_cnt.clear()
+        for i in range(0, 3):
+            create_graph(i)
+
+    def test_graph_build_ctx(test_case):
+
+        # check lazy_mode
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+        with graph_build_util.lazy_mode.gard(True):
+            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+            with graph_build_util.lazy_mode.gard(False):
+                test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+            test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.m = CustomModule()
                 self.config.enable_auto_mixed_precision(True)
 
-            def build(self, x):
-                x = self.m(x)
-                return x
+            def build(self):
+                # check lazy mode in nn.Graph._compile
+                test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
+                print("graph proto", self._graph_proto)
 
+                # check session type
+                import oneflow.python.framework.session_context as session_ctx
+                from oneflow.python.framework.multi_client_session import (
+                    MultiClientSession,
+                )
+
+                session = session_ctx.GetDefaultSession()
+                test_case.assertEqual(type(session), MultiClientSession)
+
+                # check scope
+                import oneflow.python.framework.scope_util as scope_util
+
+                scope = oneflow.current_scope()
+                scope_proto = scope_util.to_proto(scope)
+                print("cur scope in build ", scope_proto)
+                test_case.assertEqual(session.id, scope_proto.session_id)
+
+                # check job_build_and_infer_ctx
+                test_case.assertEqual(
+                    oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(),
+                    self.name,
+                )
+
+        test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraph()
-        test_case.assertEqual(g.name, g._c_nn_graph.name)
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
+        g._compile()
+        test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
 
 if __name__ == "__main__":

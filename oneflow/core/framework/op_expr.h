@@ -227,6 +227,10 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
                            Symbol<cfg::ParallelDistribution> parallel_distribution,
                            Symbol<ParallelDesc> parallel_des);
 };
+// NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
+using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;
+using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;
+using FetchOutputOpExpr = BuiltinOpExprImpl<FetchOutputOpConf>;
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;

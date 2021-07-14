@@ -43,6 +43,9 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
     return name;                                                   \
   }
 
+DEFINE_OPEXPR_OP_TYPE_NAME(FeedInputOpConf, "feed_input");
+DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
+DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
@@ -74,6 +77,9 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
     return _bool;                                               \
   }
 
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedVariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FetchOutputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
@@ -154,6 +160,11 @@ class UserOpExprInferContext : public user_op::InferContext {
 
   const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
     return user_op_expr_->indexed_output_pairs();
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
   }
 
   user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
@@ -438,6 +449,48 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(
     Symbol<ParallelDesc> parallel_desc) {
   return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(
       op_name, Symbol<cfg::ParallelDistribution>(parallel_distribution), parallel_desc));
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                            const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_feed_input_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                               const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_feed_variable_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                              const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_fetch_output_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 template<>
