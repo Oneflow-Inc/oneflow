@@ -71,6 +71,8 @@ class MlirJitKernel final : public user_op::OpKernel {
 
 REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, float)
 REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, double)
+REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int32_t)
+REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int64_t)
 
 }  // namespace
 
