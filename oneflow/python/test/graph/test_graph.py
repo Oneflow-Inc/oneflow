@@ -97,6 +97,8 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
         # conv1.name is "conv1"
         test_case.assertEqual(g.m.layer.conv1.name, "conv1")
+        # conv1.name_prefix is "m.layer."
+        test_case.assertEqual(g.m.layer.conv1.name_prefix, "m.layer.")
         # conv1.weight is Block
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Block))
         test_case.assertEqual(g.m.layer.conv1.weight.type, "PARAMETER")
@@ -258,6 +260,9 @@ class TestGraph(flow.unittest.TestCase):
             def forward(self, x):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
+                
+                # check scope symbol id
+                test_case.assertEqual(scope_proto.parent_scope_symbol_id, self.prev_scope.symbol_id)
 
                 # check scope activation checkpointing
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"]

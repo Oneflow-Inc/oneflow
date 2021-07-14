@@ -34,8 +34,9 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 
 @contextmanager
 def graph_build_context(config_proto, session):
+    prev_scope = oneflow._oneflow_internal.GetCurrentScope()
     device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
-    scope = scope_util.MakeInitialScope(
+    new_scope = scope_util.MakeInitialScope(
         config_proto,
         *device_tag_and_ids,
         None,  # TODO(): set hierarchy from user graph config
@@ -44,7 +45,7 @@ def graph_build_context(config_proto, session):
 
     with lazy_mode.gard(True):
         with JobBuildAndInferCtx(config_proto):
-            with scope_util.ScopeContext(scope):
+            with BlockScopeContext(prev_scope, new_scope):
                 yield
 
 
@@ -66,14 +67,13 @@ class JobBuildAndInferCtx(object):
             return False
 
 class BlockScopeContext(object):
-    def __init__(self, block):
-        self._block = block 
-        self._prev_scope = oneflow._oneflow_internal.GetCurrentScope()
-        assert self._prev_scope is not None
-        self._new_scope = _make_new_scope(self._prev_scope, self._block)
+    def __init__(self, prev_scope, new_scope):
+        assert prev_scope is not None
+        assert new_scope is not None
+        self._prev_scope = prev_scope
+        self._new_scope = new_scope
 
     def __enter__(self):
-        print("enter block ", self._block.name_prefix + self._block.name)
         oneflow._oneflow_internal.GlobalScopeStackPush(self._new_scope)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -81,13 +81,13 @@ class BlockScopeContext(object):
             assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope 
             oneflow._oneflow_internal.GlobalScopeStackPop()
             assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope 
-            print("exit block ", self._block.name_prefix + self._block.name)
             return True
         else:
             return False
 
-def _make_new_scope(prev_scope, block):
+def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
+    assert block is not None
    
     attr_dict = dict()
     if block.config.stage_id is not None:
@@ -106,7 +106,8 @@ def _make_new_scope(prev_scope, block):
                 name2default[attr_name],
             )
         # append name prefix
-        scope_proto.add_scope_op_name_prefixes(block.name)
+        scope_proto.clear_scope_op_name_prefixes()
+        scope_proto.add_scope_op_name_prefixes(block.name_prefix + block.name)
 
 
     new_scope = None

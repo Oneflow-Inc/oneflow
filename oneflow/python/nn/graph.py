@@ -203,6 +203,8 @@ class Block(object):
         self._type = BlockType.NONE
         self._origin = value
         self.config = BlockConfig()
+        self._scope = None
+        self._prev_scope = None
 
         if isinstance(value, Module):
             self._type = BlockType.MODULE
@@ -251,8 +253,20 @@ class Block(object):
         assert self._type == BlockType.PARAMETER or self_type == BlockType.BUFFER, "Only Parameter or Buffer Block has lazy_origin"
         self._lazy_origin = lazy_tensor
 
+    @property
+    def prev_scope(self):
+        if self._prev_scope is None:
+            self._prev_scope = oneflow._oneflow_internal.GetCurrentScope()
+        return self._prev_scope
+
+    @property
+    def scope(self):
+        if self._scope is None:
+            self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
+        return self._scope
+
     def scope_context(self):
-        return graph_build_util.BlockScopeContext(self)
+        return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
