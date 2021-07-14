@@ -5,6 +5,7 @@ message(STATUS "MLIR_DIALECT_LIBS: ${dialect_libs}")
 add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
+  Conversion/OneFlowToTosa.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
