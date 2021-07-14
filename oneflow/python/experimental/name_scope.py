@@ -24,7 +24,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_deprecate()
 def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",

@@ -175,7 +175,6 @@ def data_port(val):
     default_env_proto.data_port = val
 
 
-@oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
     r"""Set rpc use signal or not (deprecate)
 

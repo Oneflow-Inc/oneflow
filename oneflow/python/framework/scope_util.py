@@ -49,7 +49,6 @@ def api_current_scope():
     return oneflow._oneflow_internal.GetCurrentScope()
 
 
-@oneflow_deprecate()
 def deprecated_current_scope(*args, **kwargs):
     print(
         "WARNING:",
