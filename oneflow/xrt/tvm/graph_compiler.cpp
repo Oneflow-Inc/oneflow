@@ -85,7 +85,7 @@ std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Funct
   tvm::Map<tvm::Integer, tvm::Target> target_map = {
       {DLDeviceType::kDLGPU,
        tvm::Target::Create(
-           "cuda -model=1080ti")}};  // TODO(niuchong): support more devs and targets
+           "cuda -model=2080ti")}};  // TODO(niuchong): support more devs and targets
   build_fn(graph_func, target_map, tvm::Target::Create("llvm"));
   tvm::runtime::Module built_mod = get_mod_fn();
   std::string graph_json = json_fn();
@@ -124,7 +124,7 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
       if (tensor_name2expr.find(out_arg.name()) == tensor_name2expr.end()) {
         const std::string& produce_key = out_arg.meta_data().produce_key;
         tvm::relay::Expr op_expr = ctx.GetExpr4OutputName(produce_key);
-        CHECK(op_expr.defined()) << "Get an empty tvm expresion for output: " << produce_key
+        CHECK(op_expr.defined()) << "Get an empty tvm expression for output: " << produce_key
                                  << " of node: " << node->name();
         CHECK(tensor_name2expr.emplace(out_arg.name(), op_expr).second);
       }

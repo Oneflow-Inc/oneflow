@@ -925,7 +925,7 @@ def set_use_tensorrt(func_desc, value=True):
 
 @oneflow_function_config("use_tvm")
 def set_use_tvm(func_desc, value=True):
-    r"""Whether use tensorrt or not
+    r"""Whether use tvm or not
 
     Args:
         func_desc ([type]): [description]
