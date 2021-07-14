@@ -49,7 +49,7 @@ from oneflow.python.version import __version__
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
-import oneflow.python.framework.session_util as session_util
+
 import oneflow.python.framework.register_python_callback
 
 import oneflow.python_gen.__export_symbols__
@@ -73,10 +73,11 @@ from oneflow.python.framework.multi_client_session import MultiClientSession
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
+env_util.api_env_init()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
-env_util.api_env_init()
+scope_util.InitScopeStack()
 
 del env_util
 
