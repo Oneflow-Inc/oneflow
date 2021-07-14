@@ -896,6 +896,16 @@ class TestSiluModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_silu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.SiLU",
+                device=device,
+                n=2,
+                extra_generators={"inplace": constant(False)},
+            )
+
 
 def _np_selu(x):
     scale = 1.0507009873554804934193349852946
@@ -939,6 +949,16 @@ class TestSeluModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_selu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.SELU",
+                device=device,
+                n=2,
+                extra_generators={"inplace": constant(False)},
+            )
 
 
 if __name__ == "__main__":
