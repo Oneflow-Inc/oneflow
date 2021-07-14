@@ -207,12 +207,12 @@ class ScalarAdd(Module):
 @oneflow_export("sub")
 @register_tensor_op("sub")
 @experimental_api
-def _sub(x, y):
-    r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
+def _sub(input, other):
+    r"""Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
-        out = x - y
+        out = input - other
     
     For example:
 
@@ -223,39 +223,39 @@ def _sub(x, y):
         >>> flow.enable_eager_execution()
 
         # element-wise subtract
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar subtract
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(x,y).numpy()
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast subtract
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
 
     """
 
-    if isinstance(x, (int, float)):
-        return ScalarAdd(x)(ScalarMul(-1)(y))
-    elif isinstance(y, (int, float)):
-        return ScalarAdd(-1 * y)(x)
-    elif x.shape == y.shape:
+    if isinstance(input, (int, float)):
+        return ScalarAdd(input)(ScalarMul(-1)(other))
+    elif isinstance(other, (int, float)):
+        return ScalarAdd(-1 * other)(input)
+    elif input.shape == other.shape:
         # TODO: add element-wise op
-        return BroadcastSub()(x, y)
-    elif y.shape == (1,):
-        return ScalarSubByTensor()(x, y)
+        return BroadcastSub()(input, other)
+    elif other.shape == (1,):
+        return ScalarSubByTensor()(input, other)
     else:
-        return BroadcastSub()(x, y)
+        return BroadcastSub()(input, other)
 
 
 class BroadcastDiv(Module):
@@ -277,16 +277,16 @@ class ScalarDivByTensor(Module):
 @oneflow_export("div")
 @register_tensor_op("div")
 @experimental_api
-def _div(x, y):
-    r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
+def _div(input, other):
+    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
-        out = \frac{X}{Y}
+        out = \frac{input}{other}
     
     Args:
-        x (Union[int, float, flow.Tensor]): X.
-        y (Union[int, float, flow.Tensor]): Y.
+        input (Union[int, float, flow.Tensor]): input.
+        other (Union[int, float, flow.Tensor]): other.
     
     For example:
 
@@ -297,42 +297,42 @@ def _div(x, y):
         >>> flow.enable_eager_execution()
 
         # element-wise divide
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar divide
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(x,y).numpy()
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast divide
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
         >>> out.shape 
         (2, 3)
 
     """
 
-    if isinstance(x, (int, float)):
-        return ScalarMul(x)(flow.experimental.reciprocal(y))
-    elif isinstance(y, (int, float)):
-        if y == 0 or y == 0.0:
-            y = 0.0
+    if isinstance(input, (int, float)):
+        return ScalarMul(input)(flow.experimental.reciprocal(other))
+    elif isinstance(other, (int, float)):
+        if other == 0 or other == 0.0:
+            other = 0.0
         else:
-            y = 1.0 / (float(y))
-        return ScalarMul(y)(x)
-    elif x.shape == y.shape:
-        return BroadcastDiv()(x, y)
-    elif y.shape == (1,):
-        return ScalarDivByTensor()(x, y)
+            other = 1.0 / (float(other))
+        return ScalarMul(other)(input)
+    elif input.shape == other.shape:
+        return BroadcastDiv()(input, other)
+    elif other.shape == (1,):
+        return ScalarDivByTensor()(input, other)
     else:
-        return BroadcastDiv()(x, y)
+        return BroadcastDiv()(input, other)
 
 
 class Reciprocal(Module):
