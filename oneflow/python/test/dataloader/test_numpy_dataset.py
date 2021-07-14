@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.experimental as flow
-import oneflow.python.utils.data as Data
-
+import unittest
 import numpy as np
 
-flow.enable_eager_execution()
+import oneflow.experimental as flow
+import oneflow.python.utils.data as Data
 
 
 class ScpDataset(Data.Dataset):
@@ -35,8 +34,18 @@ class ScpDataset(Data.Dataset):
         return self.length
 
 
+@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestNumpyDataset(flow.unittest.TestCase):
+    def test_numpy_dataset(test_case):
+        dataset = ScpDataset()
+        dataloader = Data.DataLoader(dataset, batch_size=32, shuffle=True)
+        for X in dataloader:
+            print(X.shape)
+
+
 if __name__ == "__main__":
-    dataset = ScpDataset()
-    dataloader = Data.DataLoader(dataset, batch_size=32, shuffle=True)
-    for X in dataloader:
-        print(X.shape)
+    unittest.main()
