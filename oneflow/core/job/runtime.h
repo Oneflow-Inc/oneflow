@@ -31,8 +31,9 @@ class Runtime final {
   Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
 
  private:
-  void NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
+  void NewAllGlobal(size_t total_piece_num, bool is_experiment_phase);
   void DeleteAllGlobal();
+  Plan plan_;
 };
 
 }  // namespace oneflow

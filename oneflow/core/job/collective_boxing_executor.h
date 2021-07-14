@@ -49,12 +49,12 @@ class CollectiveBoxingExecutorBackend {
 class CollectiveBoxingExecutor final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingExecutor);
+  CollectiveBoxingExecutor() = default;
   ~CollectiveBoxingExecutor() = default;
 
   void Enqueue(const RankDesc& rank_desc, const RuntimeRequestInfo& request_info);
   void AddPlan(const Plan& plan);
   void DeletePlan(const Plan& plan);
-  void TestAddPlan(const Plan& plan);
 
  private:
   friend class Global<CollectiveBoxingExecutor>;

@@ -510,18 +510,6 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
 
 #endif  // WITH_CUDA
 
-CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan) {
-  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
-    Plan plan;
-    CHECK(plan.mutable_collective_boxing_plan()
-              ->mutable_job_id2request_set()
-              ->insert(job_id7request_set)
-              .second);
-    new_plan_.push_back(plan);
-    this->AddPlan(new_plan_.back());
-  }
-}
-
 void CollectiveBoxingExecutor::DeletePlan(const Plan& plan) {
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;

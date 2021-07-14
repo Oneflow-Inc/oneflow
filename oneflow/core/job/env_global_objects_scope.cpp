@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
 
 namespace oneflow {
 
@@ -146,6 +147,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Global<EpollCommNet>::New();
     Global<Transport>::New();
 #endif  // __linux__
+    Global<boxing::collective::CollectiveBoxingExecutor>::New();
   }
   return Maybe<void>::Ok();
 }
@@ -177,6 +179,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   google::ShutdownGoogleLogging();
 }
 
