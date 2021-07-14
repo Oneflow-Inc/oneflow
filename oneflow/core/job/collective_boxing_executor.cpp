@@ -570,13 +570,14 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
         rough_groups.back().push_back(request);
       }
     }
+    std::vector<GroupState>& group_states = job_id2group_states_[job_id];
+    CHECK_EQ(group_states.size(), 0);
     for (const auto& rough_group : rough_groups) {
       auto it = backends_.find(rough_group.front()->op_desc().backend());
       CHECK(it != backends_.end());
       auto* backend = it->second.get();
       std::vector<std::vector<const RequestDesc*>> groups;
       backend->GroupRequests(rough_group, &groups);
-      std::vector<GroupState>& group_states = job_id2group_states_[job_id];
       for (const auto& group : groups) {
         const int64_t group_id = group_states.size();
         int64_t request_id = 0;
