@@ -92,7 +92,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   ~NcclCollectiveBoxingExecutorBackend() override;
 
  private:
-  void Init(const CollectiveBoxingPlan& collective_boxing_plan) override;
+  void AddPlan(const CollectiveBoxingPlan& collective_boxing_plan) override;
   void GroupRequests(const std::vector<const RequestDesc*>& requests,
                      std::vector<std::vector<const RequestDesc*>>* groups) override;
   void ExecuteGroup(const std::vector<const RequestDesc*>& group,
@@ -139,6 +139,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
   callback_executor_pool_.reset(new ThreadPool(num_devices_));
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
   num_streams_ = collective_boxing_conf_.nccl_num_streams();
+  stream_id2device_id2device_ctx_.resize(num_streams_);
   CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
   fusion_threshold_ = collective_boxing_conf_.nccl_fusion_threshold_mb() * 1024 * 1024;
   event_list_poll_thread_ = std::thread([this]() {
@@ -434,7 +435,8 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   }
 }
 
-void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& collective_boxing_plan) {
+void NcclCollectiveBoxingExecutorBackend::AddPlan(
+    const CollectiveBoxingPlan& collective_boxing_plan) {
   CudaCurrentDeviceGuard guard;
   std::set<int64_t> local_device_ids;
   for (const auto& job_id7request_set : collective_boxing_plan.job_id2request_set()) {
@@ -490,9 +492,6 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
   }
   int cuda_stream_greatest_priority;
   OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
-  if (stream_id2device_id2device_ctx_.size() == 0) {
-    stream_id2device_id2device_ctx_.resize(num_streams_);
-  }
   for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
     auto& device_id2device_ctx_ = stream_id2device_id2device_ctx_.at(stream_id);
     for (const int64_t device_id : local_device_ids) {
@@ -539,7 +538,7 @@ std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecuto
                         std::make_unique<NcclCollectiveBoxingExecutorBackend>())
                .first;
     }
-    it->second->Init(plan.collective_boxing_plan());
+    it->second->AddPlan(plan.collective_boxing_plan());
   }
 #endif
   std::vector<int64_t> job_ids;
@@ -619,7 +618,7 @@ void CollectiveBoxingExecutor::DeletePlan(
   }
 }
 
-void CollectiveBoxingExecutor::DumpSummary(const int64_t& job_id) const {
+void CollectiveBoxingExecutor::DumpSummary(const int64_t job_id) const {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
   auto group_ls = TeePersistentLogStream::Create(StrCat("boxing/collective/job_", job_id));
   auto group_states_it = job_id2group_states_.find(job_id);

@@ -41,7 +41,7 @@ class CollectiveBoxingExecutorBackend {
   CollectiveBoxingExecutorBackend() = default;
   virtual ~CollectiveBoxingExecutorBackend() = default;
 
-  virtual void Init(const CollectiveBoxingPlan& collective_boxing_plan){};
+  virtual void AddPlan(const CollectiveBoxingPlan& collective_boxing_plan){};
   virtual void GroupRequests(const std::vector<const RequestDesc*>& requests,
                              std::vector<std::vector<const RequestDesc*>>* groups);
   virtual void ExecuteGroup(const std::vector<const RequestDesc*>& group,
@@ -62,8 +62,7 @@ class CollectiveBoxingExecutor final {
   friend class Global<CollectiveBoxingExecutor>;
   explicit CollectiveBoxingExecutor(const Plan& plan);
 
-  void Init();
-  void DumpSummary(const int64_t& job_id) const;
+  void DumpSummary(const int64_t job_id) const;
 
   struct RequestState {
     RequestState(const RequestDesc* request_desc, int64_t job_id, int64_t group_id,
