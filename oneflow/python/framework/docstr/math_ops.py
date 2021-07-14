@@ -36,7 +36,6 @@ add_docstr(
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> y1 = flow.F.sin(x1)
         >>> y1
@@ -56,7 +55,7 @@ add_docstr(
     cos(x: Tensor) -> Tensor
 
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
+
     .. math::
         \text{y}_{i} = \cos(\text{x}_{i})
 
@@ -69,7 +68,6 @@ add_docstr(
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         >>> x = flow.Tensor(x, dtype=flow.float32)
         >>> y = flow.F.cos(x)

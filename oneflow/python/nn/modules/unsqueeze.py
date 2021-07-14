@@ -51,13 +51,12 @@ def unsqueeze_op(input, dim):
         input (Tensor): the input tensor.
         dim (int): the index at which to insert the singleton dimension
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.random.rand(2, 3, 4))
         >>> y = x.unsqueeze(2)

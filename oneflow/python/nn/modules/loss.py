@@ -61,7 +61,6 @@ class L1Loss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
         >>> target = flow.Tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
@@ -147,7 +146,6 @@ class CrossEntropyLoss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(
         ...    [[-0.1664078, -1.7256707, -0.14690138],
@@ -271,7 +269,6 @@ class BCELoss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32))
         >>> target = flow.Tensor(np.array([[0, 1, 0], [1, 0, 1]]).astype(np.float32))
@@ -390,7 +387,6 @@ class NLLLoss(Module):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> import numpy as np
 
         >>> input = flow.Tensor(
@@ -555,7 +551,6 @@ class KLDivLoss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
         >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
@@ -659,7 +654,6 @@ class MSELoss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(
         ... [[-0.02557137, 0.03101675, 1.37493674],
@@ -740,7 +734,6 @@ class MarginRankingLoss(Module):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> import numpy as np
 
         >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
@@ -864,7 +857,6 @@ class CTCLoss(Module):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> import numpy as np
         >>> log_probs = np.array(
         ...             [
@@ -1011,7 +1003,6 @@ class BCEWithLogitsLoss(Module):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> import oneflow.typing as tp
 
         >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
@@ -1187,7 +1178,6 @@ class SmoothL1Loss(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32), dtype=flow.float32)
         >>> y = flow.Tensor(np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32), dtype=flow.float32)

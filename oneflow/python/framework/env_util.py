@@ -45,18 +45,12 @@ def api_all_device_placement(device_type: str) -> None:
 
 @oneflow_export("enable_eager_execution")
 def api_enable_eager_execution(val: bool = True) -> None:
-    r"""If True, job will execute in eager mode, else use lazy mode(static graph).
+    r""" deprecated. OneFlow default env is always Eager, and flow.global_function always run as lazy.
 
     Args:
-        val (bool, optional): Whether  eager execution or not.  Defaults to True.
+        val (bool, optional): Whether global_function (job) eager execution or not.  Defaults to True.
     """
-    return enable_if.unique([enable_eager_environment])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_environment(val=True):
-    return oneflow._oneflow_internal.EnableEagerEnvironment(val)
-
+    print("INFO: 'oneflow.enable_eager_execution()' is deprecated, has no effect and will be removed in the future.")
 
 @oneflow_export("env.init")
 def api_env_init() -> bool:

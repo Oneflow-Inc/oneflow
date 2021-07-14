@@ -71,7 +71,6 @@ class PixelShufflev2(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.PixelShuffle(upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))

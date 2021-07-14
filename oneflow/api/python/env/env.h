@@ -39,12 +39,6 @@ inline Maybe<std::string> EnvResource() {
   return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
 }
 
-inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
-  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
 
 inline Maybe<bool> IsMultiClient() {

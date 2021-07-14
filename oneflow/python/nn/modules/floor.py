@@ -44,21 +44,20 @@ def floor_op(x):
 
     Args:
         input (Tensor): the input tensor.
-        
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
         >>> output = flow.floor(input)
         >>> output.shape
         flow.Size([4])
         >>> output.numpy()
         array([-1.,  1.,  0.,  0.], dtype=float32)
-        
+
         >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
         >>> output1 = input1.floor()
         >>> output1.shape

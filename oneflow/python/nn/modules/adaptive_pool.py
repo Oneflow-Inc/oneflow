@@ -39,7 +39,6 @@ class AdaptiveAvgPool2d(Module):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))

@@ -26,7 +26,7 @@ class ReplicationPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.ReplicationPad2d.html?highlight=replicationpad2d#torch.nn.ReplicationPad2d
-    
+
     Pads the input tensor using the replication of the input boundary.
 
     Args:
@@ -46,7 +46,6 @@ class ReplicationPad2d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -139,7 +138,6 @@ class ReflectionPad2d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
@@ -149,7 +147,7 @@ class ReflectionPad2d(Module):
                   [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
                   [ 8.,  7.,  6.,  7.,  8.,  7.,  6.],
                   [ 5.,  4.,  3.,  4.,  5.,  4.,  3.]],
-        <BLANKLINE>         
+        <BLANKLINE>
                  [[14., 13., 12., 13., 14., 13., 12.],
                   [11., 10.,  9., 10., 11., 10.,  9.],
                   [14., 13., 12., 13., 14., 13., 12.],

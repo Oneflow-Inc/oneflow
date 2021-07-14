@@ -53,7 +53,6 @@ def greater_op(x, y):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

@@ -102,11 +102,10 @@ def chunk_op(input, chunks, dim):
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-       
+
         >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> of_out = []

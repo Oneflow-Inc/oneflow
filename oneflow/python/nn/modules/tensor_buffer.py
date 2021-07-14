@@ -60,7 +60,6 @@ def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[in
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)
         >>> x = flow.Tensor(x)
@@ -109,7 +108,6 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)
         >>> x = flow.Tensor(x)
@@ -117,7 +115,7 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
         >>> output = flow.tensor_buffer_to_tensor(x, instance_shape=(64, 64), dtype=flow.float)
         >>> output.shape
         flow.Size([4, 16, 64, 64])
-    
+
     """
     return TensorToTensorBuffer(instance_dims=instance_dims)(x)
 

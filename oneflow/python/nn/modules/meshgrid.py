@@ -54,7 +54,7 @@ def meshgrid_op(*inputs):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/_modules/torch/functional.html#meshgrid
-    
+
     Take :math:`N` tensors, each of which can be either scalar or 1-dimensional
     vector, and create :math:`N` N-dimensional grids, where the :math:`i` :sup:`th` grid is defined by
     expanding the :math:`i` :sup:`th` input over dimensions defined by other inputs.
@@ -74,7 +74,6 @@ def meshgrid_op(*inputs):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input1 = flow.Tensor(np.array([1, 2, 3]), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([4, 5, 6]), dtype=flow.float32)

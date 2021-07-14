@@ -22,10 +22,6 @@ inline std::string CurrentResource() { return oneflow::CurrentResource().GetOrTh
 
 inline std::string EnvResource() { return oneflow::EnvResource().GetOrThrow(); }
 
-inline void EnableEagerEnvironment(bool enable_eager_execution) {
-  return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
-}
-
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
 
 inline void InitEnv(const std::string& env_proto_str, bool is_multi_client) {

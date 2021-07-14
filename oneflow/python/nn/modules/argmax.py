@@ -73,7 +73,6 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([[1, 3, 8, 7, 2],
         ...            [1, 9, 4, 3, 2]], dtype=np.float32)

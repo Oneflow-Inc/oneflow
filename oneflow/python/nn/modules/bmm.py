@@ -43,14 +43,13 @@ def bmm_op(x, y):
     Args:
         input(oneflow.Tensor):  the first batch of matrices to be multiplied
         mat2(oneflow.Tensor): the second batch of matrices to be multiplied
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
         >>> of_out = flow.bmm(input1, input2)

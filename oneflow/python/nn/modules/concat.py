@@ -70,7 +70,6 @@ def concat_op(inputs, dim=0):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> import numpy as np
 
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

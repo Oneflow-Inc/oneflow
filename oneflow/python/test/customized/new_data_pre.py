@@ -16,7 +16,6 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 
-# flow.enable_eager_execution(True)
 flow.config.gpu_device_num(1)
 
 func_config = flow.FunctionConfig()

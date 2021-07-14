@@ -40,7 +40,6 @@ def bernoulli(input, *, generator=None, out=None):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array(
         ...    [

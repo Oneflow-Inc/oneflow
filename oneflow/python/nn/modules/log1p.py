@@ -45,7 +45,6 @@ def log1p_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
         >>> out = flow.log1p(x).numpy()
         >>> out

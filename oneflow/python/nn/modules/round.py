@@ -42,7 +42,6 @@ def round_op(x):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
         >>> out1 = flow.round(x1)
         >>> out1.numpy()

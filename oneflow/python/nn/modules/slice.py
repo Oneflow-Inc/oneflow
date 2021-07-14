@@ -45,13 +45,12 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
         x: A `Tensor`.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
         >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
@@ -81,20 +80,19 @@ class SliceUpdate(Module):
 @oneflow_export("slice_update")
 @experimental_api
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
-    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
+    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Tensor`, whose slice will be updated.
         update: A `Tensor`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
@@ -127,20 +125,19 @@ class LogicalSliceAssign(Module):
 @oneflow_export("tmp.logical_slice_assign")
 @experimental_api
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
-    r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
+    r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Tensor`, whose slice will be updated.
         update: A `Tensor`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))

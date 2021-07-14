@@ -80,7 +80,7 @@ class ConvUtil(object):
 @experimental_api
 class ConvTranspose2d(Module):
     r"""
-    
+
     Applies a 2D transposed convolution operator over an input image composed of several input planes.
 
     This module can be seen as the gradient of Conv2d with respect to its input.
@@ -105,12 +105,12 @@ class ConvTranspose2d(Module):
         - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
 
         .. math::
-              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0] 
+              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
 
                         \times (\text{kernel_size}[0] - 1) + \text{output_padding}[0] + 1
         .. math::
               W_{out} = (W_{in} - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
-              
+
                         \times (\text{kernel_size}[1] - 1) + \text{output_padding}[1] + 1
 
     Attributes:
@@ -130,7 +130,6 @@ class ConvTranspose2d(Module):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding

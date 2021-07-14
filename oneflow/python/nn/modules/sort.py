@@ -73,7 +73,6 @@ def sort_op(input, dim: int = -1, descending: bool = False):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> input = flow.Tensor(x)
@@ -98,7 +97,7 @@ def sort_op(input, dim: int = -1, descending: bool = False):
         >>> indices
         tensor([[0, 0, 1, 1, 0],
                 [1, 1, 0, 0, 1]], dtype=oneflow.int32)
- 
+
     """
     return Sort(dim=dim, descending=descending)(input)
 

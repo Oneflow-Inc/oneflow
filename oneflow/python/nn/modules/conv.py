@@ -79,9 +79,9 @@ class ConvUtil(object):
 @oneflow_export("nn.Conv1d")
 @experimental_api
 class Conv1d(Module):
-    r"""The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
-    
+
     Applies a 1D convolution over an input signal composed of several input
     planes.
 
@@ -150,14 +150,13 @@ class Conv1d(Module):
             sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
             :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
@@ -261,9 +260,9 @@ class Conv1d(Module):
 @oneflow_export("nn.Conv2d")
 @experimental_api
 class Conv2d(Module):
-    r"""The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
-    
+
     Applies a 2D convolution over an input signal composed of several input
     planes.
 
@@ -358,14 +357,13 @@ class Conv2d(Module):
             sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
             :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)

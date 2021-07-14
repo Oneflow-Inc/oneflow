@@ -45,7 +45,6 @@ def negative_op(x):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(
         ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32

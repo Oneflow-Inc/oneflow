@@ -481,13 +481,12 @@ class ImageFlip(Module):
         The result image.
 
     For example:
-    
+
     .. code-block:: python
-        
+
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array([
         ...    [[[1, 2, 3], [3, 2, 1]],

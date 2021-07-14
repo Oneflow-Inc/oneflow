@@ -45,7 +45,6 @@ def tan_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.tan(input)

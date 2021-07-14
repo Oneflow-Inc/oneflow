@@ -88,7 +88,6 @@ def expand_op(x, *sizes):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],

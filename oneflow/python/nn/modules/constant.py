@@ -87,7 +87,6 @@ def ones_op(
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> y = flow.ones(5)
         >>> y
@@ -126,7 +125,6 @@ def zeros_op(
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> y = flow.zeros(5)
         >>> y
@@ -257,7 +255,7 @@ class NewOnes(Module):
 @experimental_api
 def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     r"""
-    
+
     Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
 
     Args:
@@ -265,14 +263,13 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
         >>> y = x.new_ones((2, 2))

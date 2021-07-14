@@ -69,7 +69,6 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([[10, 2, 9, 3, 7],
         ...               [1, 9, 4, 3, 2]]).astype("float32")

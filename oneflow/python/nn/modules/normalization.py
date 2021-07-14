@@ -66,7 +66,6 @@ class GroupNorm(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(20, 6, 10, 10))
         >>> # Separate 6 channels into 3 groups
@@ -77,7 +76,7 @@ class GroupNorm(Module):
         >>> m = flow.nn.GroupNorm(1, 6)
         >>> # Activating the module
         >>> output = m(input)
-    
+
 """
 
     def __init__(
@@ -182,7 +181,6 @@ class LayerNorm(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input_arr = np.array(
         ...     [

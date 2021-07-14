@@ -36,7 +36,6 @@ import subprocess
 class _ClearDefaultSession(object):
     def setUp(self):
         oneflow.clear_default_session()
-        oneflow.enable_eager_execution(False)
 
 
 @oneflow_export("unittest.register_test_cases")
@@ -86,11 +85,6 @@ def _GetNumOfNodes(func):
     if hasattr(func, "__oneflow_test_case_num_nodes_required__") == False:
         return 1
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
-
-
-@oneflow_export("unittest.env.eager_execution_enabled")
-def eager_execution_enabled():
-    return os.getenv("ONEFLOW_TEST_ENABLE_EAGER") == "1"
 
 
 @oneflow_export("unittest.env.typing_check_enabled")
@@ -349,7 +343,6 @@ class TestCase(unittest.TestCase):
             _unittest_env_initilized = True
 
         oneflow.clear_default_session()
-        oneflow.enable_eager_execution(eager_execution_enabled())
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 

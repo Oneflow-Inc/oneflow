@@ -70,7 +70,6 @@ class Dropout(_DropoutNd):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Dropout(p=0)
         >>> arr = np.array(

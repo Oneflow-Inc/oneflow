@@ -43,7 +43,6 @@ def type_as_op(input, target):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> target = flow.Tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
@@ -77,7 +76,6 @@ def long_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.long()

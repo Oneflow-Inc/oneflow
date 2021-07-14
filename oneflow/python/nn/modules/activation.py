@@ -79,7 +79,6 @@ class PReLU(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.PReLU()
         >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
@@ -122,7 +121,6 @@ class ReLU(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> relu = flow.nn.ReLU()
         >>> ndarr = np.asarray([1, -2, 3])
         >>> x = flow.Tensor(ndarr)
@@ -168,7 +166,6 @@ class ReLU6(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -210,7 +207,6 @@ class Tanh(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -252,7 +248,6 @@ def tanh_op(x):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -293,7 +288,6 @@ class ELU(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -335,7 +329,6 @@ class GELU(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -377,7 +370,6 @@ def gelu_op(x):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -410,7 +402,6 @@ class Sigmoid(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> m = flow.nn.Sigmoid()
@@ -446,7 +437,6 @@ def sigmoid_op(x):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> out = flow.sigmoid(x)
@@ -483,7 +473,6 @@ class Hardsigmoid(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -556,7 +545,6 @@ def softmax_op(tensor, dim=None):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Softmax(dim = 2)
         >>> x = flow.Tensor(
@@ -597,7 +585,6 @@ class LogSoftmax(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.LogSoftmax(dim=1)
         >>> x = flow.Tensor(
@@ -660,7 +647,6 @@ class LogSigmoid(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -710,7 +696,6 @@ class Softplus(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -761,7 +746,6 @@ class Hardswish(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -820,7 +804,6 @@ class Hardtanh(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.Hardtanh()
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
@@ -884,7 +867,6 @@ class LeakyReLU(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.LeakyReLU(0.1)
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
@@ -924,7 +906,6 @@ class Mish(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)

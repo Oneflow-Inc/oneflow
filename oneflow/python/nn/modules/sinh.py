@@ -49,7 +49,6 @@ def sinh_op(x):
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
 
-        >>> flow.enable_eager_execution()
         >>> flow.sinh(x1).numpy()
         array([ 1.1752012,  3.6268604, 10.017875 ], dtype=float32)
         >>> flow.sinh(x2).numpy()

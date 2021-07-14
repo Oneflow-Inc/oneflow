@@ -186,7 +186,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> import oneflow.experimental as flow
         >>> from oneflow.experimental import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)

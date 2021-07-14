@@ -46,7 +46,6 @@ def acosh_op(x):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> out1 = flow.acosh(x1)
         >>> out1

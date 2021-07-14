@@ -43,7 +43,7 @@ class AvgPool1d(Module):
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding or the
         input. Sliding windows that would start in the right padded region are ignored.
-    
+
     Args:
         kernel_size: the size of the window.
         strides: the stride of the window. Default value is kernel_size.
@@ -53,7 +53,7 @@ class AvgPool1d(Module):
 
 
     # TODO: fix cuDNN bugs in pooling_1d
-    
+
     """
 
     def __init__(
@@ -102,8 +102,8 @@ class AvgPool2d(Module):
             stride=(2, 1),
         )
         x = flow.Tensor(shape=(1, 1, 10, 10))
-        of_y = of_avgpool2d(x)   
-        
+        of_y = of_avgpool2d(x)
+
     """
 
     def __init__(
@@ -163,7 +163,7 @@ class AvgPool3d(Module):
 
         out(N_i, C_j, d, h, w)  = \frac{1}{kD * kH * kW } \sum_{k=0}^{kD-1} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
                                input(N_i, C_j, stride[0] \times d + k, stride[1] \times h + m, stride[2] \times w + n)
-    
+
     If padding is non-zero, then the input is implicitly zero-padded on all three sides for padding number of points.
 
     Note:
@@ -197,7 +197,6 @@ class AvgPool3d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
@@ -414,7 +413,6 @@ class MaxPool2d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> kernel_size, stride, padding = (3, 4), (1, 1), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
@@ -554,7 +552,6 @@ class MaxPool3d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> kernel_size, stride, padding = (3, 3, 4), (1, 1, 1), (1, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)

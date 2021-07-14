@@ -59,7 +59,6 @@ def atan2_op(input, other):
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
         >>> y3 = flow.Tensor(np.array([0,1,0]))
 
-        >>> flow.enable_eager_execution()
         >>> flow.atan2(x1,y1).numpy()
         array([0.32175055, 0.7853982 , 1.2490457 ], dtype=float32)
         >>> flow.atan2(x2,y2).numpy()

@@ -39,9 +39,9 @@ class To(Module):
 @oneflow_export("to")
 @register_tensor_op("to")
 def to_op(input, *args, **kwargs):
-    r"""Performs Tensor dtype and/or device conversion. 
+    r"""Performs Tensor dtype and/or device conversion.
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
-    
+
     .. note::
         If the ``input`` Tensor already
         has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
@@ -54,14 +54,13 @@ def to_op(input, *args, **kwargs):
 
     Returns:
         oneflow.Tensor: A Tensor.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         >>> input = flow.Tensor(arr)

@@ -79,7 +79,6 @@ def transpose_op(tensor, dim0, dim1):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = flow.transpose(input, 0, 1).shape

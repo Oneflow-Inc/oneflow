@@ -27,14 +27,14 @@ class Flatten(Module):
     Args:
         start_dim: first dim to flatten (default = 1).
         end_dim: last dim to flatten (default = -1).
-    
 
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow.experimental as flow
-        
+
         input = flow.Tensor(32, 1, 5, 5)
         m = flow.nn.Flatten()
         output = m(input)
@@ -61,14 +61,13 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     Args:
         start_dim: first dim to flatten (default = 0).
         end_dim: last dim to flatten (default = -1).
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(32, 1, 5, 5)
         >>> output = input.flatten(start_dim=1)

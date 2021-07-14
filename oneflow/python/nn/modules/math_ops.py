@@ -68,19 +68,18 @@ class BroadcastMul(Module):
 @experimental_api
 def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
-    
+
     The formula is:
 
     .. math::
         out = x \times y
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         # element-wise multiply
         >>> x = flow.Tensor(np.random.randn(2,3))
@@ -100,7 +99,7 @@ def _mul(x, y):
         >>> x = flow.Tensor(np.random.randn(1,1))
         >>> y = flow.Tensor(np.random.randn(2,3))
         >>> out = flow.mul(x,y).numpy()
-        >>> out.shape 
+        >>> out.shape
         (2, 3)
 
     """
@@ -146,8 +145,8 @@ class Variance(Module):
 def variance_op(input, dim=None, keepdim=False):
     r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
-    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
-    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim`
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output
     tensor having 1 (or `len(dim)`) fewer dimension(s).
 
     Args:
@@ -164,7 +163,6 @@ def variance_op(input, dim=None, keepdim=False):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> np_arr = np.random.randn(2,3,4,5)
         >>> input = flow.Tensor(np_arr)
@@ -213,14 +211,13 @@ def _sub(x, y):
 
     .. math::
         out = x - y
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         # element-wise subtract
         >>> x = flow.Tensor(np.random.randn(2,3))
@@ -283,18 +280,17 @@ def _div(x, y):
 
     .. math::
         out = \frac{X}{Y}
-    
+
     Args:
         x (Union[int, float, flow.Tensor]): X.
         y (Union[int, float, flow.Tensor]): Y.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         # element-wise divide
         >>> x = flow.Tensor(np.random.randn(2,3))
@@ -314,7 +310,7 @@ def _div(x, y):
         >>> x = flow.Tensor(np.random.randn(1,1))
         >>> y = flow.Tensor(np.random.randn(2,3))
         >>> out = flow.div(x,y).numpy()
-        >>> out.shape 
+        >>> out.shape
         (2, 3)
 
     """
@@ -356,7 +352,6 @@ def _reciprocal(x):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         >>> out = flow.reciprocal(x)
@@ -417,7 +412,6 @@ def _add(x, y):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         # element-wise add
         >>> x = flow.Tensor(np.random.randn(2,3))
@@ -503,7 +497,6 @@ def asin_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> output.shape
@@ -535,7 +528,7 @@ def asin_op_tensor(input):
 @experimental_api
 def arcsin_op(input):
     r"""
-  
+
     Alias for :func:`oneflow.experimental.asin`
     """
     return Asin()(input)
@@ -577,7 +570,6 @@ def asinh_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution() 
         >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> output.shape
@@ -601,7 +593,7 @@ def asinh_op(input):
 @experimental_api
 def arcsinh_op(input):
     r"""
-  
+
     Alias for :func:`oneflow.experimental.asinh`
     """
     return Asinh()(input)
@@ -657,7 +649,6 @@ def sin_op(tensor):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> out1 = flow.sin(x1)
         >>> out1
@@ -680,7 +671,7 @@ def sin_op_tensor(tensor):
     sin() -> Tensor
 
     See :func:`oneflow.experimental.sin`
-    
+
     """
 
     return Sin(inplace=False)(tensor)
@@ -691,7 +682,7 @@ def sin_op_tensor(tensor):
 def inplace_sin_op_tensor(x):
     r"""
     In-place version of :func:`oneflow.experimental.sin`
-    
+
     """
 
     return Sin(inplace=True)(x)
@@ -711,7 +702,7 @@ class Cos(Module):
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
+
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
 
@@ -724,7 +715,6 @@ def cos_op(tensor):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> output = flow.cos(input).numpy()
@@ -756,15 +746,14 @@ def atan_op(tensor):
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
         flow.Size([3])
-        
+
     """
     return Atan()(tensor)
 
@@ -775,7 +764,7 @@ def atan_op_tensor(tensor):
     r"""
 
     See :func:`oneflow.experimental.atan`
-    
+
     """
     return Atan()(tensor)
 
@@ -785,7 +774,7 @@ def atan_op_tensor(tensor):
 def arctan_op(tensor):
     r"""
     Alias for :func:`oneflow.experimental.atan`
-    
+
     """
     return Atan()(tensor)
 
@@ -796,7 +785,7 @@ def arctan_op_tensor(tensor):
     r"""
 
     See :func:`oneflow.experimental.arctan`
-    
+
     """
     return Atan()(tensor)
 
@@ -815,20 +804,19 @@ class Log(Module):
 def log_op(tensor):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
-    
+
     .. math::
         y_{i} = \log_{e} (x_{i})
 
     Args:
         input (Tensor): the input tensor.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> arr = np.random.randn(2, 3, 4, 5)
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> output = flow.log(input)
@@ -885,7 +873,6 @@ def rsqrt_op(input):
 
             >>> import oneflow.experimental as flow
             >>> import numpy as np
-            >>> flow.enable_eager_execution()
 
             >>> a = flow.Tensor(np.array([1.0, 2.0, 3.0]))
             >>> out = flow.rsqrt(a).numpy()
@@ -921,7 +908,6 @@ def sqrt_op(input):
 
             >>> import oneflow.experimental as flow
             >>> import numpy as np
-            >>> flow.enable_eager_execution()
 
             >>> arr = np.array([1.0, 2.0, 3.0])
             >>> input = flow.Tensor(arr)
@@ -958,7 +944,6 @@ def square_op(input):
 
             >>> import oneflow.experimental as flow
             >>> import numpy as np
-            >>> flow.enable_eager_execution()
 
             >>> arr = np.array([1.0, 2.0, 3.0])
             >>> input = flow.Tensor(arr)
@@ -1013,8 +998,8 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
     reduce over all of them.
 
-    If keepdim is True, the output tensor is of the same size as input except in 
-    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    If keepdim is True, the output tensor is of the same size as input except in
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed,
     resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
 
     If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
@@ -1032,7 +1017,6 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array([1.0, 2.0, 3.0])
         >>> input = flow.Tensor(arr)
@@ -1083,7 +1067,6 @@ def pow_op(tensor, exponent):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
         >>> out = flow.pow(x, 2).numpy()
@@ -1095,7 +1078,7 @@ def pow_op(tensor, exponent):
         >>> out = flow.pow(x, y).numpy()
         >>> out
         array([  1.,   4.,  27., 256.], dtype=float32)
-        
+
     """
     return Pow()(tensor, exponent)
 
@@ -1145,10 +1128,9 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> input = flow.tensor(np.array([[1,2,4],[5,11,9.1]]))
-        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
-        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
+        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]]))
+        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]]))
         >>> output = flow.addmm(input, mat1, mat2)
         >>> output
         tensor([[100.68,  33.83, 126.87],
@@ -1255,7 +1237,6 @@ def clamp_op(tensor, min=None, max=None):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=0.5)
@@ -1332,7 +1313,6 @@ def cosh_op(tensor):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
         >>> input = flow.Tensor(arr, dtype=flow.float32)
@@ -1365,15 +1345,14 @@ def erf_op(input):
         x (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor   
-               
+        oneflow.Tensor: The result Tensor
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
@@ -1425,7 +1404,7 @@ class Erfc(Module):
 @register_tensor_op("erfc")
 @experimental_api
 def erfc_op(input):
-    r"""Computes the complementary error function of each element of input. The complementary error 
+    r"""Computes the complementary error function of each element of input. The complementary error
     function is defined as follows:
 
     .. math::
@@ -1443,7 +1422,6 @@ def erfc_op(input):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
@@ -1468,7 +1446,7 @@ def erfc_op(input):
         array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
                [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
                [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
-        
+
     """
     return Erfc()(input)
 
@@ -1496,26 +1474,25 @@ def ceil_op(x):
     r"""Returns a new tensor with the ceil of the elements of :attr:`x`,
     the smallest integer greater than or equal to each element.
 
-    The equation is: 
+    The equation is:
 
     .. math::
         \text{out}_{i} = \left\lceil \text{input}_{i} \right\rceil = \left\lfloor \text{input}_{i} \right\rfloor + 1
 
     Args:
         x (oneflow.Tensor): A Tensor.
-    
+
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution() 
-        
+
         >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> print(y.shape)
@@ -1576,25 +1553,24 @@ def expm1_op(x):
     of :attr:`x`.
 
 
-    The equation is: 
+    The equation is:
 
     .. math::
         y_{i} = e^{x_{i}} - 1
 
     Args:
         x (oneflow.Tensor): A Tensor.
-    
+
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution() 
-        
+
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> print(y.shape)
@@ -1703,7 +1679,6 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
         >>> values

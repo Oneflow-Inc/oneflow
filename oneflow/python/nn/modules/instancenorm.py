@@ -133,7 +133,6 @@ class InstanceNorm1d(_InstanceNorm):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
 
         >>> # Without Learnable Parameters
@@ -226,7 +225,6 @@ class InstanceNorm2d(_InstanceNorm):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
 
         >>> # Without Learnable Parameters
@@ -312,7 +310,6 @@ class InstanceNorm3d(_InstanceNorm):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
 
         >>> # Without Learnable Parameters

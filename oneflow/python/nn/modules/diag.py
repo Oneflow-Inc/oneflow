@@ -38,9 +38,9 @@ def diag_op(input, diagonal=0):
 
     Args:
         input (Tensor): the input tensor.
-        diagonal (Optional[int], 0): The diagonal to consider. 
+        diagonal (Optional[int], 0): The diagonal to consider.
             If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
-    
+
     Returns:
         oneflow.Tensor: the output Tensor.
 
@@ -50,7 +50,6 @@ def diag_op(input, diagonal=0):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array(
         ...     [
@@ -74,7 +73,7 @@ def diag_op_tensor(input, diagonal=0):
     r"""
     diag() -> Tensor
     See :func:`oneflow.experimental.diag`
-    
+
     """
 
     return Diag(diagonal)(input)

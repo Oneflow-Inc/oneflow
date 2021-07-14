@@ -64,7 +64,6 @@ def eq_op(input, other):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
         >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)

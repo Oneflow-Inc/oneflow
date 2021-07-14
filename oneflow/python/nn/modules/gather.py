@@ -78,7 +78,6 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))

@@ -60,7 +60,6 @@ def in_top_k_op(targets, predictions, k):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> targets1 = flow.Tensor(np.array([3, 1]), dtype=flow.int32)
         >>> predictions1 = flow.Tensor(np.array([[0.0, 1.0, 2.0, 3.0], [3.0, 2.0, 1.0, 0.0],]), dtype=flow.float32)
         >>> out1 = flow.in_top_k(targets1, predictions1, k=1)

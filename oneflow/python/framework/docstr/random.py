@@ -20,7 +20,7 @@ add_docstr(
     oneflow.F.bernoulli,
     r"""
     bernoulli(input, *, generator=None, out=None)
-    
+
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
@@ -38,7 +38,6 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array(
         ...    [

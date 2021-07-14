@@ -54,7 +54,6 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
         >>> out = flow.squeeze(input, dim=[1, 2]).shape

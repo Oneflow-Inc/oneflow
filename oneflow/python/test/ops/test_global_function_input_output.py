@@ -81,7 +81,6 @@ def _test_input_ndarray_not_contiguous(test_case, shape):
 # def test_eager_system_op(test_case):
 
 #     flow.clear_default_session()
-#     flow.enable_eager_execution()
 
 #     input = np.random.rand(5, 4).astype(np.single)
 
@@ -101,7 +100,6 @@ def _test_input_ndarray_not_contiguous(test_case, shape):
 class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_lazy_input_output(test_case):
         flow.clear_default_session()
-        flow.enable_eager_execution(False)
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -127,7 +125,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_output(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -145,7 +142,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_multi_output(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -172,7 +168,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_input(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -190,7 +185,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_input_fixed(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -208,7 +202,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_multi_input(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -230,7 +223,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_eager_input_output(test_case):
 
         flow.clear_default_session()
-        flow.enable_eager_execution()
 
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())

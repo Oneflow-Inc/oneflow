@@ -33,11 +33,11 @@ class Triu(Module):
 @register_tensor_op("triu")
 @experimental_api
 def triu_op(x, diagonal=0):
-    r"""Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
+    r"""Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input,
     the other elements of the result tensor out are set to 0.
-    
+
     Args:
-        input (Tensor): the input tensor. 
+        input (Tensor): the input tensor.
         diagonal (int, optional): the diagonal to consider
 
     For example:
@@ -46,7 +46,6 @@ def triu_op(x, diagonal=0):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
         >>> flow.triu(x)

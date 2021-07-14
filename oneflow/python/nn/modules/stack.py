@@ -72,7 +72,6 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
         >>> out = flow.stack([x, y], dim = -1)

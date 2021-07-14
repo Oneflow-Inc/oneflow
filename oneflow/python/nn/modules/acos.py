@@ -46,7 +46,6 @@ def acos_op(tensor):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> arr = np.array([0.5, 0.6, 0.7])
         >>> input = flow.Tensor(arr, dtype=flow.float32)

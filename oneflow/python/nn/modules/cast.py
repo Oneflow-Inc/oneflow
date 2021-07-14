@@ -47,7 +47,6 @@ def cast_op(x, dtype):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
         >>> input = flow.Tensor(np_arr, dtype=flow.float32)

@@ -59,7 +59,6 @@ def gather_nd_op(input, index):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[1, 2,3], [4, 5,6],[7,8,9]]), dtype=flow.float)
         >>> index_1 = flow.Tensor(np.array([[0], [2]]), dtype=flow.int)

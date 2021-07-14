@@ -71,7 +71,6 @@ def tile_op(x, reps):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> x = np.array([1, 2]).astype(np.int32)
         >>> input = flow.Tensor(x, dtype=flow.int32)

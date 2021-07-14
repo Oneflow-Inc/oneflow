@@ -86,7 +86,6 @@ class Linear(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
 
         >>> m = flow.nn.Linear(20, 30, False)
