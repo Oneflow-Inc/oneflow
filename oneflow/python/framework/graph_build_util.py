@@ -75,12 +75,9 @@ class BlockScopeContext(object):
         self._new_scope = new_scope
 
     def __enter__(self):
-        print(">>>>>>>>>>> enter ", self._new_scope.symbol_id)
-        print("proto ", scope_to_proto(self._new_scope))
         oneflow._oneflow_internal.GlobalScopeStackPush(self._new_scope)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print("<<<<<<<<<<<< exit", self._new_scope.symbol_id)
         assert oneflow._oneflow_internal.GetCurrentScope() is self._new_scope
         oneflow._oneflow_internal.GlobalScopeStackPop()
         assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope

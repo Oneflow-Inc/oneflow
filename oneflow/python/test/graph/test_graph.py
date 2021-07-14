@@ -209,7 +209,6 @@ class TestGraph(flow.unittest.TestCase):
 
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
-                print("cur scope in build ", scope_proto)
                 test_case.assertEqual(session.id, scope_proto.session_id)
 
                 # check job_build_and_infer_ctx
@@ -225,7 +224,7 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
     def test_block_scope(test_case):
-        class SubModule(flow.nn.Module):
+        class SubModule0(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.conv1 = flow.nn.Conv2d(1, 1, 5)
@@ -243,7 +242,9 @@ class TestGraph(flow.unittest.TestCase):
                 ].at_int64
                 test_case.assertEqual(stage_int, 0)
 
+                # weight is not get in conv1's forward, so it will return a Block
                 x = self.conv1.weight
+                test_case.assertEqual(type(x), flow.nn.graph.Block)
                 return x
 
         class SubModule1(flow.nn.Module):
@@ -291,11 +292,11 @@ class TestGraph(flow.unittest.TestCase):
         class CustomModule1(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.layer = SubModule()
+                self.layer0 = SubModule0()
                 self.layer1 = SubModule1()
 
             def forward(self):
-                x = self.layer()
+                x = self.layer0()
                 y = self.layer1()
                 return x, y
 
@@ -306,32 +307,17 @@ class TestGraph(flow.unittest.TestCase):
                 super().__init__()
                 self.m = m
                 # config scope
-                self.m.layer.config.stage_id = 0
-                self.m.layer.config.activation_checkpointing = True
+                self.m.layer0.config.stage_id = 0
+                self.m.layer0.config.activation_checkpointing = True
                 self.m.layer1.config.stage_id = 1
 
             def build(self):
                 return self.m()
 
         g = CustomGraph1()
-        print(repr(g))
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         z = g._compile()
-        print("z: ", z)
-
-        # for s in g._state():
-        #     with s.scope_context():
-        #         scope = oneflow.current_scope()
-        #         scope_proto = graph_build_util.scope_to_proto(scope)
-
-        #         name = s.name_prefix + s.name
-        #         prefixes = []
-        #         for prefix in scope_proto.scope_op_name_prefixes:
-        #             prefixes.append(prefix)
-        #         name_in_scope = ".".join(prefixes)
-        #         test_case.assertEqual(name, name_in_scope)
-        #         print(repr(s), "state scope name ", name_in_scope)
 
 
 if __name__ == "__main__":
