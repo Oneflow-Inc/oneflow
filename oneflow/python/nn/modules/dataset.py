@@ -624,6 +624,16 @@ class ImageBatchAlign(Module):
 @oneflow_export("nn.OFRecordBytesDecoder")
 @experimental_api
 class OFRecordBytesDecoder(Module):
+    r"""This operator reads an OFrecord as bytes. The output might need
+    further decoding process like cv2.imdecode() for images and decode("utf-8")
+    for characters.
+    Args:
+        blob_name: The name of the target feature in OFRecored.
+        name: The name for this component in the graph?
+        input: the Tensor which might be provided by an OfrecordReader.
+    Returns:
+        The result bytes Tensor.
+    """
     def __init__(self, blob_name: str,name: Optional[str] = None):
         super().__init__()
         self._op = (
