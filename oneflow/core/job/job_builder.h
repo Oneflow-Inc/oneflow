@@ -70,11 +70,7 @@ class JobBuilder final {
   void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
   void SetParallelDistribution4Oba(const OpBlobArg& oba,
                                    const cfg::ParallelDistribution& parallel_distribution);
-<<<<<<< HEAD
-  Maybe<void> ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
-=======
   Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
->>>>>>> 77f9d83f07d67c0da119e2f2fb799f1dddc93bf5
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;

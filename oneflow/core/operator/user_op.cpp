@@ -489,7 +489,7 @@ class UserOpInferParallelDistributionFnContext
 };
 
 Maybe<void> UserOp::InitFromOpConf() {
-  CHECK(op_conf().has_user_conf());
+  CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
     EnrollRepeatedInputBn(pair.first, pair.second.s_size());
     for (int32_t i = 0; i < pair.second.s_size(); ++i) {

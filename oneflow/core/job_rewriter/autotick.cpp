@@ -164,11 +164,7 @@ Maybe<void> ConnectSrcSubsetTickAndOtherTick(const OperatorConf& src_subset_tick
   CHECK_OR_RETURN(src_subset_tick_op.has_src_subset_tick_conf());
   const std::string& src_lbn =
       src_subset_tick_op.name() + "/" + src_subset_tick_op.src_subset_tick_conf().out();
-<<<<<<< HEAD
-  JUST(job_builder->ForEachOperator([&](const Operator& op) {
-=======
   JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
->>>>>>> 77f9d83f07d67c0da119e2f2fb799f1dddc93bf5
     if (op.op_name() != src_subset_tick_op.name()) {
       CHECK_OR_RETURN(!op.op_conf().has_src_subset_tick_conf());
     }
@@ -176,10 +172,7 @@ Maybe<void> ConnectSrcSubsetTickAndOtherTick(const OperatorConf& src_subset_tick
     if (!mut_helper) { return Maybe<void>::Ok(); }
     if (mut_helper->IsTickInputBound() == true) { return Maybe<void>::Ok(); }
     job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(src_lbn)});
-<<<<<<< HEAD
-=======
     return Maybe<void>::Ok();
->>>>>>> 77f9d83f07d67c0da119e2f2fb799f1dddc93bf5
   }));
   return Maybe<void>::Ok();
 }
