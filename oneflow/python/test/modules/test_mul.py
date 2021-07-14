@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_mul_impl(test_case, device):
@@ -110,6 +111,30 @@ class TestMulModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_mul_against_pytorch(test_case):
+        for device in ["cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "mul",
+                extra_annotations={"other": flow.Tensor},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random_tensor(ndim=2, dim0=2, dim1=3),
+                },
+                device=device,
+            )
+
+            test_flow_against_pytorch(
+                test_case,
+                "mul",
+                extra_annotations={"other": float},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random(0, 5),
+                },
+                device=device,
+            )
 
 
 if __name__ == "__main__":

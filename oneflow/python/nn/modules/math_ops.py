@@ -66,13 +66,13 @@ class BroadcastMul(Module):
 @oneflow_export("mul")
 @register_tensor_op("mul")
 @experimental_api
-def _mul(x, y):
-    r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
+def _mul(input, other):
+    r"""Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
     
     The formula is:
 
     .. math::
-        out = x \times y
+        out = input \times other
     
     For example:
 
@@ -83,40 +83,40 @@ def _mul(x, y):
         >>> flow.enable_eager_execution()
 
         # element-wise multiply
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar mutiply
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(x,y).numpy()
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast mutiply
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.mul(x,y).numpy()
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
         >>> out.shape 
         (2, 3)
 
     """
 
-    if isinstance(x, (int, float)):
-        return ScalarMul(x)(y)
-    elif isinstance(y, (int, float)):
-        return ScalarMul(y)(x)
-    elif x.shape == y.shape:
-        return ElementwiseMul()(x, y)
-    elif x.shape == (1,):
-        return ScalarMulByTensor()(y, x)
-    elif y.shape == (1,):
-        return ScalarMulByTensor()(x, y)
+    if isinstance(input, (int, float)):
+        return ScalarMul(input)(other)
+    elif isinstance(other, (int, float)):
+        return ScalarMul(other)(input)
+    elif input.shape == other.shape:
+        return ElementwiseMul()(input, other)
+    elif input.shape == (1,):
+        return ScalarMulByTensor()(other, input)
+    elif other.shape == (1,):
+        return ScalarMulByTensor()(input, other)
     else:
-        return BroadcastMul()(x, y)
+        return BroadcastMul()(input, other)
 
 
 class Variance(Module):
