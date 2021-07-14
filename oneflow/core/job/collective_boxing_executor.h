@@ -46,6 +46,17 @@ class CollectiveBoxingExecutorBackend {
                             const std::vector<std::map<int64_t, RuntimeRequestInfo>>& ranks) = 0;
 };
 
+class CollectiveBoxingExecutorPlanToken {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingExecutorPlanToken);
+  CollectiveBoxingExecutorPlanToken(const std::vector<int64_t>& job_ids) : job_ids_(job_ids) {}
+  ~CollectiveBoxingExecutorPlanToken() = default;
+  const std::vector<int64_t>& job_ids() const { return job_ids_; }
+
+ private:
+  std::vector<int64_t> job_ids_;
+};
+
 class CollectiveBoxingExecutor final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingExecutor);
@@ -53,8 +64,8 @@ class CollectiveBoxingExecutor final {
   ~CollectiveBoxingExecutor() = default;
 
   void Enqueue(const RankDesc& rank_desc, const RuntimeRequestInfo& request_info);
-  void AddPlan(const Plan& plan);
-  void DeletePlan(const Plan& plan);
+  std::shared_ptr<const CollectiveBoxingExecutorPlanToken> AddPlan(const Plan& plan);
+  void DeletePlan(const std::shared_ptr<const CollectiveBoxingExecutorPlanToken> plan_token);
 
  private:
   friend class Global<CollectiveBoxingExecutor>;
@@ -101,7 +112,6 @@ class CollectiveBoxingExecutor final {
   std::map<int64_t, std::vector<GroupState>> job_id2group_states_;
   int64_t current_job_id_ = -1;
   int64_t current_group_idx_in_job_ = -1;
-  std::vector<Plan> new_plan_;
 };
 
 }  // namespace collective

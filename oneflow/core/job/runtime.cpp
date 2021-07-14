@@ -63,12 +63,12 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) : plan_(plan) {
-  NewAllGlobal(total_piece_num, is_experiment_phase);
+Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+  NewAllGlobal(plan, total_piece_num, is_experiment_phase);
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
-  for (const TaskProto& task : plan_.task()) {
+  for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
@@ -95,7 +95,7 @@ Runtime::~Runtime() {
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(size_t total_piece_num, bool is_experiment_phase) {
+void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
   if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
@@ -124,14 +124,15 @@ void Runtime::NewAllGlobal(size_t total_piece_num, bool is_experiment_phase) {
     }
 #endif
   }
-  Global<boxing::collective::CollectiveBoxingExecutor>::Get()->AddPlan(plan_);
+  collective_boxing_executor_plan_token_ =
+      Global<boxing::collective::CollectiveBoxingExecutor>::Get()->AddPlan(plan);
   Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New(plan_);
+  Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New();
-  Global<ThreadMgr>::Get()->AddPlan(plan_);
+  Global<ThreadMgr>::Get()->AddPlan(plan);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
-  Global<RuntimeJobDescs>::New(plan_.job_confs().job_id2job_conf());
+  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
   Global<summary::EventsWriter>::New();
 }
 
@@ -142,7 +143,8 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
-  Global<boxing::collective::CollectiveBoxingExecutor>::Get()->DeletePlan(plan_);
+  Global<boxing::collective::CollectiveBoxingExecutor>::Get()->DeletePlan(
+      collective_boxing_executor_plan_token_);
   // should be called after Global<Transport>::Delete()
   if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
 #ifdef __linux__

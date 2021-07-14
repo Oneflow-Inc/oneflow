@@ -510,23 +510,8 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
 
 #endif  // WITH_CUDA
 
-void CollectiveBoxingExecutor::DeletePlan(const Plan& plan) {
-  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
-    const int64_t job_id = job_id7request_set.first;
-    if (job_id7request_set.second.request_size() == 0) { continue; }
-    const auto& it = job_id2group_states_.find(job_id);
-    CHECK(it != job_id2group_states_.end());
-    const std::vector<GroupState>& group_states = it->second;
-    for (const auto& group_state : group_states) {
-      for (const auto& request : group_state.requests) {
-        name2request_state_.erase(request->op_desc().name());
-      }
-    }
-    job_id2group_states_.erase(job_id);
-  }
-}
-
-void CollectiveBoxingExecutor::AddPlan(const Plan& plan) {
+std::shared_ptr<const CollectiveBoxingExecutorPlanToken> CollectiveBoxingExecutor::AddPlan(
+    const Plan& plan) {
   HashMap<int32_t, int64_t> backend2count;
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     for (const auto& request : job_id7request_set.second.request()) {
@@ -545,10 +530,12 @@ void CollectiveBoxingExecutor::AddPlan(const Plan& plan) {
     it->second->Init(plan.collective_boxing_plan());
   }
 #endif
+  std::vector<int64_t> job_ids;
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const CollectiveBoxingConf collective_boxing_conf =
         Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
     const int64_t job_id = job_id7request_set.first;
+    job_ids.push_back(job_id);
     const RequestSet& request_set = job_id7request_set.second;
     std::vector<const RequestDesc*> requests;
     requests.reserve(request_set.request_size());
@@ -601,6 +588,22 @@ void CollectiveBoxingExecutor::AddPlan(const Plan& plan) {
   }
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     if (job_id7request_set.second.request_size() > 0) { DumpSummary(job_id7request_set.first); }
+  }
+  return std::make_shared<CollectiveBoxingExecutorPlanToken>(job_ids);
+}
+
+void CollectiveBoxingExecutor::DeletePlan(
+    const std::shared_ptr<const CollectiveBoxingExecutorPlanToken> plan_token) {
+  for (const auto& job_id : plan_token->job_ids()) {
+    const auto& it = job_id2group_states_.find(job_id);
+    if (it == job_id2group_states_.end()) { continue; }
+    const std::vector<GroupState>& group_states = it->second;
+    for (const auto& group_state : group_states) {
+      for (const auto& request : group_state.requests) {
+        name2request_state_.erase(request->op_desc().name());
+      }
+    }
+    job_id2group_states_.erase(job_id);
   }
 }
 
