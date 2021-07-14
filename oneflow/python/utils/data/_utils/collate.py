@@ -56,11 +56,17 @@ def default_convert(data):
     ):
         return [default_convert(d) for d in data]
     else:
-        return data
+        # NOTE: torch just return data here, and not raise any exception!
+        raise TypeError(default_convert_err_msg_format.format(elem_type))
 
 
 default_collate_err_msg_format = (
     "default_collate: batch must contain tensors, numpy arrays, numbers, "
+    "dicts or lists; found {}"
+)
+
+default_convert_err_msg_format = (
+    "default_convert: batch must contain tensors, numpy arrays, numbers, "
     "dicts or lists; found {}"
 )
 

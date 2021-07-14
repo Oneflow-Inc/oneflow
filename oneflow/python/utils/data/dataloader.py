@@ -13,12 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-r"""Definition of the DataLoader and associated iterators that subclass _BaseDataLoaderIter
-
-To support these two classes, in `./_utils` we define many utility methods and
-functions to be run in multiprocessing. E.g., the data loading worker loop is
-in `./_utils/worker.py`.
-"""
 import sys
 import traceback
 import os
@@ -227,6 +221,12 @@ class DataLoader(Generic[T_co]):
                 "num_workers option should be non-negative; "
                 "use num_workers=0 to disable multiprocessing."
             )
+
+        if num_workers >= 1:
+            warnings.warn(
+                "Not support multiprocessing dataloader yet, we will temporary set num_workers=0!"
+            )
+            num_workers = 0
 
         if timeout < 0:
             raise ValueError("timeout option should be non-negative")
@@ -501,8 +501,6 @@ class _BaseDataLoaderIter(object):
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
         return data
-
-    next = __next__  # Python 2 compatibility
 
     def __len__(self) -> int:
         return len(self._index_sampler)

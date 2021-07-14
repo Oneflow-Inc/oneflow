@@ -260,15 +260,6 @@ class ConcatDataset(Dataset[T_co]):
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
         return self.datasets[dataset_idx][sample_idx]
 
-    @property
-    def cummulative_sizes(self):
-        warnings.warn(
-            "cummulative_sizes attribute is renamed to " "cumulative_sizes",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.cumulative_sizes
-
 
 class Subset(Dataset[T_co]):
     r"""
