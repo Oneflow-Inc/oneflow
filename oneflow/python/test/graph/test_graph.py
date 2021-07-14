@@ -266,6 +266,13 @@ class TestGraph(flow.unittest.TestCase):
                 stage_int = scope_proto.attr_name2attr_value["pipeline_stage_id_hint"].at_int64
                 test_case.assertEqual(stage_int, 1)
 
+                name = self.name_prefix + self.name
+                prefixes = []
+                for prefix in scope_proto.scope_op_name_prefixes:
+                    prefixes.append(prefix)
+                name_in_scope = '.'.join(prefixes)
+                test_case.assertEqual(name, name_in_scope)
+
                 x = oneflow.F.flatten(x, 1)
                 x = self.fc1(x) + self.dummy_buff
                 return x
