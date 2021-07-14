@@ -108,8 +108,8 @@ jobs:
           sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
       - name: Download OneFlow custom clang-tidy
         run: |
-          wget https://github.com/daquexian/llvm-project/releases/download/v0.0.1/clang-tidy
-          wget https://raw.githubusercontent.com/daquexian/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
+          wget https://github.com/oneflow-inc/llvm-project/releases/download/latest/clang-tidy
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
           chmod +x clang-tidy run-clang-tidy.py
       - name: Build third party libs and generate files
         run: |
