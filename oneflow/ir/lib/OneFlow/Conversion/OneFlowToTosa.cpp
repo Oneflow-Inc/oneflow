@@ -75,12 +75,6 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
-  // target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-  //   for (auto arg : op.getArguments()) {
-  //     if (arg.getType().dyn_cast<TensorType>()) { return false; }
-  //   }
-  //   return true;
-  // });
   RewritePatternSet patterns(&getContext());
   // TODO: Add type converter
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
