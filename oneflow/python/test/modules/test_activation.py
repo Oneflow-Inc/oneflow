@@ -257,6 +257,10 @@ class TestGelu(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_gelu_impl(test_case, *arg)
 
+    def test_gelu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.GELU", device=device, n=2)
+
 
 def numpy_sigmoid(x):
     return 1.0 / (1 + np.exp(-x))
@@ -332,6 +336,18 @@ class TestSigmoid(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_sigmoid_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Sigmoid", device=device, n=2)
+
+    def test_sigmoid_flow_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "sigmoid", device=device, n=2)
+
+    def test_sigmoid_tensor_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "sigmoid", device=device, n=2)
 
 
 def _test_softmax(test_case, device):
@@ -462,6 +478,10 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_hardsigmoid_impl(test_case, *arg)
+
+    def test_hardsigmoid_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Hardsigmoid", device=device, n=2)
 
 
 def _test_logsoftmax(test_case, device):
@@ -644,6 +664,10 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_logsigmoid_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.LogSigmoid", device=device, n=2)
+
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
@@ -743,6 +767,10 @@ class TestHardswishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_hardswish_impl(test_case, *arg)
 
+    def test_hardswish_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Hardswish", device=device, n=2)
+
 
 def _np_hardtanh_grad(x):
     return np.where(x <= -2.0, 0.0, np.where(x >= 2.3, 0.0, 1.0))
@@ -819,6 +847,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
                 extra_annotations={"negative_slope": float},
                 extra_generators={"negative_slope": random(0, 6)},
                 device=device,
+                n=2,
             )
 
 
