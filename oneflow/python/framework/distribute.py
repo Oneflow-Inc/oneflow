@@ -174,7 +174,7 @@ def assert_is_valid_distribute(
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
 
-
+@oneflow_export("distributed.get_rank")
 def get_rank():
     r"""Returns the rank of current process group.
 
@@ -184,7 +184,7 @@ def get_rank():
     """
     return oneflow._oneflow_internal.GetRank()
 
-
+@oneflow_export("distributed.get_world_size")
 def get_world_size():
     r"""Returns the number of processes in the current process group.
 

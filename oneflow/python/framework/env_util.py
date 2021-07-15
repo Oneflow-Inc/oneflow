@@ -32,7 +32,7 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow._oneflow_internal
 import traceback
 
-
+@oneflow_export("env.all_device_placement")
 def api_all_device_placement(device_type: str) -> None:
     r"""Return a placement containing all devices of all machines under env.
 
@@ -281,6 +281,7 @@ def _MakeMachine(machines):
 
 
 # only used by CI
+@oneflow_export("env.init_bootstrap_confs")
 def api_init_bootstrap_confs(*val: list, **kargs) -> None:
     return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val, **kargs)
 

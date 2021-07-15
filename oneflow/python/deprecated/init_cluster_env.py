@@ -29,6 +29,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import subprocess
 
 
+@oneflow_export("deprecated.delete_worker_by_bootstrap")
 def delete_worker_by_bootstrap(ssh_port=22) -> None:
     ssh_port_arg = " -p {} ".format(ssh_port)
     bootstrap_conf_list = env_util.global_ctrl_bootstrap_confs
@@ -53,6 +54,7 @@ def delete_worker_by_bootstrap(ssh_port=22) -> None:
             print("temp run dir removed at: {}".format(bootstrap_conf.host), flush=True)
 
 
+@oneflow_export("deprecated.delete_worker_of_multi_process")
 def delete_worker_of_multi_process(run_dir) -> None:
     assert run_dir != ""
     if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):

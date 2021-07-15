@@ -23,6 +23,7 @@ from oneflow.python.framework.attr_util import convert_to_user_attr_value
 from oneflow.python.oneflow_export import oneflow_export
 
 
+@oneflow_export("builtin_op")
 class BuiltinOp(object):
     def __init__(self, op_type_name, op_name=None):
         if op_name is None:

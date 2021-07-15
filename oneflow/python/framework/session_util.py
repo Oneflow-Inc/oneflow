@@ -473,6 +473,7 @@ def api_eager_execution_enabled() -> bool:
     return oneflow._oneflow_internal.EagerExecutionEnabled()
 
 
+@oneflow_export("clear_default_session")
 def api_clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
     """

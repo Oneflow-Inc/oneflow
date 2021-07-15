@@ -122,10 +122,12 @@ def _inferface_blob_conf_proto_to_cfg(
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
 
 
+@oneflow_export("serving.ModelVersionPolicy")
 class ModelVersionPolicy(enum.Enum):
     LATEST = 1
 
 
+@oneflow_export("serving.SessionOption")
 class SessionOption(object):
     def __init__(self):
         self.device_tag = "gpu"
@@ -133,6 +135,7 @@ class SessionOption(object):
         self.is_mirrored_view = False
 
 
+@oneflow_export("serving.InferenceSession")
 class InferenceSession(object):
     class SessionStatus(enum.Enum):
         OPEN = 1
