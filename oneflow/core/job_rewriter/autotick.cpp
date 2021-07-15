@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -83,15 +84,14 @@ Maybe<void> BuildDstSubsetTickOpAndParallelConf(const HashSet<LogicalBlobId>& ti
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
-                                            const OperatorConf& src_subset_tick,
-                                            const HashSet<LogicalBlobId>& tick_lbis,
-                                            JobBuilder* job_builder) {
+Maybe<void> CreateDstSubsetTickAndSinkTicks(
+    const OperatorConf& src_subset_tick, const HashSet<LogicalBlobId>& tick_lbis,
+    JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSink) {
   OperatorConf dst_subset_tick;
   dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
       src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
-  auto* map = critical_section->mutable_machine_id2sink_tick_op_name();
   for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -113,8 +113,21 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
       sink_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, sink_tick_op));
     }
-    (*map)[machine_id] = sink_tick_op.name();
+    JUST(DoEachSink(machine_id, sink_tick_op.name()));
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
+                                            const OperatorConf& src_subset_tick,
+                                            const HashSet<LogicalBlobId>& tick_lbis,
+                                            JobBuilder* job_builder) {
+  auto* map = critical_section->mutable_machine_id2sink_tick_op_name();
+  const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
   return Maybe<void>::Ok();
 }
 
@@ -131,10 +144,9 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
-                                              OperatorConf* src_subset_tick_op,
-                                              JobBuilder* job_builder) {
-  auto* map = critical_section->mutable_machine_id2source_tick_op_name();
+Maybe<void> CreateSourceTicksAndSrcSubsetTick(
+    OperatorConf* src_subset_tick_op, JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc) {
   for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -145,7 +157,7 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
       src_tick_op.mutable_source_tick_conf()->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, src_tick_op));
     }
-    (*map)[machine_id] = src_tick_op.name();
+    JUST(DoEachSrc(machine_id, src_tick_op.name()));
     OperatorConf tick_op;
     {
       tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
@@ -156,6 +168,18 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
     src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(tick_op.name() + "/out");
   }
   JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
+                                              OperatorConf* src_subset_tick_op,
+                                              JobBuilder* job_builder) {
+  auto* map = critical_section->mutable_machine_id2source_tick_op_name();
+  const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(CreateSourceTicksAndSrcSubsetTick(src_subset_tick_op, job_builder, DoEachSrc));
   return Maybe<void>::Ok();
 }
 
@@ -421,10 +445,10 @@ Maybe<void> AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
-  auto* critical_section =
-      Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
-  critical_section->mutable_total_job_critical_section();
+Maybe<void> AutoSourceAndSinkTick(
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSink) {
   JUST(op_graph.MaybeForEachNode([&](OpNode* node) -> Maybe<void> {
     CHECK_OR_RETURN(!node->op().op_conf().has_sink_tick_conf());
     return Maybe<void>::Ok();
@@ -442,12 +466,33 @@ Maybe<void> AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_build
     return Maybe<void>::Ok();
   }));
   OperatorConf src_subset_tick = JUST(FindSrcSubsetTickOpConf(job_builder->job()));
-  JUST(CreateSourceTicksAndSrcSubsetTick(critical_section, &src_subset_tick, job_builder));
-  JUST(CreateDstSubsetTickAndSinkTicks(critical_section, src_subset_tick, tick_lbis, job_builder));
+  JUST(CreateSourceTicksAndSrcSubsetTick(&src_subset_tick, job_builder, DoEachSrc));
+  JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
+Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  auto* critical_section =
+      Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
+  critical_section->mutable_total_job_critical_section();
+  auto* src_map = critical_section->mutable_machine_id2source_tick_op_name();
+  const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*src_map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  auto* sink_map = critical_section->mutable_machine_id2sink_tick_op_name();
+  const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*sink_map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(AutoSourceAndSinkTick(op_graph, job_builder, DoEachSrc, DoEachSink));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
+                                                       JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
   JUST(ForEachInputCriticalSectionOpNodes(
       op_graph,
       [&](const HashSet<const OpNode*>& op_nodes,
@@ -458,7 +503,9 @@ Maybe<void> AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
+Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
+                                                        JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
   JUST(ForEachOutputCriticalSectionOpNodes(
       op_graph,
       [&](const HashSet<const OpNode*>& op_nodes,
