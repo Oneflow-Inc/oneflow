@@ -95,11 +95,16 @@ class OfrecordRawDecoder(Module):
         shape: Sequence[int],
         dtype: flow.dtype,
         dim1_varying_length: bool = False,
+        truncate: bool = False,
         auto_zero_padding: bool = False,
         name: Optional[str] = None,
     ):
         super().__init__()
-
+        if auto_zero_padding:
+            print(
+                """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+                """
+            )
         self._op = (
             flow.builtin_op("ofrecord_raw_decoder", name)
             .Input("in")
@@ -108,7 +113,7 @@ class OfrecordRawDecoder(Module):
             .Attr("shape", shape)
             .Attr("data_type", dtype)
             .Attr("dim1_varying_length", dim1_varying_length)
-            .Attr("auto_zero_padding", auto_zero_padding)
+            .Attr("truncate", truncate or auto_zero_padding)
             .Build()
         )
 
@@ -432,11 +437,22 @@ def raw_decoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ):
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     return OfrecordRawDecoder(
-        blob_name, shape, dtype, dim1_varying_length, auto_zero_padding, name
+        blob_name,
+        shape,
+        dtype,
+        dim1_varying_length,
+        truncate or auto_zero_padding,
+        name,
     ).forward(input_record)
 
 
