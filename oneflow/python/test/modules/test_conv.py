@@ -28,11 +28,23 @@ from automated_test_util import *
 class TestConv2d(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            spatial_size = np.random.randint(10, 20)
+            spatial_size = np.random.randint(32, 64)
             in_channel = np.random.randint(1, 129)
             test_module_against_pytorch(
                 test_case,
                 "nn.Conv2d",
+                extra_annotations={
+                    "in_channels": int,
+                    "out_channels": int,
+                    "kernel_size": int,
+                    "stride": int,
+                    "padding": int,
+                    "dilation": int,
+                    "groups": int,
+                    "padding_mode": str,
+                    "device": str,
+                    "dtype": str,
+                },
                 extra_generators={
                     "input": random_tensor(
                         ndim=4, dim1=in_channel, dim2=spatial_size, dim3=spatial_size
@@ -45,9 +57,11 @@ class TestConv2d(flow.unittest.TestCase):
                     "dilation": random(1, 3),
                     "groups": random(1, 5),
                     "padding_mode": constant("zeros"),
+                    "device": constant("float32"),
+                    "dtype": constant(device),
                 },
                 device=device,
-                rtol=1e-3,
+                rtol=1e-2,
             )
 
 

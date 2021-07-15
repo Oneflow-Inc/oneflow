@@ -28,11 +28,12 @@ from automated_test_util import *
 class TestConvTranspose2d(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            spatial_size = np.random.randint(10, 20)
+            spatial_size = np.random.randint(32, 64)
             in_channel = np.random.randint(1, 129)
             test_module_against_pytorch(
                 test_case,
                 "nn.ConvTranspose2d",
+                extra_annotations={"device": None, "dtype": None},
                 extra_generators={
                     "input": random_tensor(
                         ndim=4, dim1=in_channel, dim2=spatial_size, dim3=spatial_size
@@ -51,8 +52,11 @@ class TestConvTranspose2d(flow.unittest.TestCase):
                     "output_padding": constant(0),
                     "padding_mode": constant("zeros"),
                     "bias": constant(False),
+                    "device": constant("float32"),
+                    "dtype": constant(device),
                 },
                 device=device,
+                rtol=1e-2,
             )
 
 
