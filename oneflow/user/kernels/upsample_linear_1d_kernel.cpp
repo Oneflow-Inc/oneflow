@@ -78,11 +78,18 @@ class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
                                               x_blob->shape().At(2));
     NdIndexOffsetHelper<int64_t, 3> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
                                                y_blob->shape().At(2));
+    const int64_t nbatch = x_blob->shape().At(0);
+    const int64_t channels = x_blob->shape().At(1);
     const int64_t in_height = x_blob->shape().At(2);
     const int64_t out_height = y_blob->shape().At(2);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
-                               scale_height, align_corners, y_blob->mut_dptr<T>());
+    if (in_height == out_height) {
+      memcpy(y_blob->mut_dptr<void>(), x_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      UpsampleLinear1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
+                                 scale_height, align_corners, y_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -96,7 +103,6 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_blob == nullptr) { return; }
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -108,11 +114,19 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
                                               dx_blob->shape().At(2));
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
+
+    const int64_t nbatch = dx_blob->shape().At(0);
+    const int64_t channels = dx_blob->shape().At(1);
     const int64_t in_height = dx_blob->shape().At(2);
     const int64_t out_height = dy_blob->shape().At(2);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    UpsampleLinear1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
-                                scale_height, align_corners, dx_blob->mut_dptr<T>());
+    if (in_height == out_height) {
+      memcpy(dx_blob->mut_dptr<void>(), dy_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      UpsampleLinear1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
+                                  scale_height, align_corners, dx_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

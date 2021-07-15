@@ -64,12 +64,23 @@ class UpsampleNearest1DCPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 3> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
-                                              x_blob->shape().At(2));
-    NdIndexOffsetHelper<int64_t, 3> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
-                                               y_blob->shape().At(2));
-    UpsampleNearest1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
-                                x_blob->shape().At(2), 1.f / height_scale, y_blob->mut_dptr<T>());
+
+    const int64_t nbatch = x_blob->shape().At(0);
+    const int64_t channels = x_blob->shape().At(1);
+    const int64_t in_height = x_blob->shape().At(2);
+    const int64_t out_height = y_blob->shape().At(2);
+
+    if (in_height == out_height) {
+      memcpy(y_blob->mut_dptr<void>(), x_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height);
+    } else {
+      NdIndexOffsetHelper<int64_t, 3> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
+                                                x_blob->shape().At(2));
+      NdIndexOffsetHelper<int64_t, 3> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
+                                                 y_blob->shape().At(2));
+      UpsampleNearest1DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper,
+                                  x_blob->shape().At(2), 1.f / height_scale, y_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -88,14 +99,24 @@ class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
+
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
-                                              dy_blob->shape().At(2));
-    NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
-                                              dx_blob->shape().At(2));
-    UpsampleNearest1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
-                                 dx_blob->shape().At(2), 1.f / height_scale,
-                                 dx_blob->mut_dptr<T>());
+    const int64_t nbatch = dx_blob->shape().At(0);
+    const int64_t channels = dx_blob->shape().At(1);
+    const int64_t in_height = dx_blob->shape().At(2);
+    const int64_t out_height = dy_blob->shape().At(2);
+    if (in_height == out_height) {
+      memcpy(dx_blob->mut_dptr<void>(), dy_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height);
+    } else {
+      NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
+                                                dy_blob->shape().At(2));
+      NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
+                                                dx_blob->shape().At(2));
+      UpsampleNearest1DBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper,
+                                   dx_blob->shape().At(2), 1.f / height_scale,
+                                   dx_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
