@@ -74,6 +74,8 @@ REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, double)
 REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int64_t)
 
+#undef REGISTER_MLIR_JIT_KERNEL
+
 }  // namespace
 
 }  // namespace oneflow
