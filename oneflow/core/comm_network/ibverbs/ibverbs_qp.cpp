@@ -29,6 +29,7 @@ limitations under the License.
 #include <infiniband/verbs.h>
 #include <memory>
 #include <mutex>
+#include "glog/logging.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -75,6 +76,9 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
   // todo(lambda7xx@gmail.com)
+  // initialize the num_msg_in_send_bug_,which representes how many messages have been send
+  // initialize the max_send_wr_in_send_buf, which  representes the maximum message that can be seed
+  // initialize the use_pendding_list , which representes if we use the msg_pendding_list_ or not
   num_msg_in_send_buf_ = 0;
   max_send_wr_in_send_buf_ = std::min(device_attr.max_qp_wr, kMaxSendWr) - 2;
   use_pendding_list_ = false;
@@ -173,26 +177,33 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
     ibv_send_wr* bad_wr = nullptr;
     // todo(lambda@gmail.com)
-    std::unique_lock<std::mutex> lck(num_msg_in_send_buf_mutex_);
-    std::unique_lock<std::mutex> lck1(use_pendding_list_mutex_);
+    // we first use the ibv_post_send to send the message directly
+    // and increase the num_msg_in_send_buf
+    // if the num_msg_in_send_bug_ is equal or greater than max_send_wr_in_send_buf_;
+    // we use the msg_pendding_list_ to store the message and set the use_pendding_list_ true
+    // if the num_msg_in_send_buf_ is less than max_send_wr_in_send_buf_ and use_pendding_list_ is
+    // true we get the message from the front of the use_pendding_list and use ibv_post_send to send
+    // this message
+    std::unique_lock<std::mutex> num_msg_in_send_buf_lck(num_msg_in_send_buf_mutex_);
+    std::unique_lock<std::mutex> use_pendding_list_lck(use_pendding_list_mutex_);
     if (num_msg_in_send_buf_ < max_send_wr_in_send_buf_ && use_pendding_list_ == false) {
       num_msg_in_send_buf_++;
       CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
     } else {
-      std::unique_lock<std::mutex> lck2(msg_pendding_list_mutex_);
-      Ibv_Send_Wr_Sge_Pair ibv_send_wr_sge = Ibv_Send_Wr_Sge_Pair();
+      std::unique_lock<std::mutex> msg_penddibg_list_lck(msg_pendding_list_mutex_);
+      IbvSendWrSgePair ibv_send_wr_sge = IbvSendWrSgePair();
       ibv_send_wr_sge.sge = sge;
       ibv_send_wr_sge.wr = wr;
       msg_pendding_list_.push(ibv_send_wr_sge);
       if (!use_pendding_list_) { use_pendding_list_ = true; }
       if (msg_pendding_list_.empty() == false && num_msg_in_send_buf_ < max_send_wr_in_send_buf_) {
-        Ibv_Send_Wr_Sge_Pair ibv_send_wr_sge = std::move(msg_pendding_list_.front());
-        ibv_send_wr wr1 = ibv_send_wr_sge.wr;
-        wr1.sg_list = &ibv_send_wr_sge.sge;
+        IbvSendWrSgePair new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
+        ibv_send_wr new_wr = new_ibv_send_wr_sge.wr;
+        new_wr.sg_list = &new_ibv_send_wr_sge.sge;
         msg_pendding_list_.pop();
-        ibv_send_wr* bad_wr1 = nullptr;
+        ibv_send_wr* new_bad_wr = nullptr;
         num_msg_in_send_buf_++;
-        CHECK_EQ(ibv_post_send(qp_, &wr1, &bad_wr1), 0);
+        CHECK_EQ(ibv_post_send(qp_, &new_wr, &new_bad_wr), 0);
       }
       if (msg_pendding_list_.empty() == true && num_msg_in_send_buf_ < max_send_wr_in_send_buf_) {
         use_pendding_list_ = false;
@@ -221,26 +232,33 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   memset(&(wr.wr), 0, sizeof(wr.wr));
   ibv_send_wr* bad_wr = nullptr;
   // todo(lambda@gmail.com)
-  std::unique_lock<std::mutex> lck(num_msg_in_send_buf_mutex_);
-  std::unique_lock<std::mutex> lck1(use_pendding_list_mutex_);
+  // we first use the ibv_post_send to send the message directly
+  // and increase the num_msg_in_send_buf
+  // if the num_msg_in_send_bug_ is equal or greater than max_send_wr_in_send_buf_;
+  // we use the msg_pendding_list_ to store the message and set the use_pendding_list_ true
+  // if the num_msg_in_send_buf_ is less than max_send_wr_in_send_buf_ and use_pendding_list_ is
+  // true we get the message from the front of the use_pendding_list and use ibv_post_send to send
+  // this message
+  std::unique_lock<std::mutex> num_msg_in_send_buf_lck(num_msg_in_send_buf_mutex_);
+  std::unique_lock<std::mutex> use_pendding_list_lck(use_pendding_list_mutex_);
   if (num_msg_in_send_buf_ < max_send_wr_in_send_buf_ && use_pendding_list_ == false) {
     num_msg_in_send_buf_++;
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   } else {
-    std::unique_lock<std::mutex> lck2(msg_pendding_list_mutex_);
-    Ibv_Send_Wr_Sge_Pair ibv_send_wr_sge = Ibv_Send_Wr_Sge_Pair();
+    std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
+    IbvSendWrSgePair ibv_send_wr_sge = IbvSendWrSgePair();
     ibv_send_wr_sge.sge = sge;
     ibv_send_wr_sge.wr = wr;
     msg_pendding_list_.push(ibv_send_wr_sge);
     if (!use_pendding_list_) { use_pendding_list_ = true; }
     if (msg_pendding_list_.empty() == false && num_msg_in_send_buf_ < max_send_wr_in_send_buf_) {
-      Ibv_Send_Wr_Sge_Pair ibv_send_wr_sge1 = std::move(msg_pendding_list_.front());
-      ibv_send_wr wr1 = ibv_send_wr_sge1.wr;
-      wr1.sg_list = &ibv_send_wr_sge1.sge;
+      IbvSendWrSgePair new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
       msg_pendding_list_.pop();
-      ibv_send_wr* bad_wr1 = nullptr;
+      ibv_send_wr new_wr = new_ibv_send_wr_sge.wr;
+      new_wr.sg_list = &new_ibv_send_wr_sge.sge;
+      ibv_send_wr* new_bad_wr = nullptr;
       num_msg_in_send_buf_++;
-      CHECK_EQ(ibv_post_send(qp_, &wr1, &bad_wr1), 0);
+      CHECK_EQ(ibv_post_send(qp_, &new_wr, &new_bad_wr), 0);
     }
     if (msg_pendding_list_.empty() == true && num_msg_in_send_buf_ < max_send_wr_in_send_buf_) {
       use_pendding_list_ = false;
@@ -255,24 +273,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
     Global<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
-  std::unique_lock<std::mutex> lck(num_msg_in_send_buf_mutex_);
-  std::unique_lock<std::mutex> lck1(use_pendding_list_mutex_);
-  if (num_msg_in_send_buf_ > 0) { num_msg_in_send_buf_--; }
-  if (num_msg_in_send_buf_ < max_send_wr_in_send_buf_ && use_pendding_list_) {
-    std::unique_lock<std::mutex> lck2(msg_pendding_list_mutex_);
-    if (msg_pendding_list_.empty() == false) {
-      Ibv_Send_Wr_Sge_Pair ibv_send_wr_sge = std::move(msg_pendding_list_.front());
-      ibv_send_wr wr = ibv_send_wr_sge.wr;
-      wr.sg_list = &ibv_send_wr_sge.sge;
-      msg_pendding_list_.pop();
-      ibv_send_wr* bad_wr = nullptr;
-      num_msg_in_send_buf_++;
-      CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
-    }
-    if (msg_pendding_list_.empty() == true && num_msg_in_send_buf_ < max_send_wr_in_send_buf_) {
-      use_pendding_list_ = false;
-    }
-  }
+  ReadSendDoneHandle();
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
@@ -281,15 +282,34 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
     send_msg_buf_.push(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
-  std::unique_lock<std::mutex> lck1(num_msg_in_send_buf_mutex_);
-  std::unique_lock<std::mutex> lck2(use_pendding_list_mutex_);
+  ReadSendDoneHandle();
+}
+
+void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
+  auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
+  CHECK(ibv_comm_net != nullptr);
+  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
+  PostRecvRequest(wr_id->msg_mr);
+  DeleteWorkRequestId(wr_id);
+}
+
+// todo-lambda7xx@gmail.com
+// SendDone and ReadDone call this
+// when the num_msg_in_send_buf_ is greater than 0, we decrease it
+// if the num_msg_in_send_buf_ < max_sned_wr_send_buf_ and  use_pendding_list_ is true and the
+// msg_pendding_list_ is not empty
+// then we get the message from the front  of the msg_pendding_list_
+// and use the ibv_post_send to send this message and increase the num_msg_in_send_buf_
+void IBVerbsQP::ReadSendDoneHandle() {
+  std::unique_lock<std::mutex> num_msg_in_send_buf_lck(num_msg_in_send_buf_mutex_);
+  std::unique_lock<std::mutex> use_pendding_list_mutex_lck(use_pendding_list_mutex_);
   if (num_msg_in_send_buf_ > 0) { num_msg_in_send_buf_--; }
   if (num_msg_in_send_buf_ < max_send_wr_in_send_buf_ && use_pendding_list_) {
-    std::unique_lock<std::mutex> lck3(msg_pendding_list_mutex_);
+    std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
     if (msg_pendding_list_.empty() == false) {
-      Ibv_Send_Wr_Sge_Pair send_wr_sge = std::move(msg_pendding_list_.front());
-      ibv_send_wr wr = send_wr_sge.wr;
-      wr.sg_list = &send_wr_sge.sge;
+      IbvSendWrSgePair ibv_send_wr_sge = std::move(msg_pendding_list_.front());
+      ibv_send_wr wr = ibv_send_wr_sge.wr;
+      wr.sg_list = &ibv_send_wr_sge.sge;
       msg_pendding_list_.pop();
       ibv_send_wr* bad_wr = nullptr;
       num_msg_in_send_buf_++;
@@ -299,14 +319,6 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
       }
     }
   }
-}
-
-void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
-  auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
-  CHECK(ibv_comm_net != nullptr);
-  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
-  PostRecvRequest(wr_id->msg_mr);
-  DeleteWorkRequestId(wr_id);
 }
 
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
