@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace one {
 
-/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+/* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
@@ -46,7 +46,7 @@ namespace one {
   }
 }
 
-/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
+/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
     const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
   const auto& blob_desc = eager_blob_object->blob_desc();

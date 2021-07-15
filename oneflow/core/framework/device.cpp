@@ -61,14 +61,14 @@ Maybe<void> Device::Init() {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
   Device device(type, device_id);
   JUST(device.Init());
   return SymbolOf(device);
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                             int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
+                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
   auto* vec = &type2device_id2device[type];
@@ -78,7 +78,7 @@ Maybe<void> Device::Init() {
   return *pptr;
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type) {
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
 }
 
