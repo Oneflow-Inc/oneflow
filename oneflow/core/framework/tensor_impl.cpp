@@ -197,7 +197,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
                            cur_rank_phy_tensor->is_leaf()),
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
-/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
+/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
   CHECK_OR_RETURN(!cur_rank_phy_tensor->is_lazy());
@@ -220,7 +220,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor));
 }
 
-/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
+/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   int64_t parallel_id = -1;
@@ -231,7 +231,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
   return NewImpl(consistent_tensor_meta, device, parallel_id, requires_grad, is_leaf);
 }
 
-/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithPhyTensor(
+/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithPhyTensor(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
     bool requires_grad, bool is_leaf) {
   const auto& shape = consistent_tensor_meta->shape_ptr();
@@ -252,7 +252,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
   return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
 }
 
-/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithoutPhyTensor(
+/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithoutPhyTensor(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
     bool requires_grad, bool is_leaf) {
   auto* tensor_impl = new EagerConsistentTensorImpl(consistent_tensor_meta, requires_grad, is_leaf,

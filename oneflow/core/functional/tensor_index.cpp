@@ -59,9 +59,10 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
-      CHECK_OR_RETURN(integer >= 0 && integer < shape.At(dim))
-          << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
-          << " with size " << shape.At(dim);
+      if (integer < 0 && integer >= shape.At(dim)) {
+        return Error::ValueError() << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
+            << " with size " << shape.At(dim);
+      }
       slice_indices->emplace_back(integer, integer + 1, 1);
       dim++;
     } else if (index_item.IsEllipsis()) {
