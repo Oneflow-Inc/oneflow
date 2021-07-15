@@ -19,7 +19,6 @@ from contextlib import contextmanager
 
 import inspect
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.hob as hob
@@ -29,59 +28,73 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
-import oneflow.python.framework.scope_symbol as scope_symbol
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
+import oneflow._oneflow_internal
 import inspect
 
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
-        _CompileJob(function_desc)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        _CompileJob(session, function_desc)
+        session.StashJob(function_desc.job_func.__name__)
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        session.StashJob(
+            function_desc.job_func.__name__,
+            function_desc.job_func.__name__ + "_after_complete",
+        )
 
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
         ret = _InterpretGlobalFunction(function_desc, args)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
     return ret
 
 
 @contextmanager
 def InterpretScope(session, function_desc, config_proto):
     job_conf = function_desc.job_config_proto
-    job_conf.job_name = function_desc.job_func.__name__
+    job_conf.set_job_name(function_desc.job_func.__name__)
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
+        hierarchy = None
     else:
         assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
         tag_and_dev_ids = (
             placement_scope.device_tag,
             placement_scope.machine_device_ids,
         )
+        hierarchy = placement_scope.hierarchy
+
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeConsistentStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
-    with _JobBuildAndInferCtx(job_conf.job_name), distribute_strategy:
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None:
+        hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
+    scope = scope_util.MakeInitialScope(
+        job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
+    )
+    with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):
                 yield
 
 
-def _CompileJob(function_desc):
+def _CompileJob(session, function_desc):
     func = function_desc.job_func
     parameters = func.__oneflow_function_signature__.parameters
     if len(parameters) == 0:
@@ -135,7 +148,7 @@ def _JobBuildAndInferCtx(job_name):
     try:
         yield
     finally:
-        c_api_util.JobBuildAndInferCtx_Close()
+        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 def _GetArgDefault(func):
@@ -186,14 +199,14 @@ def _RecusiveMakeInputBlobDef(cls):
             ("\nannotation %s" % cls)
             + "not supported"
             + "\nonly support oneflow.typing.Numpy.Placeholder, "
-            "oneflow.typing.ListNumpy.Placeholder and oneflow.typing.ListListNumpy.Placeholder"
+            "oneflow.typing.ListNumpy.Placeholder"
         )
 
 
 def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     if remote_blobs is None:
         return None
-    if isinstance(remote_blobs, remote_blob_util.BlobDef):
+    if isinstance(remote_blobs, oneflow._oneflow_internal.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(

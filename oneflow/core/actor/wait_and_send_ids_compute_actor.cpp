@@ -24,6 +24,7 @@ void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
   wait_and_send_ids_status_.in_id_ = 0;
   wait_and_send_ids_status_.out_idx_ = 0;
   wait_and_send_ids_status_.out_num_ = 0;
+  cur_piece_id_ = -1;
   OF_SET_MSG_HANDLER(&WaitAndSendIdsCompActor::HandlerWaitToStart);
 }
 
@@ -36,7 +37,10 @@ void WaitAndSendIdsCompActor::Act() {
 
 void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
-    HandleProducedNaiveDataRegstToConsumer();
+    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
+      regst->set_piece_id(++cur_piece_id_);
+      return true;
+    });
   }
 }
 

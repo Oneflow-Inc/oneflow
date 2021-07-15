@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/plan_util.h"
 
 namespace oneflow {
 
@@ -67,15 +69,29 @@ void GenRegstDescId2RegstDesc(Plan* plan,
   }
 }
 
+void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
+  RegstDescProto* ctrl_regst_desc =
+      FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
+  int64_t dst_task_id = dst_task_proto->task_id();
+  if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
+    ctrl_regst_desc->add_consumer_task_id(dst_task_id);
+    int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
+    RegstDescIdSet* consumed_ctrl_regst_desc_ids =
+        FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
+    CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
+    consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
+  }
+}
+
 struct MemoryChain {
   std::vector<TaskProto*> sorted_tasks;
   HashSet<RegstDescProto*> mem_reused_regsts;
   int64_t total_mem_reused_size = 0;
+  Shape time_shape;
 };
 
 void InitMemoryChains(Plan* plan,
                       HashMap<int64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
-  Shape meta_shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     int64_t machine_id = task->machine_id();
@@ -92,10 +108,18 @@ void InitMemoryChains(Plan* plan,
           && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
-          && regst_desc->regst_desc_type().has_data_regst_desc()
-          && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
         mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
+
+        // for time shape in mem chain
+        Shape regst_time_shape =
+            Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape());
+        if (mem_chain->time_shape.elem_cnt() == 0) {
+          mem_chain->time_shape = regst_time_shape;
+        } else {
+          CHECK(mem_chain->time_shape == regst_time_shape);
+        }
       }
     }
   }
@@ -122,25 +146,47 @@ void InitMemoryChains(Plan* plan,
 bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
+  Shape meta_shape({1, 1});
   std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
     return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
   });
   for (MemoryChain* merged_chain : *merged_chains) {
-    if (IsStrictOrderL2R(merged_chain, mem_chain)) {
-      merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
-                                        mem_chain->sorted_tasks.begin(),
-                                        mem_chain->sorted_tasks.end());
-      merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
-                                             mem_chain->mem_reused_regsts.end());
-      merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
-      return true;
+    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
+      if (IsStrictOrderL2R(merged_chain, mem_chain)) {
+        merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
+                                          mem_chain->sorted_tasks.begin(),
+                                          mem_chain->sorted_tasks.end());
+        merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
+                                               mem_chain->mem_reused_regsts.end());
+        merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool IsReachableToAnyOtherTask(const TaskProto* src_task, const HashSet<int64_t>& task_ids) {
+  for (const auto& pair : src_task->produced_regst_desc()) {
+    for (int64_t consumer : pair.second.consumer_task_id()) {
+      if (task_ids.find(consumer) != task_ids.end()) { return true; }
+    }
+  }
+  return false;
+}
+
+bool IsTaskConnectedL2R(const TaskProto* src, const TaskProto* dst) {
+  for (const auto& pair : src->produced_regst_desc()) {
+    for (int64_t consumer : pair.second.consumer_task_id()) {
+      if (consumer == dst->task_id()) { return true; }
     }
   }
   return false;
 }
 
 void GenMemChainTasksAndRegsts(
-    Plan* plan, const PlanTaskGraph& plan_task_graph,
+    Plan* plan,
+    const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
     HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
     HashMap<int64_t, HashSet<RegstDescProto*>>* mem_chain2mem_reused_regsts) {
   mem_chain2sorted_tasks->clear();
@@ -148,14 +194,35 @@ void GenMemChainTasksAndRegsts(
   HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
   InitMemoryChains(plan, &device2chain2mem_chain);
 
+  auto TryGetTaskNodeLogicalOpName = [&](const TaskProto* task_proto,
+                                         std::string* op_name) -> bool {
+    if (task_proto->task_type() == TaskType::kNormalForward
+        && task_proto->exec_sequence().exec_node_size() == 1) {
+      *op_name = PlanUtil::GetOpAttribute(plan, task_proto->job_id(),
+                                          task_proto->exec_sequence().exec_node(0).kernel_conf())
+                     .op_conf()
+                     .name();
+      return true;
+    }
+    return false;
+  };
+
   auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
     const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
     const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
-    return plan_task_graph.IsReachable(l_chain_sink_task_node->task_id(),
-                                       r_chain_source_task_node->task_id());
+    std::string l_op_name;
+    std::string r_op_name;
+    if (TryGetTaskNodeLogicalOpName(l_chain_sink_task_node, &l_op_name)
+        && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)) {
+      return IsOpNameDataOrCtrlReachable(l_op_name, r_op_name);
+    }
+    return false;
   };
 
   int64_t mem_chain_id = 0;
+
+  bool enable_mem_chain_merge =
+      Global<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
@@ -169,11 +236,14 @@ void GenMemChainTasksAndRegsts(
       CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
       return lhs_order_in_graph < rhs_order_in_graph;
     });
-    // merge
-    for (MemoryChain* mem_chain : mem_chains) {
-      if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
-        merged_chains.push_back(mem_chain);
+    if (enable_mem_chain_merge) {
+      for (MemoryChain* mem_chain : mem_chains) {
+        if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
+          merged_chains.push_back(mem_chain);
+        }
       }
+    } else {
+      merged_chains.swap(mem_chains);
     }
     for (MemoryChain* merged_chain : merged_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
@@ -189,6 +259,41 @@ void GenMemChainTasksAndRegsts(
   }
 
   CHECK_EQ(mem_chain2sorted_tasks->size(), mem_chain2mem_reused_regsts->size());
+
+  // NOTE(chengcheng): add ctrl safe guard for each mem chain
+  HashMap<int64_t, TaskProto*> task_id2proto;
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    CHECK(task_id2proto.emplace(task->task_id(), task).second);
+  }
+  for (auto& pair : *mem_chain2sorted_tasks) {
+    std::vector<TaskProto*>* sorted_tasks = &(pair.second);
+    // NOTE(chengcheng): We CANNOT only add ctrl safe guard between first and last task,
+    //  because of the sorted_tasks may connected as a graph, has multi-tail tasks(sink task).
+    const HashSet<RegstDescProto*>& mem_reused_regsts = mem_chain2mem_reused_regsts->at(pair.first);
+    if (mem_reused_regsts.size() <= 1) { continue; }
+
+    HashSet<int64_t> consumer_task_ids;
+    for (const RegstDescProto* regst : mem_reused_regsts) {
+      for (int64_t consumer : regst->consumer_task_id()) { consumer_task_ids.insert(consumer); }
+    }
+    std::vector<TaskProto*> sink_tasks;
+    for (int64_t src_task_id : consumer_task_ids) {
+      auto it = task_id2proto.find(src_task_id);
+      CHECK(it != task_id2proto.end());
+      if (!IsReachableToAnyOtherTask(it->second, consumer_task_ids)) {
+        sink_tasks.push_back(it->second);
+      }
+    }
+
+    TaskProto* first_task = sorted_tasks->front();
+    for (TaskProto* sink_task : sink_tasks) {
+      CHECK(first_task != sink_task);
+      if (!IsTaskConnectedL2R(first_task, sink_task)) {
+        TryConnectWithMemSafeGuardCtrlRegstDesc(first_task, sink_task);
+      }
+    }
+  }
 }
 
 void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
@@ -196,7 +301,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
-    HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
+    HashMap<RegstDescProto*, std::vector<RegstDescProto*>>* regst2mutual_exclusion_regsts,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst) {
   CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
   CHECK(regst2mutual_exclusion_regsts->empty());
@@ -272,10 +377,11 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   HashSet<RegstDescProto*> remain_regsts;
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
-      CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, HashSet<RegstDescProto*>()).second);
+      CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, std::vector<RegstDescProto*>())
+                .second);
       for (RegstDescProto* remain_regst : remain_regsts) {
-        CHECK(regst2mutual_exclusion_regsts->at(alloc_regst).insert(remain_regst).second);
-        CHECK(regst2mutual_exclusion_regsts->at(remain_regst).insert(alloc_regst).second);
+        regst2mutual_exclusion_regsts->at(alloc_regst).push_back(remain_regst);
+        regst2mutual_exclusion_regsts->at(remain_regst).push_back(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
     }
@@ -392,7 +498,7 @@ void MemBlockBuffer::FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offse
 void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, int64_t>& regst_desc2size,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   size_t buffer_size = 1;
@@ -414,7 +520,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
 }
 
 void MemReusedAlgorithm_MemSizeFirstAlgo(
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
@@ -431,7 +537,7 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
 }
 
 void MemReusedAlgorithm_MutualExclusionFirstAlgo(
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
@@ -585,7 +691,7 @@ void MemReusedAlgorithm_TimeLineAlgo(
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_timeline,
     const std::vector<HashSet<RegstDescProto*>>& free_regsts_timeline,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
@@ -633,12 +739,13 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
 
 }  // namespace
 
-void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
-                                                            const PlanTaskGraph& plan_task_graph) {
+void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
+    Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
+                    IsOpNameDataOrCtrlReachable) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
-  GenMemChainTasksAndRegsts(plan, plan_task_graph, &mem_chain2sorted_tasks,
+  GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
                             &mem_chain2mem_reused_regsts);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
@@ -648,7 +755,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
-  HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
+  HashMap<int64_t, HashMap<RegstDescProto*, std::vector<RegstDescProto*>>>
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
@@ -716,6 +823,25 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
       CHECK_NE(inplaced_regst_desc->mem_block_offset(), -1);
       consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());
       consumer_regst_desc->set_mem_block_offset(inplaced_regst_desc->mem_block_offset());
+    }
+
+    // set inplace hint and check
+    for (auto& consumer_inplace_pair : mem_chain2consumer2inplaced_regst.at(pair.first)) {
+      RegstDescProto* consumer_regst_desc = consumer_inplace_pair.first;
+      RegstDescProto* inplaced_regst_desc = consumer_inplace_pair.second;
+      CHECK(consumer_regst_desc->has_inplace_consumed_regst_desc_id() == false);
+      CHECK(consumer_regst_desc->has_hint_inplace_consumed_regst_desc_id());
+      int64_t hint = consumer_regst_desc->hint_inplace_consumed_regst_desc_id();
+      // NOTE(chengcheng): hint regst desc id may NOT the inplaced_regst_desc_id
+      //   because of nest inplace.
+      auto hint_it = regst_desc_id2regst_desc.find(hint);
+      CHECK(hint_it != regst_desc_id2regst_desc.end());
+      RegstDescProto* in_regst_desc = hint_it->second;
+      CHECK_EQ(consumer_regst_desc->mem_block_id(), in_regst_desc->mem_block_id());
+      CHECK_EQ(consumer_regst_desc->mem_block_offset(), in_regst_desc->mem_block_offset());
+      CHECK_EQ(in_regst_desc->mem_block_offset(), inplaced_regst_desc->mem_block_offset());
+      CHECK_EQ(consumer_regst_desc->register_num(), in_regst_desc->register_num());
+      consumer_regst_desc->set_inplace_consumed_regst_desc_id(hint);
     }
   }
 }

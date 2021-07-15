@@ -25,7 +25,7 @@ namespace mola {
 
 class CastOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     DataType dest_dtype = ctx->Attr<DataType>("dtype");
     DataType src_dtype = ctx->SoleInputType();
     xla::XlaOp in = ctx->SoleInput();

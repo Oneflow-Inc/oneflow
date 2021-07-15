@@ -29,10 +29,20 @@ python3 cnn_benchmark/of_cnn_benchmarks.py \
     --model="resnet50" \
     --batch_size_per_device=8 \
     --iter_num=5 \
+    --gpu_image_decoder=True \
     --learning_rate=0.01 \
     --optimizer="sgd" \
     --loss_print_every_n_iter=1 \
     --data_dir="/dataset/imagenet_227/train/32"
+
+python3 cnn_benchmark/of_cnn_benchmarks.py \
+    --gpu_num_per_node=1 \
+    --model="resnet50" \
+    --batch_size_per_device=8 \
+    --iter_num=5 \
+    --learning_rate=0.01 \
+    --optimizer="sgd" \
+    --loss_print_every_n_iter=1 
 
 python3 bert_benchmark/run_pretraining.py \
     --gpu_num_per_node=1 \

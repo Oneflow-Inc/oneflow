@@ -25,14 +25,17 @@ template<DeviceType device_type>
 void ForeignWatchKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   OfBlob of_blob(ctx.device_ctx, BnInOp2Blob("in"));
-  Global<ForeignWatcher>::Get()->Call(this->op_conf().foreign_watch_conf().handler_uuid(),
-                                      reinterpret_cast<int64_t>(&of_blob));
+  (*Global<std::shared_ptr<ForeignWatcher>>::Get())
+      ->Call(this->op_conf().foreign_watch_conf().handler_uuid(),
+             reinterpret_cast<int64_t>(&of_blob));
 }
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kCPU,
                             ForeignWatchKernel<DeviceType::kCPU>);
 
+#ifdef WITH_CUDA
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kForeignWatchConf, DeviceType::kGPU,
                             ForeignWatchKernel<DeviceType::kGPU>);
+#endif
 
 }  // namespace oneflow

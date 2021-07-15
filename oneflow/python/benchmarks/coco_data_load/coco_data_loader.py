@@ -58,6 +58,7 @@ def coco_data_load(cfg, machine_id, nrank):
             batch_size=cfg.batch_size,
             shuffle=cfg.shuffle_after_epoch,
             stride_partition=cfg.stride_partition,
+            name="coco_reader",
         )
         # image decode
         image = flow.image.decode(image, dtype=flow.float)
@@ -85,21 +86,29 @@ def coco_data_load(cfg, machine_id, nrank):
             dtype=flow.float,
             alignment=cfg.image_align_size,
         )
-        gt_bbox = flow.tensor_buffer_to_tensor_list(
-            bbox, shape=(cfg.max_num_objs, 4), dtype=flow.float
+        gt_bbox = flow.tensor_buffer_to_list_of_tensors(
+            bbox, (cfg.max_num_objs, 4), flow.float, True
         )
-        gt_label = flow.tensor_buffer_to_tensor_list(
-            label, shape=(cfg.max_num_objs,), dtype=flow.int32
+        gt_label = flow.tensor_buffer_to_list_of_tensors(
+            label, (cfg.max_num_objs,), flow.int32, True
         )
         segm_mask = flow.detection.object_segmentation_polygon_to_mask(
             segm_poly, segm_poly_index, new_size
         )
-        gt_mask = flow.tensor_buffer_to_tensor_list(
+        gt_mask = flow.tensor_buffer_to_list_of_tensors(
             segm_mask,
-            shape=(cfg.max_num_objs, aligned_target_size, aligned_max_size),
-            dtype=flow.int8,
+            (cfg.max_num_objs, aligned_target_size, aligned_max_size),
+            flow.int8,
+            True,
         )
-        return image, new_size, gt_bbox, gt_label, gt_mask
+
+        return {
+            "image": image,
+            "image_size": new_size,
+            "gt_bbox": list(gt_bbox),
+            "gt_label": list(gt_label),
+            "gt_mask": list(gt_mask),
+        }
 
 
 def _make_data_load_fn():
@@ -123,8 +132,13 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
     for i in range(iter_num):
-        # data_loader().get()
-        image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+        dict = data_loader().get()
+        image = dict["image"]
+        image_size = dict["image_size"]
+        gt_bbox = dict["gt_bbox"]
+        gt_label = dict["gt_label"]
+        gt_mask = dict["gt_mask"]
+
         cur = time.perf_counter()
         s[i] = cur - timestamp
         timestamp = cur
@@ -138,9 +152,9 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
             print(
                 "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
             )
-            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
-            print("gt_label:\n", gt_label.numpy_lists()[0])
-            print("gt_mask:\n", gt_mask.numpy_lists()[0])
+            print("gt_bbox:\n", [x.numpy_list()[0] for x in gt_bbox])
+            print("gt_label:\n", [x.numpy_list()[0] for x in gt_label])
+            print("gt_mask:\n", [x.numpy_list()[0] for x in gt_mask])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(

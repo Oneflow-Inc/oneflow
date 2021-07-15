@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/batch_gather_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include <assert.h>
 
 namespace oneflow {
@@ -54,7 +54,7 @@ __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff
                                        const int64_t indices_num, const int64_t instance_size,
                                        const int64_t gather_dim_size, T* in_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    gpu_atomic_add(
+    cuda::atomic::Add(
         in_diff + GetInOffset<K>(i, indices, indices_num, instance_size, gather_dim_size),
         out_diff[i]);
   }

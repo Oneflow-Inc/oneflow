@@ -27,53 +27,12 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-template<>
-class InferStreamType<ControlStreamType> final : public StreamType {
- public:
-  InferStreamType() = default;
-  ~InferStreamType() = default;
-
-  const char* device_tag() const override { return "cpu"; }
-
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
-
-  void InitInstructionStatus(const Stream& stream,
-                             InstructionStatusBuffer* status_buffer) const override {
-    return ControlStreamType().InitInstructionStatus(stream, status_buffer);
-  }
-  void DeleteInstructionStatus(const Stream& stream,
-                               InstructionStatusBuffer* status_buffer) const override {
-    return ControlStreamType().DeleteInstructionStatus(stream, status_buffer);
-  }
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override {
-    return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
-  }
-  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
-    ControlStreamType().Infer(vm, instruction);
-  }
-  void Infer(VirtualMachine* vm, InstructionMsg* instruction_msg) const override {
-    ControlStreamType().Infer(vm, instruction_msg);
-  }
-  void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-
-  bool SharingVirtualMachineThread() const override { return true; }
-
-  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                          int64_t this_machine_id) const override {
-    auto stream_desc = ControlStreamType().MakeStreamDesc(resource, this_machine_id);
-    stream_desc->mut_stream_type_id()->CopyFrom(
-        LookupInferStreamTypeId(stream_desc->stream_type_id()));
-    return stream_desc;
-  }
-};
-
 class NewSymbolInstructionType final : public InstructionType {
  public:
   NewSymbolInstructionType() = default;
   ~NewSymbolInstructionType() override = default;
+
+  bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
 
@@ -119,7 +78,9 @@ void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) con
 }
 
 void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) const {
-  Infer(vm, instruction->mut_instr_msg());
+  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
+  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
+  instr_type_id.instruction_type().Infer(vm, instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
@@ -131,7 +92,9 @@ void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) c
 }
 
 void ControlStreamType::Compute(VirtualMachine* vm, Instruction* instruction) const {
-  Compute(vm, instruction->mut_instr_msg());
+  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
+  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+  instr_type_id.instruction_type().Compute(vm, instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }

@@ -83,6 +83,9 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }
 
 template<typename T>
+void EmptyInitializer() {}
+
+template<typename T>
 void RandomUniformInitializer(const RandomUniformInitializerConf& initializer_conf,
                               uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
@@ -282,6 +285,21 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
+void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                const MemoryCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.has_host_mem()) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
+}
+
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
@@ -355,12 +373,6 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
 }
-KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
-}
-KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -432,9 +444,6 @@ KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
 }
-KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }
-}
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
@@ -455,13 +464,6 @@ KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                    const T* dy, T* dx) {
   for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
-}
-KU_FLOATING_METHOD TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
-}
-KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
 }
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   T zero = GetZeroVal<T>();
@@ -539,6 +541,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else if (initializer_conf.has_variance_scaling_conf()) {
     VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }
@@ -564,6 +568,8 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
   } else if (initializer_conf.has_int_range_conf()) {
     IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }

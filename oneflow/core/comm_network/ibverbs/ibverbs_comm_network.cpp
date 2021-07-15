@@ -15,8 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/actor/actor_message_bus.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -33,7 +36,11 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
 }
 
 void IBVForkInit() {
-  if (ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
+  if (ibv::IsAvailable()) {
+    if (ibv::wrapper.ibv_fork_init() != 0) { std::cerr << "ibv_fork_init failed\n"; }
+  } else {
+    std::cerr << "libibverbs not available, ibv_fork_init skipped\n";
+  }
 }
 
 }  // namespace
@@ -44,59 +51,60 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv_close_device(context_), 0);
-}
-
-void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  IBVerbsTokensMsg this_tokens_msg;
-  for (IBVerbsMemDesc* mem_desc : mem_descs()) {
-    this_tokens_msg.mutable_token2mem_desc()->insert(
-        {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
-  }
-  Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
-  for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsTokensMsg peer_tokens_msg;
-    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_id), &peer_tokens_msg);
-    for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(token2mem_desc_.at(peer_id)
-                .emplace(reinterpret_cast<void*>(pair.first), pair.second)
-                .second);
-    }
-  }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
-  Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
+  CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
+  ActorMsg new_msg = msg;
+  if (msg.IsDataRegstMsgToConsumer()) {
+    CHECK_EQ(msg.user_data_size(), 0);
+    auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
+    CHECK(mem_desc != nullptr);
+    IBVerbsCommNetRMADesc rma_desc{};
+    rma_desc.mem_ptr = reinterpret_cast<uint64_t>(mem_desc->mem_ptr());
+    rma_desc.mem_size = mem_desc->mem_size();
+    rma_desc.mr_rkey = mem_desc->mr()->rkey;
+    static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
+    new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
+  }
+  qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
-    : CommNetIf(plan),
-      token2mem_desc_(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum()),
-      poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv_get_device_list(nullptr);
+void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
+  ActorMsg new_msg = msg;
+  if (msg.IsDataRegstMsgToConsumer()) {
+    std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
+    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
+                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
+    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
+    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+    new_msg.set_comm_net_token(desc.get());
+  }
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
+}
+
+IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
+  ibv_device** device_list = ibv::wrapper.ibv_get_device_list(nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
-  context_ = ibv_open_device(device);
+  context_ = ibv::wrapper.ibv_open_device(device);
   CHECK(context_);
-  ibv_free_device_list(device_list);
-  pd_ = ibv_alloc_pd(context_);
+  ibv::wrapper.ibv_free_device_list(device_list);
+  pd_ = ibv::wrapper.ibv_alloc_pd(context_);
   CHECK(pd_);
-  ibv_device_attr device_attr;
-  CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
-  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
+  ibv_device_attr device_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
+  cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
-  ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
-  ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
+  ibv_port_attr port_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, 1, &port_attr), 0);
+  ibv_gid gid{};
+  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, 1, 0, &gid), 0);
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
+  qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
     qp_vec_.at(peer_id) = cur_qp;
@@ -128,7 +136,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
                             void* dst_token) {
   qp_vec_.at(src_machine_id)
-      ->PostReadRequest(token2mem_desc_.at(src_machine_id).at(src_token),
+      ->PostReadRequest(*reinterpret_cast<IBVerbsCommNetRMADesc*>(src_token),
                         *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
 }
 

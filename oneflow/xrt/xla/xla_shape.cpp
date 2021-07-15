@@ -28,7 +28,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-Shape XlaShapeToOfShape(const xla::Shape &xla_shape) {
+Shape XlaShapeToOfShape(const xla::Shape& xla_shape) {
   CHECK(!xla_shape.IsTuple());
   int rank = xla_shape.rank();
   std::vector<int64_t> dimensions(rank);
@@ -36,12 +36,12 @@ Shape XlaShapeToOfShape(const xla::Shape &xla_shape) {
   return AsShape(dimensions);
 }
 
-xla::Shape OfShapeToXlaShape(const Shape &shape, DataType dtype) {
+xla::Shape OfShapeToXlaShape(const Shape& shape, DataType dtype) {
   xla::PrimitiveType type = DataTypeToPrimitiveType(dtype);
   return OfShapeToXlaShape(shape, type);
 }
 
-xla::Shape OfShapeToXlaShape(const Shape &shape, xla::PrimitiveType type) {
+xla::Shape OfShapeToXlaShape(const Shape& shape, xla::PrimitiveType type) {
   int rank = shape.NumAxes();
   std::vector<long long> layout(rank);
   std::vector<long long> dimensions(rank);
@@ -51,7 +51,7 @@ xla::Shape OfShapeToXlaShape(const Shape &shape, xla::PrimitiveType type) {
   return xla::ShapeUtil::MakeShapeWithLayout(type, dimensions, layout);
 }
 
-Shape SliceShape(const Shape &shape, size_t start_dim, size_t end_dim) {
+Shape SliceShape(const Shape& shape, size_t start_dim, size_t end_dim) {
   CHECK_LE(start_dim, end_dim);
   CHECK_LE(end_dim, shape.NumAxes());
 

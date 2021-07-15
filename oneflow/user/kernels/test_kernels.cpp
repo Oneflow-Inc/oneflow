@@ -106,14 +106,6 @@ class CopyIn2OutKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("TestReshape4KeepHeaderOnly")
-    .SetCreateFn<CopyIn2OutKernel>()
-    .SetIsMatchedHob(user_op::HobTrue());
-
-REGISTER_USER_KERNEL("TestReshapeLike4KeepHeaderOnly")
-    .SetCreateFn<CopyIn2OutKernel>()
-    .SetIsMatchedHob(user_op::HobTrue());
-
 class TestSourceGpuKernel final : public user_op::OpKernel {
  public:
   TestSourceGpuKernel() = default;

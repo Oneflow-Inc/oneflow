@@ -23,15 +23,27 @@ limitations under the License.
 
 namespace oneflow {
 
-// txt file
+// parse protobuf message from .prototxt file
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
   google::protobuf::io::IstreamInputStream input(&in_stream);
   return google::protobuf::TextFormat::Parse(&input, proto);
 }
+
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   CHECK(TryParseProtoFromTextFile(file_path, proto));
 }
+
+// parse protobuf message from .pb file
+bool TryParseProtoFromPbFile(const std::string& file_path, PbMessage* proto) {
+  std::ifstream in_stream(file_path.c_str(), std::ifstream::in | std::ifstream::binary);
+  return proto->ParseFromIstream(&in_stream);
+}
+
+void ParseProtoFromPbFile(const std::string& file_path, PbMessage* proto) {
+  CHECK(TryParseProtoFromPbFile(file_path, proto));
+}
+
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path) {
   std::ofstream out_stream(file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
   google::protobuf::io::OstreamOutputStream output(&out_stream);
@@ -140,7 +152,7 @@ DEFINE_ENUM_VAL_GETTER_AND_SETTER(DataType);
     int32_t field_size = r->FieldSize(msg, fd);                                             \
     vec_type retval(field_size);                                                            \
     for (int i = 0; i < field_size; ++i) { retval[i] = r->Get##vec_type_name(msg, fd, i); } \
-    return std::move(retval);                                                               \
+    return retval;                                                                          \
   }                                                                                         \
   DECLARE_SETTER_FUNC_HEADER(vec_type) {                                                    \
     PROTOBUF_REFLECTION((*msg), field_name);                                                \

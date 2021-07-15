@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+message WorkerProcessInfo {
+  required int64 rank = 1;
+  required int64 port = 2;
+  optional string host = 3;
+}

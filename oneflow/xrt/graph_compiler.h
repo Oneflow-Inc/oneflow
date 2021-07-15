@@ -29,15 +29,15 @@ namespace xrt {
 
 class InputOutputAlias {
  public:
-  InputOutputAlias(const std::vector<int> &output_index, int param_number,
-                   const std::vector<int> &param_index)
+  InputOutputAlias(const std::vector<int>& output_index, int param_number,
+                   const std::vector<int>& param_index)
       : param_number_(param_number), param_index_(param_index), output_index_(output_index) {}
 
   int param_number() const { return param_number_; }
 
-  const std::vector<int> &param_index() const { return param_index_; }
+  const std::vector<int>& param_index() const { return param_index_; }
 
-  const std::vector<int> &output_index() const { return output_index_; }
+  const std::vector<int>& output_index() const { return output_index_; }
 
  private:
   int param_number_;
@@ -52,20 +52,20 @@ class GraphCompiler {
   // `Compile` function should be overrided for every engine compiler.
   class Impl {
    public:
-    explicit Impl(const std::string &name) : name_(name) {}
+    explicit Impl(const std::string& name) : name_(name) {}
     virtual ~Impl() = default;
 
-    void set_device(const XrtDevice &device) { device_ = device; }
+    void set_device(const XrtDevice& device) { device_ = device; }
 
     void set_device_ordinal(int32_t device_ordinal) {
       CHECK_GE(device_ordinal, 0) << "Device ordinal should >= 0.";
       device_ordinal_ = device_ordinal;
     }
 
-    virtual std::shared_ptr<Executable> Compile(const XrtGraph *graph,
-                                                const std::vector<Parameter> &entry_params,
-                                                const std::vector<Parameter> &return_params,
-                                                const std::vector<InputOutputAlias> &aliases) = 0;
+    virtual std::shared_ptr<Executable> Compile(const XrtGraph* graph,
+                                                const std::vector<Parameter>& entry_params,
+                                                const std::vector<Parameter>& return_params,
+                                                const std::vector<InputOutputAlias>& aliases) = 0;
 
    protected:
     // Compiler name
@@ -76,12 +76,12 @@ class GraphCompiler {
   };
 
  public:
-  using Factory = std::function<Impl *(const std::string &)>;
-  static auto Registry() -> util::Registry<XrtEngine, Factory> * {
+  using Factory = std::function<Impl*(const std::string&)>;
+  static auto Registry() -> util::Registry<XrtEngine, Factory>* {
     return util::Registry<XrtEngine, Factory>::Global();
   }
 
-  GraphCompiler(const std::string &name, const XrtEngine &engine, const XrtDevice &device,
+  GraphCompiler(const std::string& name, const XrtEngine& engine, const XrtDevice& device,
                 int32_t device_ordinal)
       : engine_(engine) {
     impl_.reset(GraphCompiler::Registry()->Lookup(engine_)(name));
@@ -90,14 +90,14 @@ class GraphCompiler {
     impl_->set_device_ordinal(device_ordinal);
   }
 
-  std::shared_ptr<Executable> Compile(const XrtGraph *graph,
-                                      const std::vector<Parameter> &entry_params,
-                                      const std::vector<Parameter> &return_params,
-                                      const std::vector<InputOutputAlias> &aliases) {
+  std::shared_ptr<Executable> Compile(const XrtGraph* graph,
+                                      const std::vector<Parameter>& entry_params,
+                                      const std::vector<Parameter>& return_params,
+                                      const std::vector<InputOutputAlias>& aliases) {
     return impl_->Compile(graph, entry_params, return_params, aliases);
   }
 
-  const XrtEngine &engine() const { return engine_; }
+  const XrtEngine& engine() const { return engine_; }
 
  private:
   GraphCompiler() = delete;
@@ -106,16 +106,16 @@ class GraphCompiler {
   std::shared_ptr<Impl> impl_;
 };
 
-#define REGISTER_GRAPH_COMPILER(Engine, Compiler)                                               \
-  namespace {                                                                                   \
-  struct _XrtGraphCompiler {                                                                    \
-    _XrtGraphCompiler() {                                                                       \
-      GraphCompiler::Registry()->Register(                                                      \
-          Engine,                                                                               \
-          [](const std::string &name) -> GraphCompiler::Impl * { return new Compiler(name); }); \
-    }                                                                                           \
-  };                                                                                            \
-  static _XrtGraphCompiler _xrt_graph_compiler_ __attribute__((unused));                        \
+#define REGISTER_GRAPH_COMPILER(Engine, Compiler)                                              \
+  namespace {                                                                                  \
+  struct _XrtGraphCompiler {                                                                   \
+    _XrtGraphCompiler() {                                                                      \
+      GraphCompiler::Registry()->Register(                                                     \
+          Engine,                                                                              \
+          [](const std::string& name) -> GraphCompiler::Impl* { return new Compiler(name); }); \
+    }                                                                                          \
+  };                                                                                           \
+  static _XrtGraphCompiler _xrt_graph_compiler_ __attribute__((unused));                       \
   }  // namespace
 
 }  // namespace xrt

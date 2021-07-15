@@ -21,13 +21,13 @@ namespace xrt {
 namespace tensorrt {
 
 template<typename T>
-static T *GetWeightPtr(const nvinfer1::Weights &weight) {
-  return reinterpret_cast<T *>(const_cast<void *>(weight.values));
+static T* GetWeightPtr(const nvinfer1::Weights& weight) {
+  return reinterpret_cast<T*>(const_cast<void*>(weight.values));
 }
 
 class NormalizationOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
+  void Compile(TrtOpContext* ctx) override {
     Shape in_shape = ctx->InputShape("x_0");
     CHECK_GE(in_shape.NumAxes(), 2);
 
@@ -38,10 +38,10 @@ class NormalizationOp : public TrtOpKernel {
     nvinfer1::Weights moving_mean = ctx->Weight("moving_mean_0");
     nvinfer1::Weights moving_variance = ctx->Weight("moving_variance_0");
 
-    float *gamma_ptr = GetWeightPtr<float>(gamma);
-    float *beta_ptr = GetWeightPtr<float>(beta);
-    const float *moving_mean_ptr = GetWeightPtr<float>(moving_mean);
-    const float *moving_variance_ptr = GetWeightPtr<float>(moving_variance);
+    float* gamma_ptr = GetWeightPtr<float>(gamma);
+    float* beta_ptr = GetWeightPtr<float>(beta);
+    const float* moving_mean_ptr = GetWeightPtr<float>(moving_mean);
+    const float* moving_variance_ptr = GetWeightPtr<float>(moving_variance);
 
     for (int i = 0; i < gamma.count; ++i) {
       *gamma_ptr /= std::sqrt(*moving_variance_ptr + epsilon);
@@ -54,16 +54,16 @@ class NormalizationOp : public TrtOpKernel {
 
     nvinfer1::Weights power{nvinfer1::DataType::kFLOAT, nullptr, 0};
 
-    nvinfer1::ITensor *input = ctx->Input("x_0");
+    nvinfer1::ITensor* input = ctx->Input("x_0");
 
     nvinfer1::ScaleMode mode = nvinfer1::ScaleMode::kCHANNEL;
-    nvinfer1::IScaleLayer *layer =  // NOLINT
+    nvinfer1::IScaleLayer* layer =  // NOLINT
         ctx->builder()->addScale(*input, mode, beta, gamma, power);
     layer->setName(ctx->op_name().c_str());
-    nvinfer1::ITensor *out = layer->getOutput(0);
+    nvinfer1::ITensor* out = layer->getOutput(0);
 
     if (ctx->HasInput("_add_to_output_0")) {
-      auto *add_layer = ctx->builder()->addElementWise(  // NOLINT
+      auto* add_layer = ctx->builder()->addElementWise(  // NOLINT
           *out, *ctx->Input("_add_to_output_0"), nvinfer1::ElementWiseOperation::kSUM);
       ctx->SetOutput("y_0", add_layer->getOutput(0));
     } else {

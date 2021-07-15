@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
 Transport::Transport() {
   comm_net_ = Global<EpollCommNet>::Get();
-  this_machine_id_ = Global<MachineCtx>::Get()->this_machine_id();
+  this_machine_id_ = GlobalProcessCtx::Rank();
   CHECK(comm_net_ != nullptr);
   // maybe need new read id for each dst machine id, maybe need 2 * machine num read ids
   read_id_ = comm_net_->NewActorReadId();
@@ -62,7 +64,7 @@ void Transport::PollMsgChannel() {
 
 void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg& msg) {
   // This machine is dst machine, and receive Send msg from source machine
-  // Mayby we need create TransportStatus,
+  // Maybe we need create TransportStatus,
   // or we need update TransportStatus and DoRead().
   CHECK_EQ(msg.type, TransportMsgType::kSend);
   CHECK(msg.src_mem_token != nullptr);
@@ -85,7 +87,7 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
   // store callback.
   TransportStatus* stat = nullptr;
 
-  // if recv_before_send is ture, it means the Receive() method has been called before this handler
+  // if recv_before_send is true, it means the Receive() method has been called before this handler
   bool recv_before_send = false;
   {
     std::unique_lock<std::mutex> lock(status_mutex_);
@@ -96,7 +98,7 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
 
       // init stat
       // These three members must be initialized in the block protected by lock
-      //  to prevent multithreaded access bugs
+      //  to prevent multi-threaded access bugs
       stat->size = msg.size;
       stat->src_machine_id = msg.src_machine_id;
       stat->dst_machine_id = msg.dst_machine_id;
@@ -214,7 +216,7 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
   // store callback.
   TransportStatus* stat = nullptr;
 
-  // if recv_before_send is ture, it means the SendMsg has been handled before this Receive called.
+  // if recv_before_send is true, it means the SendMsg has been handled before this Receive called.
   bool send_before_recv = false;
   {
     std::unique_lock<std::mutex> lock(status_mutex_);
@@ -225,7 +227,7 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
 
       // init stat
       // These three members must be initialized in the block protected by lock
-      //  to prevent multithreaded access bugs
+      //  to prevent multi-threaded access bugs
       stat->size = max_size;
       stat->src_machine_id = src_machine_id;
       stat->dst_machine_id = this_machine_id_;
@@ -289,7 +291,7 @@ void Transport::DoRead(uint64_t token) {
     // UnRegisterMemory
     comm_net_->UnRegisterMemory(msg.dst_mem_token);
 
-    // Do Recive callback
+    // Do Receive callback
     stat->callback();
 
     // Recovery status
@@ -374,3 +376,5 @@ void Transport::RecvFromLocalMachine(uint64_t token, void* ptr, std::size_t max_
 }
 
 }  // namespace oneflow
+
+#endif  // __linux__

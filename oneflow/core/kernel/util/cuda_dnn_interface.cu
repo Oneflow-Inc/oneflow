@@ -129,38 +129,6 @@ __global__ void SigmoidBackwardGpu<half>(const int n, const half* y, const half*
 }
 
 template<typename T>
-__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
-}
-
-template<>
-__global__ void TanHForwardGpu<half>(const int n, const half* x, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half ex = hexp(x[i]);
-    half e_x = hexp(__hneg(x[i]));
-    y[i] = __hdiv(__hsub(ex, e_x), __hadd(ex, e_x));
-  }
-#else
-  HALF_CHECK_FAILED;
-#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-}
-
-template<typename T>
-__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
-}
-
-template<>
-__global__ void TanHBackwardGpu<half>(const int n, const half* y, const half* dy, half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hsub(hone(), __hmul(y[i], y[i]))); }
-#else
-  HALF_CHECK_FAILED;
-#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-}
-
-template<typename T>
 struct ReluHelper final {
   static void ReluForward(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
@@ -254,47 +222,6 @@ void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, c
                                               const float16* y, const float16* dy, float16* dx) {
   CHECK(IsKernelSafeInt32(n));
   SigmoidBackwardGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
-          reinterpret_cast<half*>(dx));
-}
-
-void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHForwardGpu<float>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
-}
-
-void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHForwardGpu<double>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
-}
-
-void DnnIf<DeviceType::kGPU>::TanH(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHForwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
-}
-
-void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x,
-                                           const float* y, const float* dy, float* dx) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHBackwardGpu<float>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
-}
-
-void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x,
-                                           const double* y, const double* dy, double* dx) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHBackwardGpu<double>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
-}
-
-void DnnIf<DeviceType::kGPU>::TanHBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
-                                           const float16* y, const float16* dy, float16* dx) {
-  CHECK(IsKernelSafeInt32(n));
-  TanHBackwardGpu<half>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
           reinterpret_cast<half*>(dx));

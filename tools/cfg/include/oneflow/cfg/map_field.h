@@ -12,7 +12,6 @@ namespace cfg {
 template<typename Key, typename T>
 class _MapField_ {
  public:
-  static_assert(std::is_nothrow_move_constructible<T>::value, "");
   using key_type = typename std::map<Key, T>::key_type;
   using mapped_type = typename std::map<Key, T>::mapped_type;
   using value_type = typename std::map<Key, T>::value_type;

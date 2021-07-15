@@ -93,7 +93,9 @@ def _compare_image_batch_align(
     test_case.assertTrue(np.array_equal(image_tensor, empty_image_array))
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestImageBatchAlign(flow.unittest.TestCase):
     def test_image_batch_align(test_case):
         _compare_image_batch_align(

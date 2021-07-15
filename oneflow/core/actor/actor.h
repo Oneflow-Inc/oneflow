@@ -153,7 +153,6 @@ class Actor {
 
  protected:
   int64_t GetGlobalWorkStreamId() const;
-  int64_t GetLocalWorkStreamId() const;
   virtual bool NeedCollectActEvent() const {
     return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
   }

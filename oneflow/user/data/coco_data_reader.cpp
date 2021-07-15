@@ -53,7 +53,7 @@ COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
                    const std::string& image_dir, bool remove_images_without_annotations)
     : image_dir_(image_dir) {
   // Read content of annotation file (json format) to json obj
-  PersistentInStream in_stream(session_id, DataFS(session_id), annotation_file);
+  PersistentInStream in_stream(session_id, DataFS(), annotation_file);
   std::string json_str;
   std::string line;
   while (in_stream.ReadLine(&line) == 0) { json_str += line; }

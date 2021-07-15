@@ -92,7 +92,9 @@ class CastKernel final : public OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_CAST_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_CAST_KERNEL(DeviceType::kGPU)
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow

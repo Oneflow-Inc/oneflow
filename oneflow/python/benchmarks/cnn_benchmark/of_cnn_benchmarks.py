@@ -77,6 +77,13 @@ parser.add_argument(
     help="data part number in dataset",
 )
 parser.add_argument(
+    "--gpu_image_decoder",
+    type=bool,
+    default=False,
+    required=False,
+    help="Whether to use use ImageDecoderRandomCropResize.",
+)
+parser.add_argument(
     "--image_size", type=int, default=228, required=False, help="image size"
 )
 
@@ -179,7 +186,11 @@ def TrainNet():
         assert os.path.exists(args.data_dir)
         print("Loading data from {}".format(args.data_dir))
         (labels, images) = data_loader.load_imagenet(
-            args.data_dir, args.image_size, batch_size, args.data_part_num
+            args.data_dir,
+            args.image_size,
+            batch_size,
+            args.data_part_num,
+            args.gpu_image_decoder,
         )
     else:
         print("Loading synthetic data.")

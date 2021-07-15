@@ -16,12 +16,8 @@ message StructPodProto {
 
 enum FieldKey {
   kInvalidFieldKey = 0;
-  kTensorShapeList = 1;
-  kTensorListLength = 2;
-  kLastTensorDataOffset = 3;
-  kTensorListSlices = 4;
-  kTensorListSlicesLength = 5;
-  kFieldKeySize = 6;
+  kTensorShape = 1;
+  kFieldKeySize = 2;
 }
 
 message FieldId {

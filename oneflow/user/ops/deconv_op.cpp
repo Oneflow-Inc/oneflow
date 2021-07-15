@@ -22,18 +22,14 @@ namespace {
 
 template<size_t NDims>
 Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  CHECK_EQ(NDims + 2, in->shape().NumAxes());
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  CHECK_EQ(NDims + 2, in.shape().NumAxes());
 
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
-
-  // only support data parallel
-  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
 
   {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
@@ -44,43 +40,43 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
-    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
-    out_shape.at(0) = in->shape().At(0);
+    out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       int32_t effective_filter_size = (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
-      out_shape.at(idx_offset + i) = (in->shape().At(idx_offset + i) - 1) * strides.at(i)
+      out_shape.at(idx_offset + i) = (in.shape().At(idx_offset + i) - 1) * strides.at(i)
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
     }
-    *out = *in;
+    *out->mut_is_dynamic() = in.is_dynamic();
     *out->mut_shape() = Shape(out_shape);
   }
 
   {
-    DimVector weight_shape(in->shape().dim_vec());
+    DimVector weight_shape(in.shape().dim_vec());
     if (data_format == "channels_first") {
-      weight_shape.at(0) = in->shape().At(1);
+      weight_shape.at(0) = in.shape().At(1);
       weight_shape.at(1) = filters;
     } else if (data_format == "channels_last") {
-      weight_shape.at(0) = in->shape().At(NDims + 1);
+      weight_shape.at(0) = in.shape().At(NDims + 1);
       weight_shape.at(NDims + 1) = filters;
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
-    const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+    CHECK_EQ(weight.shape(), Shape(weight_shape));
   }
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis4DeConv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -208,8 +204,8 @@ REGISTER_USER_OP("deconv1d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<1>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
-    .SetGetSbpFn(GetSbpSignatures4DeConv);
+    .SetGetSbpFn(GetSbpSignatures4DeConv)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP("deconv2d")
     .Input("in")
@@ -225,8 +221,8 @@ REGISTER_USER_OP("deconv2d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<2>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
-    .SetGetSbpFn(GetSbpSignatures4DeConv);
+    .SetGetSbpFn(GetSbpSignatures4DeConv)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP("deconv3d")
     .Input("in")
@@ -242,7 +238,7 @@ REGISTER_USER_OP("deconv3d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<3>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
+    .SetDataTypeInferFn(InferDataType)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);

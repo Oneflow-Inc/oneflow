@@ -26,21 +26,28 @@ class VariableOp final : public Operator {
   VariableOp() : Operator() {}
   ~VariableOp() = default;
 
-  void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const override;
-  Maybe<void> UpdateOpconf() override;
-  Maybe<double> GetComputeComplexity(
-      SbpSignature* sbp_signature,
-      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
-      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InitFromOpConf() override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InferSbpSignature(
+      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
+  Maybe<void> InferParallelDistributionSignature(
+      cfg::ParallelDistributionSignature* parallel_distribution_signature,
+      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const override;
 };
 
 }  // namespace oneflow

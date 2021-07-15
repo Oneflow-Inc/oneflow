@@ -25,12 +25,13 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
+import oneflow._oneflow_internal
 
 
 @oneflow_export("advanced.distribute_clone")
 def api_distribute_clone(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     func = enable_if.unique([distribute_clone])
     return func(x, name=name)
 
@@ -59,8 +60,8 @@ def distribute_clone(x, name=None):
 
 @oneflow_export("advanced.distribute_add")
 def api_distribute_add(
-    xs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    xs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([distribute_add])
     return func(xs, name=name)
 
@@ -85,8 +86,8 @@ def distribute_add(xs, name=None):
 
 @oneflow_export("advanced.distribute_split")
 def api_distribute_split(
-    x: remote_blob_util.BlobDef, axis: int = 0, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    x: oneflow._oneflow_internal.BlobDesc, axis: int = 0, name: Optional[str] = None
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     func = enable_if.unique([distribute_split])
     return func(x, axis=axis, name=name)
 
@@ -116,8 +117,10 @@ def distribute_split(x, axis=0, name=None):
 
 @oneflow_export("advanced.distribute_concat")
 def api_distribute_concat(
-    xs: Sequence[remote_blob_util.BlobDef], axis: int = 0, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    xs: Sequence[oneflow._oneflow_internal.BlobDesc],
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([distribute_concat])
     return func(xs, axis=axis, name=name)
 
@@ -143,12 +146,15 @@ def distribute_concat(xs, axis=0, name=None):
 
 @oneflow_export("advanced.distribute_map")
 def api_distribute_map(
-    xs: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef],
+    xs: Union[
+        Sequence[oneflow._oneflow_internal.BlobDesc], oneflow._oneflow_internal.BlobDesc
+    ],
     f: Callable[
-        [remote_blob_util.BlobDef, remote_blob_util.BlobDef], remote_blob_util.BlobDef
+        [oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc],
+        oneflow._oneflow_internal.BlobDesc,
     ],
     axis: int = 0,
-) -> Tuple[remote_blob_util.BlobDef]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     func = enable_if.unqiue([distribute_map])
     return func(xs, f, axis=axis)
 
@@ -161,7 +167,7 @@ def distribute_map(xs, f, axis=0):
     splitted_xs = [oneflow.advanced.distribute_split(x, axis=axis) for x in xs]
     results = [_UnderSingleDevicePlacementScope(f, *x) for x in zip(*splitted_xs)]
     output_is_not_container = all(
-        [isinstance(x, remote_blob_util.ConsistentBlob) for x in results]
+        [isinstance(x, oneflow._oneflow_internal.ConsistentBlob) for x in results]
     )
     results = [_TryWrapTuple(x) for x in results]
     result = [oneflow.advanced.distribute_concat(x, axis=axis) for x in zip(*results)]
@@ -172,13 +178,13 @@ def distribute_map(xs, f, axis=0):
 
 @oneflow_export("cast_to_current_logical_view")
 def cast_to_current_logical_view(
-    x: remote_blob_util.BlobDef,
-) -> remote_blob_util.BlobDef:
+    x: oneflow._oneflow_internal.BlobDesc,
+) -> oneflow._oneflow_internal.BlobDesc:
     if (
-        isinstance(x, remote_blob_util.ConsistentBlob)
+        isinstance(x, oneflow._oneflow_internal.ConsistentBlob)
         and oneflow.scope.mirrored_view_enabled()
     ) or (
-        isinstance(x, remote_blob_util.MirroredBlob)
+        isinstance(x, oneflow._oneflow_internal.MirroredBlob)
         and oneflow.scope.consistent_view_enabled()
     ):
         x = oneflow.identity(x)
@@ -187,18 +193,20 @@ def cast_to_current_logical_view(
 
 def _SoleConsistentLbn(blob):
     assert blob.parallel_size == 1
-    if isinstance(blob, remote_blob_util.ConsistentBlob):
+    if isinstance(blob, oneflow._oneflow_internal.ConsistentBlob):
         return blob.unique_name
-    if isinstance(blob, remote_blob_util.MirroredBlob):
+    if isinstance(blob, oneflow._oneflow_internal.MirroredBlob):
         return blob.sub_consistent_blob_list[0].unique_name
     raise NotImplementedError
 
 
 def _AssertInputOrOutput(xs):
-    assert isinstance(xs, (list, tuple, remote_blob_util.ConsistentBlob))
+    assert isinstance(xs, (list, tuple, oneflow._oneflow_internal.ConsistentBlob))
     if isinstance(xs, (list, tuple)):
         assert len(xs) > 0
-        assert all([isinstance(x, remote_blob_util.ConsistentBlob) for x in xs])
+        assert all(
+            [isinstance(x, oneflow._oneflow_internal.ConsistentBlob) for x in xs]
+        )
 
 
 def _TryWrapTuple(ys):
@@ -211,7 +219,7 @@ def _TryWrapTuple(ys):
 def _UnderSingleDevicePlacementScope(f, *args):
     parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
     for machine_id, device_id in _EachMachineIdAndDeviceId(parallel_desc_symbol):
-        mch_dev_str = "%d:%d" % (machine_id, device_id)
+        mch_dev_str = "@%d:%d" % (machine_id, device_id)
         with oneflow.scope.placement(parallel_desc_symbol.device_tag, mch_dev_str):
             return f(*args)
 

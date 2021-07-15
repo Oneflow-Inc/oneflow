@@ -34,8 +34,8 @@ class TestDemoMatmul(flow.unittest.TestCase):
 
         @flow.global_function()
         def Matmul(
-            x: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=None),
-            y: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=1),
+            x: tp.Numpy.Placeholder((4, 4), dtype=flow.float32),
+            y: tp.Numpy.Placeholder((4, 4), dtype=flow.float32),
         ) -> tp.Numpy:
             s = flow.matmul(x, y)  # model parallel
             flow.watch(s, Watch)

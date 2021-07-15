@@ -19,7 +19,9 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-@flow.unittest.skip_unless_1n2d()
+# @flow.unittest.skip_unless_1n2d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestDynamicReshape(flow.unittest.TestCase):
     def test_dynamic_reshape(test_case):
         data_shape = (10, 10, 10)

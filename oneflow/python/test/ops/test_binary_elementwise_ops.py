@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import os
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
@@ -71,8 +70,6 @@ def RunOneflowBinaryOp(device_type, flow_op, x, y, data_type):
             return loss
 
     # Oneflow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")

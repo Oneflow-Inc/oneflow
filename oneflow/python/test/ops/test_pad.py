@@ -23,7 +23,7 @@ import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestPad(flow.unittest.TestCase):
     def test_pad(test_case):
         arg_dict = OrderedDict()

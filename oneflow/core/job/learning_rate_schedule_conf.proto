@@ -1,0 +1,79 @@
+syntax = "proto2";
+package oneflow;
+
+message ExponentialDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message InverseTimeDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message NaturalExpDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message PiecewiseConstantConf {
+  repeated int64 boundaries = 1;
+  repeated double values = 2;
+}
+
+message PolynomialDecayConf {
+  required int64 decay_batches = 1;
+  optional double end_learning_rate = 2 [default = 0.0001];
+  optional double power = 3 [default = 1.0];
+  optional bool cycle = 4 [default = false];
+}
+
+message CosineDecayConf {
+  required int64 decay_batches = 1;
+  optional double alpha = 2 [default = 0.0];
+}
+
+message LinearCosineDecayConf {
+  required int64 decay_batches = 1;
+  optional double num_periods = 2 [default = 0.5];
+  optional double alpha = 3 [default = 0.0];
+  optional double beta = 4 [default = 0.001];
+}
+
+message PiecewiseScalingConf {
+  repeated int64 boundaries = 1;
+  repeated double scales = 2;
+}
+
+message LearningRateDecayConf {
+  oneof type {
+    ExponentialDecayConf exponential_conf = 2000;
+    InverseTimeDecayConf inverse_time_conf = 2001;
+    NaturalExpDecayConf natural_exp_conf = 2002;
+    PiecewiseConstantConf piecewise_constant_conf = 2003;
+    PolynomialDecayConf polynomial_conf = 2004;
+    CosineDecayConf cosine_conf = 2005;
+    LinearCosineDecayConf linear_cosine_conf = 2006;
+    PiecewiseScalingConf piecewise_scaling_conf = 2007;
+  }
+}
+
+message ConstantWarmupConf {
+  required int64 warmup_batches = 1;
+  required double multiplier = 2;
+}
+
+message LinearWarmupConf {
+  required int64 warmup_batches = 1;
+  required double start_multiplier = 2;
+}
+
+message WarmupConf {
+  oneof type {
+    ConstantWarmupConf constant_conf = 3000;
+    LinearWarmupConf linear_conf = 3001;
+  }
+}

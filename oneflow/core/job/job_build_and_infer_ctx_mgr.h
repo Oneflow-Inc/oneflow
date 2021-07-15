@@ -81,6 +81,10 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
 
 bool EagerExecutionEnabled();
 
+Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
+Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);
+Maybe<JobBuildAndInferCtx*> GetCurInferCtx();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_

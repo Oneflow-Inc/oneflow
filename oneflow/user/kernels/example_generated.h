@@ -84,14 +84,14 @@ inline const TensorData (&EnumValuesTensorData())[9] {
   return values;
 }
 
-inline const char *const *EnumNamesTensorData() {
-  static const char *const names[10] = {"NONE",       "Int8List",    "Int16List",   "Int32List",
+inline const char* const* EnumNamesTensorData() {
+  static const char* const names[10] = {"NONE",       "Int8List",    "Int16List",   "Int32List",
                                         "Int64List",  "Float32List", "Float64List", "StringList",
                                         "BinaryList", nullptr};
   return names;
 }
 
-inline const char *EnumNameTensorData(TensorData e) {
+inline const char* EnumNameTensorData(TensorData e) {
   if (flatbuffers::IsOutRange(e, TensorData_NONE, TensorData_BinaryList)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesTensorData()[index];
@@ -142,18 +142,18 @@ struct TensorDataTraits<onerec::example::BinaryList> {
   static const TensorData enum_value = TensorData_BinaryList;
 };
 
-bool VerifyTensorData(flatbuffers::Verifier &verifier, const void *obj, TensorData type);
-bool VerifyTensorDataVector(flatbuffers::Verifier &verifier,
-                            const flatbuffers::Vector<flatbuffers::Offset<void>> *values,
-                            const flatbuffers::Vector<uint8_t> *types);
+bool VerifyTensorData(flatbuffers::Verifier& verifier, const void* obj, TensorData type);
+bool VerifyTensorDataVector(flatbuffers::Verifier& verifier,
+                            const flatbuffers::Vector<flatbuffers::Offset<void>>* values,
+                            const flatbuffers::Vector<uint8_t>* types);
 
 struct Int8List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Int8ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<int8_t> *values() const {
-    return GetPointer<const flatbuffers::Vector<int8_t> *>(VT_VALUES);
+  const flatbuffers::Vector<int8_t>* values() const {
+    return GetPointer<const flatbuffers::Vector<int8_t>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -161,15 +161,15 @@ struct Int8List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Int8ListBuilder {
   typedef Int8List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<int8_t>> values) {
     fbb_.AddOffset(Int8List::VT_VALUES, values);
   }
-  explicit Int8ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Int8ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Int8ListBuilder &operator=(const Int8ListBuilder &);
+  Int8ListBuilder& operator=(const Int8ListBuilder&);
   flatbuffers::Offset<Int8List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Int8List>(end);
@@ -178,7 +178,7 @@ struct Int8ListBuilder {
 };
 
 inline flatbuffers::Offset<Int8List> CreateInt8List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int8_t>> values = 0) {
   Int8ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -186,7 +186,7 @@ inline flatbuffers::Offset<Int8List> CreateInt8List(
 }
 
 inline flatbuffers::Offset<Int8List> CreateInt8ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<int8_t> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<int8_t>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<int8_t>(*values) : 0;
   return onerec::example::CreateInt8List(_fbb, values__);
 }
@@ -194,10 +194,10 @@ inline flatbuffers::Offset<Int8List> CreateInt8ListDirect(
 struct Int16List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Int16ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<int16_t> *values() const {
-    return GetPointer<const flatbuffers::Vector<int16_t> *>(VT_VALUES);
+  const flatbuffers::Vector<int16_t>* values() const {
+    return GetPointer<const flatbuffers::Vector<int16_t>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -205,15 +205,15 @@ struct Int16List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Int16ListBuilder {
   typedef Int16List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<int16_t>> values) {
     fbb_.AddOffset(Int16List::VT_VALUES, values);
   }
-  explicit Int16ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Int16ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Int16ListBuilder &operator=(const Int16ListBuilder &);
+  Int16ListBuilder& operator=(const Int16ListBuilder&);
   flatbuffers::Offset<Int16List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Int16List>(end);
@@ -222,7 +222,7 @@ struct Int16ListBuilder {
 };
 
 inline flatbuffers::Offset<Int16List> CreateInt16List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int16_t>> values = 0) {
   Int16ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -230,7 +230,7 @@ inline flatbuffers::Offset<Int16List> CreateInt16List(
 }
 
 inline flatbuffers::Offset<Int16List> CreateInt16ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<int16_t> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<int16_t>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<int16_t>(*values) : 0;
   return onerec::example::CreateInt16List(_fbb, values__);
 }
@@ -238,10 +238,10 @@ inline flatbuffers::Offset<Int16List> CreateInt16ListDirect(
 struct Int32List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Int32ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<int32_t> *values() const {
-    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_VALUES);
+  const flatbuffers::Vector<int32_t>* values() const {
+    return GetPointer<const flatbuffers::Vector<int32_t>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -249,15 +249,15 @@ struct Int32List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Int32ListBuilder {
   typedef Int32List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<int32_t>> values) {
     fbb_.AddOffset(Int32List::VT_VALUES, values);
   }
-  explicit Int32ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Int32ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Int32ListBuilder &operator=(const Int32ListBuilder &);
+  Int32ListBuilder& operator=(const Int32ListBuilder&);
   flatbuffers::Offset<Int32List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Int32List>(end);
@@ -266,7 +266,7 @@ struct Int32ListBuilder {
 };
 
 inline flatbuffers::Offset<Int32List> CreateInt32List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int32_t>> values = 0) {
   Int32ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -274,7 +274,7 @@ inline flatbuffers::Offset<Int32List> CreateInt32List(
 }
 
 inline flatbuffers::Offset<Int32List> CreateInt32ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<int32_t> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<int32_t>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<int32_t>(*values) : 0;
   return onerec::example::CreateInt32List(_fbb, values__);
 }
@@ -282,10 +282,10 @@ inline flatbuffers::Offset<Int32List> CreateInt32ListDirect(
 struct Int64List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Int64ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<int64_t> *values() const {
-    return GetPointer<const flatbuffers::Vector<int64_t> *>(VT_VALUES);
+  const flatbuffers::Vector<int64_t>* values() const {
+    return GetPointer<const flatbuffers::Vector<int64_t>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -293,15 +293,15 @@ struct Int64List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Int64ListBuilder {
   typedef Int64List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<int64_t>> values) {
     fbb_.AddOffset(Int64List::VT_VALUES, values);
   }
-  explicit Int64ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Int64ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Int64ListBuilder &operator=(const Int64ListBuilder &);
+  Int64ListBuilder& operator=(const Int64ListBuilder&);
   flatbuffers::Offset<Int64List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Int64List>(end);
@@ -310,7 +310,7 @@ struct Int64ListBuilder {
 };
 
 inline flatbuffers::Offset<Int64List> CreateInt64List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int64_t>> values = 0) {
   Int64ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -318,7 +318,7 @@ inline flatbuffers::Offset<Int64List> CreateInt64List(
 }
 
 inline flatbuffers::Offset<Int64List> CreateInt64ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<int64_t> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<int64_t>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<int64_t>(*values) : 0;
   return onerec::example::CreateInt64List(_fbb, values__);
 }
@@ -326,10 +326,10 @@ inline flatbuffers::Offset<Int64List> CreateInt64ListDirect(
 struct Float32List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Float32ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<float> *values() const {
-    return GetPointer<const flatbuffers::Vector<float> *>(VT_VALUES);
+  const flatbuffers::Vector<float>* values() const {
+    return GetPointer<const flatbuffers::Vector<float>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -337,15 +337,15 @@ struct Float32List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Float32ListBuilder {
   typedef Float32List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<float>> values) {
     fbb_.AddOffset(Float32List::VT_VALUES, values);
   }
-  explicit Float32ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Float32ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Float32ListBuilder &operator=(const Float32ListBuilder &);
+  Float32ListBuilder& operator=(const Float32ListBuilder&);
   flatbuffers::Offset<Float32List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Float32List>(end);
@@ -354,7 +354,7 @@ struct Float32ListBuilder {
 };
 
 inline flatbuffers::Offset<Float32List> CreateFloat32List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<float>> values = 0) {
   Float32ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -362,7 +362,7 @@ inline flatbuffers::Offset<Float32List> CreateFloat32List(
 }
 
 inline flatbuffers::Offset<Float32List> CreateFloat32ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<float> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<float>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<float>(*values) : 0;
   return onerec::example::CreateFloat32List(_fbb, values__);
 }
@@ -370,10 +370,10 @@ inline flatbuffers::Offset<Float32List> CreateFloat32ListDirect(
 struct Float64List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef Float64ListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<double> *values() const {
-    return GetPointer<const flatbuffers::Vector<double> *>(VT_VALUES);
+  const flatbuffers::Vector<double>* values() const {
+    return GetPointer<const flatbuffers::Vector<double>*>(VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.EndTable();
   }
@@ -381,15 +381,15 @@ struct Float64List FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct Float64ListBuilder {
   typedef Float64List Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(flatbuffers::Offset<flatbuffers::Vector<double>> values) {
     fbb_.AddOffset(Float64List::VT_VALUES, values);
   }
-  explicit Float64ListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit Float64ListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  Float64ListBuilder &operator=(const Float64ListBuilder &);
+  Float64ListBuilder& operator=(const Float64ListBuilder&);
   flatbuffers::Offset<Float64List> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Float64List>(end);
@@ -398,7 +398,7 @@ struct Float64ListBuilder {
 };
 
 inline flatbuffers::Offset<Float64List> CreateFloat64List(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<double>> values = 0) {
   Float64ListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -406,7 +406,7 @@ inline flatbuffers::Offset<Float64List> CreateFloat64List(
 }
 
 inline flatbuffers::Offset<Float64List> CreateFloat64ListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<double> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<double>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<double>(*values) : 0;
   return onerec::example::CreateFloat64List(_fbb, values__);
 }
@@ -414,11 +414,11 @@ inline flatbuffers::Offset<Float64List> CreateFloat64ListDirect(
 struct StringList FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef StringListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *values() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>* values() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>*>(
         VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.VerifyVectorOfStrings(values())
            && verifier.EndTable();
@@ -427,16 +427,16 @@ struct StringList FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct StringListBuilder {
   typedef StringList Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(
       flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> values) {
     fbb_.AddOffset(StringList::VT_VALUES, values);
   }
-  explicit StringListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit StringListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  StringListBuilder &operator=(const StringListBuilder &);
+  StringListBuilder& operator=(const StringListBuilder&);
   flatbuffers::Offset<StringList> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<StringList>(end);
@@ -445,7 +445,7 @@ struct StringListBuilder {
 };
 
 inline flatbuffers::Offset<StringList> CreateStringList(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> values = 0) {
   StringListBuilder builder_(_fbb);
   builder_.add_values(values);
@@ -453,8 +453,8 @@ inline flatbuffers::Offset<StringList> CreateStringList(
 }
 
 inline flatbuffers::Offset<StringList> CreateStringListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<flatbuffers::Offset<flatbuffers::String>> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>>* values = nullptr) {
   auto values__ = values ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*values) : 0;
   return onerec::example::CreateStringList(_fbb, values__);
 }
@@ -462,10 +462,10 @@ inline flatbuffers::Offset<StringList> CreateStringListDirect(
 struct Binary FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef BinaryBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_BUFFER = 4 };
-  const flatbuffers::Vector<int8_t> *buffer() const {
-    return GetPointer<const flatbuffers::Vector<int8_t> *>(VT_BUFFER);
+  const flatbuffers::Vector<int8_t>* buffer() const {
+    return GetPointer<const flatbuffers::Vector<int8_t>*>(VT_BUFFER);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_BUFFER)
            && verifier.VerifyVector(buffer()) && verifier.EndTable();
   }
@@ -473,15 +473,15 @@ struct Binary FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct BinaryBuilder {
   typedef Binary Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_buffer(flatbuffers::Offset<flatbuffers::Vector<int8_t>> buffer) {
     fbb_.AddOffset(Binary::VT_BUFFER, buffer);
   }
-  explicit BinaryBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit BinaryBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  BinaryBuilder &operator=(const BinaryBuilder &);
+  BinaryBuilder& operator=(const BinaryBuilder&);
   flatbuffers::Offset<Binary> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Binary>(end);
@@ -490,15 +490,15 @@ struct BinaryBuilder {
 };
 
 inline flatbuffers::Offset<Binary> CreateBinary(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int8_t>> buffer = 0) {
   BinaryBuilder builder_(_fbb);
   builder_.add_buffer(buffer);
   return builder_.Finish();
 }
 
-inline flatbuffers::Offset<Binary> CreateBinaryDirect(flatbuffers::FlatBufferBuilder &_fbb,
-                                                      const std::vector<int8_t> *buffer = nullptr) {
+inline flatbuffers::Offset<Binary> CreateBinaryDirect(flatbuffers::FlatBufferBuilder& _fbb,
+                                                      const std::vector<int8_t>* buffer = nullptr) {
   auto buffer__ = buffer ? _fbb.CreateVector<int8_t>(*buffer) : 0;
   return onerec::example::CreateBinary(_fbb, buffer__);
 }
@@ -506,11 +506,11 @@ inline flatbuffers::Offset<Binary> CreateBinaryDirect(flatbuffers::FlatBufferBui
 struct BinaryList FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef BinaryListBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUES = 4 };
-  const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>> *values() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>> *>(
+  const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>>* values() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>>*>(
         VT_VALUES);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_VALUES)
            && verifier.VerifyVector(values()) && verifier.VerifyVectorOfTables(values())
            && verifier.EndTable();
@@ -519,17 +519,17 @@ struct BinaryList FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct BinaryListBuilder {
   typedef BinaryList Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_values(
       flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>>>
           values) {
     fbb_.AddOffset(BinaryList::VT_VALUES, values);
   }
-  explicit BinaryListBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit BinaryListBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  BinaryListBuilder &operator=(const BinaryListBuilder &);
+  BinaryListBuilder& operator=(const BinaryListBuilder&);
   flatbuffers::Offset<BinaryList> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<BinaryList>(end);
@@ -538,7 +538,7 @@ struct BinaryListBuilder {
 };
 
 inline flatbuffers::Offset<BinaryList> CreateBinaryList(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Binary>>> values =
         0) {
   BinaryListBuilder builder_(_fbb);
@@ -547,8 +547,8 @@ inline flatbuffers::Offset<BinaryList> CreateBinaryList(
 }
 
 inline flatbuffers::Offset<BinaryList> CreateBinaryListDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<flatbuffers::Offset<onerec::example::Binary>> *values = nullptr) {
+    flatbuffers::FlatBufferBuilder& _fbb,
+    const std::vector<flatbuffers::Offset<onerec::example::Binary>>* values = nullptr) {
   auto values__ =
       values ? _fbb.CreateVector<flatbuffers::Offset<onerec::example::Binary>>(*values) : 0;
   return onerec::example::CreateBinaryList(_fbb, values__);
@@ -561,56 +561,56 @@ struct Tensor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DATA_TYPE = 6,
     VT_DATA = 8
   };
-  const flatbuffers::Vector<int32_t> *shape() const {
-    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SHAPE);
+  const flatbuffers::Vector<int32_t>* shape() const {
+    return GetPointer<const flatbuffers::Vector<int32_t>*>(VT_SHAPE);
   }
   onerec::example::TensorData data_type() const {
     return static_cast<onerec::example::TensorData>(GetField<uint8_t>(VT_DATA_TYPE, 0));
   }
-  const void *data() const { return GetPointer<const void *>(VT_DATA); }
+  const void* data() const { return GetPointer<const void*>(VT_DATA); }
   template<typename T>
-  const T *data_as() const;
-  const onerec::example::Int8List *data_as_Int8List() const {
+  const T* data_as() const;
+  const onerec::example::Int8List* data_as_Int8List() const {
     return data_type() == onerec::example::TensorData_Int8List
-               ? static_cast<const onerec::example::Int8List *>(data())
+               ? static_cast<const onerec::example::Int8List*>(data())
                : nullptr;
   }
-  const onerec::example::Int16List *data_as_Int16List() const {
+  const onerec::example::Int16List* data_as_Int16List() const {
     return data_type() == onerec::example::TensorData_Int16List
-               ? static_cast<const onerec::example::Int16List *>(data())
+               ? static_cast<const onerec::example::Int16List*>(data())
                : nullptr;
   }
-  const onerec::example::Int32List *data_as_Int32List() const {
+  const onerec::example::Int32List* data_as_Int32List() const {
     return data_type() == onerec::example::TensorData_Int32List
-               ? static_cast<const onerec::example::Int32List *>(data())
+               ? static_cast<const onerec::example::Int32List*>(data())
                : nullptr;
   }
-  const onerec::example::Int64List *data_as_Int64List() const {
+  const onerec::example::Int64List* data_as_Int64List() const {
     return data_type() == onerec::example::TensorData_Int64List
-               ? static_cast<const onerec::example::Int64List *>(data())
+               ? static_cast<const onerec::example::Int64List*>(data())
                : nullptr;
   }
-  const onerec::example::Float32List *data_as_Float32List() const {
+  const onerec::example::Float32List* data_as_Float32List() const {
     return data_type() == onerec::example::TensorData_Float32List
-               ? static_cast<const onerec::example::Float32List *>(data())
+               ? static_cast<const onerec::example::Float32List*>(data())
                : nullptr;
   }
-  const onerec::example::Float64List *data_as_Float64List() const {
+  const onerec::example::Float64List* data_as_Float64List() const {
     return data_type() == onerec::example::TensorData_Float64List
-               ? static_cast<const onerec::example::Float64List *>(data())
+               ? static_cast<const onerec::example::Float64List*>(data())
                : nullptr;
   }
-  const onerec::example::StringList *data_as_StringList() const {
+  const onerec::example::StringList* data_as_StringList() const {
     return data_type() == onerec::example::TensorData_StringList
-               ? static_cast<const onerec::example::StringList *>(data())
+               ? static_cast<const onerec::example::StringList*>(data())
                : nullptr;
   }
-  const onerec::example::BinaryList *data_as_BinaryList() const {
+  const onerec::example::BinaryList* data_as_BinaryList() const {
     return data_type() == onerec::example::TensorData_BinaryList
-               ? static_cast<const onerec::example::BinaryList *>(data())
+               ? static_cast<const onerec::example::BinaryList*>(data())
                : nullptr;
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_SHAPE)
            && verifier.VerifyVector(shape()) && VerifyField<uint8_t>(verifier, VT_DATA_TYPE)
            && VerifyOffset(verifier, VT_DATA) && VerifyTensorData(verifier, data(), data_type())
@@ -619,48 +619,48 @@ struct Tensor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 template<>
-inline const onerec::example::Int8List *Tensor::data_as<onerec::example::Int8List>() const {
+inline const onerec::example::Int8List* Tensor::data_as<onerec::example::Int8List>() const {
   return data_as_Int8List();
 }
 
 template<>
-inline const onerec::example::Int16List *Tensor::data_as<onerec::example::Int16List>() const {
+inline const onerec::example::Int16List* Tensor::data_as<onerec::example::Int16List>() const {
   return data_as_Int16List();
 }
 
 template<>
-inline const onerec::example::Int32List *Tensor::data_as<onerec::example::Int32List>() const {
+inline const onerec::example::Int32List* Tensor::data_as<onerec::example::Int32List>() const {
   return data_as_Int32List();
 }
 
 template<>
-inline const onerec::example::Int64List *Tensor::data_as<onerec::example::Int64List>() const {
+inline const onerec::example::Int64List* Tensor::data_as<onerec::example::Int64List>() const {
   return data_as_Int64List();
 }
 
 template<>
-inline const onerec::example::Float32List *Tensor::data_as<onerec::example::Float32List>() const {
+inline const onerec::example::Float32List* Tensor::data_as<onerec::example::Float32List>() const {
   return data_as_Float32List();
 }
 
 template<>
-inline const onerec::example::Float64List *Tensor::data_as<onerec::example::Float64List>() const {
+inline const onerec::example::Float64List* Tensor::data_as<onerec::example::Float64List>() const {
   return data_as_Float64List();
 }
 
 template<>
-inline const onerec::example::StringList *Tensor::data_as<onerec::example::StringList>() const {
+inline const onerec::example::StringList* Tensor::data_as<onerec::example::StringList>() const {
   return data_as_StringList();
 }
 
 template<>
-inline const onerec::example::BinaryList *Tensor::data_as<onerec::example::BinaryList>() const {
+inline const onerec::example::BinaryList* Tensor::data_as<onerec::example::BinaryList>() const {
   return data_as_BinaryList();
 }
 
 struct TensorBuilder {
   typedef Tensor Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_shape(flatbuffers::Offset<flatbuffers::Vector<int32_t>> shape) {
     fbb_.AddOffset(Tensor::VT_SHAPE, shape);
@@ -669,10 +669,10 @@ struct TensorBuilder {
     fbb_.AddElement<uint8_t>(Tensor::VT_DATA_TYPE, static_cast<uint8_t>(data_type), 0);
   }
   void add_data(flatbuffers::Offset<void> data) { fbb_.AddOffset(Tensor::VT_DATA, data); }
-  explicit TensorBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit TensorBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  TensorBuilder &operator=(const TensorBuilder &);
+  TensorBuilder& operator=(const TensorBuilder&);
   flatbuffers::Offset<Tensor> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Tensor>(end);
@@ -681,7 +681,7 @@ struct TensorBuilder {
 };
 
 inline flatbuffers::Offset<Tensor> CreateTensor(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<int32_t>> shape = 0,
     onerec::example::TensorData data_type = onerec::example::TensorData_NONE,
     flatbuffers::Offset<void> data = 0) {
@@ -693,7 +693,7 @@ inline flatbuffers::Offset<Tensor> CreateTensor(
 }
 
 inline flatbuffers::Offset<Tensor> CreateTensorDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const std::vector<int32_t> *shape = nullptr,
+    flatbuffers::FlatBufferBuilder& _fbb, const std::vector<int32_t>* shape = nullptr,
     onerec::example::TensorData data_type = onerec::example::TensorData_NONE,
     flatbuffers::Offset<void> data = 0) {
   auto shape__ = shape ? _fbb.CreateVector<int32_t>(*shape) : 0;
@@ -703,15 +703,15 @@ inline flatbuffers::Offset<Tensor> CreateTensorDirect(
 struct Feature FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef FeatureBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_NAME = 4, VT_TENSOR = 6 };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const flatbuffers::String* name() const {
+    return GetPointer<const flatbuffers::String*>(VT_NAME);
   }
-  bool KeyCompareLessThan(const Feature *o) const { return *name() < *o->name(); }
-  int KeyCompareWithValue(const char *val) const { return strcmp(name()->c_str(), val); }
-  const onerec::example::Tensor *tensor() const {
-    return GetPointer<const onerec::example::Tensor *>(VT_TENSOR);
+  bool KeyCompareLessThan(const Feature* o) const { return *name() < *o->name(); }
+  int KeyCompareWithValue(const char* val) const { return strcmp(name()->c_str(), val); }
+  const onerec::example::Tensor* tensor() const {
+    return GetPointer<const onerec::example::Tensor*>(VT_TENSOR);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffsetRequired(verifier, VT_NAME)
            && verifier.VerifyString(name()) && VerifyOffset(verifier, VT_TENSOR)
            && verifier.VerifyTable(tensor()) && verifier.EndTable();
@@ -720,7 +720,7 @@ struct Feature FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct FeatureBuilder {
   typedef Feature Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_name(flatbuffers::Offset<flatbuffers::String> name) {
     fbb_.AddOffset(Feature::VT_NAME, name);
@@ -728,10 +728,10 @@ struct FeatureBuilder {
   void add_tensor(flatbuffers::Offset<onerec::example::Tensor> tensor) {
     fbb_.AddOffset(Feature::VT_TENSOR, tensor);
   }
-  explicit FeatureBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit FeatureBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  FeatureBuilder &operator=(const FeatureBuilder &);
+  FeatureBuilder& operator=(const FeatureBuilder&);
   flatbuffers::Offset<Feature> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Feature>(end);
@@ -741,7 +741,7 @@ struct FeatureBuilder {
 };
 
 inline flatbuffers::Offset<Feature> CreateFeature(
-    flatbuffers::FlatBufferBuilder &_fbb, flatbuffers::Offset<flatbuffers::String> name = 0,
+    flatbuffers::FlatBufferBuilder& _fbb, flatbuffers::Offset<flatbuffers::String> name = 0,
     flatbuffers::Offset<onerec::example::Tensor> tensor = 0) {
   FeatureBuilder builder_(_fbb);
   builder_.add_tensor(tensor);
@@ -750,7 +750,7 @@ inline flatbuffers::Offset<Feature> CreateFeature(
 }
 
 inline flatbuffers::Offset<Feature> CreateFeatureDirect(
-    flatbuffers::FlatBufferBuilder &_fbb, const char *name = nullptr,
+    flatbuffers::FlatBufferBuilder& _fbb, const char* name = nullptr,
     flatbuffers::Offset<onerec::example::Tensor> tensor = 0) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   return onerec::example::CreateFeature(_fbb, name__, tensor);
@@ -760,7 +760,7 @@ struct Digest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef DigestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUE = 4 };
   int64_t value() const { return GetField<int64_t>(VT_VALUE, 0); }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyField<int64_t>(verifier, VT_VALUE)
            && verifier.EndTable();
   }
@@ -768,13 +768,13 @@ struct Digest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct DigestBuilder {
   typedef Digest Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_value(int64_t value) { fbb_.AddElement<int64_t>(Digest::VT_VALUE, value, 0); }
-  explicit DigestBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit DigestBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  DigestBuilder &operator=(const DigestBuilder &);
+  DigestBuilder& operator=(const DigestBuilder&);
   flatbuffers::Offset<Digest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Digest>(end);
@@ -782,7 +782,7 @@ struct DigestBuilder {
   }
 };
 
-inline flatbuffers::Offset<Digest> CreateDigest(flatbuffers::FlatBufferBuilder &_fbb,
+inline flatbuffers::Offset<Digest> CreateDigest(flatbuffers::FlatBufferBuilder& _fbb,
                                                 int64_t value = 0) {
   DigestBuilder builder_(_fbb);
   builder_.add_value(value);
@@ -795,14 +795,14 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_FEATURES = 4,
     VT_METADIGEST = 6
   };
-  const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>> *features() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>> *>(
+  const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>* features() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>*>(
         VT_FEATURES);
   }
-  const onerec::example::Digest *metaDigest() const {
-    return GetPointer<const onerec::example::Digest *>(VT_METADIGEST);
+  const onerec::example::Digest* metaDigest() const {
+    return GetPointer<const onerec::example::Digest*>(VT_METADIGEST);
   }
-  bool Verify(flatbuffers::Verifier &verifier) const {
+  bool Verify(flatbuffers::Verifier& verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_FEATURES)
            && verifier.VerifyVector(features()) && verifier.VerifyVectorOfTables(features())
            && VerifyOffset(verifier, VT_METADIGEST) && verifier.VerifyTable(metaDigest())
@@ -812,7 +812,7 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 
 struct ExampleBuilder {
   typedef Example Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::FlatBufferBuilder& fbb_;
   flatbuffers::uoffset_t start_;
   void add_features(
       flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>>
@@ -822,10 +822,10 @@ struct ExampleBuilder {
   void add_metaDigest(flatbuffers::Offset<onerec::example::Digest> metaDigest) {
     fbb_.AddOffset(Example::VT_METADIGEST, metaDigest);
   }
-  explicit ExampleBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit ExampleBuilder(flatbuffers::FlatBufferBuilder& _fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  ExampleBuilder &operator=(const ExampleBuilder &);
+  ExampleBuilder& operator=(const ExampleBuilder&);
   flatbuffers::Offset<Example> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Example>(end);
@@ -834,7 +834,7 @@ struct ExampleBuilder {
 };
 
 inline flatbuffers::Offset<Example> CreateExample(
-    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::FlatBufferBuilder& _fbb,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>>
         features = 0,
     flatbuffers::Offset<onerec::example::Digest> metaDigest = 0) {
@@ -845,58 +845,58 @@ inline flatbuffers::Offset<Example> CreateExample(
 }
 
 inline flatbuffers::Offset<Example> CreateExampleDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    std::vector<flatbuffers::Offset<onerec::example::Feature>> *features = nullptr,
+    flatbuffers::FlatBufferBuilder& _fbb,
+    std::vector<flatbuffers::Offset<onerec::example::Feature>>* features = nullptr,
     flatbuffers::Offset<onerec::example::Digest> metaDigest = 0) {
   auto features__ =
       features ? _fbb.CreateVectorOfSortedTables<onerec::example::Feature>(features) : 0;
   return onerec::example::CreateExample(_fbb, features__, metaDigest);
 }
 
-inline bool VerifyTensorData(flatbuffers::Verifier &verifier, const void *obj, TensorData type) {
+inline bool VerifyTensorData(flatbuffers::Verifier& verifier, const void* obj, TensorData type) {
   switch (type) {
     case TensorData_NONE: {
       return true;
     }
     case TensorData_Int8List: {
-      auto ptr = reinterpret_cast<const onerec::example::Int8List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Int8List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_Int16List: {
-      auto ptr = reinterpret_cast<const onerec::example::Int16List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Int16List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_Int32List: {
-      auto ptr = reinterpret_cast<const onerec::example::Int32List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Int32List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_Int64List: {
-      auto ptr = reinterpret_cast<const onerec::example::Int64List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Int64List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_Float32List: {
-      auto ptr = reinterpret_cast<const onerec::example::Float32List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Float32List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_Float64List: {
-      auto ptr = reinterpret_cast<const onerec::example::Float64List *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::Float64List*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_StringList: {
-      auto ptr = reinterpret_cast<const onerec::example::StringList *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::StringList*>(obj);
       return verifier.VerifyTable(ptr);
     }
     case TensorData_BinaryList: {
-      auto ptr = reinterpret_cast<const onerec::example::BinaryList *>(obj);
+      auto ptr = reinterpret_cast<const onerec::example::BinaryList*>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;
   }
 }
 
-inline bool VerifyTensorDataVector(flatbuffers::Verifier &verifier,
-                                   const flatbuffers::Vector<flatbuffers::Offset<void>> *values,
-                                   const flatbuffers::Vector<uint8_t> *types) {
+inline bool VerifyTensorDataVector(flatbuffers::Verifier& verifier,
+                                   const flatbuffers::Vector<flatbuffers::Offset<void>>* values,
+                                   const flatbuffers::Vector<uint8_t>* types) {
   if (!values || !types) return !values && !types;
   if (values->size() != types->size()) return false;
   for (flatbuffers::uoffset_t i = 0; i < values->size(); ++i) {
@@ -907,34 +907,34 @@ inline bool VerifyTensorDataVector(flatbuffers::Verifier &verifier,
   return true;
 }
 
-inline const onerec::example::Example *GetExample(const void *buf) {
+inline const onerec::example::Example* GetExample(const void* buf) {
   return flatbuffers::GetRoot<onerec::example::Example>(buf);
 }
 
-inline const onerec::example::Example *GetSizePrefixedExample(const void *buf) {
+inline const onerec::example::Example* GetSizePrefixedExample(const void* buf) {
   return flatbuffers::GetSizePrefixedRoot<onerec::example::Example>(buf);
 }
 
-inline const char *ExampleIdentifier() { return "1REC"; }
+inline const char* ExampleIdentifier() { return "1REC"; }
 
-inline bool ExampleBufferHasIdentifier(const void *buf) {
+inline bool ExampleBufferHasIdentifier(const void* buf) {
   return flatbuffers::BufferHasIdentifier(buf, ExampleIdentifier());
 }
 
-inline bool VerifyExampleBuffer(flatbuffers::Verifier &verifier) {
+inline bool VerifyExampleBuffer(flatbuffers::Verifier& verifier) {
   return verifier.VerifyBuffer<onerec::example::Example>(ExampleIdentifier());
 }
 
-inline bool VerifySizePrefixedExampleBuffer(flatbuffers::Verifier &verifier) {
+inline bool VerifySizePrefixedExampleBuffer(flatbuffers::Verifier& verifier) {
   return verifier.VerifySizePrefixedBuffer<onerec::example::Example>(ExampleIdentifier());
 }
 
-inline void FinishExampleBuffer(flatbuffers::FlatBufferBuilder &fbb,
+inline void FinishExampleBuffer(flatbuffers::FlatBufferBuilder& fbb,
                                 flatbuffers::Offset<onerec::example::Example> root) {
   fbb.Finish(root, ExampleIdentifier());
 }
 
-inline void FinishSizePrefixedExampleBuffer(flatbuffers::FlatBufferBuilder &fbb,
+inline void FinishSizePrefixedExampleBuffer(flatbuffers::FlatBufferBuilder& fbb,
                                             flatbuffers::Offset<onerec::example::Example> root) {
   fbb.FinishSizePrefixed(root, ExampleIdentifier());
 }

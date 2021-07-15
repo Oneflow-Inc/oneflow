@@ -21,13 +21,14 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+import os
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, in_shape, data_type):
+def compare_with_tensorflow(device_type, in_shape, axis, data_type):
     assert device_type in ["gpu", "cpu"]
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
@@ -43,13 +44,13 @@ def compare_with_tensorflow(device_type, in_shape, data_type):
         )
     ):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.math.argmax(input)
+            return flow.math.argmax(input, axis)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
     of_out = ArgMaxJob([input]).get().numpy_list()[0]
     # TensorFlow
-    tf_out = tf.math.argmax(input, -1).numpy()
+    tf_out = tf.math.argmax(input, axis).numpy()
     tf_out = np.array([tf_out]) if isinstance(tf_out, np.int64) else tf_out
 
     assert np.array_equal(of_out, tf_out)
@@ -60,12 +61,21 @@ def gen_arg_list():
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["in_shape"] = [
         (100,),
-        (100, 100),
-        (1000, 1000),
-        (10, 10, 2000),
-        (10, 10000),
+        (10, 10, 20),
+        (10, 1000),
     ]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["axis"] = [-1]
+    arg_dict["data_type"] = ["double", "int64"]
+
+    return GenArgList(arg_dict)
+
+
+def gen_arg_list_for_test_axis():
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu"]
+    arg_dict["in_shape"] = [(10, 10, 20, 30)]
+    arg_dict["axis"] = [-2, 0, 1, 2]
+    arg_dict["data_type"] = ["float32", "int32"]
 
     return GenArgList(arg_dict)
 
@@ -74,6 +84,11 @@ def gen_arg_list():
 class TestArgmax(flow.unittest.TestCase):
     def test_argmax(test_case):
         for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_argmax_gpu(test_case):
+        for arg in gen_arg_list_for_test_axis():
             compare_with_tensorflow(*arg)
 
 

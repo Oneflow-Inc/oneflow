@@ -39,27 +39,34 @@ def append_link(soup, link):
     li_tag.append(a_tag)
 
 
-def generate_index_file(endpoint, bucket, dir_key, file_path, index_key=None):
+def generate_index_file(endpoint, bucket, dir_key, file_path, index_keys=None):
     ki = os.getenv("OSS_ACCESS_KEY_ID")
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
     auth = oss2.Auth(ki, ks)
     bucket_obj = oss2.Bucket(auth, endpoint, bucket)
-
-    files = bucket_obj.list_objects(dir_key + "/")
+    should_continue = True
     count = 0
-    for f in files.object_list:
-        key = f.key
-        print(key)
-        link = url4key(endpoint, bucket, key)
-        append_link(soup, link)
-        count += 1
+    next_marker = ""
+    while should_continue:
+        files = bucket_obj.list_objects(dir_key + "/", marker=next_marker)
+        for f in files.object_list:
+            key = f.key
+            if key.endswith(".whl"):
+                print(key)
+                link = url4key(endpoint, bucket, key)
+                append_link(soup, link)
+                count += 1
+        next_marker = files.next_marker
+        should_continue = next_marker != ""
+    print("count", count)
     assert count
     html = soup.prettify()
     with open(file_path, "w+") as f:
         f.write(html)
-    if index_key == None:
-        index_key = dir_key + ".pip.index.html"
-    bucket_obj.put_object_from_file(index_key, file_path)
+    if index_keys == None:
+        index_keys = [dir_key + ".index.html"]
+    for index_key in index_keys:
+        bucket_obj.put_object_from_file(index_key, file_path)
 
 
 if __name__ == "__main__":
@@ -82,13 +89,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d", "--dir_key", type=str, required=False, default="nightly",
     )
-    parser.add_argument("--index_key", type=str, required=False, default=None)
+    parser.add_argument("--index_key", action="append", nargs="+")
     args = parser.parse_args()
     assert args.dir_key[-1] != "/"
+    index_keys = sum(args.index_key, [])
     generate_index_file(
         args.endpoint,
         args.bucket,
         args.dir_key,
         args.output_path,
-        index_key=args.index_key,
+        index_keys=index_keys,
     )

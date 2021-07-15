@@ -44,8 +44,9 @@ OpKernelRegistry& OpKernelRegistry::SetInplaceProposalFn(InplaceProposalFn fn) {
   return *this;
 }
 
-OpKernelRegistry& OpKernelRegistry::Finish() {
-  CHECK(result_.create_fn != nullptr) << "No Create function for " << result_.op_type_name;
+Maybe<OpKernelRegistry&> OpKernelRegistry::Finish() {
+  CHECK_OR_RETURN(result_.create_fn != nullptr)
+      << "No Create function for " << result_.op_type_name;
   if (result_.infer_tmp_size_fn == nullptr) {
     result_.infer_tmp_size_fn = TmpSizeInferFnUtil::ZeroTmpSize;
   }

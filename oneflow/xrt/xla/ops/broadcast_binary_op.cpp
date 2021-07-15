@@ -27,7 +27,7 @@ namespace mola {
 template<typename BinaryOp>
 class BcastBinaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape shape_a = ctx->InputShape("x_0");
     Shape shape_b = ctx->InputShape("y_0");
 

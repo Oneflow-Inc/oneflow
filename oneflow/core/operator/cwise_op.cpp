@@ -17,14 +17,28 @@ limitations under the License.
 
 namespace oneflow {
 
-void CWiseOp::InitFromOpConf() {
+Maybe<void> CWiseOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in_0");
   VirtualInitFromOpConf();
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> CWiseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const {
+Maybe<void> CWiseOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const BlobDesc* in_0_blob_desc = BlobDesc4BnInOp(input_bns().Get(0));
+  for (size_t i = 1; i < input_bns().size(); ++i) {
+    const auto* blob_desc = BlobDesc4BnInOp(input_bns().Get(i));
+    CHECK_OR_RETURN(*in_0_blob_desc == *blob_desc);
+  }
+  *BlobDesc4BnInOp("out") = *in_0_blob_desc;
+  return VirtualInferBlobDescs(BlobDesc4BnInOp, nullptr);
+}
+
+Maybe<void> CWiseOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const auto* blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));

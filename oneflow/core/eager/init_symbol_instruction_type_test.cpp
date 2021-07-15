@@ -18,6 +18,7 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -28,14 +29,23 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
+
+namespace {
+
+void InitNumProcessPerNode() { Global<NumProcessPerNode>::New()->set_value(1); }
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
+}  // namespace
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
@@ -46,7 +56,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
-  Global<vm::SymbolStorage<T>>::Get()->Add(symbol_id, SerializedT());
+  CHECK_JUST(Global<symbol::Storage<T>>::Get()->Add(symbol_id, SerializedT()));
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);
@@ -62,15 +72,27 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(InitSymbolInstructionType, job_desc) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
+  DestroyNumProcessPerNode();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
-  TestInitSymbolInstructionType<OperatorConf, OperatorConf>("InitOperatorConfSymbol");
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
+  TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

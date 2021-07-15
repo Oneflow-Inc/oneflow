@@ -16,13 +16,14 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("regularizers.l1_l2")
 def l1_l2_regularizer(
     l1: float = 0.01, l2: float = 0.01
-) -> op_conf_util.RegularizerConf:
+) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L1 and L2 weight regularizer. 
 
     Args:
@@ -30,7 +31,7 @@ def l1_l2_regularizer(
         l2 (float, optional): The L2 regularization coefficient. Defaults to 0.01.
 
     Returns:
-        op_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators. 
+        regularizer_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators.
     
     For example: 
 
@@ -63,21 +64,21 @@ def l1_l2_regularizer(
         out = conv2d_l1_l2_Job(x)
     
     """
-    regularizer = op_conf_util.RegularizerConf()
+    regularizer = regularizer_conf_util.RegularizerConf()
     setattr(regularizer.l1_l2_conf, "l1", l1)
     setattr(regularizer.l1_l2_conf, "l2", l2)
     return regularizer
 
 
 @oneflow_export("regularizers.l1")
-def l1_regularizer(l: float = 0.01) -> op_conf_util.RegularizerConf:
+def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L1 weight regularizer. 
 
     Args:
         l (float, optional): The L1 regularization coefficient. Defaults to 0.01.
 
     Returns:
-        op_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators. 
+        regularizer_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators.
     
     For example: 
 
@@ -114,14 +115,14 @@ def l1_regularizer(l: float = 0.01) -> op_conf_util.RegularizerConf:
 
 
 @oneflow_export("regularizers.l2")
-def l2_regularizer(l: float = 0.01) -> op_conf_util.RegularizerConf:
+def l2_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L2 weight regularizer. 
 
     Args:
         l (float, optional): The L2 regularization coefficient. Defaults to 0.01.
 
     Returns:
-        op_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators. 
+        regularizer_conf_util.RegularizerConf: A regularizer that can be used in other layers or operators.
 
     For example: 
 

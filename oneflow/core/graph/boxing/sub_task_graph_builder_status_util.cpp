@@ -14,23 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-Maybe<SubTskGphBuilderStatus> BuildSubTskGphBuilderStatus(
-    const CompTaskNode* src_node, const CompTaskNode* dst_node,
-    const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
-    const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
-    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& builder_name,
-    const std::string& comment) {
-  std::string src_op_name = src_node->logical_node()->op_vec().at(0)->op_name();
-  std::string dst_op_name = dst_node->logical_node()->op_vec().at(0)->op_name();
-  SubTskGphBuilderStatus status(src_op_name, dst_op_name, src_parallel_desc, dst_parallel_desc,
-                                src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-                                builder_name, comment);
-
+Maybe<SubTskGphBuilderStatus> BuildSubTskGphBuilderStatus(const std::string& builder_name,
+                                                          const std::string& comment) {
+  SubTskGphBuilderStatus status(builder_name, comment);
   return status;
+}
+
+Maybe<SubTskGphBuilderStatus> MakeComposedSubTskGphBuilderStatus(
+    const std::vector<SubTskGphBuilderStatus>& status_vec) {
+  std::string builder_name = "ComposedBuilder:";
+  std::string comment = "ComposedComment:";
+  for (auto status : status_vec) {
+    builder_name += " ";
+    builder_name += status.builder_name();
+    comment += " ";
+    if (status.comment().empty()) {
+      comment += "None";
+    } else {
+      comment += status.comment();
+    }
+  }
+  SubTskGphBuilderStatus composed_status(builder_name, comment);
+  return composed_status;
 }
 
 }  // namespace oneflow

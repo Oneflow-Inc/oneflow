@@ -16,6 +16,8 @@
 [base]
 name=CentOS-$releasever - Base
 baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos/$releasever/os/$basearch/
+        http://mirrors.aliyun.com/centos/$releasever/os/$basearch/
+        http://mirrors.aliyuncs.com/centos/$releasever/os/$basearch/
 #mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
 enabled=1
 gpgcheck=1
@@ -25,6 +27,8 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-7
 [updates]
 name=CentOS-$releasever - Updates
 baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos/$releasever/updates/$basearch/
+        http://mirrors.aliyun.com/centos/$releasever/updates/$basearch/
+        http://mirrors.aliyuncs.com/centos/$releasever/updates/$basearch/
 #mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates
 enabled=1
 gpgcheck=1
@@ -36,6 +40,8 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-7
 [extras]
 name=CentOS-$releasever - Extras
 baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos/$releasever/extras/$basearch/
+        http://mirrors.aliyun.com/centos/$releasever/extras/$basearch/
+        http://mirrors.aliyuncs.com/centos/$releasever/extras/$basearch/
 #mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=extras
 enabled=1
 gpgcheck=1
@@ -47,8 +53,9 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-7
 [centosplus]
 name=CentOS-$releasever - Plus
 baseurl=https://mirrors.tuna.tsinghua.edu.cn/centos/$releasever/centosplus/$basearch/
+        http://mirrors.aliyun.com/centos/$releasever/centosplus/$basearch/
+        http://mirrors.aliyuncs.com/centos/$releasever/centosplus/$basearch/
 #mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=centosplus
 gpgcheck=1
 enabled=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-7
-

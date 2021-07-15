@@ -20,9 +20,9 @@ import numpy as np
 from typing import Tuple
 
 
-class Add(flow.nn.Module):
+class Add(flow.deprecated.nn.Module):
     def __init__(self):
-        flow.nn.Module.__init__(self)
+        flow.deprecated.nn.Module.__init__(self)
         self.module_builder_ = flow.consistent_user_op_module_builder("add_n")
         self.module_builder_.InputSize("in", 2).Output("out")
         self.module_builder_.user_op_module.InitOpKernel()

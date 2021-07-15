@@ -24,10 +24,11 @@ message InstructionOperandProto {
     OperandProto mut_operand = 2;
     // mut2 writeable object
     OperandProto mut2_operand = 3;
+    OperandProto del_operand = 4;
     // read only symbol
-    OperandProto symbol_operand = 4;
+    OperandProto symbol_operand = 5;
     // initializable symbol
-    OperandProto init_symbol_operand = 5;
+    OperandProto init_symbol_operand = 6;
 
     OperandSeparatorProto separator = 7;
     double double_operand = 8;

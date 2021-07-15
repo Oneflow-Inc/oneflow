@@ -332,8 +332,8 @@ class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
   ObjectMsgDefaultAllocator() = default;
 
   static ObjectMsgDefaultAllocator* GlobalObjectMsgAllocator() {
-    static ObjectMsgDefaultAllocator allocator;
-    return &allocator;
+    static ObjectMsgDefaultAllocator* allocator = new ObjectMsgDefaultAllocator();
+    return allocator;
   }
 
   char* Allocate(std::size_t size) override { return allocator_.allocate(size); }
@@ -398,13 +398,15 @@ struct ObjectMsgStructDefault final {
     ObjectMsgPtrUtil::InitRef<T>(Mutable());
   }
 
-  const T& Get() const { return msg_; }
-  T* Mutable() { return &msg_; }
+  const T& Get() const { return msg.msg_; }
+  T* Mutable() { return &msg.msg_; }
 
  private:
-  union {
+  union Msg {
     T msg_;
-  };
+    Msg() {}
+    ~Msg() {}
+  } msg;
 };
 
 template<bool is_object_msg>

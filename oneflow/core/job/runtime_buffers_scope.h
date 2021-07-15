@@ -24,7 +24,7 @@ namespace oneflow {
 class RuntimeBuffersScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RuntimeBuffersScope);
-  RuntimeBuffersScope(const Plan& plan);
+  RuntimeBuffersScope(const JobConfs& job_confs);
   ~RuntimeBuffersScope();
 };
 

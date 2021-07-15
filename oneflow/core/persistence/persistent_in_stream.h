@@ -24,7 +24,7 @@ namespace oneflow {
 class PersistentInStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentInStream);
-
+  virtual ~PersistentInStream() {}
   PersistentInStream(fs::FileSystem* fs, const std::vector<std::string>& file_paths,
                      uint64_t offset, bool cyclic, bool with_local_copy);
   PersistentInStream(fs::FileSystem* fs, const std::vector<std::string>& file_paths, bool cyclic,

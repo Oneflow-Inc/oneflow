@@ -19,7 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.id_util as id_util
 
 
-@oneflow_export("nn.Module")
+@oneflow_export("deprecated.nn.Module")
 class Module(object):
     def __init__(self, name=None):
         if name is None:

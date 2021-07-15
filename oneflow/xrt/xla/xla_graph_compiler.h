@@ -29,36 +29,36 @@ namespace mola {
 
 class XlaGraphCompiler : public GraphCompiler::Impl {
  public:
-  explicit XlaGraphCompiler(const std::string &name) : GraphCompiler::Impl(name) {
+  explicit XlaGraphCompiler(const std::string& name) : GraphCompiler::Impl(name) {
     builder_ = std::make_unique<xla::XlaBuilder>(name);
     CHECK(builder_) << "Creating xla builder failed.";
   }
 
   virtual ~XlaGraphCompiler() = default;
 
-  std::shared_ptr<Executable> Compile(const XrtGraph *graph,
-                                      const std::vector<Parameter> &entry_params,
-                                      const std::vector<Parameter> &return_params,
-                                      const std::vector<InputOutputAlias> &aliases) override;
+  std::shared_ptr<Executable> Compile(const XrtGraph* graph,
+                                      const std::vector<Parameter>& entry_params,
+                                      const std::vector<Parameter>& return_params,
+                                      const std::vector<InputOutputAlias>& aliases) override;
 
  private:
-  std::shared_ptr<Executable> BuildExecutable(const std::vector<xla::Shape> &xla_input_shapes,
-                                              const xla::Shape &xla_output_shape,
-                                              const xla::XlaComputation &computation);
+  std::shared_ptr<Executable> BuildExecutable(const std::vector<xla::Shape>& xla_input_shapes,
+                                              const xla::Shape& xla_output_shape,
+                                              const xla::XlaComputation& computation);
 
-  void SetupKernelContextParam(const XrtNode *node, XlaOpContext::Param *context_param);
+  void SetupKernelContextParam(const XrtNode* node, XlaOpContext::Param* context_param);
 
-  void BuildComputation(const XrtGraph *graph, const std::vector<Argument> &return_args,
-                        xla::Shape *output_shape, xla::XlaComputation *computation);
+  void BuildComputation(const XrtGraph* graph, const std::vector<Argument>& return_args,
+                        xla::Shape* output_shape, xla::XlaComputation* computation);
 
-  void BuildEntryParameters(const std::vector<Parameter> &entry_params,
-                            std::vector<xla::Shape> *input_shapes);
+  void BuildEntryParameters(const std::vector<Parameter>& entry_params,
+                            std::vector<xla::Shape>* input_shapes);
 
-  void SetOpMetadata(const std::string &op_type, const std::string &op_name);
+  void SetOpMetadata(const std::string& op_type, const std::string& op_name);
 
   void ClearOpMetadata();
 
-  Argument ArgFromParameter(const Parameter &param);
+  Argument ArgFromParameter(const Parameter& param);
 
  private:
   bool use_meta_data_ = true;

@@ -235,18 +235,23 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
   SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
   SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
+  // Calculate the length of continuous part
+  int cnt = 1;
+  for (int i = NDIM - 1; i >= 0; i--) {
+    if (large_slice_param.step[i] == 1) { cnt *= large_slice_param.size[i]; }
+    if (!large_slice_param.IsFullSlice(i) || !small_slice_param.IsFullSlice(i)) { break; }
+  }
   const auto* src_ptr = src->dptr<T>();
   auto* dst_ptr = dst->mut_dptr<T>();
-  FOR_RANGE(int, i, 0, elem_cnt) {
+  for (int i = 0; i < elem_cnt; i += cnt) {
     const int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(
         i, large_slice_param, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
     const int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(
         i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
     const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
     const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
-    // TODO(jianhao): optimize the performance by dedicated kernels
     AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
-               GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
+               cnt * GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
   }
 }
 
@@ -262,8 +267,12 @@ DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
 
 std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,
                                                          const std::string& large_tensor_name) {
-  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
-  if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
+    return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+  }
+  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
+  if (in_sbp.has_split_parallel()) {
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
     const auto split_axis = in_sbp.split_parallel().axis();
@@ -272,8 +281,7 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel() || ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
+  } else if (in_sbp.has_broadcast_parallel()) {
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
   } else {
     // TODO(jianhao): support partialsum
@@ -289,8 +297,8 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    const SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+    const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
@@ -333,8 +341,10 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
-    if (ctx->parallel_ctx().parallel_num() > 1) { CHECK(value_sbp.has_broadcast_parallel()); }
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
+      CHECK(value_sbp.has_broadcast_parallel());
+    }
     return CreateSliceState(ctx, "ref");
   }
 

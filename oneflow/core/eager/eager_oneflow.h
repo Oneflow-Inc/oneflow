@@ -18,25 +18,36 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
+#include "oneflow/core/job/cluster_instruction.cfg.h"
+#include "oneflow/core/vm/instruction.cfg.h"
+#include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
-namespace eager {
+
+namespace vm {
+namespace cfg {
+
+class InstructionListProto;
+class EagerSymbolList;
+
+}  // namespace cfg
 
 class EagerOneflow final {
  public:
-  Maybe<void> RunLogicalInstruction(
-      const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+  Maybe<void> RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
+                                    const vm::cfg::EagerSymbolList& eager_symbol_list);
 
-  Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
-                                    const std::string& eager_symbol_list_str);
-
-  Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
-                                     const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+
+  Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
+                                     const vm::cfg::EagerSymbolList& eager_symbol_list);
+
+  Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
+                                     const vm::EagerSymbolList& eager_symbol_list);
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_ONEFLOW_H_

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -71,8 +72,18 @@ const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::Stri
   return *this;
 }
 
+template<ConfigDefType config_def_type>
+const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::ListInt64(
+    const std::string& name, const std::vector<int64_t>& default_val,
+    const std::string& description) const {
+  auto* list = AddAttrDef<config_def_type>(name, description)->mutable_at_list_int64();
+  *list->mutable_val() = {default_val.begin(), default_val.end()};
+  return *this;
+}
+
 template class ConfigDefBuidler<kEnvConfigDefType>;
 template class ConfigDefBuidler<kSessionConfigDefType>;
 template class ConfigDefBuidler<kFunctionConfigDefType>;
+template class ConfigDefBuidler<kScopeConfigDefType>;
 
 }  // namespace oneflow

@@ -61,8 +61,6 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
             return (m, v)
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = MomentsJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -80,10 +78,11 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMoments(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_moments(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["x_shape"] = [(10, 10, 20, 30), (10, 20, 30), (10, 20), (20,)]
+        arg_dict["x_shape"] = [(10, 20, 30), (20,)]
         arg_dict["data_type"] = ["float32", "double"]
         arg_dict["axes"] = [[0], [0, 2], [0, 1]]
         for arg in GenArgList(arg_dict):

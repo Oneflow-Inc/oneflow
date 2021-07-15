@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
 
@@ -28,22 +29,23 @@ class Plan;
 class ThreadMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
-  ThreadMgr() = delete;
+  ThreadMgr() = default;
   ~ThreadMgr();
 
+  void AddPlan(const Plan& plan);
   Thread* GetThrd(int64_t thrd_id);
 
  private:
   friend class Global<ThreadMgr>;
-  explicit ThreadMgr(const Plan& plan);
 
-  void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
-
-  std::vector<Thread*> threads_;
+  HashMap<int64_t, std::unique_ptr<Thread>> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+
+#define REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(device, creator) \
+  REGISTER_CLASS_CREATOR(int, device, Thread, creator, const StreamId&)
 
 }  // namespace oneflow
 

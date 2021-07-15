@@ -22,7 +22,7 @@ namespace tensorrt {
 
 class TopKOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
+  void Compile(TrtOpContext* ctx) override {
     Shape in_shape = ctx->SoleInputShape();
     // CHECK_GE(in_shape.NumAxes(), 2);
 
@@ -31,8 +31,8 @@ class TopKOp : public TrtOpKernel {
     // CHECK_GE(axis, 1);
     // CHECK_LT(axis, in_shape.NumAxes());
     uint32_t reduce_axis = (1U << (in_shape.NumAxes() - 1));
-    nvinfer1::ITensor *in = ctx->SoleInput();
-    auto *layer = ctx->builder()->addTopK(*in, nvinfer1::TopKOperation::kMAX, k, reduce_axis);
+    nvinfer1::ITensor* in = ctx->SoleInput();
+    auto* layer = ctx->builder()->addTopK(*in, nvinfer1::TopKOperation::kMAX, k, reduce_axis);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }

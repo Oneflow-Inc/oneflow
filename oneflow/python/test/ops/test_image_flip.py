@@ -72,7 +72,9 @@ def _compare_image_flip_with_cv(test_case, image_files):
         test_case.assertTrue(np.allclose(exp_flip_image, flip_image))
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestImageFlip(flow.unittest.TestCase):
     def test_image_flip(test_case):
         _compare_image_flip_with_cv(

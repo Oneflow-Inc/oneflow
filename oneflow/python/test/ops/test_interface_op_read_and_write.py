@@ -28,10 +28,6 @@ class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
     def test(test_case):
         flow.config.gpu_device_num(2)
 
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
-
         @flow.global_function()
         def add() -> tp.Numpy:
             with flow.scope.placement("gpu", "0:0-1"):
@@ -47,8 +43,12 @@ class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
                 )
                 return flow.math.add_n([x, y])
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
+        # NOTE(chengcheng): Should retain for session init before set_interface_blob_value
+        flow.train.CheckPoint().init()
+
+        if flow.eager_execution_enabled():
+            add()
+
         x_value = np.random.random((2, 3)).astype(np.float32)
         y_value = np.random.random((2, 3)).astype(np.float32)
         flow.experimental.set_interface_blob_value("x", x_value)

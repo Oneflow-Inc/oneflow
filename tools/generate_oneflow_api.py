@@ -12,6 +12,51 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+#                     will be removed in the future
+def dtype_related_symbols():
+    return [
+        """import oneflow._oneflow_internal""",
+        """locals()["dtype"] = oneflow._oneflow_internal.dtype""",
+        """locals()["char"] = oneflow._oneflow_internal.char""",
+        """locals()["float16"] = oneflow._oneflow_internal.float16""",
+        """locals()["half"] = oneflow._oneflow_internal.float16""",
+        """locals()["float32"] = oneflow._oneflow_internal.float32""",
+        """locals()["float"] = oneflow._oneflow_internal.float""",
+        """locals()["double"] = oneflow._oneflow_internal.double""",
+        """locals()["float64"] = oneflow._oneflow_internal.float64""",
+        """locals()["int8"] = oneflow._oneflow_internal.int8""",
+        """locals()["int"] = oneflow._oneflow_internal.int32""",
+        """locals()["int32"] = oneflow._oneflow_internal.int32""",
+        """locals()["int64"] = oneflow._oneflow_internal.int64""",
+        """locals()["long"] = oneflow._oneflow_internal.int64""",
+        """locals()["uint8"] = oneflow._oneflow_internal.uint8""",
+        """locals()["record"] = oneflow._oneflow_internal.record""",
+        """locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer""",
+    ]
+
+
+def customized_symbols():
+    return [
+        # Note that the imported module name shouldn't be same with existing module, use import ... as ... if there is same module with same name
+        # oneflow.device
+        """from oneflow._oneflow_internal import device""",
+        """device.__module__ = \"oneflow\"""",
+        # oneflow.Size
+        """from oneflow._oneflow_internal import Size""",
+        """Size.__module__ = \"oneflow\"""",
+        # oneflow.sbp.sbp
+        """from oneflow._oneflow_internal.sbp import sbp""",
+        """sbp.__module__ = \"oneflow.sbp\"""",
+        """del sbp""",  # Note that del is used here carefully to avoid deleting the class that was originally exported under the oneflow namespace
+        # oneflow.Tensor
+        """from oneflow.python.framework.tensor import Tensor""",
+        """Tensor.__module__ = \"oneflow\"""",
+        # oneflow.placement
+        """from oneflow._oneflow_internal import placement""",
+        """placement.__module__ = \"oneflow\"""",
+    ]
+
 
 class VirtualModule(object):
     def __init__(self):
@@ -20,7 +65,9 @@ class VirtualModule(object):
 
     def add_func_or_class(self, api_name_base, func_or_class):
         assert api_name_base not in self._func_or_class_dict
-        assert api_name_base not in self._submodule_dict
+        assert (
+            api_name_base not in self._submodule_dict
+        ), "{} is already in submodule_dict.".format(api_name_base)
         self._func_or_class_dict[api_name_base] = func_or_class
 
     def find_or_create_submodule(self, submodule_name):
@@ -53,8 +100,14 @@ class VirtualModule(object):
                 mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
+            # TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+            #                     will be removed in the future
+            if "experimental/__init__.py" in init_file_path:
+                lines += dtype_related_symbols()
             lines = list(mod_set) + lines
-            f.write("\n".join(lines))
+            if "oneflow/__init__.py" in init_file_path:
+                lines = customized_symbols() + lines
+            f.write("\n" + "\n".join(lines) + "\n")
 
     def submodule_names(self):
         return self._submodule_dict.keys()
@@ -65,20 +118,24 @@ def include_submodule(modname):
 
 
 def include_export(api_name_base, symbol):
+    # print(symbol._IS_VALUE)
     if symbol.__name__ == api_name_base:
-        return ["from {} import {}".format(symbol.__module__, api_name_base)]
+        output = ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
         if inspect.isclass(symbol):
-            return [
+            output = [
                 "from {} import {}".format(symbol.__module__, symbol.__name__),
                 "{} = {}".format(api_name_base, symbol.__name__),
             ]
         else:
-            return [
+            output = [
                 "from {} import {} as {}".format(
                     symbol.__module__, symbol.__name__, api_name_base
                 )
             ]
+    if symbol._IS_VALUE:
+        output.append("{} = {}()".format(api_name_base, api_name_base))
+    return output
 
 
 def exported_symbols():

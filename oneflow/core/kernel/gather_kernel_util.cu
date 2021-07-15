@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/gather_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/kernel.h"
 #include <assert.h>
 

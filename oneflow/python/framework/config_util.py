@@ -19,6 +19,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -37,6 +38,22 @@ def load_library(val):
     assert type(val) is str
     sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
+
+
+@oneflow_export("config.load_library_now")
+def api_load_library_now(val: str) -> None:
+    r"""Load necessary library for job now
+
+    Args:
+        val (str): path to shared object file
+    """
+    return enable_if.unique([load_library_now, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def load_library_now(val):
+    assert type(val) is str
+    oneflow._oneflow_internal.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")
@@ -64,16 +81,14 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    from oneflow.python_gen.compatibility import with_cuda
-
-    if with_cuda == False:
+    if oneflow._oneflow_internal.flags.with_cuda():
+        return enable_if.unique([gpu_device_num, do_nothing])(val)
+    else:
         print(
             "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
         print(traceback.format_stack()[-2])
         return enable_if.unique([cpu_device_num, do_nothing])(val)
-    else:
-        return enable_if.unique([gpu_device_num, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -142,14 +157,9 @@ def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_numa_aware_cuda_malloc_host, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_numa_aware_cuda_malloc_host(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_numa_aware_cuda_malloc_host = val
+    print(
+        "'enable_numa_aware_cuda_malloc_host' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_export("config.compute_thread_pool_size")
@@ -289,38 +299,27 @@ def enable_debug_mode(val):
     sess.config_proto.resource.enable_debug_mode = val
 
 
-@oneflow_export("config.save_downloaded_file_to_local_fs")
-def api_save_downloaded_file_to_local_fs(val: bool = True) -> None:
-    r"""Whether or not save downloaded file to local file system.
+@oneflow_export("config.legacy_model_io_enabled")
+def api_legacy_model_io_enabled():
+    sess = session_ctx.GetDefaultSession()
+    return sess.config_proto.resource.enable_legacy_model_io
+
+
+@oneflow_export("config.enable_legacy_model_io")
+def api_enable_legacy_model_io(val: bool = True):
+    r"""Whether or not use legacy model io.
 
     Args:
-        val (bool, optional): True or False. Defaults to True.
+        val ([type]): True or False
     """
-    return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=val)
+    return enable_if.unique([enable_legacy_model_io, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def save_downloaded_file_to_local_fs(val=True):
+def enable_legacy_model_io(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.save_downloaded_file_to_local_fs = val
-
-
-@oneflow_export("config.persistence_buf_byte")
-def api_persistence_buf_byte(val: int) -> None:
-    r"""Set up buffer size for persistence.
-
-    Args:
-        val (int): e.g. 1024(bytes)
-    """
-    return enable_if.unique([persistence_buf_byte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def persistence_buf_byte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.io_conf.persistence_buf_byte = val
+    sess.config_proto.resource.enable_legacy_model_io = val
 
 
 @oneflow_export("config.enable_model_io_v2")
@@ -337,7 +336,7 @@ def api_enable_model_io_v2(val):
 def enable_model_io_v2(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.enable_model_io_v2 = val
+    sess.config_proto.resource.enable_model_io_v2 = val
 
 
 @oneflow_export("config.collect_act_event")
@@ -390,6 +389,74 @@ def num_callback_threads(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
+
+
+@oneflow_export("config.enable_tensor_float_32_compute")
+def api_enable_tensor_float_32_compute(val: bool = True) -> None:
+    r"""Whether or not to enable Tensor-float-32 on supported GPUs
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_tensor_float_32_compute, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_tensor_float_32_compute(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_tensor_float_32_compute = val
+
+
+@oneflow_export("config.enable_mem_chain_merge")
+def api_enable_mem_chain_merge(val: bool = True) -> None:
+    r"""Whether or not to enable MemChain merge.
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_mem_chain_merge, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_mem_chain_merge(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_mem_chain_merge = val
+
+
+@oneflow_export("config.nccl_use_compute_stream")
+def api_nccl_use_compute_stream(val: bool = False) -> None:
+    r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([nccl_use_compute_stream, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_use_compute_stream(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.nccl_use_compute_stream = val
+
+
+@oneflow_export("config.disable_group_boxing_by_dst_parallel")
+def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
+    r"""Whether or not disable group boxing by dst parallel pass to reduce boxing memory life cycle.
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([disable_group_boxing_by_dst_parallel, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def disable_group_boxing_by_dst_parallel(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
 
 
 @oneflow_export("config.collective_boxing.nccl_num_streams")
@@ -562,6 +629,23 @@ def nccl_enable_all_to_all(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.collective_boxing_conf.nccl_enable_all_to_all = val
+
+
+@oneflow_export("config.collective_boxing.nccl_enable_mixed_fusion")
+def api_nccl_enable_mixed_fusion(val: bool) -> None:
+    r"""Whether or not use nccl mixed fusion
+
+    Args:
+        val (bool): True or False
+    """
+    return enable_if.unique([nccl_enable_mixed_fusion, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_enable_mixed_fusion(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.nccl_enable_mixed_fusion = val
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)

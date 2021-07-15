@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -62,12 +61,15 @@ class FuseUpdateOpsPass final : public JobPass {
 
 Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
+  std::vector<std::string> del_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     if (!op_node->op().op_conf().has_user_conf()) { return; }
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
-        && user_op_conf.op_type_name() != "adam_update") {
+        && user_op_conf.op_type_name() != "adam_update"
+        && user_op_conf.op_type_name() != "rmsprop_update"
+        && user_op_conf.op_type_name() != "lars_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -94,7 +96,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         l1 = l1_l2_regularize_gradient_op_conf.attr<float>("l1");
         l2 = l1_l2_regularize_gradient_op_conf.attr<float>("l2");
         model_diff_lbi = GenLogicalBlobId(l1_l2_regularize_gradient_op_conf.input("model_diff", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -105,7 +107,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         const user_op::UserOpConfWrapper scalar_mul_by_tensor_op_conf(producer->op().op_conf());
         model_diff_lbi = GenLogicalBlobId(scalar_mul_by_tensor_op_conf.input("x", 0));
         scale_by_tensor_lbn = scalar_mul_by_tensor_op_conf.input("scalar", 0);
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -122,7 +124,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           UNIMPLEMENTED();
         }
         model_diff_lbi = GenLogicalBlobId(scalar_mul_op_conf.input("in", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -137,7 +139,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           return;
         }
         model_diff_lbi = GenLogicalBlobId(cast_op_conf.input("in", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
     }();
@@ -156,6 +158,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
+    if (user_op_conf.has_input("skip_if", 0)) {
+      fused_op_builder.Input("skip_if", user_op_conf.input("skip_if", 0));
+    }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
@@ -167,13 +172,30 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+    } else if (user_op_conf.op_type_name() == "rmsprop_update") {
+      const bool centered = user_op_conf.attr<bool>("centered");
+      fused_op_builder.Input("mean_square", user_op_conf.input("mean_square", 0.f))
+          .Attr<bool>("centered", user_op_conf.attr<bool>("centered"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<float>("decay_rate", user_op_conf.attr<float>("decay_rate"));
+      if (centered) {
+        fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
+      }
+    } else if (user_op_conf.op_type_name() == "lars_update") {
+      fused_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
+          .Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
     } else {
       UNIMPLEMENTED();
     }
+    CHECK(user_op_conf.op_conf().has_scope_symbol_id());
+    fused_op_builder.ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id());
     OperatorConf new_op_conf = user_op_conf.op_conf();
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
+  job_builder->DelOps(del_op_names);
   return Maybe<void>::Ok();
 }
 

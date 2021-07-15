@@ -40,13 +40,13 @@ void DeviceMemoryPool::Release() {
 }
 
 auto DeviceMemoryPool::Registry()
-    -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool *(se::Stream *, int)>> * {
+    -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool*(se::Stream*, int)>>* {
   return util::Registry<se::Platform::Id,
-                        std::function<DeviceMemoryPool *(se::Stream *, int)>>::Global();
+                        std::function<DeviceMemoryPool*(se::Stream*, int)>>::Global();
 }
 
-std::shared_ptr<DeviceMemoryPool> DeviceMemoryPool::NewMemoryPool(const se::Platform *platform,
-                                                                  se::Stream *stream,
+std::shared_ptr<DeviceMemoryPool> DeviceMemoryPool::NewMemoryPool(const se::Platform* platform,
+                                                                  se::Stream* stream,
                                                                   int device_ordinal) {
   return std::shared_ptr<DeviceMemoryPool>(
       DeviceMemoryPool::Registry()->Lookup(platform->id())(stream, device_ordinal));
@@ -56,19 +56,19 @@ namespace memory {
 
 class CpuMemoryPool : public DeviceMemoryPool {
  public:
-  explicit CpuMemoryPool(se::Stream *stream, int device_ordinal)
+  explicit CpuMemoryPool(se::Stream* stream, int device_ordinal)
       : DeviceMemoryPool(stream, device_ordinal) {}
   virtual ~CpuMemoryPool() { Release(); }
 
  private:
   void ReserveImpl(size_t size) override {
-    mem_buffer_ = new uint8_t[size];
+    mem_buffer_ = reinterpret_cast<uint8_t*>(aligned_alloc(kHostAlignSize, size));
     CHECK(mem_buffer_);
     capacity_ = size;
   }
 
   void ReleaseImpl() override {
-    if (capacity_ > 0 && mem_buffer_) { delete[] mem_buffer_; }
+    if (capacity_ > 0 && mem_buffer_) { free(mem_buffer_); }
     capacity_ = 0;
     mem_buffer_ = nullptr;
   }
@@ -78,7 +78,7 @@ REGISTER_XLA_MEMORY_POOL(se::host::kHostPlatformId, CpuMemoryPool);
 
 class GpuMemoryPool : public DeviceMemoryPool {
  public:
-  explicit GpuMemoryPool(se::Stream *stream, int device_ordinal)
+  explicit GpuMemoryPool(se::Stream* stream, int device_ordinal)
       : DeviceMemoryPool(stream, device_ordinal) {}
 
   virtual ~GpuMemoryPool() { Release(); }

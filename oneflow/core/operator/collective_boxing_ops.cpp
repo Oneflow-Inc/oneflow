@@ -27,11 +27,12 @@ class CollectiveBoxingGenericOp : public Operator {
   ~CollectiveBoxingGenericOp() override = default;
 
  private:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_collective_boxing_generic_conf());
     const RankDesc& rank_desc = op_conf().collective_boxing_generic_conf().rank_desc();
     if (GenericOpHasInput(rank_desc)) { EnrollInputBn("in", false); }
     if (GenericOpHasOutput(rank_desc)) { EnrollOutputBn("out", false); }
+    return Maybe<void>::Ok();
   }
 
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override {
@@ -42,8 +43,14 @@ class CollectiveBoxingGenericOp : public Operator {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override {
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     const RankDesc& rank_desc = op_conf().collective_boxing_generic_conf().rank_desc();
     const DataType data_type = rank_desc.op_desc().data_type();
     if (GenericOpHasInput(rank_desc)) {

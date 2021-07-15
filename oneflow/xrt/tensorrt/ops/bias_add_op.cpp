@@ -25,7 +25,7 @@ namespace tensorrt {
 
 class BiasAddOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
+  void Compile(TrtOpContext* ctx) override {
     CHECK_EQ(ctx->InputType("a_0"), ctx->InputType("b_0"));
 
     Shape in_shape = ctx->InputShape("a_0");
@@ -37,11 +37,12 @@ class BiasAddOp : public TrtOpKernel {
     int32_t axis = ctx->Attr<int32_t>("axis");
     dims[axis] = bias_shape.At(0);
 
-    nvinfer1::ITensor *in = ctx->Input("a_0");;
+    nvinfer1::ITensor* in = ctx->Input("a_0");
+    ;
     nvinfer1::Weights bias = ctx->Weight("b_0");
-    nvinfer1::ITensor *reshaped_bias = helpers::Reshape(ctx, bias, AsShape(dims));
+    nvinfer1::ITensor* reshaped_bias = helpers::Reshape(ctx, bias, AsShape(dims));
     // Add bias to input by ElementWise layer.
-    auto *layer = ctx->builder()->addElementWise(  // NOLINT
+    auto* layer = ctx->builder()->addElementWise(  // NOLINT
         *in, *reshaped_bias, nvinfer1::ElementWiseOperation::kSUM);
     layer->setName(ctx->op_name().c_str());
 

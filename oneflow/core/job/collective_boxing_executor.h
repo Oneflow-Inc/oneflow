@@ -30,7 +30,7 @@ namespace collective {
 struct RuntimeRequestInfo {
   const void* send_buff;
   void* recv_buff;
-  std::function<void(const Maybe<void>&)> callback;
+  std::shared_ptr<const std::function<void(const Maybe<void>&)>> callback;
 };
 
 class CollectiveBoxingExecutorBackend {

@@ -28,7 +28,7 @@ class KernelCtx;
 class Blob;
 class ParallelContext;
 
-namespace eager {
+namespace vm {
 
 class OpKernelObject : public vm::Object {
  public:
@@ -66,12 +66,12 @@ class OpKernelObject : public vm::Object {
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
                              const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                             std::unique_ptr<OpContext>* op_ctx);
+                             const cfg::SbpSignature* sbp_signature,
+                             const ParallelContext* parallel_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
-      OpContext* op_ctx, const ParallelDesc* parallel_desc);
+      const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
@@ -104,13 +104,12 @@ class SystemOpKernelObject : public vm::Object {
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
                              const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                             const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
-                             std::unique_ptr<OpContext>* op_ctx);
+                             const cfg::SbpSignature* sbp_signature,
+                             const ParallelContext* parallel_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                    const OpNodeSignatureDesc& op_node_signature,
-                   const ParallelContext* parallel_ctx, OpContext* op_ctx,
-                   const ParallelDesc* parallel_desc);
+                   const ParallelContext* parallel_ctx, const ParallelDesc* parallel_desc);
 
   OperatorConf op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
@@ -118,7 +117,7 @@ class SystemOpKernelObject : public vm::Object {
   std::unique_ptr<const Kernel> kernel_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_OPKERNEL_OBJECT_H_

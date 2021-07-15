@@ -18,33 +18,13 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
-from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+from oneflow.python.oneflow_export import (
+    oneflow_export,
+    oneflow_deprecate,
+    oneflow_export_value,
+)
+import oneflow._oneflow_internal
 import traceback
-
-
-class Distribute(object):
-    def __init__(self):
-        pass
-
-
-class AutoDistribute(Distribute):
-    def __init__(self):
-        Distribute.__init__(self)
-
-
-class BroadcastDistribute(Distribute):
-    def __init__(self):
-        Distribute.__init__(self)
-
-
-class SplitDistribute(Distribute):
-    def __init__(self, axis):
-        Distribute.__init__(self)
-        self.axis_ = axis
-
-    @property
-    def axis(self):
-        return self.axis_
 
 
 @oneflow_export("distribute.mirrored_strategy")
@@ -117,7 +97,6 @@ def deprecated_consistent_strategy():
 @oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
-    
     Usage::
 
         with oneflow.scope.consistent_view():
@@ -155,60 +134,133 @@ def ConsistentStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.split")
-def split(axis: int) -> SplitDistribute:
+def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     r"""Generate a split scheme in which op will be splitted at `axis`.
-    
+
     Args:
-        axis (int): At `axis` the op will be splitted. 
-    
+        axis (int): At `axis` the op will be splitted.
+
     Returns:
         SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     Example::
         weight = weight.with_distribute(distribute.split(1))
 
     """
     assert type(axis) is int
-    assert str(axis) in _axis_str2split_axis_obj, "not a valid split. expected: [0, 11)"
-    return _axis_str2split_axis_obj[str(axis)]
+    return oneflow._oneflow_internal.distribute.split(axis)
 
 
 @oneflow_export("distribute.broadcast")
-def broadcast() -> BroadcastDistribute:
+def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
         BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     Example::
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
-    
+
     """
-    return _broadcast
+    return oneflow._oneflow_internal.distribute.broadcast()
 
 
 @oneflow_export("distribute.auto")
-def auto() -> AutoDistribute:
+def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
         AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     """
-    return _auto
+    return oneflow._oneflow_internal.distribute.auto()
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute: Distribute) -> None:
+def assert_is_valid_distribute(
+    distribute: oneflow._oneflow_internal.distribute.Distribute,
+) -> None:
     assert isinstance(
-        distribute, Distribute
+        distribute, oneflow._oneflow_internal.distribute.Distribute
     ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 
-_auto = AutoDistribute()
-_broadcast = BroadcastDistribute()
-_axis_str2split_axis_obj = dict()
-for i in range(11):
-    class_name = "Split_Axis%d" % i
-    _axis_str2split_axis_obj[str(i)] = SplitDistribute(i)
+@oneflow_export("distributed.get_local_rank")
+def get_local_rank():
+    return oneflow._oneflow_internal.GetLocalRank()
+
+
+@oneflow_export("distributed.get_rank")
+def get_rank():
+    r"""Returns the rank of current process group.
+
+    Returns:
+        The rank of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetRank()
+
+
+@oneflow_export("distributed.get_world_size")
+def get_world_size():
+    r"""Returns the number of processes in the current process group.
+
+    Returns:
+        The world size of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetWorldSize()
+
+
+@oneflow_export("distributed.is_multi_client")
+def is_multi_client():
+    return oneflow._oneflow_internal.IsMultiClient()
+
+
+@oneflow_export("sbp.split")
+def split_sbp(
+    axis: int,
+) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a split scheme in which op will be splitted at `axis`.
+
+    Args:
+        axis (int): At `axis` the op will be splitted.
+
+    Returns:
+        SbpParallel: Split scheme object, often required by `to_consistent` method of `Tensor`
+
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.split(0), placement=("cuda", {0: [0, 1, 2, 3]}))
+
+    """
+    assert type(axis) is int
+    return oneflow._oneflow_internal.sbp.split(axis)
+
+
+@oneflow_export_value("sbp.broadcast")
+def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a broadcast scheme.
+    Returns:
+        SbpParallel: Broadcast scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.broadcast, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.broadcast()
+
+
+@oneflow_export_value("sbp.partial_sum")
+def partial_sum_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+    r"""Generate a partial_sum scheme.
+    Returns:
+        SbpParallel: PartialSum scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.partial_sum, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.partial_sum()

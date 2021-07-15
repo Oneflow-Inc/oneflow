@@ -38,7 +38,6 @@ def TrainCompare(test_case, func):
     def DisableInplace():
         return func("w1")
 
-    flow.train.CheckPoint().init()
     num_iter = 10
     enable_inplace_losses = np.array(
         [EnableInplace().get().tolist() for _ in range(num_iter)]
@@ -71,7 +70,6 @@ class TestInplace(flow.unittest.TestCase):
             y = flow.math.relu(w)
             return y
 
-        flow.train.CheckPoint().init()
         test_case.assertTrue(
             np.allclose(InplaceVariable().get().numpy(), np.ones((10,), np.float32))
         )
@@ -108,7 +106,6 @@ class TestInplace(flow.unittest.TestCase):
             y = flow.reshape(w, (10,))
             return y
 
-        flow.train.CheckPoint().init()
         of_ret = InplaceVariable().get().numpy()
         test_case.assertTrue(np.allclose(of_ret, np.ones((10,), np.float32)))
 

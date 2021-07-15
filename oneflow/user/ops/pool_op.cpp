@@ -27,7 +27,7 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -41,28 +41,13 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     CHECK_EQ_OR_RETURN(strides.size(), dim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
 
-    const Params3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
+    const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
+    *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
     return Maybe<void>::Ok();
   };
-}
-
-Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
 }
 
 // Logically computation cost of pool op is the product of output data amount and pool kernal data
@@ -78,6 +63,22 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
     return logical_computation_cost / ctx->parallel_desc().parallel_num();
   }
   return logical_computation_cost;
+}
+
+Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
@@ -138,9 +139,9 @@ REGISTER_USER_OP("avg_pool_1d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_1d_grad")
     .Input("x")
@@ -155,9 +156,9 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
 
@@ -172,9 +173,9 @@ REGISTER_USER_OP("avg_pool_2d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_2d_grad")
     .Input("x")
@@ -189,9 +190,9 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
 
@@ -206,9 +207,9 @@ REGISTER_USER_OP("avg_pool_3d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_3d_grad")
     .Input("x")
@@ -223,9 +224,9 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
 
@@ -240,9 +241,9 @@ REGISTER_USER_OP("max_pool_1d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_1d_grad")
     .Input("x")
@@ -257,9 +258,9 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
 
@@ -274,9 +275,9 @@ REGISTER_USER_OP("max_pool_2d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_2d_grad")
     .Input("x")
@@ -291,9 +292,9 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
 
@@ -308,9 +309,9 @@ REGISTER_USER_OP("max_pool_3d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_3d_grad")
     .Input("x")
@@ -325,9 +326,9 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
     .SetComputeComplexityFn(GetComputationCostFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
 

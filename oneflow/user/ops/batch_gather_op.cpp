@@ -22,27 +22,25 @@ REGISTER_USER_OP("batch_gather")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
-      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
-      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_LE_OR_RETURN(indices->shape().dim_vec().size(), in->shape().dim_vec().size());
-      FOR_RANGE(int64_t, i, 0, indices->shape().dim_vec().size() - 1) {
-        if (in->is_dynamic() && indices->is_dynamic() == false) {
-          CHECK_GE_OR_RETURN(indices->shape().dim_vec().at(i), in->shape().dim_vec().at(i));
-        } else if (in->is_dynamic() == false && indices->is_dynamic()) {
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
+      const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
+      CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_LE_OR_RETURN(indices.shape().dim_vec().size(), in.shape().dim_vec().size());
+      FOR_RANGE(int64_t, i, 0, indices.shape().dim_vec().size() - 1) {
+        if (in.is_dynamic() && indices.is_dynamic() == false) {
+          CHECK_GE_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i));
+        } else if (in.is_dynamic() == false && indices.is_dynamic()) {
           UNIMPLEMENTED();
         } else {
-          CHECK_EQ_OR_RETURN(indices->shape().dim_vec().at(i), in->shape().dim_vec().at(i));
+          CHECK_EQ_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i));
         }
       }
 
-      DimVector dim_vec(in->shape().dim_vec());
-      dim_vec.at(indices->shape().NumAxes() - 1) = indices->shape().dim_vec().back();
+      DimVector dim_vec(in.shape().dim_vec());
+      dim_vec.at(indices.shape().NumAxes() - 1) = indices.shape().dim_vec().back();
       *out->mut_shape() = Shape(dim_vec);
-      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -50,10 +48,6 @@ REGISTER_USER_OP("batch_gather")
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t indices_num_axes =
@@ -72,13 +66,20 @@ REGISTER_USER_OP("batch_gather")
             .PartialSum(user_op::OpArg("out", 0))
             .Build();
       } else {
-        std::shared_ptr<ErrorProto> err;
+        std::shared_ptr<cfg::ErrorProto> err;
         err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
                      + " (should be bigger than 1).");
         err->mutable_check_failed_error();
         return err;
       }
-
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = in.data_type();
       return Maybe<void>::Ok();
     });
 

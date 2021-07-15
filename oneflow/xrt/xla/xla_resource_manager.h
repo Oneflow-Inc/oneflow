@@ -33,19 +33,19 @@ namespace mola {
 
 namespace resource_mgr {
 
-se::Platform::Id GetPlatformId(const XrtDevice &device);
+se::Platform::Id GetPlatformId(const XrtDevice& device);
 
-const se::Platform *GetPlatform(const XrtDevice &device);
+const se::Platform* GetPlatform(const XrtDevice& device);
 
-Eigen::ThreadPoolDevice *GetOrCreateEigenHostDevice();
+Eigen::ThreadPoolDevice* GetOrCreateEigenHostDevice();
 
-typedef void *StreamId;
+typedef void* StreamId;
 
-DeviceBufferAllocator *GetOrCreateBufferAllocator(const XrtDevice &device,
-                                                  const StreamId &stream_id, se::Stream *stream,
+DeviceBufferAllocator* GetOrCreateBufferAllocator(const XrtDevice& device,
+                                                  const StreamId& stream_id, se::Stream* stream,
                                                   int device_ordinal);
 
-xla::LocalClient *GetOrCreateLocalClient(const XrtDevice &device);
+xla::LocalClient* GetOrCreateLocalClient(const XrtDevice& device);
 
 }  // namespace resource_mgr
 

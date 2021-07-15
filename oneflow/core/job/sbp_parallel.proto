@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-// Take matmul_op as an example.
+// Take matmal_op as an example.
 
 //   Y     =   A    *   B
 // (m, n)    (m, k) , (k, n)
@@ -64,6 +64,14 @@ message SbpParallel {
 
 message SbpSignature {
   map<string, SbpParallel> bn_in_op2sbp_parallel = 1;
+}
+
+message ParallelDistribution {
+  repeated SbpParallel sbp_parallel = 1;
+}
+
+message ParallelDistributionSignature {
+  map<string, ParallelDistribution> bn_in_op2parallel_distribution = 1;
 }
 
 message SbpSignatureList {

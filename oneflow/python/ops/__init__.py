@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import re
 
-import oneflow.core.job.placement_pb2 as placement_proto_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
@@ -29,10 +28,12 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def InputOpByArgBlobDef(blob_def):
@@ -42,7 +43,10 @@ def InputOpByArgBlobDef(blob_def):
     op_conf.input_conf.out = blob_def.blob_name
     op_conf.input_conf.blob_conf.CopyFrom(blob_def.ToInterfaceBlobConf())
     blob_def.AddAndInferOp(op_conf)
-    return remote_blob_util.RemoteBlob(blob_def.lbi)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = blob_def.op_name
+    lbi.blob_name = blob_def.blob_name
+    return remote_blob_util.RemoteBlob(lbi)
 
 
 def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
@@ -55,7 +59,10 @@ def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
 def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     assert isinstance(
         remote_blob,
-        (remote_blob_util.LazyMirroredBlob, remote_blob_util.LazyConsistentBlob),
+        (
+            oneflow._oneflow_internal.LazyMirroredBlob,
+            oneflow._oneflow_internal.LazyConsistentBlob,
+        ),
     )
     op_conf, lbi, scope = _GetReturnOpConfAndOutLbiAndScope(
         remote_blob, allow_cpu_return_op
@@ -78,15 +85,19 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     op_attribute = add_and_infer(op_conf, scope)
 
     def BuildInstruction(builder):
-        get_blob_scope = blob_register.BnInOp2BlobObjectScope
-        with get_blob_scope(op_attribute) as bn_in_op2blob_object:
+        get_blob_scope = blob_register_util.BnInOp2BlobObjectScope
+        with get_blob_scope(blob_register, op_attribute) as bn_in_op2blob_object:
+            cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatelessCall(
-                op_attribute,
+                cfg_op_attribute,
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
     return remote_blob_util.RemoteBlob(lbi)
 
 
@@ -102,11 +113,11 @@ def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
 
-    parallel_conf = placement_proto_pb.ParallelConf()
+    parallel_conf = placement_cfg.ParallelConf()
     parallel_conf.CopyFrom(remote_blob.parallel_conf)
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelConf(builder, parallel_conf)
+        return builder.BuildScopeWithNewParallelConf(old_scope, parallel_conf)
 
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(BuildScope)

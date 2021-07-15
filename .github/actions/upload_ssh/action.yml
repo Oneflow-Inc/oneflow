@@ -1,0 +1,26 @@
+name: "Upload via ssh"
+description: ""
+inputs:
+  src_path:
+    required: true
+    description: ""
+  dst_host:
+    required: true
+    description: ""
+  dst_path:
+    required: true
+    description: ""
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        set -x
+        dir_arg=""
+        if [ -d "${{ inputs.src_path }}" ]; then
+          dir_arg="-r"
+        fi
+        parent_dir=$(dirname ${{ inputs.dst_path }})
+        ssh -o StrictHostKeyChecking=no ${{ inputs.dst_host }} mkdir -p $parent_dir
+        ssh ${{ inputs.dst_host }} rm -rf ${{ inputs.dst_path }}
+        scp ${dir_arg} ${{ inputs.src_path }} ${{ inputs.dst_host }}:${{ inputs.dst_path }}
+      shell: bash

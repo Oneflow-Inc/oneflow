@@ -71,8 +71,6 @@ def RunOneflowBiasAdd(data_type, device_type, value, bias, flow_args):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(value, bias).get().numpy()
     value_diff = test_global_storage.Get("value_diff")
     bias_diff = test_global_storage.Get("bias_diff")

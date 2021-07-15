@@ -16,12 +16,13 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Optional
+from typing import Optional, Union
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow._oneflow_internal
 
 
 def build_math_binary_elementwise_op(math_op, x, y, name=None):
@@ -41,25 +42,27 @@ def build_math_binary_elementwise_op(math_op, x, y, name=None):
 
 @oneflow_export("math.atan2")
 def atan2(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
-    r"""This operator computes the values of :math:`arctan(\frac{x}{y})`. 
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator computes the values of :math:`arctan(\frac{x}{y})`.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = arctan(\frac{x}{y})
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
-        y (remote_blob_util.BlobDef): A Blob
+        x (oneflow._oneflow_internal.BlobDesc): A Blob
+        y (oneflow._oneflow_internal.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -88,25 +91,29 @@ def atan2(
 
 @oneflow_export("math.pow")
 def pow(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
-    """This operator computes the Pow result. 
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: Union[oneflow._oneflow_internal.BlobDesc, float],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator computes the Pow result.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = x^y
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
-        y (remote_blob_util.BlobDef): A Blob, the exponential factor of Pow
+        x (oneflow._oneflow_internal.BlobDesc): A Blob
+        y (Union[oneflow._oneflow_internal.BlobDesc, float]): A Blob or float value, the exponential factor of Pow
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
-    
-    For example: 
+        oneflow._oneflow_internal.BlobDesc: The result Blob
+
+    For example:
+
+    Example 1:
 
     .. code-block:: python
 
@@ -126,25 +133,63 @@ def pow(
         out = powJob(x, y)
 
         # out [  4.  27. 256.]
+
+    Example 2:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def scalar_pow_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):
+                out = flow.math.pow(x, 2.0)
+            return out
+
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        out = scalar_pow_job(x)
+
+        # out [1. 4. 9.]
     """
-    return build_math_binary_elementwise_op("pow", x, y, name)
+    if name is None:
+        name = id_util.UniqueStr("Pow_")
+
+    if isinstance(y, (int, float)):
+        return (
+            flow.user_op_builder(name)
+            .Op("scalar_pow")
+            .Input("in", [x])
+            .Attr("exponent", float(y))
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_math_binary_elementwise_op("pow", x, y, name)
 
 
 @oneflow_export("math.floordiv")
 def floordiv(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x/y`, rounding toward the most negative integer value
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
-        y (remote_blob_util.BlobDef): A Blob
+        x (oneflow._oneflow_internal.BlobDesc): A Blob
+        y (oneflow._oneflow_internal.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -171,21 +216,23 @@ def floordiv(
 
 @oneflow_export("math.xdivy")
 def xdivy(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x/y`
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
-        y (remote_blob_util.BlobDef): A Blob
+        x (oneflow._oneflow_internal.BlobDesc): A Blob
+        y (oneflow._oneflow_internal.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
-    
-    For example: 
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -211,21 +258,23 @@ def xdivy(
 
 @oneflow_export("math.xlogy")
 def xlogy(
-    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x*log(y)`
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
-        y (remote_blob_util.BlobDef): A Blob
+        x (oneflow._oneflow_internal.BlobDesc): A Blob
+        y (oneflow._oneflow_internal.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np

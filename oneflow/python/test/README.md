@@ -48,7 +48,7 @@ if __name__ == "__main__":
     更多用法请参考 [https://docs.python.org/3/library/unittest.html](https://docs.python.org/3/library/unittest.html)
 
 - 通过设置环境变量 `ONEFLOW_TEST_DEVICE_NUM` 过滤要运行几卡的脚本，如果没有给，默认就是1
-- 多机脚本需要设置 `ONEFLOW_TEST_NODE_LIST` 和`ONEFLOW_TEST_CTRL_PORT`环境变量来指定多机的 ip 地址和 control port
+- 多机脚本需要设置 `ONEFLOW_TEST_NODE_LIST` 和`ONEFLOW_TEST_MASTER_PORT`环境变量来指定多机的 ip 地址和 control port
 - 运行单一脚本，可以直接用 python3 二进制运行一个文件，接受 python unitest 的所有命令行参数，如 `--failfast` , `--verbose`
 
     ```cpp

@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 class RemoveForeignCallbackInstructionType : public vm::InstructionType {
  public:
@@ -36,12 +36,13 @@ class RemoveForeignCallbackInstructionType : public vm::InstructionType {
 
   void Compute(vm::Instruction* instruction) const override {
     FlatMsgView<RemoveForeignCallbackInstrOperand> args(instruction->instr_msg().operand());
-    Global<ForeignCallback>::Get()->RemoveForeignCallback(args->unique_callback_id());
+    (*Global<std::shared_ptr<ForeignCallback>>::Get())
+        ->RemoveForeignCallback(args->unique_callback_id());
   }
 };
 
 COMMAND(vm::RegisterInstructionType<RemoveForeignCallbackInstructionType>("RemoveForeignCallback"));
 
-}  // namespace eager
+}  // namespace vm
 
 }  // namespace oneflow

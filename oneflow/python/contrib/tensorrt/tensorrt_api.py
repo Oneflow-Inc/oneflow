@@ -15,15 +15,22 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.oneflow_internal as oneflow_internal
+import traceback
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow._oneflow_internal
 
 
 @oneflow_export("tensorrt.write_int8_calibration")
 def write_int8_calibration(path):
-    oneflow_internal.WriteInt8Calibration(path)
+    try:
+        oneflow._oneflow_internal.WriteInt8Calibration(path)
+    except oneflow._oneflow_internal.exception.CompileOptionWrongException:
+        traceback.print_exc()
 
 
 @oneflow_export("tensorrt.cache_int8_calibration")
 def cache_int8_calibration():
-    oneflow_internal.CacheInt8Calibration()
+    try:
+        oneflow._oneflow_internal.CacheInt8Calibration()
+    except oneflow._oneflow_internal.exception.CompileOptionWrongException:
+        traceback.print_exc()

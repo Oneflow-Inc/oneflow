@@ -21,11 +21,20 @@ namespace oneflow {
 namespace vm {
 
 void RwMutexedObjectAccess::__Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                                     bool is_const_operand) {
+                                     OperandAccessType access_type) {
   set_instruction(instruction);
   set_mirrored_object(mirrored_object);
-  set_is_const_operand(is_const_operand);
+  set_rw_mutexed_object(mirrored_object->mut_rw_mutexed_object());
+  set_access_type(access_type);
   mut_mirrored_object_id()->CopyFrom(mirrored_object->mirrored_object_id());
+}
+
+bool RwMutexedObjectAccess::is_const_operand() const {
+  return kConstOperandAccess == access_type();
+}
+
+bool RwMutexedObjectAccess::is_mut_operand() const {
+  return kMutableOperandAccess == access_type();
 }
 
 void MirroredObject::__Init__(LogicalObject* logical_object, int64_t global_device_id) {

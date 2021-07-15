@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow.eager;
+package oneflow.vm;
 
 import "oneflow/core/vm/instruction.proto";
 import "oneflow/core/eager/eager_symbol.proto";

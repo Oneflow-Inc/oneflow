@@ -80,8 +80,6 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         ):
             return clip(values_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return clip_fn([values]).get().numpy_list()[0]
 
     else:
@@ -91,8 +89,6 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):
             return clip(values_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return clip_fn(values).get().numpy()
 
 

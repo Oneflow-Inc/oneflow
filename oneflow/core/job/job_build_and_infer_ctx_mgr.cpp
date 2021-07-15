@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/common/util.h"
 #include <json.hpp>
 
@@ -97,6 +100,26 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   mut_job_set()->clear_job();
   clear_job_name2infer_ctx();
   return Maybe<void>::Ok();
+}
+
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
+
+Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
+  if (EagerExecutionEnabled() && !LazyMode::is_enabled()) {
+    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
+}
+
+Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(job_name);
+}
+
+Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
 }
 
 }  // namespace oneflow

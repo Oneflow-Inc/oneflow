@@ -117,7 +117,7 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      const Shape* y_shape = ctx->OutputShape("y", 0);
       const int32_t batch_size = y_shape->At(0);
 
       const int32_t random_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));

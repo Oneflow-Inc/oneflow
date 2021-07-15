@@ -36,8 +36,8 @@ void OneflowModuleRegistry::Register(std::string module_path,
 }
 
 void OneflowModuleRegistry::ImportAll(pybind11::module& m) {
-  for (auto& pair : (*GetSubModuleMap())) {
-    for (auto& BuildModule : pair.second) { BuildSubModule(pair.first, m, BuildModule); }
+  for (const auto& pair : (*GetSubModuleMap())) {
+    for (const auto& BuildModule : pair.second) { BuildSubModule(pair.first, m, BuildModule); }
   }
 }
 

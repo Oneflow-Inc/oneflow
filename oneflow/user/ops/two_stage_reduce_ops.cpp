@@ -21,56 +21,109 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferReduceDeviceStageTensorDescFn(user_op::InferContext* ctx) {
-  Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("count", 0) = DataType::kInt32;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx) {
+  const Shape& input_shape = ctx->InputShape("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+  const int64_t num_axes = input_shape.NumAxes();
+  Shape* output_shape = ctx->OutputShape("out", 0);
   if (axis.empty()) {
-    *output_shape = Shape::Ones(input_shape->NumAxes());
+    *output_shape = Shape::Ones(num_axes);
   } else {
-    const AxisVector axis_vec = {axis.begin(), axis.end()};
-    const Shape& reduced_shape = CreateReducedShape(*input_shape, axis_vec);
-    *output_shape = reduced_shape;
+    const ParallelDesc& parallel_desc = ctx->parallel_desc();
+    const cfg::ParallelDistribution& in_parallel_distribution =
+        ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+    DimVector dim_vec = input_shape.dim_vec();
+    if (parallel_desc.hierarchy()->NumAxes() == 1) {
+      const auto& input_sbp = in_parallel_distribution.sbp_parallel(0);
+      for (auto i : axis) {
+        const int64_t regular_axis = ShiftNegativeAxis(i, num_axes);
+        dim_vec.at(regular_axis) =
+            (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis)
+                ? parallel_desc.parallel_num()
+                : 1;
+      }
+    } else {
+      CHECK_EQ_OR_RETURN(axis.size(), 1);
+      const int64_t regular_axis = ShiftNegativeAxis(axis.at(0), num_axes);
+      dim_vec.at(regular_axis) = 1;
+      for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+        const auto& input_sbp = in_parallel_distribution.sbp_parallel(i);
+        if (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis) {
+          dim_vec.at(regular_axis) *= parallel_desc.hierarchy()->At(i);
+        }
+      }
+    }
+    *output_shape = Shape(dim_vec);
   }
 
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
-
-  *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
-  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
+  *ctx->OutputShape("mask", 0) = input_shape;
+  *ctx->OutputShape("count", 0) = *output_shape;
 
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ctx) {
+  const Shape& input_shape = ctx->InputShape("in", 0);
+  const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+  Shape* output_shape = ctx->OutputShape("out", 0);
+  if (axis.empty()) {
+    *output_shape = Shape::Ones(input_shape.NumAxes());
+  } else {
+    const AxisVector axis_vec = {axis.begin(), axis.end()};
+    const Shape& reduced_shape = CreateReducedShape(input_shape, axis_vec);
+    *output_shape = reduced_shape;
+  }
+
+  *ctx->OutputShape("mask", 0) = input_shape;
+  *ctx->OutputShape("count", 0) = *output_shape;
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
+  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("out_diff", 0),
-                     *ctx->Shape4ArgNameAndIndex("count", 0));
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
-  *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *ctx->Shape4ArgNameAndIndex("mask", 0);
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputShape("out_diff", 0), ctx->InputShape("count", 0));
+  *ctx->OutputShape("in_diff", 0) = ctx->InputShape("mask", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-  const Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
-  CHECK_EQ_OR_RETURN(*input_shape, *device_count_shape);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
+  const Shape& input_shape = ctx->InputShape("in", 0);
+  const Shape& device_count_shape = ctx->InputShape("device_count", 0);
+  CHECK_EQ_OR_RETURN(input_shape, device_count_shape);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+  Shape* output_shape = ctx->OutputShape("out", 0);
   if (axis.empty()) {
     if (keepdims) {
-      *output_shape = Shape::Ones(input_shape->NumAxes());
+      *output_shape = Shape::Ones(input_shape.NumAxes());
     } else {
       *output_shape = Shape({1});
     }
   } else {
     const AxisVector axis_vec = {axis.begin(), axis.end()};
-    const Shape& reduced_shape = CreateReducedShape(*input_shape, axis_vec);
+    const Shape& reduced_shape = CreateReducedShape(input_shape, axis_vec);
     if (keepdims) {
       *output_shape = reduced_shape;
     } else {
@@ -78,75 +131,25 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
     }
   }
 
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+  *ctx->OutputShape("mask", 0) = input_shape;
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+
+  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
-  Shape* mask_shape = ctx->Shape4ArgNameAndIndex("mask", 0);
-  Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
-  CHECK_EQ_OR_RETURN(*device_count_shape, *mask_shape);
-
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
-
-  *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *mask_shape;
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
-
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferReduceDeviceStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-  auto* mask_batch_axis = ctx->BatchAxis4ArgNameAndIndex("mask", 0);
-  auto* count_batch_axis = ctx->BatchAxis4ArgNameAndIndex("count", 0);
-  if (in_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-    *out_batch_axis = *in_batch_axis;
-    *mask_batch_axis = *in_batch_axis;
-    *count_batch_axis = *in_batch_axis;
-  } else {
-    out_batch_axis->clear_value();
-    mask_batch_axis->clear_value();
-    count_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferReduceDeviceStageGradBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* out_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out_diff", 0);
-  auto* in_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in_diff", 0);
-  if (out_diff_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(out_diff_batch_axis->value()) == conf_axes.end()) {
-    *in_diff_batch_axis = *out_diff_batch_axis;
-  } else {
-    in_diff_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferReduceGlobalStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-  auto* mask_batch_axis = ctx->BatchAxis4ArgNameAndIndex("mask", 0);
-  if (in_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-    *out_batch_axis = *in_batch_axis;
-    *mask_batch_axis = *in_batch_axis;
-  } else {
-    out_batch_axis->clear_value();
-    mask_batch_axis->clear_value();
-  }
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  const Shape& device_count_shape = ctx->InputShape("device_count", 0);
+  CHECK_EQ_OR_RETURN(device_count_shape, mask_shape);
+  *ctx->OutputShape("in_diff", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 
@@ -161,14 +164,12 @@ Maybe<void> GetReduceDeviceStageSbpFn(user_op::SbpContext* ctx) {
   }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (IsReducedAxis(i)) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), i)
-          .Split(user_op::OpArg("out", 0), i)
-          .Split(user_op::OpArg("mask", 0), i)
-          .Split(user_op::OpArg("count", 0), i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .Split(user_op::OpArg("out", 0), i)
+        .Split(user_op::OpArg("mask", 0), i)
+        .Split(user_op::OpArg("count", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -198,15 +199,16 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP(op_name)           \
-  REGISTER_USER_OP(op_name)                                     \
-      .Input("in")                                              \
-      .Output("out")                                            \
-      .Output("mask")                                           \
-      .Output("count")                                          \
-      .Attr<std::vector<int32_t>>("axis")                       \
-      .SetTensorDescInferFn(InferReduceDeviceStageTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageBatchAxisFn)   \
+#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP(op_name)                           \
+  REGISTER_USER_OP(op_name)                                                     \
+      .Input("in")                                                              \
+      .Output("out")                                                            \
+      .Output("mask")                                                           \
+      .Output("count")                                                          \
+      .Attr<std::vector<int32_t>>("axis")                                       \
+      .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
+      .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
+      .SetDataTypeInferFn(InferReduceDeviceStageDtypeFn)                        \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")
@@ -220,7 +222,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
       .Output("in_diff")                                            \
       .Attr<std::vector<int32_t>>("axis")                           \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
+      .SetDataTypeInferFn(InferReduceDeviceStageGradDtypeFn)        \
       .SetGetSbpFn(GetReduceDeviceStageGradSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_min_device_stage_grad")
@@ -260,14 +262,22 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .Attr<std::vector<int32_t>>("axis")                                         \
       .Attr<bool>("keepdims")                                                     \
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
-      .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                     \
+      .SetDataTypeInferFn(InferReduceGlobalStageDtypeFn)                          \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
                               const user_op::UserOpConfWrapper&) {                \
         user_op::InputArgModifier* device_count_modifier =                        \
             GetInputArgModifierFn("device_count", 0);                             \
         device_count_modifier->set_requires_grad(false);                          \
       })                                                                          \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
+      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                  \
+        ctx->NewBuilder()                                                         \
+            .Split(user_op::OpArg("in", 0), 0)                                    \
+            .Split(user_op::OpArg("device_count", 0), 0)                          \
+            .Split(user_op::OpArg("out", 0), 0)                                   \
+            .Split(user_op::OpArg("mask", 0), 0)                                  \
+            .Build();                                                             \
+        return Maybe<void>::Ok();                                                 \
+      });
 
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_min_global_stage")
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
@@ -281,7 +291,7 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Attr<std::vector<int32_t>>("axis")                           \
       .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
+      .SetDataTypeInferFn(InferReduceGlobalStageGradDtypeFn)        \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")

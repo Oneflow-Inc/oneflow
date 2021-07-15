@@ -1,0 +1,19 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/job_conf.proto";
+
+message SavedModel {
+  required string name = 1;
+  required int64 version = 2;
+  required string checkpoint_dir = 3;
+  map<string, GraphDef> graphs = 4;
+  optional string default_graph_name = 5;
+}
+
+message GraphDef {
+  repeated OperatorConf op_list = 1;
+  map<string, JobSignatureDef> signatures = 2;
+  optional string default_signature_name = 3;
+}

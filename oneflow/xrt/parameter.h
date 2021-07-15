@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 namespace xrt {
 
-inline int SizeOf(const DataType &data_type) {
+inline int SizeOf(const DataType& data_type) {
   /*
     switch (data_type) {
       case DataType::kChar:
@@ -55,44 +55,44 @@ class Parameter {
   Parameter() = default;
   virtual ~Parameter() = default;
 
-  Parameter(void *data, const Shape &shape, const DataType &data_type)
+  Parameter(void* data, const Shape& shape, const DataType& data_type)
       : storage_(data), shape_(shape), data_type_(data_type) {
     byte_size_ = shape.elem_cnt() * SizeOf(data_type);
   }
 
-  Parameter(const std::string &name, void *data, const Shape &shape, const DataType &data_type)
+  Parameter(const std::string& name, void* data, const Shape& shape, const DataType& data_type)
       : storage_(data), shape_(shape), data_type_(data_type), parameter_name_(name) {
     byte_size_ = shape.elem_cnt() * SizeOf(data_type);
   }
 
-  void set_data(const void *data) { storage_ = const_cast<void *>(data); }
+  void set_data(const void* data) { storage_ = const_cast<void*>(data); }
 
   template<typename T>
-  void set_data(const T *data) {
-    storage_ = const_cast<T *>(data);
+  void set_data(const T* data) {
+    storage_ = const_cast<T*>(data);
   }
 
-  void *data() const { return storage_; }
+  void* data() const { return storage_; }
 
   template<typename T>
-  T *data() const {
-    return reinterpret_cast<T *>(storage_);
+  T* data() const {
+    return reinterpret_cast<T*>(storage_);
   }
 
-  const std::string &name() const { return parameter_name_; }
-  const Shape &shape() const { return shape_; }
-  const DataType &data_type() const { return data_type_; }
+  const std::string& name() const { return parameter_name_; }
+  const Shape& shape() const { return shape_; }
+  const DataType& data_type() const { return data_type_; }
   int64_t byte_size() const {
     return byte_size_ < 0 ? shape_.elem_cnt() * SizeOf(data_type_) : byte_size_;
   }
 
-  void set_name(const std::string &name) { parameter_name_ = name; }
-  void set_shape(const Shape &shape) { shape_ = shape; }
-  void set_data_type(const DataType &data_type) { data_type_ = data_type; }
+  void set_name(const std::string& name) { parameter_name_ = name; }
+  void set_shape(const Shape& shape) { shape_ = shape; }
+  void set_data_type(const DataType& data_type) { data_type_ = data_type; }
   void set_byte_size(int64_t byte_size) { byte_size_ = byte_size; }
 
  private:
-  void *storage_ = nullptr;
+  void* storage_ = nullptr;
 
   int64_t byte_size_ = -1;
 

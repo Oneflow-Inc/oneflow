@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import os
 
 from collections import OrderedDict
 
@@ -78,6 +79,7 @@ def _test_two_stage_reduce(
 
 @flow.unittest.skip_unless_1n4d()
 class TestTwoStageReduce(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_two_stage_reduce_max(test_case):
         arg_dict = OrderedDict()
         arg_dict["flow_func"] = [flow.math.two_stage_reduce_max]
@@ -89,6 +91,7 @@ class TestTwoStageReduce(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_two_stage_reduce(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_two_stage_reduce_min(test_case):
         arg_dict = OrderedDict()
         arg_dict["flow_func"] = [flow.math.two_stage_reduce_min]

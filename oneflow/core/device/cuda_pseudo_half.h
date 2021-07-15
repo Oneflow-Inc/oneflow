@@ -25,7 +25,7 @@ limitations under the License.
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 530
 
 #define DEFINE_CUDA_PSEUDO_HALF_ARITHMETIC_BINARY_OPERATOR(op)                        \
-  __device__ __forceinline__ __half operator op(const __half &lh, const __half &rh) { \
+  __device__ __forceinline__ __half operator op(const __half& lh, const __half& rh) { \
     return __float2half(__half2float(lh) op __half2float(rh));                        \
   }
 
@@ -64,7 +64,7 @@ DEFINE_CUDA_PSEUDO_HALF_HALF2_ARITHMETIC_BINARY_FUNC(sub)
 #undef DEFINE_CUDA_PSEUDO_HALF_HALF2_ARITHMETIC_BINARY_FUNC
 
 #define DEFINE_CUDA_PSEUDO_HALF_ARITHMETIC_ASSIGNMENT_OPERATOR(op)               \
-  __device__ __forceinline__ __half &operator op(__half &lh, const __half &rh) { \
+  __device__ __forceinline__ __half& operator op(__half& lh, const __half& rh) { \
     float lhv = __half2float(lh);                                                \
     lhv op __half2float(rh);                                                     \
     lh = __float2half(lhv);                                                      \
@@ -78,38 +78,38 @@ DEFINE_CUDA_PSEUDO_HALF_ARITHMETIC_ASSIGNMENT_OPERATOR(/=)
 
 #undef DEFINE_CUDA_PSEUDO_HALF_ARITHMETIC_ASSIGNMENT_OPERATOR
 
-__device__ __forceinline__ __half &operator++(__half &h) {
+__device__ __forceinline__ __half& operator++(__half& h) {
   h = __float2half(__half2float(h) + 1);
   return h;
 }
 
-__device__ __forceinline__ __half &operator--(__half &h) {
+__device__ __forceinline__ __half& operator--(__half& h) {
   h = __float2half(__half2float(h) - 1);
   return h;
 }
 
-__device__ __forceinline__ __half operator++(__half &h, int) {
+__device__ __forceinline__ __half operator++(__half& h, int) {
   __half ret = h;
   h = __float2half(__half2float(h) + 1);
   return ret;
 }
 
-__device__ __forceinline__ __half operator--(__half &h, int) {
+__device__ __forceinline__ __half operator--(__half& h, int) {
   __half ret = h;
   h = __float2half(__half2float(h) - 1);
   return ret;
 }
 
-__device__ __forceinline__ __half operator+(const __half &h) { return h; }
+__device__ __forceinline__ __half operator+(const __half& h) { return h; }
 
-__device__ __forceinline__ __half operator-(const __half &h) {
+__device__ __forceinline__ __half operator-(const __half& h) {
   return __float2half(-__half2float(h));
 }
 
 __device__ __forceinline__ __half __hneg(const __half a) { return -a; }
 
 #define DEFINE_CUDA_PSEUDO_HALF_COMPARISON_BINARY_OPERATOR(op)                      \
-  __device__ __forceinline__ bool operator op(const __half &lh, const __half &rh) { \
+  __device__ __forceinline__ bool operator op(const __half& lh, const __half& rh) { \
     return __half2float(lh) op __half2float(rh);                                    \
   }
 

@@ -20,13 +20,13 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+  const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
   CHECK_OR_RETURN(!reduce_axes.empty());
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
-  const Shape& reduce_shape = CreateReducedShape(*input_shape, reduce_axes_vec);
+  const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
+  Shape* output_shape = ctx->OutputShape("output_tensor", 0);
   if (keepdims) {
     *output_shape = reduce_shape;
   } else {
@@ -35,21 +35,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  const bool keepdims = ctx->Attr<bool>("keepdims");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("input_tensor", 0);
-  auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output_tensor", 0);
-  if (in_batch_axis->has_value()) {
-    if (keepdims || conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-      *out_batch_axis = *in_batch_axis;
-    } else {
-      out_batch_axis->clear_value();
-    }
-  } else {
-    out_batch_axis->clear_value();
-  }
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
   return Maybe<void>::Ok();
 }
 
@@ -70,7 +57,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   int64_t num_axes = in_tensor.shape().NumAxes();
   bool keep_dims = ctx->Attr<bool>("keepdims");
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduce_axes.begin(), reduce_axes.end()};
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduce_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -94,8 +82,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")             \
       .Attr<bool>("keepdims")                         \
       .SetTensorDescInferFn(InferTensorDescFn)        \
-      .SetBatchAxisInferFn(InferBatchAxisFn)          \
-      .SetGetSbpFn(GetSbpFn<binary_func>);
+      .SetGetSbpFn(GetSbpFn<binary_func>)             \
+      .SetDataTypeInferFn(InferDataType);
 
 REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
 REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)

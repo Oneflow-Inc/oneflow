@@ -36,7 +36,6 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
       int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
-  OF_PUBLIC void GenerateParallelConf(const char* device_tag, ParallelConf* parallel_conf);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, machine_num);

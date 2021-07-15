@@ -3,15 +3,9 @@ import argparse
 import os
 import re
 from urllib.parse import urlparse
-import requests
 import hashlib
 import base64
 import tempfile
-
-try:
-    import oss2
-except:
-    pass
 
 
 parser = argparse.ArgumentParser()
@@ -29,6 +23,7 @@ def glob_by_pattern(dir_path, pattern):
 
 def scan_urls(dir_path):
     cmakes = glob_by_pattern(dir_path, "**/*.cmake")
+    cmakes += glob_by_pattern(dir_path, "**/*.bzl")
     urls = []
     for cmake_path in cmakes:
         with open(cmake_path) as f:
@@ -46,13 +41,22 @@ def convert_url_to_oss_key(url):
     assert not parsed.fragment
     assert parsed.path.startswith("/")
     path = parsed.path[1::]
-    return os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    ret = os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    assert convert_url_to_oss_key1(url) == ret
+    return ret
+
+
+def convert_url_to_oss_key1(url):
+    path = url[len("https://") : :]
+    return "/".join(["third_party_mirror", "https", path])
 
 
 def convert_url_to_oss_https_url(url):
-    key = convert_url_to_oss_key(url)
-    prefix = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/"
-    return os.path.join(prefix, key)
+    if should_be_mirrored(url):
+        key = convert_url_to_oss_key(url)
+        return "https://oneflow-static.oss-cn-beijing.aliyuncs.com/" + key
+    else:
+        return url
 
 
 def should_be_mirrored(url: str):
@@ -62,6 +66,9 @@ def should_be_mirrored(url: str):
         and not parsed.query
         and not parsed.params
         and url.endswith(("gz", "tar", "zip"))
+        and not "mirror.tensorflow.org" in url
+        and not "mirror.bazel.build" in url
+        and not "aliyuncs.com" in url
     )
 
 
@@ -72,9 +79,11 @@ def calculate_data_md5(data):
     return base64.b64encode(digest)
 
 
-def upload_one_to_aliyun(url):
+def upload_one_to_aliyun(url: str):
     ki = os.getenv("OSS_ACCESS_KEY_ID")
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
+    import oss2
+
     auth = oss2.Auth(ki, ks)
     endpoint = "oss-cn-beijing.aliyuncs.com"
     bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
@@ -83,17 +92,14 @@ def upload_one_to_aliyun(url):
     if bucket.object_exists(key):
         print("exists: ", key)
     else:
-        content = requests.get(url).content
+        import requests
+
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
             with tempfile.NamedTemporaryFile() as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-                encode_md5 = calculate_data_md5(f.read())
-                os.system("md5sum " + f.name)
                 headers = {}
-                # TODO: md5 check doesn't work. please check it in cmake
-                # headers = {"Content-MD5": encode_md5.decode("utf-8")}
                 bucket.put_object_from_file(key, f.name, headers=headers)
 
 

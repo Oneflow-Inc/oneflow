@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
+void CheckSizeAndCopyBlob(DeviceCtx* ctx, Blob* dst, const Blob* src) {
   dst->CopyValidDataContentFrom(ctx, src);
 }
 
@@ -34,23 +34,23 @@ class DistributeConcatKernel final : public KernelIf<device_type> {
   ~DistributeConcatKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx &,
-                          std::function<Blob *(const std::string &)>) const override;
-  const Blob *GetInBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  const Blob* GetInBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 template<DeviceType device_type>
 void DistributeConcatKernel<device_type>::ForwardDataContent(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
 }
 
 template<DeviceType device_type>
-const Blob *DistributeConcatKernel<device_type>::GetInBlob(
-    std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  const Blob *in_blob = nullptr;
+const Blob* DistributeConcatKernel<device_type>::GetInBlob(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob *cur_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(i));
+    const Blob* cur_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(i));
     if (cur_blob != nullptr && cur_blob != in_blob) {
       CHECK_ISNULL(in_blob);
       in_blob = cur_blob;

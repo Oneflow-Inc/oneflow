@@ -26,7 +26,12 @@ class CopyCommNetOp final : public Operator {
   CopyCommNetOp() = default;
   ~CopyCommNetOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;

@@ -18,12 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
-
-class TaskGraph;
-class TaskNode;
 
 class SubTskGphBuilderCtx final {
  public:
@@ -32,19 +28,9 @@ class SubTskGphBuilderCtx final {
   virtual ~SubTskGphBuilderCtx() = default;
 
   virtual TaskGraph* task_graph();
-  TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id, int64_t dst_machine_id,
-                         int64_t dst_mem_zone_id);
-  template<typename T1, typename T2>
-  void ConnectAll121(const std::vector<T1*>& src_nodes, const std::vector<T2*>& dst_nodes) {
-    CHECK_EQ(src_nodes.size(), dst_nodes.size());
-    FOR_RANGE(int64_t, i, 0, dst_nodes.size()) {
-      Connect<TaskNode>(src_nodes.at(i), task_graph()->NewEdge(), dst_nodes.at(i));
-    }
-  }
 
  private:
   TaskGraph* task_graph_;
-  HashMap<TaskNode*, HashMap<std::pair<int64_t, int64_t>, TaskNode*>> node2proxies_;
 };
 
 }  // namespace oneflow
