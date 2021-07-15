@@ -20,98 +20,120 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
+
+def check_dim(num_dims, input_dim):
+    if input_dim == None:
+        dim = input_dim
+    elif isinstance(input_dim, (int, tuple)):
+        if isinstance(input_dim, int):
+            dim = input_dim if input_dim >= 0 else input_dim + num_dims
+            if dim >= num_dims or dim < 0:
+                raise IndexError("Dimension out of range")
+        else:
+            temp = list(input_dim)
+            for i in range(len(temp)):
+                temp[i] = temp[i] if temp[i] >= 0 else temp[i] + num_dims
+                if temp[i] >= num_dims or temp[i] < 0:
+                    raise IndexError("Dimension out of range")
+            dim = temp
+    else:
+        raise TypeError("linalg_vector_norm(): argument 'dim' must be tuple of ints, not {}".format(type(input_dim)))
+    return dim
+
+
+
+
 class Vector_Norm(Module):
     def __init__(self, ord=None, dim=None, keepdim=False) -> None:
         super().__init__()
-
-        self.ord = 2 if ord == None else ord
+        if ord == None:
+            self.ord = 2.0
+        elif isinstance(ord, (int, float)):
+            self.ord = float(ord)
+        else:
+            raise TypeError("linalg_vector_norm(): argument 'ord' must be Number, not {}".format(type(ord)))
         self.dim = dim
         self.keepdim = keepdim
 
-    def _vector_norm(self, x, ord, dim):
-        if isinstance(ord, str) and ord in ["fro", "nuc"]:
-            raise ValueError("Norm order {} is not supported for vectors".format(ord))
-        elif isinstance(ord, float):
-            if ord == float("inf"):
-                return flow.experimental.max(flow.experimental.abs(x), dim=dim)
-            elif ord == float("-inf"):
-                return flow.experimental.min(flow.experimental.abs(x), dim=dim)
-            else:
-                return flow.experimental.pow(
-                    flow.experimental.sum(
-                        flow.experimental.pow(flow.experimental.abs(x), ord), dim=dim
-                    ),
-                    1.0 / ord,
-                )
-
-        elif isinstance(ord, int):
-            if ord == 0:
-                # TODO: fix error when input are all zero vector
-                return flow.tensor([flow.experimental.argwhere(x).shape[0]])
-            else:
-                return flow.experimental.pow(
-                    flow.experimental.sum(
-                        flow.experimental.pow(flow.experimental.abs(x), ord), dim=dim
-                    ),
-                    1.0 / ord,
-                )
+    def _vector_norm(self, x, ord, dim, keepdim = False):
+        if ord == 0:
+            # TODO: fix error when input are all zero vector
+            return flow.tensor([flow.experimental.argwhere(x).shape[0]])
+        elif ord == float("inf"):
+            return flow.experimental.max(flow.experimental.abs(x), dim=dim, keepdim = keepdim)
+        elif ord == float("-inf"):
+            return flow.experimental.min(flow.experimental.abs(x), dim=dim, keepdim = keepdim)
         else:
-            raise ValueError("Invalid norm order: {}".format(ord))
+            return flow.experimental.pow(
+                    flow.experimental.sum(
+                        flow.experimental.pow(flow.experimental.abs(x), ord), dim=dim, keepdim=keepdim
+                    ),
+                    1.0 / ord,
+                )
 
     def forward(self, x):
-        return self._vector_norm(x.reshape((1, -1))[0], ord = self.ord, dim=self.dim)
+        num_dims = len(x.shape)
+        dim = check_dim(num_dims, self.dim)
+        if dim == None:
+            return self._vector_norm(x.reshape((1, -1))[0], ord = self.ord, dim=self.dim, keepdim= self.keepdim)
+        else:
+            return self._vector_norm(x, ord = self.ord, dim=dim, keepdim = self.keepdim)
 
 
 
 class Matrix_Norm(Module):
-    def __init__(self, ord=None, dim=None, keepdim=False) -> None:
+    def __init__(self, ord="fro", dim=(-2,-1), keepdim=False) -> None:
         super().__init__()
-
+        if isinstance(ord, str) and ord in ["fro", "nuc"]:
+            self.ord = ord
+        elif isinstance(ord, float) and ord in [float("inf"), float("-inf")]:
+            self.ord = ord
+        elif isinstance(ord, int) and ord in [1,-1,2,-2]:
+            self.ord = ord
+        elif ord == None:
+            self.ord = "fro"
+        else:
+            raise TypeError("linalg_matrix_norm(): argument 'ord' must be Number, not {}".format(type(ord)))
         self.ord = "fro" if ord == None else ord
         self.dim = dim
         self.keepdim = keepdim
 
-    def _matrix_norm(self, x, ord, dim):
-        if isinstance(ord, str) and ord in ["fro", "nuc"]:
-            if ord == "nuc":
-                raise NotImplementedError
-            else:
-                return flow.experimental.sqrt(
-                    flow.experimental.sum(flow.experimental.square(x), dim=dim)
-                )
-        elif isinstance(ord, float) and ord in [float("inf"), float("-inf")]:
-            if ord == float("inf"):
-                return flow.experimental.max(
-                    flow.experimental.sum(flow.experimental.abs(x), dim=1)
-                )
-            else:
-                return flow.experimental.min(
-                    flow.experimental.sum(flow.experimental.abs(x), dim=1)
-                )
-        elif isinstance(ord, int):
-            if ord == 1:
-                return flow.experimental.max(
-                    flow.experimental.sum(flow.experimental.abs(x), dim=0)
-                )
-            elif ord == -1:
-                return flow.experimental.min(
-                    flow.experimental.sum(flow.experimental.abs(x), dim=0)
-                )
-            elif ord == 2:
-                raise NotImplementedError
-            elif ord == -2:
-                raise NotImplementedError
-            else:
-                raise ValueError(
-                    "Norm order {} is not supported for matrices".format(ord)
-                )
+    def _matrix_norm(self, x, ord, dim, keepdim):
+        if ord == "nuc":
+            raise NotImplementedError
+        elif ord == "fro":
+            return flow.experimental.sqrt(
+                flow.experimental.sum(flow.experimental.square(x), dim=dim, keepdim= keepdim)
+            )
+
+        elif ord == float("inf"):
+            return flow.experimental.max(
+                flow.experimental.sum(flow.experimental.abs(x), dim=1, keepdim= keepdim)
+            )
+        elif ord == float("-inf"):
+            return flow.experimental.min(
+                flow.experimental.sum(flow.experimental.abs(x), dim=1, keepdim=keepdim)
+            )
+
+        elif ord == 1:
+            return flow.experimental.max(
+                flow.experimental.sum(flow.experimental.abs(x), dim=0, keepdim=keepdim)
+            )
+        elif ord == -1:
+            return flow.experimental.min(
+                flow.experimental.sum(flow.experimental.abs(x), dim=0, keepdim=keepdim)
+            )
+        elif ord == 2:
+            raise NotImplementedError
+        elif ord == -2:
+            raise NotImplementedError
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
 
     def forward(self, x):
-        if self.keepdim == True and self.dim != None:
-                return flow.experimental.unsqueeze(self._matrix_norm(x, ord = self.ord, dim=self.dim), self.dim)
-        return self._matrix_norm(x, ord = self.ord, dim=self.dim)
+        num_dims = len(x.shape)
+        dim = check_dim(num_dims, self.dim)        
+        return self._matrix_norm(x, ord = self.ord, dim= dim, keepdim= self.keepdim)
 
 
 class Norm(Module):
@@ -121,48 +143,23 @@ class Norm(Module):
         self.ord = ord
         self.dim = dim
         self.keepdim = keepdim
-        self._vector_norm = Vector_Norm(self.ord, self.dim, self.keepdim)._vector_norm
-        self._matrix_norm = Matrix_Norm(self.ord, self.dim, self.keepdim)._matrix_norm
 
-
-    def _whether_keepdim(self, x):
-        if self.keepdim == True and self.dim != None:
-            return flow.experimental.unsqueeze(x, self.dim)
-        else:
-            return x
 
     def forward(self, x):
-        num_axes = len(x.shape)
-        if self.dim == None and self.ord == None:
-            res = self._vector_norm(x.reshape((1, -1))[0], ord=2, dim=self.dim)
+        if isinstance(self.dim, int) or (self.dim == None and self.ord == None):
+            res = Vector_Norm(ord=self.ord, dim=self.dim, keepdim = self.keepdim)(x)
+        elif isinstance(self.dim, tuple):
+            res = Matrix_Norm(ord=self.ord, dim=self.dim, keepdim = self.keepdim)(x)
         elif self.dim == None and self.ord != None:
             assert (
-                num_axes <= 2
+                len(x.shape) <= 2
             ), "input must be 1-D or 2-D when dim is None and ord is not None"
-            res = (
-                self._vector_norm(x, self.ord, self.dim)
-                if num_axes == 1
-                else self._matrix_norm(x, self.ord, self.dim)
-            )
-        elif isinstance(self.dim, (int, tuple, list)):
-            if isinstance(self.dim, int):
-                self.dim = self.dim if self.dim >= 0 else self.dim + num_axes
-                assert 0 <= self.dim < num_axes, "dim out of range"
-                res = self._vector_norm(
-                    x, ord=2 if self.ord == None else self.ord, dim=self.dim
-                )
+            if len(x.shape) == 1:
+                res = Vector_Norm(ord=self.ord, dim = self.dim, keepdim = self.keepdim)(x)
             else:
-                temp = list(self.dim) if isinstance(self.dim, tuple) else self.dim
-                for i in range(len(temp)):
-                    temp[i] = temp[i] if temp[i] >= 0 else temp[i] + num_axes
-                    assert 0 <= temp[i] < num_axes, "dim out of range"
-                self.dim = temp
-                res = self._matrix_norm(
-                    x, ord="fro" if self.ord == None else self.ord, dim=self.dim
-                )
-        else:
-            raise ValueError("Invalid dimension: {}".format(self.dim))
-        return self._whether_keepdim(res)
+                res = Matrix_Norm(ord=self.ord, dim =self.dim, keepdim = self.keepdim)(x)
+       
+        return res
 
 
 @oneflow_export("linalg.norm")
@@ -298,7 +295,76 @@ def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
 @experimental_api
 def vector_norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
-    See :func:`oneflow.experimental.linalg.norm.`
+    linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
+
+    Computes a vector norm.
+
+    Supports input of float, double dtypes.
+
+    This function does not necessarily treat multidimensonal attr:`input` as a batch of
+    vectors, instead:
+
+    - If :attr:`dim`\ `= None`, :attr:`A` will be flattened before the norm is computed.
+    - If :attr:`dim` is an `int` or a `tuple`, the norm will be computed over these dimensions
+    and the other dimensions will be treated as batch dimensions.
+
+    This behavior is for consistency with :func:`flow.linalg.norm`.
+
+    :attr:`ord` defines the vector norm that is computed. The following norms are supported:
+
+    ======================   ========================================================
+    :attr:`ord`              vector norm
+    ======================   ========================================================
+    `2` (default)            `2`-norm (see below)
+    `inf`                    `max(abs(x))`
+    `-inf`                   `min(abs(x))`
+    `0`                      `sum(x != 0)`
+    other `int` or `float`   `sum(abs(x)^{ord})^{(1 / ord)}`
+    ======================   ========================================================
+
+    where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
+
+    .. seealso::
+
+            :func:`flow.linalg.matrix_norm` computes a matrix norm.
+
+    Args:
+        input (Tensor): tensor, flattened by default, but this behavior can be
+            controlled using :attr:`dim`.
+        ord (int, float, inf, -inf, 'fro', 'nuc', optional): order of norm. Default: `2`
+        dim (int, Tuple[int], optional): dimensions over which to compute
+            the norm. See above for the behavior when :attr:`dim`\ `= None`.
+            Default: `None`
+        keepdim (bool, optional): If set to `True`, the reduced dimensions are retained
+            in the result as dimensions with size one. Default: `False`
+
+    Keyword args:
+        out (Tensor, optional): output tensor. Ignored if `None`. Default: `None`.
+        dtype (:class:`torch.dtype`, optional): If specified, the input tensor is cast to
+            :attr:`dtype` before performing the operation, and the returned tensor's type
+            will be :attr:`dtype`. Default: `None`
+
+    Returns:
+        A real-valued tensor, even when :attr:`A` is complex.
+
+    Examples::
+
+        >>> import oneflow.experimental as flow
+        >>> from oneflow.experimental import linalg as LA
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
+        >>> a
+        tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
+        >>> b = a.reshape((3, 3))
+        >>> b
+        tensor([[-4., -3., -2.],
+                [-1.,  0.,  1.],
+                [ 2.,  3.,  4.]], dtype=oneflow.float32)
+        >>> LA.vector_norm(a, ord=3.5)
+        tensor([5.4345], dtype=oneflow.float32)
+        >>> LA.vector_norm(b, ord=3.5)
+        tensor([5.4345], dtype=oneflow.float32)
     """
     return Vector_Norm(ord, dim, keepdim)(input)
 
