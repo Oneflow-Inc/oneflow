@@ -579,8 +579,8 @@ class TensorSetItemFunctor {
 
     const auto& value_shape = value->shape();
     bool matched = [&]() {
-      for (int i = value_shape->NumAxes(); i > target_shape.NumAxes(); --i) {
-        if (value_shape->At(i - 1) != 1) { return false; }
+      for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
+        if (value_shape->At(i) != 1) { return false; }
       }
       return true;
     }();
@@ -590,9 +590,10 @@ class TensorSetItemFunctor {
     std::shared_ptr<one::Tensor> value_tensor(value);
     if (target_shape.NumAxes() != 0 &&  // NOLINT
         /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
-      // Remove the redundant 1-dimensions.
+      // Remove the beginning redundant 1-dimensions.
       if (value_shape->NumAxes() > target_shape.NumAxes()) {
-        const auto& shape = JUST(SliceShape(*value_shape, 0, target_shape.NumAxes()));
+        int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
+        const auto& shape = JUST(SliceShape(*value_shape, start_axis, value_shape->NumAxes()));
         value_tensor = JUST(functional::Reshape(value, *shape));
       }
       value_tensor = JUST(functional::Expand(value_tensor, target_shape));
