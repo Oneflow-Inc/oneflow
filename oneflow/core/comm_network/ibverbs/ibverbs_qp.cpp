@@ -176,7 +176,6 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
     ibv_send_wr* bad_wr = nullptr;
-    // todo(lambda@gmail.com)
     // we first use the ibv_post_send to send the message directly
     // and increase the num_msg_in_send_buf
     // if the num_msg_in_send_bug_ is equal or greater than max_send_wr_in_send_buf_;
@@ -191,7 +190,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
       CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
     } else {
       std::unique_lock<std::mutex> msg_penddibg_list_lck(msg_pendding_list_mutex_);
-      IbvSendWrSgePair ibv_send_wr_sge = IbvSendWrSgePair();
+      IbvSendWrSgePair ibv_send_wr_sge;
       ibv_send_wr_sge.sge = sge;
       ibv_send_wr_sge.wr = wr;
       msg_pendding_list_.push(ibv_send_wr_sge);
@@ -231,7 +230,6 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
   ibv_send_wr* bad_wr = nullptr;
-  // todo(lambda@gmail.com)
   // we first use the ibv_post_send to send the message directly
   // and increase the num_msg_in_send_buf
   // if the num_msg_in_send_bug_ is equal or greater than max_send_wr_in_send_buf_;
@@ -246,7 +244,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   } else {
     std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
-    IbvSendWrSgePair ibv_send_wr_sge = IbvSendWrSgePair();
+    IbvSendWrSgePair ibv_send_wr_sge;
     ibv_send_wr_sge.sge = sge;
     ibv_send_wr_sge.wr = wr;
     msg_pendding_list_.push(ibv_send_wr_sge);
@@ -293,7 +291,6 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   DeleteWorkRequestId(wr_id);
 }
 
-// todo-lambda7xx@gmail.com
 // SendDone and ReadDone call this
 // when the num_msg_in_send_buf_ is greater than 0, we decrease it
 // if the num_msg_in_send_buf_ < max_sned_wr_send_buf_ and  use_pendding_list_ is true and the
