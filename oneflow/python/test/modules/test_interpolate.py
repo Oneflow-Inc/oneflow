@@ -370,7 +370,8 @@ class TestUpsample2d(flow.unittest.TestCase):
             "cuda",
         ]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            for i in range(100):
+                arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
