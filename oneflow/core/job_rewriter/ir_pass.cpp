@@ -127,6 +127,7 @@ class IRRoundTrip final : public JobPass {
     TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
         ->Write(*job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
+      // TODO: It is not clear how to define if extra boxing is introduced
       TODO();
       return true;
     });
