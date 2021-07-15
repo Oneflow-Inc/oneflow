@@ -255,7 +255,7 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
   } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
     use_tensor_op_math = true;
 #endif
-  else {
+  } else {
     use_tensor_op_math = false;
   }
   if (use_tensor_op_math) {
