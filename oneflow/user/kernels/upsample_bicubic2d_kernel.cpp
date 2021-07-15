@@ -48,7 +48,7 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
         for (int64_t output_x = 0; output_x < out_width; output_x++) {
           const T* in = &in_ptr[output_y * in_width + output_x];
           T* out = &out_ptr[output_y * out_width + output_x];
-          for (int64_t c = 0; c < channels; ++c) {
+          for (int64_t c = 0; c < nbatch * channels; ++c) {
             out[0] = in[0];
             in += in_width * in_height;
             out += out_width * out_height;

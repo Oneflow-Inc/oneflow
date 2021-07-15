@@ -13,164 +13,220 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// #include "oneflow/core/framework/framework.h"
-// #include "oneflow/core/kernel/new_kernel_util.h"
-// #include "oneflow/core/common/nd_index_offset_helper.h"
-// #include "oneflow/core/cuda/atomic.cuh"
-// #include "oneflow/user/kernels/upsample_kernel.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/user/kernels/upsample_kernel.h"
 
-// namespace oneflow {
+namespace oneflow {
 
-// namespace {
+namespace {
 
-// template<typename T>
-// __global__ void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dptr,
-//                                          NdIndexOffsetHelper<int64_t, 4> in_helper,
-//                                          NdIndexOffsetHelper<int64_t, 4> out_helper,
-//                                          const int64_t in_height, const int64_t in_width,
-//                                          const float scale_h, const float scale_w, T* out_dptr) {
-//   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-//     int64_t n, c, h, w;
-//     out_helper.OffsetToNdIndex(index, n, c, h, w);
+template<typename T>
+__device__ void upsample_increment_value_bounded_cuda(T* data, int64_t width, int64_t height,
+                                                      int64_t x, int64_t y, T value) {
+  int64_t access_x = max(min(x, width - 1), static_cast<int64_t>(0));
+  int64_t access_y = max(min(y, height - 1), static_cast<int64_t>(0));
+  cuda::atomic::Add(data + access_y * width + access_x, value);
+}
 
-//     T real_x = scale_w * w;
-//     int64_t input_x = real_x;
-//     T t_x = real_x - input_x;
+template<typename T>
+__global__ void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dptr,
+                                         const int64_t nbatch, const int64_t channels,
+                                         const int64_t in_height, const int64_t in_width,
+                                         const int64_t out_height, const int64_t out_width,
+                                         const float scale_height, const float scale_width,
+                                         bool align_corners, T* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(idx, elem_cnt) {
+    const int output_x = idx % out_width;
+    const int output_y = idx / out_width;
 
-//     T real_y = scale_h * h;
-//     int64_t input_y = real_y;
-//     T t_y = real_y - input_y;
+    if (in_height == out_height && in_width == out_width) {
+      const T* in = &in_dptr[output_y * in_width + output_x];
+      T* out = &out_dptr[output_y * out_width + output_x];
+      for (int64_t c = 0; c < nbatch * channels; ++c) {
+        out[0] = in[0];
+        in += in_width * in_height;
+        out += out_width * out_height;
+      }
+      continue;
+    }
 
-//     T coefficients[4];
+    const T* in = &in_dptr[output_y * in_width + output_x];
+    T* out = &out_dptr[output_y * out_width + output_x];
 
-//     // Interpolate 4 times in the x direction
-//     for (int64_t i = 0; i < 4; i++) {
-//       coefficients[i] = cubic_interp1d<T>(
-//           upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x - 1, input_y - 1 +
-//           i), upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x + 0, input_y -
-//           1 + i), upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x + 1,
-//           input_y - 1 + i), upsample_get_value_bounded<T>(in_dptr, in_width, in_height, input_x +
-//           2, input_y - 1 + i), t_x);
-//     }
-//     out_dptr[index] =
-//         cubic_interp1d<T>(coefficients[0], coefficients[1], coefficients[2], coefficients[3],
-//         t_y);
-//   }
-// }
+    const T real_x = GetAreaPixel(scale_width, output_x, align_corners, /*cubic=*/true);
+    int64_t input_x = std::floor(real_x);
+    const T t_x = real_x - input_x;
 
-// template<typename T>
-// __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dptr,
-//                                           NdIndexOffsetHelper<int64_t, 4> dy_helper,
-//                                           NdIndexOffsetHelper<int64_t, 4> dx_helper,
-//                                           const int64_t dx_height, const int64_t dx_width,
-//                                           const float scale_h, const float scale_w, T* dx_dptr) {
-//   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-//     int64_t n, c, h, w;
-//     dy_helper.OffsetToNdIndex(index, n, c, h, w);
+    const T real_y = GetAreaPixel(scale_height, output_y, align_corners, /*cubic=*/true);
+    int64_t input_y = std::floor(real_y);
+    const T t_y = real_y - input_y;
 
-//     T real_x = scale_w * w;
-//     int64_t input_x = real_x;
-//     T t_x = real_x - input_x;
+    for (int64_t c = 0; c < channels * nbatch; c++) {
+      T coefficients[4];
 
-//     T real_y = scale_h * h;
-//     int64_t input_y = real_y;
-//     T t_y = real_y - input_y;
+      // Interpolate 4 times in the x direction
+      for (int64_t i = 0; i < 4; i++) {
+        coefficients[i] = cubic_interp1d<T>(
+            upsample_get_value_bounded<T>(in, in_width, in_height, input_x - 1, input_y - 1 + i),
+            upsample_get_value_bounded<T>(in, in_width, in_height, input_x + 0, input_y - 1 + i),
+            upsample_get_value_bounded<T>(in, in_width, in_height, input_x + 1, input_y - 1 + i),
+            upsample_get_value_bounded<T>(in, in_width, in_height, input_x + 2, input_y - 1 + i),
+            t_x);
+      }
 
-//     T x_coeffs[4], y_coeffs[4];
+      // Interpolate in the y direction using x interpolations
+      out[output_y * out_width + output_x] = cubic_interp1d<T>(
+          coefficients[0], coefficients[1], coefficients[2], coefficients[3], t_y);
 
-//     get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
-//     get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
+      // Move to next channel
+      in += in_width * in_height;
+      out += out_width * out_height;
+    }
+  }
+}
 
-//     for (int64_t i = 0; i < 4; i++) {
-//       for (int64_t j = 0; j < 4; j++) {
-//         cuda::atomic::Add(
-//             dx_dptr + dx_helper.NdIndexToOffset(n, c, input_y - 1 + j, input_x - 1 + i),
-//             dy_dptr[index]);
-//       }
-//     }
-//   }
-// }
+template<typename T>
+__global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dptr,
+                                          const int64_t nbatch, const int64_t channels,
+                                          const int64_t in_height, const int64_t in_width,
+                                          const int64_t out_height, const int64_t out_width,
+                                          const float scale_height, const float scale_width,
+                                          bool align_corners, T* dx_dptr) {
+  CUDA_1D_KERNEL_LOOP(idx, elem_cnt) {
+    const int output_x = idx % out_width;
+    const int output_y = idx / out_width;
+    if (in_height == out_height && in_width == out_width) {
+      T* in = &dx_dptr[output_y * in_width + output_x];
+      const T* out = &dy_dptr[output_y * out_width + output_x];
+      for (int64_t c = 0; c < nbatch * channels; ++c) {
+        in[0] = out[0];
+        in += in_width * in_height;
+        out += out_width * out_height;
+      }
+      continue;
+    }
 
-// }  // namespace
+    T* in = dx_dptr;
+    const T* out = dy_dptr;
 
-// template<typename T>
-// class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
-//  public:
-//   UpsampleBicubic2dGPUKernel() = default;
-//   ~UpsampleBicubic2dGPUKernel() = default;
+    T real_x = GetAreaPixel(scale_width, output_x, align_corners, true);
+    int64_t input_x = std::floor(real_x);
+    T t_x = real_x - input_x;
 
-//  private:
-//   void Compute(user_op::KernelComputeContext* ctx) const override {
-//     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
-//     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-//     const float height_scale = ctx->Attr<float>("height_scale");
-//     const float width_scale = ctx->Attr<float>("width_scale");
-//     const bool align_corners = ctx->Attr<bool>("align_corners");
-//     const int64_t elem_cnt = y_blob->shape().elem_cnt();
-//     NdIndexOffsetHelper<int64_t, 4> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
-//                                               x_blob->shape().At(2), x_blob->shape().At(3));
-//     NdIndexOffsetHelper<int64_t, 4> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
-//                                                y_blob->shape().At(2), y_blob->shape().At(3));
-//     const int64_t in_height = x_blob->shape().At(2);
-//     const int64_t in_width = x_blob->shape().At(3);
-//     const int64_t out_height = y_blob->shape().At(2);
-//     const int64_t out_width = y_blob->shape().At(3);
-//     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-//     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    T real_y = GetAreaPixel(scale_height, output_y, align_corners, true);
+    int64_t input_y = std::floor(real_y);
+    T t_y = real_y - input_y;
 
-//     RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-//                     x_blob->dptr<T>(), in_helper, out_helper, x_blob->shape().At(2),
-//                     x_blob->shape().At(3), scale_height, scale_width, y_blob->mut_dptr<T>());
-//   }
-//   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-// };
+    T x_coeffs[4];
+    T y_coeffs[4];
 
-// template<typename T>
-// class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
-//  public:
-//   UpsampleBicubic2dGradGPUKernel() = default;
-//   ~UpsampleBicubic2dGradGPUKernel() = default;
+    get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
+    get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
 
-//  private:
-//   void Compute(user_op::KernelComputeContext* ctx) const override {
-//     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-//     if (dx_blob == nullptr) { return; }
-//     Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
-//                              dx_blob->shape().elem_cnt() * sizeof(T));
-//     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-//     const float height_scale = ctx->Attr<float>("height_scale");
-//     const float width_scale = ctx->Attr<float>("width_scale");
-//     const bool align_corners = ctx->Attr<bool>("align_corners");
-//     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
-//     NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
-//                                               dy_blob->shape().At(2), dy_blob->shape().At(3));
-//     NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
-//                                               dx_blob->shape().At(2), dx_blob->shape().At(3));
-//     const int64_t in_height = dx_blob->shape().At(2);
-//     const int64_t in_width = dx_blob->shape().At(3);
-//     const int64_t out_height = dy_blob->shape().At(2);
-//     const int64_t out_width = dy_blob->shape().At(3);
-//     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-//     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    for (int64_t c = 0; c < channels; c++) {
+      T out_value = out[output_y * out_width + output_x];
 
-//     RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-//                     dy_blob->dptr<T>(), dy_helper, dx_helper, dx_blob->shape().At(2),
-//                     dx_blob->shape().At(3), scale_height, scale_width, dx_blob->mut_dptr<T>());
-//   }
-//   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-// };
+      for (int64_t i = 0; i < 4; i++) {
+        for (int64_t j = 0; j < 4; j++) {
+          upsample_increment_value_bounded_cuda<T>(in, in_width, in_height, input_x - 1 + i,
+                                                   input_y - 1 + j,
+                                                   out_value * y_coeffs[j] * x_coeffs[i]);
+        }
+      }
 
-// #define REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(dtype)                                    \
-//   REGISTER_USER_KERNEL("upsample_bicubic_2d")                                          \
-//       .SetCreateFn<UpsampleBicubic2dGPUKernel<dtype>>()                                \
-//       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-//                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-//   REGISTER_USER_KERNEL("upsample_bicubic_2d_grad")                                     \
-//       .SetCreateFn<UpsampleBicubic2dGradGPUKernel<dtype>>()                            \
-//       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-//                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      in += in_width * in_height;
+      out += out_width * out_height;
+    }
+  }
+}
 
-// REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(float)
-// REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(double)
+}  // namespace
 
-// }  // namespace oneflow
+template<typename T>
+class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
+ public:
+  UpsampleBicubic2dGPUKernel() = default;
+  ~UpsampleBicubic2dGPUKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const T* in_ptr = x_blob->dptr<T>();
+    T* out_ptr = y_blob->mut_dptr<T>();
+    const float height_scale = ctx->Attr<float>("height_scale");
+    const float width_scale = ctx->Attr<float>("width_scale");
+    const bool align_corners = ctx->Attr<bool>("align_corners");
+
+    const int nbatch = x_blob->shape().At(0);
+    const int channels = x_blob->shape().At(1);
+    const int64_t in_height = x_blob->shape().At(2);
+    const int64_t in_width = x_blob->shape().At(3);
+    const int64_t out_height = y_blob->shape().At(2);
+    const int64_t out_width = y_blob->shape().At(3);
+    const int64_t elem_cnt = out_height * out_width;
+
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
+    RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    x_blob->dptr<T>(), nbatch, channels, x_blob->shape().At(2),
+                    x_blob->shape().At(3), y_blob->shape().At(2), y_blob->shape().At(3),
+                    scale_height, scale_width, align_corners, y_blob->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<typename T>
+class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
+ public:
+  UpsampleBicubic2dGradGPUKernel() = default;
+  ~UpsampleBicubic2dGradGPUKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    if (dx_blob == nullptr) { return; }
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
+                             dx_blob->shape().elem_cnt() * sizeof(T));
+    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const float height_scale = ctx->Attr<float>("height_scale");
+    const float width_scale = ctx->Attr<float>("width_scale");
+    const bool align_corners = ctx->Attr<bool>("align_corners");
+
+    const int nbatch = dx_blob->shape().At(0);
+    const int channels = dx_blob->shape().At(1);
+    const int64_t in_height = dx_blob->shape().At(2);
+    const int64_t in_width = dx_blob->shape().At(3);
+    const int64_t out_height = dy_blob->shape().At(2);
+    const int64_t out_width = dy_blob->shape().At(3);
+    const int64_t elem_cnt = out_height * out_width;
+
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
+    RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                    dy_blob->dptr<T>(), nbatch, channels, dx_blob->shape().At(2),
+                    dx_blob->shape().At(3), dy_blob->shape().At(2), dy_blob->shape().At(3),
+                    scale_height, scale_width, align_corners, dx_blob->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("upsample_bicubic_2d")                                          \
+      .SetCreateFn<UpsampleBicubic2dGPUKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_bicubic_2d_grad")                                     \
+      .SetCreateFn<UpsampleBicubic2dGradGPUKernel<dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(float)
+REGISTER_UPSAMPLE_BICUBIC_GPU_KERNEL(double)
+
+}  // namespace oneflow
