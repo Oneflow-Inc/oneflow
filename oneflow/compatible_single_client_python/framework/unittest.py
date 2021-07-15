@@ -319,7 +319,7 @@ class TestCase(unittest.TestCase):
                     + ".proto"
                 )
                 oneflow_cmd = (
-                    "python3 -m oneflow --start_worker"
+                    "python3 -m oneflow.compatible.single_client --start_worker"
                     + " --env_proto="
                     + run_dir
                     + "/log_"
