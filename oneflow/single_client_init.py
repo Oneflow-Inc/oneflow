@@ -115,4 +115,23 @@ atexit.register(TryCloseDefaultSession)
 
 del TryCloseDefaultSession
 del atexit
+
+import sys
+
+__original_exit__ = sys.exit
+
+
+def custom_exit(returncode):
+    if returncode != 0:
+        import oneflow
+
+        oneflow._oneflow_internal.MasterSendAbort()
+    __original_exit__(returncode)
+
+
+sys.exit = custom_exit
+
+del custom_exit
+del sys
+
 del absolute_import
