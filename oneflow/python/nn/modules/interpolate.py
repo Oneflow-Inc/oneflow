@@ -62,14 +62,7 @@ class Interpolate(Module):
         else:
             pass
 
-        if (
-            self.mode != "nearest"
-            and self.mode != "bilinear"
-            and self.mode != "linear"
-            and self.mode != "area"
-            and self.mode != "bicubic"
-            and self.mode != "trilinear"
-        ):
+        if  self.mode not in ("nearest", "bilinear", "linear", "area", "bicubic", "trilinear"):
             raise ValueError(
                 'interpolation must be "nearest" or "bilinear" or "linear" or "area" or "bicubic" or "trilinear".'
             )
