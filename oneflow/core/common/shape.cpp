@@ -186,11 +186,11 @@ bool Shape::Containing(const Shape& small_shape) const {
 
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);
-  int64_t ndims = NumAxes();
+  int64_t ndims = this->NumAxes();
   if (start_dim > ndims) { start_dim = ndims; }
   if (end_dim > ndims) { end_dim = ndims; }
   DimVector dim_vec;
-  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.push_back(shape.At(i)); }
+  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.push_back(this->At(i)); }
   return std::make_shared<Shape>(dim_vec);
 }
 
