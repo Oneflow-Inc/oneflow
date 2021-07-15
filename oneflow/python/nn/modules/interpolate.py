@@ -22,8 +22,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Union, Tuple
 
 
-class INTERPOLATE(Module):
-
+class Interpolate(Module):
     def __init__(
         self,
         size: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -116,24 +115,29 @@ class INTERPOLATE(Module):
                 for scale in scale_factors:
                     if math.floor(scale) != scale:
                         warnings.warn(
-                        "The default behavior for interpolate/upsample with float scale_factor changed "
-                        "in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, "
-                        "instead of relying on the computed output size. "
-                        "If you wish to restore the old behavior, please set recompute_scale_factor=True. "
-                        "See the documentation of nn.Upsample for details. "
-                    )
+                            "The default behavior for interpolate/upsample with float scale_factor changed "
+                            "in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, "
+                            "instead of relying on the computed output size. "
+                            "If you wish to restore the old behavior, please set recompute_scale_factor=True. "
+                            "See the documentation of nn.Upsample for details. "
+                        )
                     break
         elif self.recompute_scale_factor and self.size is not None:
-            raise ValueError("recompute_scale_factor is not meaningful with an explicit size.")
+            raise ValueError(
+                "recompute_scale_factor is not meaningful with an explicit size."
+            )
 
         # "area" mode always requires an explicit size rather than scale factor.
         # Re-use the recompute_scale_factor code path.
         if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
-        
+
         if self.recompute_scale_factor is not None and self.recompute_scale_factor:
             assert scale_factors is not None
-            output_size = [int(math.floor(float(input.size(i + 2)) * scale_factors[i])) for i in range(dim)]
+            output_size = [
+                int(math.floor(float(input.size(i + 2)) * scale_factors[i]))
+                for i in range(dim)
+            ]
             scale_factors = None
 
         if len(x.shape) == 3 and self.mode == "nearest":
@@ -207,7 +211,12 @@ class INTERPOLATE(Module):
 @oneflow_export("nn.functional.interpolate")
 @experimental_api
 def interpolate(
-    input, size=None, scale_factor=None, mode="nearest", align_corners=None, recompute_scale_factor=None
+    input,
+    size=None,
+    scale_factor=None,
+    mode="nearest",
+    align_corners=None,
+    recompute_scale_factor=None,
 ):
     r"""The interface is consistent with PyTorch.    
     
@@ -294,8 +303,12 @@ def interpolate(
                dtype=oneflow.float32)
 
     """
-    return INTERPOLATE(
-        size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners, recompute_scale_factor=recompute_scale_factor
+    return Interpolate(
+        size=size,
+        scale_factor=scale_factor,
+        mode=mode,
+        align_corners=align_corners,
+        recompute_scale_factor=recompute_scale_factor,
     )(input)
 
 
