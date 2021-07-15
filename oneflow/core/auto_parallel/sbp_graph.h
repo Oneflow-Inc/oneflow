@@ -26,7 +26,7 @@ class SbpGraph {
  public:
   // Data Structure
   // All the nodes
-  std::vector<SbpNode<SbpSignature> *> NodeList;
+  std::vector<SbpNode<SbpSignature>*> NodeList;
 
   // Over All Cost under current strategy
   double GraphCost = 0;
@@ -44,17 +44,17 @@ class SbpGraph {
   }
 
   // Setup SbpSignature Candidates
-  void AssembleSbpSignature(const std::function<int32_t()> &CalcOrderValue4SbpSig,
-                            std::vector<SbpSignature *> GlobalSbpSignatureList);
+  void AssembleSbpSignature(const std::function<int32_t()>& CalcOrderValue4SbpSig,
+                            std::vector<SbpSignature*> GlobalSbpSignatureList);
 
   // Use our algorithm to decide SbpSignature for each op-node
   void DecideSbpSignature();
 
   // Compute Cost before elimination
   void ComputeInitialCost(
-      const std::function<double(SbpNode<SbpSignature> *, SbpSignature *, SbpNode<SbpSignature> *,
-                                 SbpSignature *)> &SbpInferHint4Ibn,
-      const std::function<double(SbpNode<SbpSignature> *, SbpSignature *)> &SbpComputationCost);
+      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
+                                 SbpSignature*)>& SbpInferHint4Ibn,
+      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
 
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature();
@@ -63,24 +63,24 @@ class SbpGraph {
   double ComputeCost();
 
   // Generate a node
-  SbpNode<SbpSignature> *GenerateNode();
+  SbpNode<SbpSignature>* GenerateNode();
 
   // Remove a node from nodelist
-  void RemoveFromNodeList(SbpNode<SbpSignature> *this_node);
+  void RemoveFromNodeList(SbpNode<SbpSignature>* this_node);
 
   // Check and eliminate one node with only one degree-in and one degree-out
-  int32_t NodeElimination(SbpNode<SbpSignature> *this_node);
+  int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
   // Merge all parallel edges with given StartNode and EndNode
-  int32_t EdgeElimination(SbpNode<SbpSignature> *this_node);
+  int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
   // Ckeck and eliminate one child node
-  int32_t ChildElimination(SbpNode<SbpSignature> *this_node);
+  int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
 
   // Merge all parallel edges & Check and eliminate all nodes with only one
   // degree-in and one degree-out
   int32_t NodeAndEdgeEliminations();
 
   // Merge two nodes
-  int32_t NodeMerging(SbpNode<SbpSignature> *first, SbpNode<SbpSignature> *second);
+  int32_t NodeMerging(SbpNode<SbpSignature>* first, SbpNode<SbpSignature>* second);
   // Select two nodes and merge them
   int32_t PickAndMerge();
 
@@ -106,11 +106,11 @@ class SbpGraph {
   double ComputeOriginCost();
 
   // Original NodeList
-  std::vector<SbpNode<SbpSignature> *> OriginalNodeList;
+  std::vector<SbpNode<SbpSignature>*> OriginalNodeList;
 
   // get ready for Topological sorting
   void InitTopologicalSort() {
-    for (const auto &this_node : NodeList) { this_node->CurrDeg = this_node->EdgesIn.size(); }
+    for (const auto& this_node : NodeList) { this_node->CurrDeg = this_node->EdgesIn.size(); }
   }
 
 #endif  // DEBUG_ALGORITHM_
@@ -125,8 +125,8 @@ namespace Algorithm {
 
 // Generate a node
 template<class SbpSignature>
-SbpNode<SbpSignature> *SbpGraph<SbpSignature>::GenerateNode() {
-  SbpNode<SbpSignature> *this_node = new SbpNode<SbpSignature>();
+SbpNode<SbpSignature>* SbpGraph<SbpSignature>::GenerateNode() {
+  SbpNode<SbpSignature>* this_node = new SbpNode<SbpSignature>();
   NodeList.emplace_back(this_node);
   this_node->id = NextId++;
   this_node->NodeListId = NodeList.size() - 1;
@@ -134,10 +134,10 @@ SbpNode<SbpSignature> *SbpGraph<SbpSignature>::GenerateNode() {
 }
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature> *this_node) {
+void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node) {
   if (this_node->NodeListId < 0) return;
   NodeList.back()->NodeListId = this_node->NodeListId;
-  RemoveFrom<SbpNode<SbpSignature> *>(NodeList, this_node->NodeListId);
+  RemoveFrom<SbpNode<SbpSignature>*>(NodeList, this_node->NodeListId);
   this_node->NodeListId = -1;
 }
 
@@ -148,13 +148,13 @@ SbpGraph<SbpSignature>::SbpGraph() {}
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::ComputeInitialCost(
-    const std::function<double(SbpNode<SbpSignature> *, SbpSignature *, SbpNode<SbpSignature> *,
-                               SbpSignature *)> &SbpInferHint4Ibn,
-    const std::function<double(SbpNode<SbpSignature> *, SbpSignature *)> &SbpComputationCost) {
-  for (const auto &this_node : NodeList) {
+    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
+                               SbpSignature*)>& SbpInferHint4Ibn,
+    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost) {
+  for (const auto& this_node : NodeList) {
     this_node->ComputeCost(SbpComputationCost);
     this_node->OriginCost = this_node->Cost;
-    for (const auto &edge_out : this_node->EdgesOut) {
+    for (const auto& edge_out : this_node->EdgesOut) {
       edge_out->ComputeCost(SbpInferHint4Ibn);
       this_node->OriginCostOut.emplace_back(edge_out->Cost);
     }
@@ -163,16 +163,16 @@ void SbpGraph<SbpSignature>::ComputeInitialCost(
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::AssembleSbpSignature(
-    const std::function<int32_t()> &CalcOrderValue4SbpSig,
-    std::vector<SbpSignature *> GlobalSbpSignatureList) {
-  for (const auto &this_node : NodeList) {
+    const std::function<int32_t()>& CalcOrderValue4SbpSig,
+    std::vector<SbpSignature*> GlobalSbpSignatureList) {
+  for (const auto& this_node : NodeList) {
     this_node->InitializeSbp(CalcOrderValue4SbpSig, GlobalSbpSignatureList);
   }
 };
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::RandomSbpSignature() {
-  for (const auto &this_node : NodeList) {
+  for (const auto& this_node : NodeList) {
     this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
   }
 };
@@ -180,11 +180,11 @@ void SbpGraph<SbpSignature>::RandomSbpSignature() {
 template<class SbpSignature>
 double SbpGraph<SbpSignature>::ComputeCost() {
   GraphCost = 0;
-  for (const auto &this_node : NodeList) {
+  for (const auto& this_node : NodeList) {
     int32_t this_id = this_node->FinalSbpSignatureId;
 
     GraphCost += this_node->Cost[this_id];
-    for (const auto &edge_out : this_node->EdgesOut) {
+    for (const auto& edge_out : this_node->EdgesOut) {
       GraphCost += edge_out->Cost[this_id][edge_out->EndNode->FinalSbpSignatureId];
     }
   }
@@ -192,11 +192,11 @@ double SbpGraph<SbpSignature>::ComputeCost() {
 }
 
 template<class SbpSignature>
-int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature> *this_node) {
+int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 2) {
-    std::vector<SbpNode<SbpSignature> *> TwoNode;
-    for (auto &one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
-    for (auto &one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
+    std::vector<SbpNode<SbpSignature>*> TwoNode;
+    for (auto& one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
+    for (auto& one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
 
     // If a node is pointing to itself, could happen when shrink from a circle
     if (TwoNode[0] == TwoNode[1]) {
@@ -210,21 +210,21 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature> *this_node
       return EliminationNumber;
     }
 
-    std::vector<SbpEdge<SbpSignature> *> TwoEdge(this_node->EdgesIn);
+    std::vector<SbpEdge<SbpSignature>*> TwoEdge(this_node->EdgesIn);
     TwoEdge.insert(TwoEdge.end(), this_node->EdgesOut.begin(), this_node->EdgesOut.end());
 
     int32_t EdgesInSize = this_node->EdgesIn.size();
 
-    SbpEdge<SbpSignature> *e =
+    SbpEdge<SbpSignature>* e =
         new SbpEdge<SbpSignature>(TwoNode[0], this_node, TwoNode[1], TwoEdge[0], TwoEdge[1]);
     e->SummerizeCost();
     // check and remove the edge_in with new edge in graph
     for (int32_t i = 0; i < EdgesInSize; i++) {
-      CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(TwoNode[i]->EdgesOut, TwoEdge[i]);
+      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(TwoNode[i]->EdgesOut, TwoEdge[i]);
     }
     // check and remove the edge_out with new edge in graph
     for (int32_t i = EdgesInSize; i < 2; i++) {
-      CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(TwoNode[i]->EdgesIn, TwoEdge[i]);
+      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(TwoNode[i]->EdgesIn, TwoEdge[i]);
     }
     // Let e take control of EdgeList completely by disconnecting MidNode
     e->MidNode->EdgesOut.clear();
@@ -279,8 +279,8 @@ int32_t SbpGraph<SbpSignature>::NodeAndEdgeEliminations() {
 }
 
 template<class SbpSignature>
-int32_t LookForParallelEdge(SbpEdge<SbpSignature> *&e, SbpNode<SbpSignature> *start_node,
-                            SbpNode<SbpSignature> *end_node, bool ifReverse, int32_t stopsign) {
+int32_t LookForParallelEdge(SbpEdge<SbpSignature>*& e, SbpNode<SbpSignature>* start_node,
+                            SbpNode<SbpSignature>* end_node, bool ifReverse, int32_t stopsign) {
   // elimination edges with specific start node and end node in
   // start_node->EdgesOut from index stopsign to the end.
   // start_node->EdgesOut[Stopsign] not included and need special treatment
@@ -297,7 +297,7 @@ int32_t LookForParallelEdge(SbpEdge<SbpSignature> *&e, SbpNode<SbpSignature> *st
       // edge elimination
       e->EdgeList.emplace_back(start_node->EdgesOut[j]);
       EliminationsNumber++;
-      RemoveFrom<SbpEdge<SbpSignature> *>(start_node->EdgesOut, j);
+      RemoveFrom<SbpEdge<SbpSignature>*>(start_node->EdgesOut, j);
     }
   }
   return EliminationsNumber;
@@ -305,20 +305,20 @@ int32_t LookForParallelEdge(SbpEdge<SbpSignature> *&e, SbpNode<SbpSignature> *st
 
 // Remove all edges with (start_node -> end_node) from EdgesIn of end_node
 template<class SbpSignature>
-void RemoveFromEdgesIn(SbpNode<SbpSignature> *start_node, SbpNode<SbpSignature> *end_node) {
+void RemoveFromEdgesIn(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node) {
   for (int32_t i = end_node->EdgesIn.size() - 1; i >= 0; i--) {
     if (start_node == end_node->EdgesIn[i]->StartNode) {
-      RemoveFrom<SbpEdge<SbpSignature> *>(end_node->EdgesIn, i);
+      RemoveFrom<SbpEdge<SbpSignature>*>(end_node->EdgesIn, i);
     }
   }
 }
 
 template<class SbpSignature>
-int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature> *this_node) {
+int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node) {
   int32_t EliminationsNumber = 0;
 
   for (int32_t i = 0; i < this_node->EdgesOut.size(); i++) {
-    SbpEdge<SbpSignature> *e = NULL;
+    SbpEdge<SbpSignature>* e = NULL;
     // Find and delete Parallel Edges from EdgesOut
     EliminationsNumber +=
         LookForParallelEdge<SbpSignature>(e, this_node, this_node->EdgesOut[i]->EndNode, false, i);
@@ -339,19 +339,19 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature> *this_node
 }
 
 template<class SbpSignature>
-int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature> *this_node) {
+int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature>* this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 1) {
     if (this_node->EdgesIn.size()) {
       // edge in graph: father -> this_node
-      SbpNode<SbpSignature> *father = this_node->EdgesIn[0]->StartNode;
+      SbpNode<SbpSignature>* father = this_node->EdgesIn[0]->StartNode;
       father->Children.emplace_back(this_node);
-      CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(father->EdgesOut, this_node->EdgesIn[0]);
+      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesOut, this_node->EdgesIn[0]);
       father->SummerizeCost();
     } else {
       // edge in graph: this_node -> father
-      SbpNode<SbpSignature> *father = this_node->EdgesOut[0]->EndNode;
+      SbpNode<SbpSignature>* father = this_node->EdgesOut[0]->EndNode;
       father->Children.emplace_back(this_node);
-      CheckAndRemoveFrom<SbpEdge<SbpSignature> *>(father->EdgesIn, this_node->EdgesOut[0]);
+      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesIn, this_node->EdgesOut[0]);
       father->SummerizeCost();
     }
 
@@ -367,9 +367,9 @@ int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature> *this_nod
 
 // Merge two nodes
 template<class SbpSignature>
-int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature> *first,
-                                            SbpNode<SbpSignature> *second) {
-  SbpNode<SbpSignature> *new_node = new SbpNode<SbpSignature>(first, second);
+int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature>* first,
+                                            SbpNode<SbpSignature>* second) {
+  SbpNode<SbpSignature>* new_node = new SbpNode<SbpSignature>(first, second);
 
   // Adjust NodeList
   RemoveFromNodeList(first);
@@ -385,7 +385,7 @@ int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature> *first,
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::FinalizeSbp() {
-  for (const auto &this_node : NodeList) { this_node->FinalizeSbp(); }
+  for (const auto& this_node : NodeList) { this_node->FinalizeSbp(); }
 }
 
 template<class SbpSignature>
@@ -394,13 +394,13 @@ double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
   double TtlCostRdc, CostRdc;
   for (int32_t step = NodeList.size(); step >= 0; step--) {
     CostRdc = 0;
-    for (SbpNode<SbpSignature> *this_node : NodeList) {
+    for (SbpNode<SbpSignature>* this_node : NodeList) {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
       if (ForceNode || this_node->EdgesIn.size() + this_node->EdgesOut.size() == 0)
         CostRdc += this_node->GreedyStrategy();
       else {
-        for (SbpEdge<SbpSignature> *this_edge : this_node->EdgesOut) {
+        for (SbpEdge<SbpSignature>* this_edge : this_node->EdgesOut) {
           CostRdc += this_edge->GreedyStrategy();
         }
       }
@@ -420,10 +420,10 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
     // Transfer edge to binary set
     NodeBinarySets[i].Initialize(NodeList.size());
     NodeBinarySets[i].AddEntry(i);
-    for (const SbpEdge<SbpSignature> *edge_in : NodeList[i]->EdgesIn) {
+    for (const SbpEdge<SbpSignature>* edge_in : NodeList[i]->EdgesIn) {
       NodeBinarySets[i].AddEntry(edge_in->StartNode->NodeListId);
     }
-    for (const SbpEdge<SbpSignature> *edge_out : NodeList[i]->EdgesOut) {
+    for (const SbpEdge<SbpSignature>* edge_out : NodeList[i]->EdgesOut) {
       NodeBinarySets[i].AddEntry(edge_out->StartNode->NodeListId);
     }
   }
@@ -465,7 +465,7 @@ SbpGraph<SbpSignature>::SbpGraph() {
 
   // generate node candidates
   // std::vector<std::vector<std::shared_ptr<SbpNode<SbpSignature>>>> AllNodes;
-  std::vector<std::vector<SbpNode<SbpSignature> *>> AllNodes;
+  std::vector<std::vector<SbpNode<SbpSignature>*>> AllNodes;
   AllNodes.resize(15 + rand() % 9);
   AllNodes[0].resize(6 + rand() % 12, NULL);
 
@@ -519,7 +519,7 @@ SbpGraph<SbpSignature>::SbpGraph() {
               if (AllNodes[i_end][j_end]) {
                 // check if we had same edge before
                 bool check_duplicated = false;
-                for (const auto &node_out : AllNodes[i][j]->NodesOut) {
+                for (const auto& node_out : AllNodes[i][j]->NodesOut) {
                   if (node_out == AllNodes[i_end][j_end]) { check_duplicated = true; }
                 }
                 if (check_duplicated) continue;
@@ -558,7 +558,7 @@ SbpGraph<SbpSignature>::SbpGraph() {
 template<class SbpSignature>
 double SbpGraph<SbpSignature>::ComputeOriginCost() {
   double GraphCost = 0;
-  for (SbpNode<SbpSignature> *this_node : OriginalNodeList) {
+  for (SbpNode<SbpSignature>* this_node : OriginalNodeList) {
     int32_t this_id = this_node->FinalSbpSignatureId;
     GraphCost += this_node->OriginCost[this_id];
     for (int32_t j = 0; j < this_node->OriginCostOut.size(); j++) {
@@ -574,7 +574,7 @@ double SbpGraph<SbpSignature>::ComputeOriginCost() {
 #ifdef PRINT_GRAPH_
 
 template<class SbpSignature>
-void PrintNode(SbpNode<SbpSignature> *this_node) {
+void PrintNode(SbpNode<SbpSignature>* this_node) {
   if (!this_node->Children.empty()) {
     printf("[%d", this_node->Children[0]->id);
     for (int32_t i = 1; i < this_node->Children.size(); i++) {
@@ -588,7 +588,7 @@ void PrintNode(SbpNode<SbpSignature> *this_node) {
 
   printf("%d -> ", this_node->id);
 
-  for (const auto &edge_out : this_node->EdgesOut) { printf("%d, ", edge_out->EndNode->id); }
+  for (const auto& edge_out : this_node->EdgesOut) { printf("%d, ", edge_out->EndNode->id); }
   printf("\n");
 }
 
@@ -598,8 +598,8 @@ void SbpGraph<SbpSignature>::PrintGraph() {
   InitTopologicalSort();
 
   // strict topological sorting
-  std::vector<SbpNode<SbpSignature> *> TopoSortNode;
-  for (const auto &this_node : NodeList) {
+  std::vector<SbpNode<SbpSignature>*> TopoSortNode;
+  for (const auto& this_node : NodeList) {
     if (this_node->CurrDeg == 0) TopoSortNode.emplace_back(this_node);
   }
 
@@ -616,7 +616,7 @@ void SbpGraph<SbpSignature>::PrintGraph() {
 
     // Print each node and all out degrees
     PrintNode(TopoSortNode[index]);
-    for (const auto &edge_out : TopoSortNode[index]->EdgesOut) {
+    for (const auto& edge_out : TopoSortNode[index]->EdgesOut) {
       edge_out->EndNode->CurrDeg--;
       if (edge_out->EndNode->CurrDeg == 0) TopoSortNode.emplace_back(edge_out->EndNode);
     }
@@ -625,7 +625,7 @@ void SbpGraph<SbpSignature>::PrintGraph() {
   }
 
   printf("==============level:Circle===============\n");
-  for (const auto &this_node : NodeList) {
+  for (const auto& this_node : NodeList) {
     if (this_node->CurrDeg) PrintNode(this_node);
   }
   printf("\n|++++++++++++++++++++++++++++++++++|\n\n");
@@ -635,7 +635,7 @@ void SbpGraph<SbpSignature>::PrintGraph() {
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::PrintSbpSigs() {
   printf("**********Sbp Signatures***********\n");
-  for (const auto &this_node : OriginalNodeList) {
+  for (const auto& this_node : OriginalNodeList) {
     printf("%d (Sbp: %d)\n", this_node->id,
            this_node->SbpSignatureList[this_node->FinalSbpSignatureId]->id);
   }

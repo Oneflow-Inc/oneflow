@@ -35,7 +35,7 @@ class SbpEdge {
  public:
   // The edge point from StartNode to EndNode
   // It will have a middle node if and only if type 3
-  SbpNode<SbpSignature> *StartNode, *MidNode, *EndNode;
+  SbpNode<SbpSignature>*StartNode, *MidNode, *EndNode;
   // Cost[sbp_i][sbp_j] is the total cost from StartNode with sbp_i to EndNode
   // with sbp_j
   std::vector<std::vector<double>> Cost;
@@ -50,27 +50,27 @@ class SbpEdge {
   //        MidNode -> StartNode, MidNode -> EndNode;
   // example 2: type 2 EdgeList contain three edges:
   //        StartNode -> EndNode, EndNode -> StartNode, StartNode -> EndNode;
-  std::vector<SbpEdge<SbpSignature> *> EdgeList;
+  std::vector<SbpEdge<SbpSignature>*> EdgeList;
 
   // Constructor for type 1 & 2
-  SbpEdge(SbpNode<SbpSignature> *start_node, SbpNode<SbpSignature> *end_node)
+  SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node)
       : StartNode(start_node), EndNode(end_node) {
     MidNode = NULL;
   }
   // Constructor for type 3
-  SbpEdge(SbpNode<SbpSignature> *start_node, SbpNode<SbpSignature> *mid_node,
-          SbpNode<SbpSignature> *end_node, SbpEdge<SbpSignature> *first_edge,
-          SbpEdge<SbpSignature> *second_edge);
+  SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* mid_node,
+          SbpNode<SbpSignature>* end_node, SbpEdge<SbpSignature>* first_edge,
+          SbpEdge<SbpSignature>* second_edge);
   // Compute copy cost for type 1
   void ComputeCost(
-      const std::function<double(SbpNode<SbpSignature> *, SbpSignature *, SbpNode<SbpSignature> *,
-                                 SbpSignature *)> &SbpInferHint4Ibn);
+      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
+                                 SbpSignature*)>& SbpInferHint4Ibn);
 
   // Update copy cost for type 2 and 3
   void SummerizeCost();
   // Duplicate Cost. Designed for merging two nodes.
   void DuplicateCost(bool ifStart, bool ifFirst,
-                     const std::vector<std::pair<int32_t, int32_t>> &mergedSigId2ChildrenSigId);
+                     const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId);
   // Determine Final SbpSignature for attachment of this edge
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -80,7 +80,7 @@ class SbpEdge {
   // Deconstructor
   ~SbpEdge() {
     if (MidNode) { delete MidNode; }
-    for (auto &this_edge : EdgeList) { delete this_edge; }
+    for (auto& this_edge : EdgeList) { delete this_edge; }
   }
 };
 }  // namespace Algorithm
@@ -88,9 +88,9 @@ class SbpEdge {
 // Otherwise we will need to declare specific template at the end of cpp file.
 namespace Algorithm {
 template<class SbpSignature>
-SbpEdge<SbpSignature>::SbpEdge(SbpNode<SbpSignature> *start_node, SbpNode<SbpSignature> *mid_node,
-                               SbpNode<SbpSignature> *end_node, SbpEdge<SbpSignature> *first_edge,
-                               SbpEdge<SbpSignature> *second_edge)
+SbpEdge<SbpSignature>::SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* mid_node,
+                               SbpNode<SbpSignature>* end_node, SbpEdge<SbpSignature>* first_edge,
+                               SbpEdge<SbpSignature>* second_edge)
     : StartNode(start_node), MidNode(mid_node), EndNode(end_node) {
   EdgeList.emplace_back(first_edge);
   EdgeList.emplace_back(second_edge);
@@ -98,8 +98,8 @@ SbpEdge<SbpSignature>::SbpEdge(SbpNode<SbpSignature> *start_node, SbpNode<SbpSig
 
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::ComputeCost(
-    const std::function<double(SbpNode<SbpSignature> *, SbpSignature *, SbpNode<SbpSignature> *,
-                               SbpSignature *)> &SbpInferHint4Ibn) {
+    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
+                               SbpSignature*)>& SbpInferHint4Ibn) {
   Cost.resize(StartNode->Cost.size());
   int32_t EndNodeSbpSize = EndNode->Cost.size();
   for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
@@ -168,7 +168,7 @@ void SbpEdge<SbpSignature>::SummerizeCost() {
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::DuplicateCost(
     bool ifStart, bool ifFirst,
-    const std::vector<std::pair<int32_t, int32_t>> &mergedSigId2ChildrenSigId) {
+    const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId) {
   const int32_t num_sig = mergedSigId2ChildrenSigId.size();
   std::vector<std::vector<double>> tmpCost;
   std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;
@@ -215,7 +215,7 @@ void SbpEdge<SbpSignature>::FinalizeSbp() {
         MidNodeSbpSig[StartNode->FinalSbpSignatureId][EndNode->FinalSbpSignatureId];
     MidNode->FinalizeSbp();
   }
-  for (const auto &this_edge : EdgeList) { this_edge->FinalizeSbp(); }
+  for (const auto& this_edge : EdgeList) { this_edge->FinalizeSbp(); }
 }
 
 template<class SbpSignature>

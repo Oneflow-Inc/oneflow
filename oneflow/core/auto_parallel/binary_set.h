@@ -40,15 +40,15 @@ class BinarySet {
   // Take i-th element out from this subset
   void DeleteEntry(int32_t i);
   // Get the union with another subset and store it into u
-  void UnionTo(BinarySet &bs, BinarySet &u);
+  void UnionTo(BinarySet& bs, BinarySet& u);
   // Get the intersection with another subset and store it into i
-  void IntersectionTo(BinarySet &bs, BinarySet &i);
+  void IntersectionTo(BinarySet& bs, BinarySet& i);
   // Count number of elements in this subset
   int32_t Total();
   // Output all the elements in the subset
-  void OutPut(std::vector<int32_t> &out);
+  void OutPut(std::vector<int32_t>& out);
   // Add elements of input into this subset
-  void AddEntrys(std::vector<int32_t> &in);
+  void AddEntrys(std::vector<int32_t>& in);
 };
 
 }  // namespace Algorithm

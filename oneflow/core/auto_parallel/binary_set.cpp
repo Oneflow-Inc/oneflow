@@ -50,13 +50,13 @@ void BinarySet::DeleteEntry(int32_t i) {
   BinarySetValues[k] &= ~(1 << j);
 }
 // Get the union with another subset and store it into u
-void BinarySet::UnionTo(BinarySet &bs, BinarySet &u) {
+void BinarySet::UnionTo(BinarySet& bs, BinarySet& u) {
   for (int32_t k = 0; k < BinarySetValues.size(); k++) {
     u.BinarySetValues[k] = BinarySetValues[k] | bs.BinarySetValues[k];
   }
 }
 // Get the intersection with another subset and store it into i
-void BinarySet::IntersectionTo(BinarySet &bs, BinarySet &i) {
+void BinarySet::IntersectionTo(BinarySet& bs, BinarySet& i) {
   for (int32_t k = 0; k < BinarySetValues.size(); k++) {
     i.BinarySetValues[k] = BinarySetValues[k] & bs.BinarySetValues[k];
   }
@@ -78,7 +78,7 @@ int32_t BinarySet::Total() {
 }
 
 // Output all the elements in the subset
-void BinarySet::OutPut(std::vector<int32_t> &out) {
+void BinarySet::OutPut(std::vector<int32_t>& out) {
   out.clear();
   for (int32_t i = 0; i < SizeOfSet; i++) {
     if (CheckExistency(i)) out.emplace_back(i);
@@ -86,7 +86,7 @@ void BinarySet::OutPut(std::vector<int32_t> &out) {
 }
 
 // Add elements of input into this subset
-void BinarySet::AddEntrys(std::vector<int32_t> &in) {
+void BinarySet::AddEntrys(std::vector<int32_t>& in) {
   for (int32_t i = 0; i < in.size(); i++) { AddEntry(i); }
 }
 

@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/operator/normal_model_update_op.h"
 #include <fstream>
 
 namespace oneflow {

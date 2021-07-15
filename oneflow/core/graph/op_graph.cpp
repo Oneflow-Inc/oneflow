@@ -248,8 +248,6 @@ void OpGraph::InitEdges() {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
       (*consumer_lbi2ibns)[lbi].push_back(ibn);
-    }
-    // Build edges use the connections computed above.
       auto producer_it = lbi2producer.find(lbi);
       CHECK(producer_it != lbi2producer.end()) << "producer not found: " << GenLogicalBlobName(lbi);
       const int32_t output_index = CHECK_JUST(producer_it->second->op().GetOutputIndex(lbi));
