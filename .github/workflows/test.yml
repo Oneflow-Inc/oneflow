@@ -152,6 +152,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    continue-on-error: true
     steps:
       - name: Check if secrets accessible
         env:
