@@ -52,22 +52,17 @@ class TestRound(flow.unittest.TestCase):
     #     arg_dict["device"] = ["cpu", "cuda"]
     #     for arg in GenArgList(arg_dict):
     #         __impl(test_case, *arg)
-    
+
     def test_flow_round_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_flow_against_pytorch(
-                test_case,
-                "round",
-                device = device,
+                test_case, "round", device=device,
             )
-    
+
     def test_flow_tensor_round_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "round",
-                device=device
-            )
+            test_tensor_against_pytorch(test_case, "round", device=device)
+
 
 if __name__ == "__main__":
     unittest.main()

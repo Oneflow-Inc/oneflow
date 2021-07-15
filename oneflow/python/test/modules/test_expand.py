@@ -205,7 +205,7 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     # 稍后debug
     # def test_flow_tensor_expand_with_random_data(test_case):
     #     for device in ["cpu", "cuda"]:

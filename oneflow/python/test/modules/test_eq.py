@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+
 # from torch._C import int8
 
 import oneflow.experimental as flow
@@ -103,7 +104,7 @@ class TestEq(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     # eq无反向传播
     # def test_flow_eq_with_random_data(test_case):
     #     for device in ["cpu", "cuda"]:
@@ -118,7 +119,7 @@ class TestEq(flow.unittest.TestCase):
     #                 "input": random_tensor(ndim=2, dim0=1, dim1=2),
     #                 "other": random_tensor(ndim=2, dim0=1, dim1=2)
     #             }
-    #         )         
+    #         )
 
 
 # @unittest.skipIf(

@@ -79,23 +79,14 @@ class TestErfModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_erf_impl(test_case, *arg)
             _test_tensor_erf_impl(test_case, *arg)
-        
+
     def test_flow_erf_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "erf",
-                device=device
-            )
-    
+            test_flow_against_pytorch(test_case, "erf", device=device)
+
     def test_flow_tensor_erf_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "erf",
-                device=device
-            )
-
+            test_tensor_against_pytorch(test_case, "erf", device=device)
 
 
 if __name__ == "__main__":
