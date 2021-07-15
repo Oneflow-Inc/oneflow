@@ -27,7 +27,6 @@ func_config.default_data_type(flow.float)
 @flow.unittest.skip_unless_1n1d()
 class TestUnpackPack(flow.unittest.TestCase):
     def test_unpack_pack(test_case):
-
         @flow.global_function(function_config=func_config)
         def UnpackPackJob(a: oft.Numpy.Placeholder((3, 4))):
             return flow.pack(flow.unpack(a, 3), 3)

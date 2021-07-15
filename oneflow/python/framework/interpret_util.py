@@ -29,24 +29,24 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 def Forward(op_conf, scope_symbol=None):
     if scope_symbol is None:
         scope_symbol = oneflow.current_scope()
-    func = LazyInfer # NOTE(chengcheng): global_function ONLY support Lazy run.
+    func = LazyInfer  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return func(compile_ctx.CurJobAddOp, op_conf, scope_symbol)
 
 
 def OpKernelForward(op_conf, opkernel_object):
-    func = LazyOpKernelInfer # NOTE(chengcheng): global_function ONLY support Lazy run.
+    func = LazyOpKernelInfer  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return func(compile_ctx.CurJobAddOp, op_conf, opkernel_object)
 
 
 def ConsistentForward(op_conf, scope_symbol=None):
     if scope_symbol is None:
         scope_symbol = oneflow.current_scope()
-    func = LazyInfer # NOTE(chengcheng): global_function ONLY support Lazy run.
+    func = LazyInfer  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return func(compile_ctx.CurJobAddConsistentOp, op_conf, scope_symbol)
 
 
 def OpKernelConsistentForward(op_conf, opkernel_object):
-    func = LazyOpKernelInfer # NOTE(chengcheng): global_function ONLY support Lazy run.
+    func = LazyOpKernelInfer  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return func(compile_ctx.CurJobAddConsistentOp, op_conf, opkernel_object)
 
 

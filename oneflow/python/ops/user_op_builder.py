@@ -150,7 +150,9 @@ def api_user_op_builder(op_name):
     Returns:
         UserOpConfBuilder: `UserOpConfBuilder` object used to build a wrapper of user op.
     """
-    api = lazy_user_op_builder # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = (
+        lazy_user_op_builder  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    )
     return api(op_name)
 
 
@@ -418,7 +420,7 @@ class UserOpConfBuilder(object):
 
 @oneflow_export("user_op_module_builder")
 def api_user_op_module_builder(op_type_name):
-    api = lazy_user_op_module_builder # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = lazy_user_op_module_builder  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(op_type_name)
 
 
@@ -460,7 +462,7 @@ class LazyUserOpModule(UserOpModule, UserOp):
     def InitOpKernel(self):
         self.set_opkernel_object(None)
 
-      def InferAndTryRun(self):
+    def InferAndTryRun(self):
         assert hob.in_global_mode(None)
         compile_context.CurJobAddOp(self.op_conf_)
         return self

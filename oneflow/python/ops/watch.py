@@ -127,7 +127,7 @@ def Watch(
         #        [-0.12266113 -0.12266113]]]]
 
     """
-    api = LazyWatch # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = LazyWatch  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(blob_watched, handler_or_prompt)
 
 

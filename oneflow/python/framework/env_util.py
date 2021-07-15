@@ -50,7 +50,10 @@ def api_enable_eager_execution(val: bool = True) -> None:
     Args:
         val (bool, optional): Whether global_function (job) eager execution or not.  Defaults to True.
     """
-    print("INFO: 'oneflow.enable_eager_execution()' is deprecated, has no effect and will be removed in the future.")
+    print(
+        "INFO: 'oneflow.enable_eager_execution()' is deprecated, has no effect and will be removed in the future."
+    )
+
 
 @oneflow_export("env.init")
 def api_env_init() -> bool:

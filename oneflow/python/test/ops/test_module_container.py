@@ -20,7 +20,6 @@ import oneflow.experimental as flow
 import oneflow.typing as tp
 
 
-@unittest.skipIf(
 class TestContainer(flow.unittest.TestCase):
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):

@@ -31,7 +31,9 @@ import oneflow._oneflow_internal
 
 
 def GetCurJobConfigProto():
-    return GetLazyCurJobConfigProto() # NOTE(chengcheng): global_function ONLY support Lazy run.
+    return (
+        GetLazyCurJobConfigProto()
+    )  # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
 @enable_if.condition(hob.in_global_mode)

@@ -151,5 +151,6 @@ class TestAssign(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+
 if __name__ == "__main__":
     unittest.main()

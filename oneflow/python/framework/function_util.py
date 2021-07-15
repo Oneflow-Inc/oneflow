@@ -118,7 +118,7 @@ def api_oneflow_function(
             function_config.function_desc.job_config_proto.mutable_train_conf()
         else:
             function_config.function_desc.job_config_proto.mutable_predict_conf()
-    api = lazy_oneflow_function # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = lazy_oneflow_function  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(function_config)
 
 
@@ -145,9 +145,7 @@ def eager_oneflow_function(function_config=FunctionConfig()):
     return Decorator
 
 
-@enable_if.condition(
-    hob.in_normal_mode & ~hob.session_initialized
-)
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 

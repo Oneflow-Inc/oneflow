@@ -57,7 +57,9 @@ class CheckPoint(object):
             check_point_v2.SaveVarDict(path)
             return
         assert type(path) is str
-        lazy_checkpoint_save(path) # NOTE(chengcheng): global_function ONLY support Lazy run.
+        lazy_checkpoint_save(
+            path
+        )  # NOTE(chengcheng): global_function ONLY support Lazy run.
 
     @session_ctx.try_init_default_session
     def init(self) -> None:
@@ -65,7 +67,7 @@ class CheckPoint(object):
         """
         if not config_util.api_legacy_model_io_enabled():
             return
-        lazy_checkpoint_init() # NOTE(chengcheng): global_function ONLY support Lazy run.
+        lazy_checkpoint_init()  # NOTE(chengcheng): global_function ONLY support Lazy run.
 
     @session_ctx.try_init_default_session
     def load(self, path: str) -> None:
@@ -78,7 +80,9 @@ class CheckPoint(object):
             check_point_v2.LoadVariables(check_point_v2.GetCheckpoint(path))
             return
         assert type(path) is str
-        lazy_checkpoint_load(path) # NOTE(chengcheng): global_function ONLY support Lazy run.
+        lazy_checkpoint_load(
+            path
+        )  # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
 @enable_if.condition(hob.in_normal_mode)
