@@ -345,7 +345,7 @@ def vector_norm_tensor_op(input, ord=None, dim=None, keepdim=False):
             will be :attr:`dtype`. Default: `None`
 
     Returns:
-        A real-valued tensor, even when :attr:`A` is complex.
+        A real-valued tensor.
 
     Examples::
 
