@@ -139,8 +139,8 @@ def evaluate_accuracy(net, device, data_iter):
             if isinstance(net, nn.Module):
                 net.eval()  #  evaluating mode
                 acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
-                net.train()  # turn to training mode 
-            else: 
+                net.train()  # turn to training mode
+            else:
                 if "is_training" in net.__code__.co_varnames:
                     # set is_training = False
                     acc_sum += (

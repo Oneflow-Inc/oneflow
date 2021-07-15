@@ -32,7 +32,7 @@ class Normalize(flow.nn.Module):
     This transform does not support PIL Image.
     Given mean: ``(mean[1],...,mean[n])`` and std: ``(std[1],..,std[n])`` for ``n``
     channels, this transform will normalize each channel of the input
-    ``torch.*Tensor`` i.e.,
+    ``flow.*Tensor`` i.e.,
     ``output[channel] = (input[channel] - mean[channel]) / std[channel]``
     .. note::
         This transform acts out of place, i.e., it does not mutate the input tensor.
@@ -64,7 +64,7 @@ class Normalize(flow.nn.Module):
 
 
 class Compose:
-    """Composes several transforms together. This transform does not support torchscript.
+    """Composes several transforms together.
     Please, see the note below.
     Args:
         transforms (list of ``Transform`` objects): list of transforms to compose.
@@ -74,13 +74,12 @@ class Compose:
         >>>     transforms.ToTensor(),
         >>> ])
     .. note::
-        In order to script the transformations, please use ``torch.nn.Sequential`` as below.
-        >>> transforms = torch.nn.Sequential(
+        In order to script the transformations, please use ``flow.nn.Sequential`` as below.
+        >>> transforms = flow.nn.Sequential(
         >>>     transforms.CenterCrop(10),
         >>>     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         >>> )
-        >>> scripted_transforms = torch.jit.script(transforms)
-        Make sure to use only scriptable transformations, i.e. that work with ``torch.Tensor``, does not require
+        Make sure to use only scriptable transformations, i.e. that work with ``flow.Tensor``, does not require
         `lambda` functions or ``PIL.Image``.
     """
 
@@ -102,9 +101,9 @@ class Compose:
 
 
 class ToTensor:
-    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor. This transform does not support torchscript.
+    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
     Converts a PIL Image or numpy.ndarray (H x W x C) in the range
-    [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
+    [0, 255] to a flow.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
     if the PIL Image belongs to one of the modes (L, LA, P, I, F, RGB, YCbCr, RGBA, CMYK, 1)
     or if the numpy.ndarray has dtype = np.uint8
     In the other cases, tensors are returned without scaling.
@@ -129,7 +128,7 @@ class ToTensor:
 
 class Resize(flow.nn.Module):
     """Resize the input image to the given size.
-    If the image is torch Tensor, it is expected
+    If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
 
     Args:
@@ -138,9 +137,8 @@ class Resize(flow.nn.Module):
             smaller edge of the image will be matched to this number.
             i.e, if height > width, then image will be rescaled to
             (size * height / width, size).
-            In torchscript mode size as single int is not supported, use a sequence of length 1: ``[size, ]``.
         interpolation (InterpolationMode): Desired interpolation enum defined by
-            :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.BILINEAR``.
+            :class:`flow.utils.vision.transforms.InterpolationMode`. Default is ``InterpolationMode.BILINEAR``.
             If input is Tensor, only ``InterpolationMode.NEAREST``, ``InterpolationMode.BILINEAR`` and
             ``InterpolationMode.BICUBIC`` are supported.
             For backward compatibility integer values (e.g. ``PIL.Image.NEAREST``) are still acceptable.

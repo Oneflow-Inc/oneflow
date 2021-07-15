@@ -14,4 +14,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from .mnist import MNIST, FashionMNIST
-from .cifar import CIFAR10
+from .cifar import CIFAR10, CIFAR100

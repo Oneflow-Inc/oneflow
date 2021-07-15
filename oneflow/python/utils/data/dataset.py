@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import bisect
-import warnings
 import functools
 from typing import (
     TypeVar,
@@ -142,9 +141,8 @@ class IterableDataset(Dataset[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         raise NotImplementedError
 
-    # TODO:
-    # def __add__(self, other: Dataset[T_co]):
-    #     return ChainDataset([self, other])
+    def __add__(self, other: Dataset[T_co]):
+        return ChainDataset([self, other])
 
     def __getattr__(self, attribute_name):
         if attribute_name in IterableDataset.functions:
@@ -259,6 +257,40 @@ class ConcatDataset(Dataset[T_co]):
         else:
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
         return self.datasets[dataset_idx][sample_idx]
+
+
+class ChainDataset(IterableDataset):
+    r"""Dataset for chainning multiple :class:`IterableDataset` s.
+
+    This class is useful to assemble different existing dataset streams. The
+    chainning operation is done on-the-fly, so concatenating large-scale
+    datasets with this class will be efficient.
+
+    Args:
+        datasets (iterable of IterableDataset): datasets to be chained together
+    """
+
+    def __init__(self, datasets: Iterable[Dataset]) -> None:
+        super(ChainDataset, self).__init__()
+        self.datasets = datasets
+
+    def __iter__(self):
+        for d in self.datasets:
+            assert isinstance(
+                d, IterableDataset
+            ), "ChainDataset only supports IterableDataset"
+            for x in d:
+                yield x
+
+    def __len__(self):
+        total = 0
+        for d in self.datasets:
+            assert isinstance(
+                d, IterableDataset
+            ), "ChainDataset only supports IterableDataset"
+            # Cannot verify that all self.datasets are Sized
+            total += len(d)
+        return total
 
 
 class Subset(Dataset[T_co]):

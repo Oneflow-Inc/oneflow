@@ -28,7 +28,7 @@ def _is_tensor_a_flow_image(x: Tensor) -> bool:
 
 def _assert_image_tensor(img):
     if not _is_tensor_a_flow_image(img):
-        raise TypeError("Tensor is not a torch image.")
+        raise TypeError("Tensor is not a flow image.")
 
 
 def _get_image_size(img: Tensor) -> List[int]:

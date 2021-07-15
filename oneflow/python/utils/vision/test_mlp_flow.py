@@ -80,7 +80,7 @@ class FlattenLayer(nn.Module):
         res = x.reshape(shape=[x.shape[0], -1])
         return res
 
-print(" >>>>>>>>>>>>>>>>>>>>>>>>>> aaaa")
+
 net = nn.Sequential(
     FlattenLayer(),
     nn.Linear(num_inputs, num_hiddens),
@@ -91,7 +91,6 @@ net = nn.Sequential(
 for params in net.parameters():
     nn.init.normal_(params, mean=0, std=0.01)
 
-print(" >>>>>>>>>>>>>>>>>>>>>>>>>> bbbb")
 device = flow.device("cuda")
 net.to(device)
 
@@ -105,11 +104,10 @@ optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
 
 num_epochs = 10
 
-print(" >>>>>>>>>>>>>>>>>>>>>>>>>> cccc")
-# ############################ 5.5 #########################
+
 def evaluate_accuracy(data_iter, net, device=None):
     if device is None and isinstance(net, nn.Module):
-        # 如果没指定device就使用net的device
+        # using net device if not specified
         device = list(net.parameters())[0].device
     acc_sum, n = 0.0, 0
     with flow.no_grad():
@@ -117,14 +115,14 @@ def evaluate_accuracy(data_iter, net, device=None):
             X = X.to(device=device)
             y = y.to(device=device)
             if isinstance(net, nn.Module):
-                net.eval()  # 评估模式, 这会关闭dropout
+                net.eval()
                 acc_sum += (
                     net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()
                 ).sum()
-                net.train()  # 改回训练模式
-            else:  # 自定义的模型, 3.13节之后不会用到, 不考虑GPU
-                if "is_training" in net.__code__.co_varnames:  # 如果有is_training这个参数
-                    # 将is_training设置成False
+                net.train()
+            else:
+                if "is_training" in net.__code__.co_varnames:
+                    # set is_training=False if has 'is_training' param
                     acc_sum += (
                         net(X, is_training=False).argmax(dim=1).numpy() == y.numpy()
                     ).sum()
@@ -176,6 +174,4 @@ def train(
         )
 
 
-train(
-    net, train_iter, test_iter, loss, num_epochs, batch_size, None, None, optimizer
-)
+train(net, train_iter, test_iter, loss, num_epochs, batch_size, None, None, optimizer)

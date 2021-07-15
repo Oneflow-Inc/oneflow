@@ -86,8 +86,7 @@ def _is_numpy_image(img: Any) -> bool:
 
 def to_tensor(pic):
     """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
-    This function does not support torchscript.
-    See :class:`~torchvision.transforms.ToTensor` for more details.
+    See :class:`~transforms.ToTensor` for more details.
     Args:
         pic (PIL Image or numpy.ndarray): Image to be converted to tensor.
     Returns:
@@ -150,7 +149,7 @@ def normalize(
     This transform does not support PIL Image.
     .. note::
         This transform acts out of place by default, i.e., it does not mutates the input tensor.
-    See :class:`~torchvision.transforms.Normalize` for more details.
+    See :class:`~transforms.Normalize` for more details.
     Args:
         tensor (Tensor): Float tensor image of size (C, H, W) or (B, C, H, W) to be normalized.
         mean (sequence): Sequence of means for each channel.
@@ -203,7 +202,7 @@ def resize(
     interpolation: InterpolationMode = InterpolationMode.BILINEAR,
 ) -> Tensor:
     r"""Resize the input image to the given size.
-    If the image is torch Tensor, it is expected
+    If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
 
     Args:
@@ -213,9 +212,8 @@ def resize(
             the smaller edge of the image will be matched to this number maintaining
             the aspect ratio. i.e, if height > width, then image will be rescaled to
             :math:`\left(\text{size} \times \frac{\text{height}}{\text{width}}, \text{size}\right)`.
-            In torchscript mode size as single int is not supported, use a sequence of length 1: ``[size, ]``.
         interpolation (InterpolationMode): Desired interpolation enum defined by
-            :class:`torchvision.transforms.InterpolationMode`.
+            :class:`flow.utils.vision.transforms.InterpolationMode`.
             Default is ``InterpolationMode.BILINEAR``. If input is Tensor, only ``InterpolationMode.NEAREST``,
             ``InterpolationMode.BILINEAR`` and ``InterpolationMode.BICUBIC`` are supported.
             For backward compatibility integer values (e.g. ``PIL.Image.NEAREST``) are still acceptable.
