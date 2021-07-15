@@ -184,4 +184,14 @@ bool Shape::Containing(const Shape& small_shape) const {
   return true;
 }
 
+Maybe<Shape> SliceShape(const Shape& shape, int64_t start, int64_t end) {
+  CHECK_OR_RETURN(start >= 0 && end >= start);
+  int64_t ndims = shape.NumAxes();
+  if (start > ndims) { start = ndims; }
+  if (end > ndims) { end = ndims; }
+  DimVector dim_vec;
+  for (int64_t i = start; i < end && i < ndims; ++i) { dim_vec.push_back(shape.At(i)); }
+  return std::make_shared<Shape>(dim_vec);
+}
+
 }  // namespace oneflow

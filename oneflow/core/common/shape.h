@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
@@ -84,6 +85,8 @@ template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
 }
+
+Maybe<Shape> SliceShape(const Shape& shape, int64_t start, int64_t end);
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
