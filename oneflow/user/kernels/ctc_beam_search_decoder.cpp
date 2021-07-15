@@ -31,11 +31,10 @@ struct CTCBeamSearchDecoderFunctor<DeviceType::kCPU, T> final {
     const T prune_threshold = 0.001;
     FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
-    // decoded_ptr [batch_size, max_input_length]
+    NdIndexOffsetHelper<int64_t, 3> decoded_helper(top_paths, batch_size, max_input_length);
 
     FOR_RANGE(int64_t, b, 0, batch_size) {
       const int32_t input_length = input_lengths_ptr[b];
-      // NOLINTNEXTLINE(modernize-use-transparent-functors)
       std::multimap<float, std::vector<int32_t>, std::greater<float>> A_next_inv;
       // For a given time step, Pb maps prefixes to the probability of all
       // candidate sequences that end in a blank and Pnb maps prefixes to the
@@ -101,23 +100,15 @@ struct CTCBeamSearchDecoderFunctor<DeviceType::kCPU, T> final {
         }
       }
 
-      // const int total_candidates = batch_size * top_paths;
-      // auto* output_len =
-      //     Output(OUTPUT_LEN, std::vector<int64_t>{total_candidates}, at::dtype<int>());
-      // int* output_len_data = output_len->mutable_data<int>();
-      // memset(output_len_data, 0, total_candidates * sizeof(int));
-      // float* output_prob_data = output_prob->mutable_data<float>();
-
-      // std::vector<int32_t> values_cache;
-
-      // auto it = A_next_inv.begin();
-      // for (int index = 0; index < top_paths; index++, it++) {
-      //   if (it == A_next_inv.end()) { break; }
-      //   auto& candidate = it->second;
-      //   output_len_data[b * top_paths + index] = candidate.size();
-      //   output_prob_data[b * top_paths + index] = Pb.back()[candidate] + Pnb.back()[candidate];
-      //   values_cache.insert(values_cache.end(), candidate.begin(), candidate.end());
-      // }
+      auto it = A_next_inv.begin();
+      for (int p = 0; p < top_paths; p++, it++) {
+        if (it == A_next_inv.end()) { break; }
+        auto& candidate = it->second;
+        for (int c = 0; c < candidate.size(); c++) {
+          decoded_ptr[decoded_helper.NdIndexToOffset(p, b, c)] = candidate[c];
+        }
+        log_probability_ptr[b * top_paths + p] = Pb.back()[candidate] + Pnb.back()[candidate];
+      }
     }
   }
 };

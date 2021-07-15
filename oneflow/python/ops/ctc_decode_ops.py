@@ -98,8 +98,8 @@ def ctc_greedy_decoder(
 def ctc_beam_search_decoder(
     log_probs: oneflow._oneflow_internal.BlobDesc,
     input_lengths: oneflow._oneflow_internal.BlobDesc,
-    beam_width: int,
-    top_paths: int,
+    beam_width: int = 100,
+    top_paths: int = 1,
     name: Optional[str] = None,
 ) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     r"""Performs beam search decoding on the logits given in input.

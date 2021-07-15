@@ -67,7 +67,7 @@ REGISTER_USER_OP("ctc_beam_search_decoder")
       CHECK_GE_OR_RETURN(beam_width, 0);
       CHECK_GE_OR_RETURN(top_paths, 0);
       CHECK_LE_OR_RETURN(top_paths, beam_width);
-      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+      *ctx->OutputShape("decoded", 0) = Shape({top_paths, batch_size, log_probs.shape().At(0)});
       *ctx->OutputShape("log_probability", 0) = Shape({batch_size, top_paths});
       return Maybe<void>::Ok();
     })

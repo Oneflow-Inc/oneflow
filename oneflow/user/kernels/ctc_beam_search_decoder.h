@@ -46,8 +46,8 @@ class CTCBeamSearchDecoderKernel final : public user_op::OpKernel {
     user_op::Tensor* log_probability = ctx->Tensor4ArgNameAndIndex("log_probability", 0);
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int64_t* input_lengths_ptr = input_lengths->dptr<int64_t>();
-    const bool beam_width = ctx->Attr<int64_t>("beam_width");
-    const bool top_paths = ctx->Attr<int64_t>("top_paths");
+    const int32_t beam_width = ctx->Attr<int32_t>("beam_width");
+    const int32_t top_paths = ctx->Attr<int32_t>("top_paths");
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t batch_size = log_probs->shape().At(1);
     const int64_t num_labels = log_probs->shape().At(2);
