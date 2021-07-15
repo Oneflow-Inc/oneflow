@@ -29,6 +29,7 @@ Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
                                                        JobBuilder* job_builder);
 Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
                                                         JobBuilder* job_builder);
+Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job);
 
 class MutOpConTickInputHelper {
  public:
