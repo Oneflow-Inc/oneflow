@@ -20,6 +20,8 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
+import torch
 
 
 def _test_acos_impl(test_case, shape, device):
@@ -39,6 +41,20 @@ def _test_acos_impl(test_case, shape, device):
     )
 
 
+def acos_input_tensor(shape):
+    def generator(_):
+        low = -1
+        high = 1
+        rng = np.random.default_rng()
+        np_arr = rng.random(size=shape) * (high - low) + low
+        return (
+            flow.Tensor(np_arr, dtype=flow.float32),
+            torch.tensor(np_arr, dtype=torch.float32),
+        )
+
+    return generator
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -50,6 +66,26 @@ class TestAcos(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_acos_impl(test_case, *arg)
+
+    def test_acos_flow_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "acos",
+                device=device,
+                n=2,
+                extra_generators={"input": acos_input_tensor((3, 3))},
+            )
+
+    def test_acos_tensor_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "acos",
+                device=device,
+                n=2,
+                extra_generators={"input": acos_input_tensor((3, 3))},
+            )
 
 
 if __name__ == "__main__":
