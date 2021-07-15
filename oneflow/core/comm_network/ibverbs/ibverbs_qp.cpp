@@ -42,7 +42,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
 constexpr int kMaxSendWr = 4096;
 }
 
