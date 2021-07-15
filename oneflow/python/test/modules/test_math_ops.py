@@ -744,10 +744,6 @@ def arccosh_input_tensor(shape):
     return generator
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestArccosh(flow.unittest.TestCase):
     def test_arccosh_flow_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
@@ -803,10 +799,6 @@ def acosh_input_tensor(shape):
     return generator
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAcosh(flow.unittest.TestCase):
     def test_acosh(test_case):
         arg_dict = OrderedDict()
@@ -915,10 +907,6 @@ def _test_atan2_backward(test_case, device):
     test_y_grad()
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAtan2(flow.unittest.TestCase):
     def test_atan2_forward(test_case):
         arg_dict = OrderedDict()
