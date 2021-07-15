@@ -88,7 +88,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // Step1: ensure job is completed.
-  if (need_job_complete) { JobCompleter().Complete(job); }
+  if (need_job_complete) { CHECK_JUST(JobCompleter().Complete(job)); }
 
   // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
