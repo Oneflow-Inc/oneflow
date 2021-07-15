@@ -133,7 +133,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -511,6 +511,14 @@ jobs:
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Dataloader API test
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/dataloader \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
