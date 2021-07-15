@@ -341,6 +341,14 @@ class TestSigmoid(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(test_case, "nn.Sigmoid", device=device, n=2)
 
+    def test_sigmoid_flow_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "sigmoid", device=device, n=2)
+
+    def test_sigmoid_tensor_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "sigmoid", device=device, n=2)
+
 
 def _test_softmax(test_case, device):
     axis = 0
