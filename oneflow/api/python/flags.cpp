@@ -57,6 +57,16 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return false;
 #endif  // RPC_BACKEND_LOCAL
   });
+
+#define STRINGIFY(X) #X
+  m.def("cmake_build_type", []() {
+#ifdef ONEFLOW_CMAKE_BUILD_TYPE
+    return std::string(STRINGIFY(ONEFLOW_CMAKE_BUILD_TYPE));
+#else
+    return "Undefined";
+#endif  // RPC_BACKEND_LOCAL
+  });
+#undef STRINGIFY
 }
 
 }  // namespace oneflow
