@@ -143,6 +143,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    continue-on-error: true
     steps:
       - name: Check if secrets accessible
         env:
@@ -157,6 +158,7 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
+        timeout-minutes: 45
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
