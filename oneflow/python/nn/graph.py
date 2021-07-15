@@ -45,6 +45,7 @@ class Graph(object):
         self._optimizers = OrderedDict()
         self._is_compiled = False
         self._state_tensortuple = None
+        self._job_proto = None
 
     @property
     def name(self):
@@ -56,7 +57,7 @@ class Graph(object):
 
     @property
     def _graph_proto(self):
-        return c_api_util.GetCurrentJob()
+        return self._job_proto
 
     def build(self, *args):
         raise NotImplementedError()
@@ -102,16 +103,39 @@ class Graph(object):
         session.TryInit()
 
         with graph_build_util.graph_build_context(self.config.proto, session):
+            # Deal with input
+            lazy_args = []
+            for arg in args:
+                assert isinstance(arg, Tensor)
+                op_name = "input_" + str(len(lazy_args))
+                input_conf = (
+                    oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+                )
+                input_conf.set_in_0("eager_in_0")
+                input_conf.set_out_0("out_0")
+
+                input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+                    op_name, input_conf, ["in_0"], ["out_0"]
+                )
+                attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+
+                if not arg.is_determined:
+                    arg.determine()
+                arg_tensor_in_c = arg._local_or_consistent_tensor
+
+                lazy_arg = input_op.apply([arg_tensor_in_c], attrs)[0]
+                lazy_args.append(lazy_arg)
             # Deal with parameter and buffer
             for s in self._state():
-
                 def to_lazy():
                     # TODO(): Replace repr(s) with OpExpr(s.origin)
                     lazy_tensor = repr(s)
                     return lazy_tensor
 
                 s.set_lazy_origin_lambda(to_lazy)
-            outputs = self.build(*args)
+            
+            outputs = self.build(*lazy_args)
+            self._job_proto = c_api_util.GetCurrentJob()
 
         self._is_compiled = True
         return outputs
@@ -122,7 +146,6 @@ class Graph(object):
         ...
 
     def __call__(self, *args):
-        # TODO(xuxiaoyu)
         # if not self._is_compiled:
         #     self._compile()
         # return self._launch()
