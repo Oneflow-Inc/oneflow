@@ -323,6 +323,14 @@ class TestSqrt(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_sqrt_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "sqrt", device=device)
+
+    def test_tensor_sqrt_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "sqrt", device=device)
+
 
 def _test_rsqrt(test_case, shape, device):
     np_arr = np.random.randn(*shape)
@@ -398,6 +406,14 @@ class TestSquare(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_square_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "square", device=device)
+
+    def test_tensor_square_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "square", device=device)
+
 
 def _test_pow(test_case, shape, device):
     input = flow.Tensor(
@@ -441,6 +457,14 @@ class TestPow(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_pow_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "pow", device=device)
+
+    def test_tensor_pow_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "pow", device=device)
 
 
 def _test_asin(test_case, shape, device):

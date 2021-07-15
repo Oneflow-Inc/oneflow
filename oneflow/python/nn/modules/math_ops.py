@@ -956,9 +956,9 @@ def square_op(input):
 
 
 class Std(Module):
-    def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
+    def __init__(self, dim=None, unbiased=False, keepdim=False) -> None:
         super().__init__()
-        assert unbiased == True, "Only support 'unbiased=True' for now!"
+        assert unbiased == False, "Only support 'unbiased=False' for now!"
         self.unbiased = unbiased
         self.keepdim = keepdim
         self.dim = dim
@@ -993,7 +993,7 @@ class Std(Module):
 @oneflow_export("std")
 @register_tensor_op("std")
 @experimental_api
-def std_op(tensor, dim, unbiased=True, keepdim=False):
+def std_op(input, dim, unbiased=False, keepdim=False):
     r"""
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
@@ -1027,7 +1027,8 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
         array([0.8164968], dtype=float32)
 
     """
-    return Std(dim, unbiased, keepdim)(tensor)
+    result = Std(dim, unbiased, keepdim)(input)
+    return result
 
 
 class Pow(Module):
