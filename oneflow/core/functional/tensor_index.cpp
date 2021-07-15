@@ -60,8 +60,9 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
       if (integer < 0 && integer >= shape.At(dim)) {
-        return Error::ValueError() << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
-            << " with size " << shape.At(dim);
+        return Error::IndexError()
+               << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
+               << " with size " << shape.At(dim);
       }
       slice_indices->emplace_back(integer, integer + 1, 1);
       dim++;
