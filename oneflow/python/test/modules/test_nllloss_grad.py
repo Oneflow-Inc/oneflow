@@ -436,6 +436,7 @@ def _test_nllloss_bert_sum_backward_with_ignore_index(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

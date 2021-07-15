@@ -85,6 +85,7 @@ def _test_clamp_backward(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestClampModule(flow.unittest.TestCase):
     def test_clamp(test_case):
         arg_dict = OrderedDict()

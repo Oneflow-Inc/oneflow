@@ -102,6 +102,7 @@ def _test_atan2_backward(test_case, device):
     test_y_grad()
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

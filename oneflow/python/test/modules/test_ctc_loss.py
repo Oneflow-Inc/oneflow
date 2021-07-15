@@ -301,6 +301,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

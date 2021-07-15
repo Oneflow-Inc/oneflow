@@ -90,6 +90,7 @@ def _test_pow_backward_impl(test_case, device):
     test_x_grad_scalar()
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

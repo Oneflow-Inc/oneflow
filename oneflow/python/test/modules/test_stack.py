@@ -82,6 +82,7 @@ def _test_stack_multi_input(test_case, device, shape):
         test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

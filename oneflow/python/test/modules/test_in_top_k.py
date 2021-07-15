@@ -99,6 +99,7 @@ def _test_in_top_k_impl(test_case, shape, k, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

@@ -124,6 +124,8 @@ def node_size():
 
 @oneflow_export("unittest.env.has_world_size")
 def has_world_size():
+    if oneflow.distributed.is_multi_client():
+        return True
     if os.getenv("ONEFLOW_TEST_WORLD_SIZE"):
         assert os.getenv(
             "ONEFLOW_TEST_WORLD_SIZE"
@@ -135,6 +137,8 @@ def has_world_size():
 
 @oneflow_export("unittest.env.world_size")
 def world_size():
+    if oneflow.distributed.is_multi_client():
+        return oneflow.distributed.get_world_size()
     return int(os.getenv("ONEFLOW_TEST_WORLD_SIZE"))
 
 

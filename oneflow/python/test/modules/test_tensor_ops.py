@@ -37,6 +37,7 @@ def _test_long(test_case, shape, device, dtype):
     test_case.assertEqual(input.dtype, flow.int64)
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

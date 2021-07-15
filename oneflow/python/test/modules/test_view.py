@@ -71,6 +71,7 @@ def _test_view_backward(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

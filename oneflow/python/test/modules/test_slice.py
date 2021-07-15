@@ -125,6 +125,7 @@ def _test_slice_backward(test_case, device):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -147,6 +148,7 @@ class TestSlice(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -161,6 +163,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

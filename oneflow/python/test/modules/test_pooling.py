@@ -600,6 +600,7 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

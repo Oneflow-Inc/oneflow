@@ -47,6 +47,7 @@ def _test_tensor_argsort(test_case, data_shape, axis, descending, data_type, dev
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
