@@ -247,3 +247,12 @@ Experimental features
 .. autofunction:: oneflow.experimental.bernoulli
 .. autofunction:: oneflow.experimental.in_top_k
 .. autofunction:: oneflow.experimental.Tensor.in_top_k
+.. autofunction:: oneflow.experimental.nn.SiLU
+.. autofunction:: oneflow.experimental.silu
+.. autofunction:: oneflow.experimental.Tensor.silu
+.. autofunction:: oneflow.experimental.nn.SELU
+.. autofunction:: oneflow.experimental.selu
+.. autofunction:: oneflow.experimental.Tensor.selu
+.. autofunction:: oneflow.experimental.nn.Softsign
+.. autofunction:: oneflow.experimental.softsign
+.. autofunction:: oneflow.experimental.Tensor.softsign
