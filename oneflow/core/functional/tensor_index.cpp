@@ -56,9 +56,10 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
       CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
-      CHECK_OR_RETURN(integer >= 0 && integer < shape.At(dim))
-          << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
-          << " with size " << shape.At(dim);
+      CHECK_OR_RETURN(integer >= 0 && integer < shape.At(dim)) << Error::ValueError(
+          std::string("Index ") + std::to_string(index_item.integer())
+          + std::string(" is out of bounds for dimension ") + std::to_string(dim)
+          + std::string(" with size ") + std::to_string(shape.At(dim)));
       regular_index->emplace_back(detail::IndexItem(integer));
       dim++;
     } else if (index_item.IsEllipsis()) {
