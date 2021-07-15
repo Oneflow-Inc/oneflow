@@ -5,22 +5,8 @@ src_root = os.path.join(this_file, "..")
 src_root = os.path.abspath(src_root)
 
 
-def check_unwanted_test_scripts(python_test_dir=None):
+def check_unwanted_test_scripts(python_test_dir=None, allowed=None):
     python_test_dir = os.path.abspath(python_test_dir)
-
-    allowed = [
-        "customized",
-        "custom_ops",
-        "dataloader",
-        "deprecated",
-        "graph",
-        "models",
-        "modules",
-        "ops",
-        "serving",
-        "tensor",
-        "xrt",
-    ]
 
     allowed_full = [
         os.path.relpath(os.path.join(python_test_dir, a), src_root) for a in allowed
@@ -51,5 +37,18 @@ def check_unwanted_test_scripts(python_test_dir=None):
 
 
 check_unwanted_test_scripts(
-    python_test_dir=os.path.join(src_root, "oneflow/python/test")
+    python_test_dir=os.path.join(src_root, "oneflow/python/test"),
+    allowed=[
+        "customized",
+        "custom_ops",
+        "dataloader",
+        "deprecated",
+        "graph",
+        "models",
+        "modules",
+        "ops",
+        "serving",
+        "tensor",
+        "xrt",
+    ],
 )
