@@ -106,7 +106,7 @@ class Graph(object):
             for s in self._state():
 
                 def to_lazy():
-                    # TODO(): Replace repr with OpExpr(s.origin)
+                    # TODO(): Replace repr(s) with OpExpr(s.origin)
                     lazy_tensor = repr(s)
                     return lazy_tensor
 
@@ -385,28 +385,42 @@ class Block(object):
                 if name in _parameters:
                     p_block = _parameters[name]
                     if self._is_executing_forward:
+                        # Return Tensor for running when getattr inside it's father Block's forward()
                         if graph_build_util.lazy_mode.is_enabled():
-                            # Create and return lazy tensor
-                            with p_block.scope_context():
-                                p_block._lazy_origin = p_block._lazy_origin_lambda()
+                            if p_block._lazy_origin is None:
+                                assert p_block._lazy_origin_lambda is not None, (
+                                    repr(p_block)
+                                    + " has no lazy Tensor creation function."
+                                )
+                                # Create and return lazy tensor
+                                with p_block.scope_context():
+                                    p_block._lazy_origin = p_block._lazy_origin_lambda()
                             return p_block._lazy_origin
                         else:
                             return p_block.origin
                     else:
+                        # Return Block for config when getattr outside it's father Block's forward()
                         return p_block
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
                     b_block = _buffers[name]
                     if self._is_executing_forward:
+                        # Return Tensor for running when getattr inside it's father Block's forward()
                         if graph_build_util.lazy_mode.is_enabled():
-                            # Create and return lazy tensor
-                            with b_block.scope_context():
-                                b_block._lazy_origin = b_block._lazy_origin_lambda()
+                            if b_block._lazy_origin is None:
+                                assert b_block._lazy_origin_lambda is not None, (
+                                    repr(b_block)
+                                    + " has no lazy Tensor creation function."
+                                )
+                                # Create and return lazy tensor
+                                with b_block.scope_context():
+                                    b_block._lazy_origin = b_block._lazy_origin_lambda()
                             return b_block._lazy_origin
                         else:
                             return b_block.origin
                     else:
+                        # Return Block for config when getattr outside it's father Block's forward()
                         return b_block
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
