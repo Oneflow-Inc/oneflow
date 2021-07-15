@@ -15,6 +15,7 @@ def check_unwanted_test_scripts(python_test_dir=None, allowed=None):
         if python_test_dir in dirpath and "__pycache__" not in dirpath:
             rel_to_python_test = os.path.relpath(dirpath, python_test_dir)
             rel_to_src_root = os.path.relpath(dirpath, src_root)
+            print(f"checking: {rel_to_src_root}")
             if (
                 rel_to_python_test not in allowed
                 and rel_to_python_test != "."
@@ -42,7 +43,6 @@ check_unwanted_test_scripts(
         "customized",
         "custom_ops",
         "dataloader",
-        "deprecated",
         "graph",
         "models",
         "modules",
