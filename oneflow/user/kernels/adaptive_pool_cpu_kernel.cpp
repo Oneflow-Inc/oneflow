@@ -44,13 +44,13 @@ void ForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
-  const T* in_ptr = in_tensor->dptr<T>();
-  T* out_ptr = out_tensor->mut_dptr<T>();
-
   // TODO: Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
+
+  const T* in_ptr = in_tensor->dptr<T>();
+  T* out_ptr = out_tensor->mut_dptr<T>();
 
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
