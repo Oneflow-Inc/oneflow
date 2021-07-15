@@ -69,6 +69,8 @@ class Shape final {
 
   bool Containing(const Shape& small_shape) const;
 
+  Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
+
  private:
   void UpdateElemCnt();
 
@@ -85,8 +87,6 @@ template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
 }
-
-Maybe<Shape> SliceShape(const Shape& shape, int64_t start, int64_t end);
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);
 

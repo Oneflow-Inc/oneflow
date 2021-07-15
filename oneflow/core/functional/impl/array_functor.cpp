@@ -593,7 +593,7 @@ class TensorSetItemFunctor {
       // Remove the beginning redundant 1-dimensions.
       if (value_shape->NumAxes() > target_shape.NumAxes()) {
         int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
-        const auto& shape = JUST(SliceShape(*value_shape, start_axis, value_shape->NumAxes()));
+        const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
         value_tensor = JUST(functional::Reshape(value, *shape));
       }
       value_tensor = JUST(functional::Expand(value_tensor, target_shape));
