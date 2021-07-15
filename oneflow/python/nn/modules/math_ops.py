@@ -409,7 +409,7 @@ def _add(input, other):
     The formula is:
 
     .. math::
-        out = x + y
+        out = input + other
 
     For example:
 
@@ -420,23 +420,23 @@ def _add(input, other):
         >>> flow.enable_eager_execution()
 
         # element-wise add
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar add
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast add
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
