@@ -23,7 +23,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 from automated_test_util import *
 
-"""
+
 def _test_relu_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -256,6 +256,7 @@ class TestGelu(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_gelu_impl(test_case, *arg)
+
     def test_gelu_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(test_case, "nn.GELU", device=device, n=2)
@@ -335,6 +336,7 @@ class TestSigmoid(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
     def test_sigmoid_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(test_case, "nn.Sigmoid", device=device, n=2)
@@ -417,40 +419,28 @@ def _test_softmax_backward_1_dim(test_case, device):
     d[0].backward()
     a_grad = np.array([0.0199441700, -0.0265922267])
     test_case.assertTrue(np.allclose(a.grad.numpy(), a_grad, 1e-5, 1e-5))
-"""
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestSoftmax(flow.unittest.TestCase):
-    # def test_softmax(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["fun"] = [
-    #         _test_softmax,
-    #         _test_softmax_dim_1,
-    #         _test_softmax_dim_2,
-    #         _test_softmax_dim_3,
-    #         _test_softmax_backward_normal,
-    #         _test_softmax_backward_1_dim,
-    #     ]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
-    def test_softmax_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, 
-                                        "nn.Softmax", 
-                                        device=device, 
-                                        extra_defaults={
-                                            "dim": constant(1), 
-                                        }, 
-                                        extra_generators={
-                                            "input": random_tensor(ndim=3, dim1=4)
-                                        }, 
-                                        n=2)
+    def test_softmax(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_softmax,
+            _test_softmax_dim_1,
+            _test_softmax_dim_2,
+            _test_softmax_dim_3,
+            _test_softmax_backward_normal,
+            _test_softmax_backward_1_dim,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
-"""
+
 def _np_hardsigmoid_grad(x):
     return np.where(x > 0, np.where(x >= 1, 0, 1.0 / 6), 0)
 
@@ -480,6 +470,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_hardsigmoid_impl(test_case, *arg)
+
     def test_hardsigmoid_module_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(test_case, "nn.Hardsigmoid", device=device, n=2)
@@ -665,6 +656,10 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_logsigmoid_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.LogSigmoid", device=device, n=2)
+
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
@@ -764,6 +759,10 @@ class TestHardswishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_hardswish_impl(test_case, *arg)
 
+    def test_hardswish_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Hardswish", device=device, n=2)
+
 
 def _np_hardtanh_grad(x):
     return np.where(x <= -2.0, 0.0, np.where(x >= 2.3, 0.0, 1.0))
@@ -840,6 +839,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
                 extra_annotations={"negative_slope": float},
                 extra_generators={"negative_slope": random(0, 6)},
                 device=device,
+                n=2,
             )
 
 
@@ -879,7 +879,7 @@ class TestMishModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-"""
+
 
 if __name__ == "__main__":
     unittest.main()
