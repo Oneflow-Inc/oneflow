@@ -22,6 +22,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace boxing {
+
+namespace collective {
+
+class CollectiveBoxingExecutorPlanToken;
+
+}
+
+}  // namespace boxing
+
 class Runtime final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Runtime);
@@ -33,6 +43,9 @@ class Runtime final {
  private:
   void NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
   void DeleteAllGlobal();
+
+  std::shared_ptr<const boxing::collective::CollectiveBoxingExecutorPlanToken>
+      collective_boxing_executor_plan_token_;
 };
 
 }  // namespace oneflow
