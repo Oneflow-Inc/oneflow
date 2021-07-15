@@ -82,19 +82,12 @@ class TestErfcModule(flow.unittest.TestCase):
 
     def test_flow_erfc_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "erfc",
-                device=device
-            )
-    
+            test_flow_against_pytorch(test_case, "erfc", device=device)
+
     def test_flow_tensor_erfc_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "erfc",
-                device=device
-            )
+            test_tensor_against_pytorch(test_case, "erfc", device=device)
+
 
 if __name__ == "__main__":
     unittest.main()

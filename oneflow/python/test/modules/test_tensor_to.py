@@ -85,10 +85,9 @@ class TestTo(flow.unittest.TestCase):
     def test_flow_tensor_to_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
-                test_case,
-                "to",
-                device=device,
+                test_case, "to", device=device,
             )
+
 
 if __name__ == "__main__":
     unittest.main()

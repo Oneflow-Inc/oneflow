@@ -116,7 +116,7 @@ class TestEq(flow.unittest.TestCase):
     #                 "input": random_tensor(ndim=2, dim0=1, dim1=2),
     #                 "other": random_tensor(ndim=2, dim0=1, dim1=2)
     #             }
-    #         )         
+    #         )
 
 
 # @unittest.skipIf(
