@@ -323,10 +323,6 @@ def _test_groupnorm_backward_3d(test_case, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestGroupNorm(flow.unittest.TestCase):
     def test_groupnorm(test_case):
         arg_dict = OrderedDict()
