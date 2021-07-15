@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -30,10 +31,6 @@ struct PReLUInterpState : public OpExprInterpState {
 class PReLU : public OpExprGradFunction<PReLUInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(op_expr_helper::PReLUGradOp(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -57,11 +54,10 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
 
     in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
-      const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, {x, dy, alpha}));
+      const auto& grads = JUST(functional::PReluGrad(dy, x, alpha));
       if (ctx->input_requires_grad) { in_grads->at(0) = grads->at(0); }
       if (ctx->alpha_requires_grad) { in_grads->at(1) = grads->at(1); }
     }
-
     return Maybe<void>::Ok();
   }
 
@@ -70,6 +66,7 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
+
 
 }  // namespace one
 }  // namespace oneflow
