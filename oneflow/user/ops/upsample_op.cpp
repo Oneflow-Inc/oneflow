@@ -28,10 +28,9 @@ REGISTER_USER_OP("upsample_linear_1d")
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float scale_factor = ctx->Attr<float>("scale_factor");
 
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 3) {
-        LOG(FATAL) << "upsample_linear_1d only supports NCH";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 3)
+          << "upsample_linear_1d only supports NCH";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(scale_factor * x_desc->shape().At(2))});
       return Maybe<void>::Ok();
@@ -54,10 +53,9 @@ REGISTER_USER_OP("upsample_nearest_1d")
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float scale_factor = ctx->Attr<float>("scale_factor");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 3) {
-        LOG(FATAL) << "upsample_nearest_1d only supports NCH";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 3)
+          << "upsample_nearest_1d only supports NCH";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(scale_factor * x_desc->shape().At(2))});
       return Maybe<void>::Ok();
@@ -82,10 +80,9 @@ REGISTER_USER_OP("upsample_nearest_2d")
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 4) {
-        LOG(FATAL) << "upsample_nearest_2d only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 4)
+          << "upsample_nearest_2d only supports NCHW";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
                                     static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
@@ -112,10 +109,9 @@ REGISTER_USER_OP("upsample_bilinear_2d")
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 4) {
-        LOG(FATAL) << "upsample_bilinear_2d only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 4)
+          << "upsample_bilinear_2d only supports NCHW";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
                                     static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
@@ -142,10 +138,9 @@ REGISTER_USER_OP("upsample_bicubic_2d")
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 4) {
-        LOG(FATAL) << "upsample_bicubic_2d only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 4)
+          << "upsample_bicubic_2d only supports NCHW";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
                                     static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
@@ -204,10 +199,9 @@ REGISTER_USER_OP("upsample_nearest_3d")
       const float depth_scale = ctx->Attr<float>("depth_scale");
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 5) {
-        LOG(FATAL) << "upsample_nearest_3d only supports NCDHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 5)
+          << "upsample_nearest_3d only supports NCDHW";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(depth_scale * x_desc->shape().At(2)),
                                     static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
@@ -237,10 +231,9 @@ REGISTER_USER_OP("upsample_trilinear_3d")
       const float depth_scale = ctx->Attr<float>("depth_scale");
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 5) {
-        LOG(FATAL) << "upsample_trilinear_3d only supports NCDHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && x_desc->shape().NumAxes() == 5)
+          << "upsample_trilinear_3d only supports NCDHW";
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
                                     static_cast<int32_t>(depth_scale * x_desc->shape().At(2)),
                                     static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
@@ -315,9 +308,9 @@ REGISTER_USER_OP("upsample_nearest_2d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
-        LOG(FATAL) << "upsample_nearest_2d_grad only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 4)
+          << "upsample_nearest_2d_grad only supports NCHW";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
@@ -341,9 +334,9 @@ REGISTER_USER_OP("upsample_bilinear_2d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
-        LOG(FATAL) << "upsample_bilinear_2d_grad only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 4)
+          << "upsample_bilinear_2d_grad only supports NCHW";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
@@ -367,9 +360,9 @@ REGISTER_USER_OP("upsample_bicubic_2d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
-        LOG(FATAL) << "upsample_bicubic_2d only supports NCHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 4)
+          << "upsample_bicubic_2d_grad only supports NCHW";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
@@ -420,9 +413,9 @@ REGISTER_USER_OP("upsample_nearest_3d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 5) {
-        LOG(FATAL) << "upsample_nearest_3d_grad only supports NCDHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 5)
+          << "upsample_nearest_3d_grad only supports NCDHW";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
@@ -447,9 +440,9 @@ REGISTER_USER_OP("upsample_trilinear_3d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 5) {
-        LOG(FATAL) << "upsample_trilinear_3d_grad only supports NCDHW";
-      }
+      CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
+                      && dy_shape.NumAxes() == 5)
+          << "upsample_trilinear_3d_grad only supports NCDHW";
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
