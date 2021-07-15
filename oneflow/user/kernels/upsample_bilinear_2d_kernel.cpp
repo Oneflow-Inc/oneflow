@@ -93,15 +93,23 @@ class UpsampleBilinear2DCPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 4> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
                                                y_blob->shape().At(2), y_blob->shape().At(3));
 
+    const int64_t nbatch = x_blob->shape().At(0);
+    const int64_t channels = x_blob->shape().At(1);
     const int64_t in_height = x_blob->shape().At(2);
     const int64_t in_width = x_blob->shape().At(3);
     const int64_t out_height = y_blob->shape().At(2);
     const int64_t out_width = y_blob->shape().At(3);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
-    UpsampleBilinear2DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
-                                 in_width, scale_height, scale_width, align_corners,
-                                 y_blob->mut_dptr<T>());
+
+    if (in_height == out_height && in_width == out_width) {
+      memcpy(y_blob->mut_dptr<void>(), x_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height * in_width);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+      UpsampleBilinear2DForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
+                                   in_width, scale_height, scale_width, align_corners,
+                                   y_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -115,7 +123,6 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx_blob == nullptr) { return; }
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -128,15 +135,22 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
                                               dx_blob->shape().At(2), dx_blob->shape().At(3));
 
+    const int64_t nbatch = dx_blob->shape().At(0);
+    const int64_t channels = dx_blob->shape().At(1);
     const int64_t in_height = dx_blob->shape().At(2);
     const int64_t in_width = dx_blob->shape().At(3);
     const int64_t out_height = dy_blob->shape().At(2);
     const int64_t out_width = dy_blob->shape().At(3);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
-    UpsampleBilinearBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
-                                in_width, scale_height, scale_width, align_corners,
-                                dx_blob->mut_dptr<T>());
+    if (in_height == out_height && in_width == out_width) {
+      memcpy(dx_blob->mut_dptr<void>(), dy_blob->dptr<void>(),
+             sizeof(T) * nbatch * channels * in_height * in_width);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+      UpsampleBilinearBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
+                                  in_width, scale_height, scale_width, align_corners,
+                                  dx_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
