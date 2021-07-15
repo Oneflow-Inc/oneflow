@@ -24,38 +24,23 @@ from test_util import GenArgList
 from automated_test_util import *
 
 
-def _test_reciprocal_impl(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = flow.reciprocal(x)
-    np_out = np.reciprocal(x.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestReciprocalModule(flow.unittest.TestCase):
-    def test_reciprocal(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_reciprocal_impl(test_case, *arg)
-
-    def test_flow_reciprocal_with_random_data(test_case):
+class TestCos(flow.unittest.TestCase):
+    def test_flow_cos_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_flow_against_pytorch(
-                test_case, "reciprocal", device=device,
+                test_case, "cos", device=device,
             )
-    
-    def test_tensor_flow_reciprocal_with_random_data(test_case):
+
+    def test_tensor_flow_cos_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
-                test_case, "reciprocal", device=device,
+                test_case, "cos", device=device,
             )
+
 
 
 if __name__ == "__main__":
