@@ -34,9 +34,15 @@ def OFRecordRawDecoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return (
@@ -48,7 +54,7 @@ def OFRecordRawDecoder(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("dim1_varying_length", dim1_varying_length)
-        .Attr("auto_zero_padding", auto_zero_padding)
+        .Attr("truncate", truncate or auto_zero_padding)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1092,6 +1098,7 @@ def image_batch_align(
     shape: Sequence[int],
     dtype: flow.dtype,
     alignment: int,
+    dynamic_out: bool = True,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator aligns the shape for a batch of images.
@@ -1190,6 +1197,7 @@ def image_batch_align(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("alignment", alignment)
+        .Attr("dynamic_out", dynamic_out)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
