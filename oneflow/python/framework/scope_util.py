@@ -116,7 +116,3 @@ def ScopeContext(scope):
         assert oneflow._oneflow_internal.GetCurrentScope() is scope
         oneflow._oneflow_internal.GlobalScopeStackPop()
         assert oneflow._oneflow_internal.GetCurrentScope() is old_scope
-
-
-def to_proto(scope):
-    return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
