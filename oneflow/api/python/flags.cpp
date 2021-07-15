@@ -65,7 +65,7 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return std::string(STRINGIFY(ONEFLOW_CMAKE_BUILD_TYPE));
 #else
     return std::string("Undefined");
-#endif  // RPC_BACKEND_LOCAL
+#endif  // ONEFLOW_CMAKE_BUILD_TYPE
   });
 #undef STRINGIFY
 #undef STRINGIFY_
