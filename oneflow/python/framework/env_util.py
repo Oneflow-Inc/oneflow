@@ -65,16 +65,13 @@ def api_env_init() -> bool:
     Returns:
         bool: [description]
     """
-    return enable_if.unique([_env_init_single_client, do_nothing])()
+    return enable_if.unique([env_init, do_nothing])()
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def _env_init_single_client():
-    return env_init(False)
-
-
-def env_init(is_multi_client):
+def env_init():
     global default_env_proto
+    is_multi_client = oneflow._oneflow_internal.IsMultiClient()
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto, is_multi_client)
     c_api_util.InitEnv(default_env_proto, is_multi_client)
@@ -395,13 +392,12 @@ def GetEnvDefaultParallelConf(device_tag):
 
 
 def HasAllMultiClientEnvVars():
-    return (
-        os.getenv("MASTER_ADDR")
-        and os.getenv("MASTER_PORT")
-        and os.getenv("WORLD_SIZE")
-        and os.getenv("RANK")
-        and os.getenv("LOCAL_RANK")
-    )
+    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
+    has_all_env_vars = all([os.getenv(x) for x in env_var_names])
+    if not has_all_env_vars:
+        has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
+        assert not has_at_least_one_env_var
+    return has_all_env_vars
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
@@ -419,6 +415,15 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
     bootstrap_conf.rank = str2int(os.getenv("RANK"))
     env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
+
+    cpp_logging_conf = env_pb.CppLoggingConf()
+    if os.getenv("GLOG_log_dir"):
+        cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
+    if os.getenv("GLOG_logtostderr"):
+        cpp_logging_conf.logtostderr = os.getenv("GLOG_logtostderr")
+    if os.getenv("GLOG_logbuflevel"):
+        cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
+    env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
 device_tag2default_parallel_conf = {}

@@ -48,9 +48,7 @@ from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
-import oneflow.python.framework.session_util as session_util
 
-del session_util
 
 import oneflow.python.framework.register_python_callback
 
@@ -66,12 +64,23 @@ register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
+from oneflow.python.framework.session_util import Session
+from oneflow.python.framework.multi_client_session import MultiClientSession
 
 
 if env_util.HasAllMultiClientEnvVars():
-    env_util.env_init(True)
+    oneflow._oneflow_internal.SetIsMultiClient(True)
+    env_util.api_env_init()
+    session_ctx.OpenDefaultSession(
+        MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+    )
+    scope_util.InitScopeStack()
 else:
+    oneflow._oneflow_internal.SetIsMultiClient(False)
     env_util.init_default_physical_env()
+    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 del env_util
 
@@ -102,22 +111,29 @@ atexit.register(
 )
 del atexit
 
-import sys
+if not oneflow._oneflow_internal.IsMultiClient():
+    import sys
 
-__original_exit__ = sys.exit
+    __original_exit__ = sys.exit
 
+    def custom_exit(returncode):
+        if returncode != 0:
+            import oneflow
 
-def custom_exit(returncode):
-    if returncode != 0:
-        import oneflow
+            oneflow._oneflow_internal.MasterSendAbort()
+        __original_exit__(returncode)
 
-        oneflow._oneflow_internal.MasterSendAbort()
-    __original_exit__(returncode)
+    sys.exit = custom_exit
 
+    del custom_exit
+    del sys
 
-sys.exit = custom_exit
-
-del custom_exit
-del sys
 del absolute_import
 del oneflow
+
+import oneflow.python.framework.docstr as docstr
+from oneflow.python.framework.docstr.utils import register_docstr
+
+register_docstr()
+del register_docstr
+del docstr
