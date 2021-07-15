@@ -81,7 +81,6 @@ class PythonKernelRegistry(object):
 
 
 _python_kernel_reg = PythonKernelRegistry()
-oneflow._oneflow_internal.RegisterPyKernels(_python_kernel_reg.kernels_)
 
 
 class CustomOpModule(object):

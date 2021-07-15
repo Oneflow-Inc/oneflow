@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 from oneflow.compatible.single_client import experimental as flow
 from test_util import GenArgList
-from oneflow.compatible_single_client_python.nn.parameter import Parameter
+from oneflow.compatible.single_client.python.nn.parameter import Parameter
 
 
 def compare_with_numpy_rmsprop(

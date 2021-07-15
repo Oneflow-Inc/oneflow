@@ -49,12 +49,14 @@ from oneflow.compatible.single_client.python.framework import session_util
 from oneflow.compatible.single_client.python.framework import session_context
 from oneflow.compatible.single_client.python.framework import env_util
 
+
 oneflow._oneflow_internal.DestroyEnv()
 oneflow._oneflow_internal.SetIsMultiClient(False)
 env_util.init_default_physical_env()
 session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
 )
+oneflow._oneflow_internal.EnableEagerEnvironment(False)
 
 del env_util
 del session_util
@@ -89,6 +91,13 @@ oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(
 )
 del boxing_util
 
+# register RegisterPyKernels
+from oneflow.compatible.single_client.python.ops.util import custom_op_module
+
+oneflow._oneflow_internal.RegisterPyKernels(
+    custom_op_module._python_kernel_reg.kernels_
+)
+del custom_op_module
 
 from oneflow.compatible.single_client.python.framework import register_class_method_util
 

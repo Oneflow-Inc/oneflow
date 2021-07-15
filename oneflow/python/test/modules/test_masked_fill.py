@@ -95,10 +95,6 @@ def _test_masked_fill_backward(test_case, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMaskedFill(flow.unittest.TestCase):
     def test_masked_fill(test_case):
         arg_dict = OrderedDict()

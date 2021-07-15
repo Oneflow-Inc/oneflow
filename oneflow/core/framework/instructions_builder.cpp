@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/api/python/env/env.h"
 
 namespace oneflow {
 
@@ -1577,6 +1578,12 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
+  if (JUST(IsMultiClient())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return PhysicalRun(Build);
+  }
+
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1593,8 +1600,9 @@ Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& B
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
-                                           &instruction_list, &eager_symbol_list,
+  const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
+      std::make_shared<vm::LogicalIdGenerator>();
+  InstructionsBuilder instructions_builder(id_generator, &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
   if (debug::RecordingInstructions()) {

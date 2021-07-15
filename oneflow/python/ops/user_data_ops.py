@@ -33,9 +33,15 @@ def OFRecordRawDecoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return (
@@ -47,7 +53,7 @@ def OFRecordRawDecoder(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("dim1_varying_length", dim1_varying_length)
-        .Attr("auto_zero_padding", auto_zero_padding)
+        .Attr("truncate", truncate or auto_zero_padding)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
