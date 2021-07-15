@@ -107,7 +107,6 @@ void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jo
   oneflow::JobConfigProto job_conf;
   std::string job_conf_txt = convert_jstring_to_string(env, jstr);
   oneflow::TxtString2PbMessage(job_conf_txt, &job_conf);
-  std::cout << job_conf.job_name() << std::endl;
 
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf_cfg = std::make_shared<oneflow::cfg::JobConfigProto>();
   job_conf_cfg->InitFromProto(job_conf);
@@ -255,10 +254,10 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->CopyShapeFrom(_shape, shape_arr_length);
-    if (dtype_code == 22) {
+    if (dtype_code == kFloat) {
       of_blob->AutoMemCopyFrom((float*) _data, element_number);
     }
-    if (dtype_code == 13) {
+    if (dtype_code == kInt32) {
       of_blob->AutoMemCopyFrom((int*) _data, element_number);
     }
 
@@ -305,18 +304,18 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
     for (int i = 0; i < axes; i++) {
       element_number = element_number * shape[i];
     }
-    if (of_blob->data_type() == 2) {
+    if (of_blob->data_type() == kFloat) {
       element_number = element_number * 4;
     }
-    if (of_blob->data_type() == 5) {
+    if (of_blob->data_type() == kInt32) {
       element_number = element_number * 4;
     }
     unsigned char* data = new unsigned char[element_number];
 
-    if (of_blob->data_type() == 2) {
+    if (of_blob->data_type() == kFloat) {
       of_blob->AutoMemCopyTo((float*) data, element_number / 4);
     }
-    if (of_blob->data_type() == 5) {
+    if (of_blob->data_type() == kInt32) {
       of_blob->AutoMemCopyTo((int*) data, element_number / 4);
     }
 
@@ -348,15 +347,7 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
 
   // call nativeNewTensor
   jclass tensorClass = (*env).FindClass("org/oneflow/Tensor");
-  if (tensorClass == nullptr) {
-    std::cout << "class not found" << std::endl;
-  }
-
   jmethodID mid = (*env).GetStaticMethodID(tensorClass, "nativeNewTensor", "([B[JI)Lorg/oneflow/Tensor;");
-  if (mid == nullptr) {
-    std::cout << "method not found" << std::endl;
-  }
-
   jobject tensor = (*env).CallStaticObjectMethod(tensorClass, mid, array, shapeArray, dtype);
 
   delete []data;
