@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.test.modules.automated_test_util import test_tensor_against_pytorch
+from automated_test_util import *
 import unittest
 from collections import OrderedDict
 
@@ -207,15 +207,15 @@ class TestModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
     
     # 稍后debug
-    # def test_flow_tensor_expand_with_random_data(test_case):
-    #     for device in ["cpu", "cuda"]:
-    #         test_tensor_against_pytorch(
-    #             test_case,
-    #             "expand",
-    #             device = device,
-    #             extra_annotations={"size": int},
-    #             extra_generators={"size": (random(1, 6), random(1, 6))}
-    #         )
+    def test_flow_tensor_expand_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "expand",
+                device = device,
+                extra_annotations={"size": flow.Size},
+                extra_generators={"size": random(1, 6)}
+            )
 
 
 if __name__ == "__main__":
