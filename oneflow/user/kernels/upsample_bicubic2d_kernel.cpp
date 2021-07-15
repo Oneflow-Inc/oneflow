@@ -44,60 +44,49 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_blob->shape().At(3);
 
     if (in_height == out_height && in_width == out_width) {
+      memcpy(out_ptr, in_ptr, sizeof(T) * nbatch * channels * in_height * in_width);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
       for (int64_t output_y = 0; output_y < out_height; output_y++) {
         for (int64_t output_x = 0; output_x < out_width; output_x++) {
-          const T* in = &in_ptr[output_y * in_width + output_x];
-          T* out = &out_ptr[output_y * out_width + output_x];
-          for (int64_t c = 0; c < nbatch * channels; ++c) {
-            out[0] = in[0];
+          const T* in = in_ptr;
+          T* out = out_ptr;
+
+          const T real_x = GetAreaPixel(scale_width, output_x, align_corners, /*cubic=*/true);
+          int64_t input_x = std::floor(real_x);
+          const T t_x = real_x - input_x;
+
+          const T real_y = GetAreaPixel(scale_height, output_y, align_corners, /*cubic=*/true);
+          int64_t input_y = std::floor(real_y);
+          const T t_y = real_y - input_y;
+
+          for (int64_t c = 0; c < channels * nbatch; c++) {
+            T coefficients[4];
+
+            // Interpolate 4 times in the x direction
+            for (int64_t i = 0; i < 4; i++) {
+              coefficients[i] =
+                  cubic_interp1d<T>(upsample_get_value_bounded<T>(in, in_width, in_height,
+                                                                  input_x - 1, input_y - 1 + i),
+                                    upsample_get_value_bounded<T>(in, in_width, in_height,
+                                                                  input_x + 0, input_y - 1 + i),
+                                    upsample_get_value_bounded<T>(in, in_width, in_height,
+                                                                  input_x + 1, input_y - 1 + i),
+                                    upsample_get_value_bounded<T>(in, in_width, in_height,
+                                                                  input_x + 2, input_y - 1 + i),
+                                    t_x);
+            }
+
+            // Interpolate in the y direction using x interpolations
+            out[output_y * out_width + output_x] = cubic_interp1d<T>(
+                coefficients[0], coefficients[1], coefficients[2], coefficients[3], t_y);
+
+            // Move to next channel
             in += in_width * in_height;
             out += out_width * out_height;
           }
-        }
-      }
-      return;
-    }
-
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
-
-    for (int64_t output_y = 0; output_y < out_height; output_y++) {
-      for (int64_t output_x = 0; output_x < out_width; output_x++) {
-        const T* in = in_ptr;
-        T* out = out_ptr;
-
-        const T real_x = GetAreaPixel(scale_width, output_x, align_corners, /*cubic=*/true);
-        int64_t input_x = std::floor(real_x);
-        const T t_x = real_x - input_x;
-
-        const T real_y = GetAreaPixel(scale_height, output_y, align_corners, /*cubic=*/true);
-        int64_t input_y = std::floor(real_y);
-        const T t_y = real_y - input_y;
-
-        for (int64_t c = 0; c < channels * nbatch; c++) {
-          T coefficients[4];
-
-          // Interpolate 4 times in the x direction
-          for (int64_t i = 0; i < 4; i++) {
-            coefficients[i] =
-                cubic_interp1d<T>(upsample_get_value_bounded<T>(in, in_width, in_height,
-                                                                input_x - 1, input_y - 1 + i),
-                                  upsample_get_value_bounded<T>(in, in_width, in_height,
-                                                                input_x + 0, input_y - 1 + i),
-                                  upsample_get_value_bounded<T>(in, in_width, in_height,
-                                                                input_x + 1, input_y - 1 + i),
-                                  upsample_get_value_bounded<T>(in, in_width, in_height,
-                                                                input_x + 2, input_y - 1 + i),
-                                  t_x);
-          }
-
-          // Interpolate in the y direction using x interpolations
-          out[output_y * out_width + output_x] = cubic_interp1d<T>(
-              coefficients[0], coefficients[1], coefficients[2], coefficients[3], t_y);
-
-          // Move to next channel
-          in += in_width * in_height;
-          out += out_width * out_height;
         }
       }
     }
@@ -133,55 +122,44 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_blob->shape().At(3);
 
     if (in_height == out_height && in_width == out_width) {
+      memcpy(in_ptr, out_ptr, sizeof(T) * nbatch * channels * in_height * in_width);
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+
       for (int64_t output_y = 0; output_y < out_height; output_y++) {
         for (int64_t output_x = 0; output_x < out_width; output_x++) {
-          T* in = &in_ptr[output_y * in_width + output_x];
-          const T* out = &out_ptr[output_y * out_width + output_x];
-          for (int64_t c = 0; c < channels; ++c) {
-            in[0] = out[0];
+          T* in = in_ptr;
+          const T* out = out_ptr;
+
+          T real_x = GetAreaPixel(scale_width, output_x, align_corners, true);
+          int64_t input_x = std::floor(real_x);
+          T t_x = real_x - input_x;
+
+          T real_y = GetAreaPixel(scale_height, output_y, align_corners, true);
+          int64_t input_y = std::floor(real_y);
+          T t_y = real_y - input_y;
+
+          T x_coeffs[4];
+          T y_coeffs[4];
+
+          get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
+          get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
+
+          for (int64_t c = 0; c < channels; c++) {
+            T out_value = out[output_y * out_width + output_x];
+
+            for (int64_t i = 0; i < 4; i++) {
+              for (int64_t j = 0; j < 4; j++) {
+                upsample_increment_value_bounded<T>(in, in_width, in_height, input_x - 1 + i,
+                                                    input_y - 1 + j,
+                                                    out_value * y_coeffs[j] * x_coeffs[i]);
+              }
+            }
+
             in += in_width * in_height;
             out += out_width * out_height;
           }
-        }
-      }
-      return;
-    }
-
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
-
-    for (int64_t output_y = 0; output_y < out_height; output_y++) {
-      for (int64_t output_x = 0; output_x < out_width; output_x++) {
-        T* in = in_ptr;
-        const T* out = out_ptr;
-
-        T real_x = GetAreaPixel(scale_width, output_x, align_corners, true);
-        int64_t input_x = std::floor(real_x);
-        T t_x = real_x - input_x;
-
-        T real_y = GetAreaPixel(scale_height, output_y, align_corners, true);
-        int64_t input_y = std::floor(real_y);
-        T t_y = real_y - input_y;
-
-        T x_coeffs[4];
-        T y_coeffs[4];
-
-        get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
-        get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
-
-        for (int64_t c = 0; c < channels; c++) {
-          T out_value = out[output_y * out_width + output_x];
-
-          for (int64_t i = 0; i < 4; i++) {
-            for (int64_t j = 0; j < 4; j++) {
-              upsample_increment_value_bounded<T>(in, in_width, in_height, input_x - 1 + i,
-                                                  input_y - 1 + j,
-                                                  out_value * y_coeffs[j] * x_coeffs[i]);
-            }
-          }
-
-          in += in_width * in_height;
-          out += out_width * out_height;
         }
       }
     }

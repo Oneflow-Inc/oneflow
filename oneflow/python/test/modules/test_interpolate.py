@@ -214,6 +214,21 @@ def _test_interpolate_bicubic_2d(test_case, device):
     np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
+def _test_interpolate_bicubic_same_dim_2d(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5).reshape((1, 1, 2, 2)).astype(np.float32),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    of_out = flow.nn.functional.interpolate(input, scale_factor=1.0, mode="bicubic")
+    np_out = [[[[1.0, 2.0], [3.0, 4.0]]]]
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[1.0, 1.0], [1.0, 1.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 def _test_interpolate_trilinear_3d(test_case, device):
     input = flow.Tensor(
@@ -362,6 +377,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_interpolate_nearest_3d,
             _test_interpolate_bilinear_2d,
             _test_interpolate_bicubic_2d,
+            _test_interpolate_bicubic_same_dim_2d,
             _test_interpolate_trilinear_3d,
             _test_interpolate_trilinear_3d_align_corners,
         ]
