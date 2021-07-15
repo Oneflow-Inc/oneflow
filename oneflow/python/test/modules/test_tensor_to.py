@@ -19,6 +19,8 @@ import numpy as np
 
 import oneflow.experimental as flow
 
+from automated_test_util import *
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -80,6 +82,13 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(output.dtype, flow.int)
         test_case.assertEqual(output.device, flow.device("cuda"))
 
+    def test_flow_tensor_to_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "to",
+                device=device,
+            )
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+# from torch._C import int8
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_eq(test_case, shape, device):
@@ -101,7 +103,43 @@ class TestEq(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    # eq无反向传播
+    # def test_flow_eq_with_random_data(test_case):
+    #     for device in ["cpu", "cuda"]:
+    #         test_flow_against_pytorch(
+    #             test_case,
+    #             "eq",
+    #             device = device,
+    #             extra_annotations={
+    #                 "other": flow.Tensor
+    #             },
+    #             extra_generators={
+    #                 "input": random_tensor(ndim=2, dim0=1, dim1=2),
+    #                 "other": random_tensor(ndim=2, dim0=1, dim1=2)
+    #             }
+    #         )         
 
+
+# @unittest.skipIf(
+#     not flow.unittest.env.eager_execution_enabled(),
+#     ".numpy() doesn't work in lazy mode",
+# )
+# class TestEqual(flow.unittest.TestCase):
+#     def test_flow_equal_with_random_data(test_case):
+#         for device in ["cpu", "cuda"]:
+#             test_flow_against_pytorch(
+#                 test_case,
+#                 "equal",
+#                 device = device,
+#                 extra_annotations={
+#                     "other": flow.Tensor
+#                 },
+#                 extra_generators={
+#                     "input": random_tensor(ndim=2, dim0=1, dim1=2),
+#                     "other": random_tensor(ndim=2, dim0=1, dim1=2)
+#                 }
+#             )
 
 if __name__ == "__main__":
     unittest.main()

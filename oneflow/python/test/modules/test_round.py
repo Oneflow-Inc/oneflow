@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from automated_test_util import *
 import unittest
 from collections import OrderedDict
 
@@ -23,7 +24,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_round_impl(test_case, shape, device):
+def __impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -45,13 +46,28 @@ def _test_round_impl(test_case, shape, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestRound(flow.unittest.TestCase):
-    def test_round(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_round_impl(test_case, *arg)
-
+    # def test_round(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+    #     arg_dict["device"] = ["cpu", "cuda"]
+    #     for arg in GenArgList(arg_dict):
+    #         __impl(test_case, *arg)
+    
+    def test_flow_round_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "round",
+                device = device,
+            )
+    
+    def test_flow_tensor_round_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "round",
+                device=device
+            )
 
 if __name__ == "__main__":
     unittest.main()

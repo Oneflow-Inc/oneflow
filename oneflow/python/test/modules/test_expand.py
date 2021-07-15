@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.python.test.modules.automated_test_util import test_tensor_against_pytorch
 import unittest
 from collections import OrderedDict
 
@@ -20,6 +21,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _np_get_expand(input_shape, expand_size):
@@ -203,6 +205,17 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    # 稍后debug
+    # def test_flow_tensor_expand_with_random_data(test_case):
+    #     for device in ["cpu", "cuda"]:
+    #         test_tensor_against_pytorch(
+    #             test_case,
+    #             "expand",
+    #             device = device,
+    #             extra_annotations={"size": int},
+    #             extra_generators={"size": (random(1, 6), random(1, 6))}
+    #         )
 
 
 if __name__ == "__main__":

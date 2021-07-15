@@ -20,6 +20,7 @@ from scipy import special
 from collections import OrderedDict
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_erfc_impl(test_case, shape, device):
@@ -79,6 +80,21 @@ class TestErfcModule(flow.unittest.TestCase):
             _test_erfc_impl(test_case, *arg)
             _test_tensor_erfc_impl(test_case, *arg)
 
+    def test_flow_erfc_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "erfc",
+                device=device
+            )
+    
+    def test_flow_tensor_erfc_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "erfc",
+                device=device
+            )
 
 if __name__ == "__main__":
     unittest.main()

@@ -71,12 +71,30 @@ class TestFlattenModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     def test_with_random_data(test_case):
-        test_module_against_pytorch(
-            test_case,
-            "nn.Flatten",
-            extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
-        )
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.Flatten",
+                extra_generators={
+                    "input": random_tensor(ndim=5, dim0=1, dim1=2, dim2=3, dim3=4, dim4=5),
+                    "start_dim": random(0, 3), 
+                    "end_dim": random(3, 5), 
+                    },
+                device=device
+            )
 
+    def test_tensor_flatten_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, 
+                "flatten",
+                extra_generators={
+                    "input": random_tensor(ndim=5, dim0=1, dim1=2, dim2=3, dim3=4, dim4=5),
+                    "start_dim": random(0, 3), 
+                    "end_dim": random(3, 5), 
+                    },
+                device=device
+            )
 
 if __name__ == "__main__":
     unittest.main()

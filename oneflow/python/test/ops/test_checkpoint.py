@@ -400,7 +400,7 @@ class TestCheckpoint(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "Save and load are covered by other tests in lazy mode",
     )
-    def test_round_trip(test_case):
+    def _trip(test_case):
         _TestRoundTrip(test_case, get_large_model, flow.float)
 
     @flow.unittest.skip_unless_1n4d()

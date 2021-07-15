@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_exp_impl(test_case, shape, device):
@@ -48,6 +49,22 @@ class TestExp(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_exp_impl(test_case, *arg)
+    
+    def test_flow_exp_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "exp",
+                device=device
+            )
+    
+    def test_flow_tensor_exp_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "exp",
+                device=device
+            )
 
 
 if __name__ == "__main__":
