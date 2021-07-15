@@ -49,12 +49,13 @@ OF_DEVICE_FUNC T GetAreaPixelScale(const int64_t input_size, const int64_t outpu
 }
 
 template<typename T>
-OF_DEVICE_FUNC T GetAreaPixel(const T scale, const int64_t dst_index, bool align_corners) {
+OF_DEVICE_FUNC T GetAreaPixel(const T scale, const int64_t dst_index, bool align_corners,
+                              bool cubic = false) {
   if (align_corners) {
     return scale * dst_index;
   } else {
     T src_idx = scale * (dst_index + 0.5) - 0.5;
-    return src_idx < 0 ? static_cast<T>(0) : src_idx;
+    return (!cubic && src_idx < 0) ? static_cast<T>(0) : src_idx;
   }
 }
 
@@ -100,14 +101,9 @@ OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, 
   params->w_lerp = w1r - w1;
 }
 
-template <typename T>
-OF_DEVICE_FUNC void upsample_increment_value_bounded(
-    T* data,
-    int64_t width,
-    int64_t height,
-    int64_t x,
-    int64_t y,
-    T value) {
+template<typename T>
+OF_DEVICE_FUNC void upsample_increment_value_bounded(T* data, int64_t width, int64_t height,
+                                                     int64_t x, int64_t y, T value) {
   int64_t access_x = std::max(std::min(x, width - 1), static_cast<int64_t>(0));
   int64_t access_y = std::max(std::min(y, height - 1), static_cast<int64_t>(0));
   data[access_y * width + access_x] += value;
@@ -130,14 +126,15 @@ OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
 
 // Based on
 // https://en.wikipedia.org/wiki/Bicubic_interpolation#Bicubic_convolution_algorithm
+
 template<typename T>
 OF_DEVICE_FUNC T cubic_convolution1(const T x, const T A) {
-  return ((A + 2) * x - (A + 3)) * x * x + 1;
+  return ((A + 2.0) * x - (A + 3.0)) * x * x + 1.0;
 }
 
 template<typename T>
 OF_DEVICE_FUNC T cubic_convolution2(const T x, const T A) {
-  return ((A * x - 5 * A) * x + 8 * A) * x - 4 * A;
+  return ((A * x - 5.0 * A) * x + 8.0 * A) * x - 4.0 * A;
 }
 
 template<typename T>
@@ -158,7 +155,5 @@ template<typename T>
 OF_DEVICE_FUNC T cubic_interp1d(const T x0, const T x1, const T x2, const T x3, const T t) {
   T coeffs[4];
   get_cubic_upsample_coefficients<T>(coeffs, t);
-
-  return x0 * coeffs[0] + x1 * coeffs[1] + x2 * coeffs[2] + x3 * coeffs[3];
+  return x0 * coeffs[0] * 1.0 + x1 * coeffs[1] * 1.0 + x2 * coeffs[2] * 1.0 + x3 * coeffs[3] * 1.0;
 }
-
