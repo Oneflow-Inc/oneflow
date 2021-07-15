@@ -46,5 +46,3 @@ inside one of these directories:
 {allowed_full},
 and delete this directory: {rel_to_src_root}"""
                 )
-    # for f in filenames:
-    #     print(f)
