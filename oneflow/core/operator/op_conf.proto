@@ -220,7 +220,8 @@ message DstSubsetTickOpConf {
 }
 
 message SourceTickOpConf {
-  required string out = 1;
+  optional string wait_in = 1;
+  required string out = 2;
 }
 
 message SinkTickOpConf {

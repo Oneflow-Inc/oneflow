@@ -48,7 +48,7 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   for (const LbiAndDiffWatcherUuidPair& pair : pair_list) {
     if (lbi2diff_lbi.find(pair.lbi()) == lbi2diff_lbi.end()) { continue; }
     const auto& diff_lbi = lbi2diff_lbi.at(pair.lbi());
-    const auto& diff_lbi_op_conf = job_builder.OpConf4OpName(diff_lbi.op_name());
+    const auto& diff_lbi_op_conf = JUST(job_builder.OpConf4OpName(diff_lbi.op_name()));
     OperatorConf foreign_watcher_op;
     foreign_watcher_op.set_name("System-LbiDiffWatcher-ForeignWatcher-" + NewUniqueId());
     foreign_watcher_op.set_scope_symbol_id(diff_lbi_op_conf.scope_symbol_id());
