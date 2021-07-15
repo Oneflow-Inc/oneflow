@@ -91,6 +91,9 @@ jobs:
         if: ${{ failure() }}
         run: |
           exit 1
+      - name: Check source code (prevent creating files at wrong places)
+        run: |
+          python3 tools/check_src.py
 
   static_analysis_with_clang:
     name: Static analysis with clang
