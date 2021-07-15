@@ -62,7 +62,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
-  // todo(lambda7xx@gmail.com)
   // initialize the num_msg_in_send_bug_,which representes how many messages have been send
   // initialize the max_send_wr_in_send_buf, which  representes the maximum message that can be seed
   // initialize the use_pendding_list , which representes if we use the msg_pendding_list_ or not
