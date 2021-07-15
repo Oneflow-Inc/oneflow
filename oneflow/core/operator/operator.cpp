@@ -41,11 +41,11 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
-  if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
-  CHECK_JUST(rptr->Init(op_conf));
+  DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf->device_tag()));
+  if (IsCpuOnly(*op_conf)) { CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU); }
+  JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
 }
 
@@ -1090,15 +1090,15 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   return IsCpuOnly(op_conf.user_conf().op_type_name());
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
   std::shared_ptr<OperatorConf> dev_op_conf = std::make_shared<OperatorConf>(op_conf);
   dev_op_conf->set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  auto op = CheckAndConstructOp(dev_op_conf);
+  auto op = JUST(CheckAndConstructOp(dev_op_conf));
   return op;
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
-  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf) {
+  if (IsCpuOnly(op_conf)) { return JUST(ConstructOp(op_conf, DeviceType::kCPU)); }
   return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
 
@@ -1390,7 +1390,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
-  const auto& op = ConstructOp(op_conf);
+  const auto& op = JUST(ConstructOp(op_conf));
   JUST(CheckOpInputSignature(*op, upstream_signature));
   JUST(op->FillOpParallelDesc(parallel_desc));
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
