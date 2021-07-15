@@ -170,8 +170,6 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
 
 def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
-#endif // ONEFLOW_OPS
-
 // JIT ops
 
 def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {}
@@ -202,8 +200,15 @@ def OutlineFuseCastScale : Pat<
   (OutlineFunction $mul_op, $cast_op)
 >;
 
+#endif // ONEFLOW_OPS
+
+#ifndef ONEFLOW_PASSES
+#define ONEFLOW_PASSES
+
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }
+
+#endif // ONEFLOW_PASSES
