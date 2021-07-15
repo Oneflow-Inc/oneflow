@@ -16,7 +16,6 @@ limitations under the License.
 import unittest
 
 import oneflow.experimental as flow
-from test_util import GenArgList
 from automated_test_util import *
 
 
@@ -39,3 +38,4 @@ class TestArctan(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    
