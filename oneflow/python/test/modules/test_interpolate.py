@@ -29,8 +29,7 @@ def _test_interpolate_linear_1d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="linear")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="linear")
     np_out = [[[1.0, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.0]]]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
@@ -39,10 +38,9 @@ def _test_interpolate_linear_1d(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
     input.grad = None
-    m = flow.nn.functional.interpolate(
-        scale_factor=2.0, mode="linear", align_corners=True
+    of_out = flow.nn.functional.interpolate(
+        input, scale_factor=2.0, mode="linear", align_corners=True
     )
-    of_out = m(input)
     np_out = [
         [
             [
@@ -80,8 +78,7 @@ def _test_interpolate_nearest_1d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="nearest")
     np_out = [[[1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0]]]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
@@ -97,8 +94,7 @@ def _test_interpolate_nearest_2d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="nearest")
     np_out = np.array(
         [
             [
@@ -125,8 +121,7 @@ def _test_interpolate_nearest_3d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="nearest")
     np_out = np.array(
         [
             [
@@ -173,8 +168,7 @@ def _test_interpolate_bilinear_2d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="bilinear")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="bilinear")
     np_out = np.array(
         [
             [
@@ -201,8 +195,7 @@ def _test_interpolate_bicubic_2d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="bicubic")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="bicubic")
     np_out = np.array(
         [
             [
@@ -229,8 +222,7 @@ def _test_interpolate_trilinear_3d(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(scale_factor=2.0, mode="trilinear")
-    of_out = m(input)
+    of_out = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="trilinear")
     np_out = np.array(
         [
             [
@@ -277,10 +269,9 @@ def _test_interpolate_trilinear_3d_align_corners(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.functional.interpolate(
-        scale_factor=2.0, mode="trilinear", align_corners=True
+    of_out = flow.nn.functional.interpolate(
+        input, scale_factor=2.0, mode="trilinear", align_corners=True
     )
-    of_out = m(input)
     np_out = np.array(
         [
             [

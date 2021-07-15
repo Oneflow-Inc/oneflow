@@ -22,8 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Union, Tuple
 
 
-@oneflow_export("nn.functional.interpolate")
-@experimental_api
 class INTERPOLATE(Module):
     r"""
     """
@@ -34,6 +32,7 @@ class INTERPOLATE(Module):
         scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
         mode: str = "nearest",
         align_corners: Optional[bool] = None,
+        recompute_scale_factor: Optional[bool] = None,
     ):
         super().__init__()
         self.size = size
@@ -49,6 +48,7 @@ class INTERPOLATE(Module):
             )
 
         self.mode = mode
+        self.recompute_scale_factor = recompute_scale_factor
         if align_corners == None:
             align_corners = False
 
@@ -113,6 +113,31 @@ class INTERPOLATE(Module):
         else:
             raise ValueError("either size or scale_factor should be defined")
 
+        if self.recompute_scale_factor is None:
+            if scale_factors is not None:
+                for scale in scale_factors:
+                    if math.floor(scale) != scale:
+                        warnings.warn(
+                        "The default behavior for interpolate/upsample with float scale_factor changed "
+                        "in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, "
+                        "instead of relying on the computed output size. "
+                        "If you wish to restore the old behavior, please set recompute_scale_factor=True. "
+                        "See the documentation of nn.Upsample for details. "
+                    )
+                    break
+        elif self.recompute_scale_factor and self.size is not None:
+            raise ValueError("recompute_scale_factor is not meaningful with an explicit size.")
+
+        # "area" mode always requires an explicit size rather than scale factor.
+        # Re-use the recompute_scale_factor code path.
+        if self.mode == "area" and output_size is None:
+            self.recompute_scale_factor = True
+        
+        if self.recompute_scale_factor is not None and self.recompute_scale_factor:
+            assert scale_factors is not None
+            output_size = [int(math.floor(float(input.size(i + 2)) * scale_factors[i])) for i in range(dim)]
+            scale_factors = None
+
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow.F.upsample_nearest_1d(
                 x, scale_factor=scale_factors[0], data_format="channels_first"
@@ -135,7 +160,7 @@ class INTERPOLATE(Module):
                 data_format="channels_first",
             )
 
-        # TODO(zxy) Add adaptive_avg_pool op
+        # TODO(bbuf) Add adaptive_avg_pool op
 
         if self.mode == "area":
             raise NotImplementedError("adaptive_avg_pool1d not impleted now!")
@@ -179,6 +204,16 @@ class INTERPOLATE(Module):
                 align_corners=self.align_corners,
                 data_format="channels_first",
             )
+
+
+@oneflow_export("nn.functional.interpolate")
+@experimental_api
+def interpolate(
+    input, size=None, scale_factor=None, mode="nearest", align_corners=None, recompute_scale_factor=None
+):
+    return INTERPOLATE(
+        size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners, recompute_scale_factor=recompute_scale_factor
+    )(input)
 
 
 if __name__ == "__main__":
