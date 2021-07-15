@@ -93,8 +93,8 @@ jobs:
         run: |
           exit 1
 
-  static_analysis_with_clang_plug_in:
-    name: Static analysis with Clang plug-in
+  static_analysis_with_clang:
+    name: Static analysis with clang
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
@@ -105,54 +105,43 @@ jobs:
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Install dependencies
         run: |
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
           sudo apt-get update
-          sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev \
-            libopenblas-dev nasm python3-pip ninja-build
-      - name: Set environment variables
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
+      - name: Download OneFlow custom clang-tidy
         run: |
-          set -x
-          echo "CC=clang-12" >> $GITHUB_ENV
-          echo "CXX=clang++-12" >> $GITHUB_ENV
-      - name: Build Clang plug-in
-        run: |
-          cd tools/clang-plugin
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
-          make -j$(nproc)
-          clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
-          ldd ${clang_plugin_path}
-          echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Build (third party)
+          wget https://github.com/oneflow-inc/llvm-project/releases/download/latest/clang-tidy
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
+          chmod +x clang-tidy run-clang-tidy.py
+      - name: Build third party libs and generate files
         run: |
           mkdir build
           cd build
-          # clang-12 produces many warnings on oneflow, -w to suppress them
+          # clang-tidy has builtin includes, but doesn't work here
+          # https://clang.llvm.org/docs/LibTooling.html#builtin-includes
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON \
-            -DTHIRD_PARTY=ON \
-            -DONEFLOW=OFF \
-            -DCMAKE_CXX_FLAGS="-w"
-          cmake --build . -j$(nproc)
-      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+            -DBUILD_TESTING=ON
+          cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+      - name: Run Maybe-related checks by clang-tidy
         run: |
           cd build
+          rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_CXX_FLAGS="-isystem /usr/lib/llvm-12/lib/clang/12.0.1/include/" \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
-            -DTHIRD_PARTY=OFF \
-            -DONEFLOW=ON \
-            -DCMAKE_CXX_FLAGS="-w -fplugin=${{ env.clang_plugin_path }}"
-          cmake --build . -j$(nproc)
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    continue-on-error: true
     steps:
       - name: Check if secrets accessible
         env:
@@ -167,6 +156,7 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
+        timeout-minutes: 45
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
