@@ -11,7 +11,7 @@ set(ONEFLOW_TEST_DEPENDS
         oneflow-translate
         )
 
-add_lit_testsuite(check-oneflow "Running the oneflow regression tests"
+add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests"
         ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${ONEFLOW_TEST_DEPENDS}
         )
