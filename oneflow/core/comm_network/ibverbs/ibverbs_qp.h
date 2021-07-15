@@ -91,7 +91,6 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
-  // todo-lambda
   std::mutex num_msg_in_send_buf_mutex_;
   uint32_t num_msg_in_send_buf_;
   uint32_t max_send_wr_in_send_buf_;
