@@ -624,9 +624,9 @@ class ImageBatchAlign(Module):
 @oneflow_export("nn.OFRecordBytesDecoder")
 @experimental_api
 class OFRecordBytesDecoder(Module):
-    r"""This operator reads an OFrecord as bytes. The output might need
+    r"""This operator reads an tensor as bytes. The output might need
     further decoding process like cv2.imdecode() for images and decode("utf-8")
-    for characters.
+    for characters,depending on the downstream task.
     Args:
         blob_name: The name of the target feature in OFRecored.
         name: The name for this component in the graph?
@@ -649,5 +649,4 @@ class OFRecordBytesDecoder(Module):
 
 if __name__ == "__main__":
     import doctest
-
     doctest.testmod(raise_on_error=True)
