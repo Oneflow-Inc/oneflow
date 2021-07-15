@@ -31,19 +31,18 @@ def api_add_loss(loss: oneflow._oneflow_internal.BlobDesc) -> None:
     Args:
         loss: A `Blob`.
     """
-    return enable_if.unique([lazy_add_loss, eager_add_loss])(loss)
+    return lazy_add_loss(loss) # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
 @enable_if.condition(
-    hob.in_global_mode & hob.is_trainable & ~hob.eager_execution_enabled
+    hob.in_global_mode & hob.is_trainable
 )
 def lazy_add_loss(loss):
     c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.unique_name)
 
 
 @enable_if.condition(
-    hob.in_global_mode & hob.is_trainable & hob.eager_execution_enabled
-)
+    hob.in_global_mode & hob.is_trainable)
 def eager_add_loss(loss):
     c_api_util.CurJobBuildAndInferCtx_AddLossLogicalBlobName(loss.unique_name)
     gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(

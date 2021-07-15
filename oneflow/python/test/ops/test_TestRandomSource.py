@@ -47,12 +47,9 @@ class Test_TestRandomSource(flow.unittest.TestCase):
         rand_0_4 = np.array([0.5488136, 0.59284467, 0.7151894, 0.8442659, 0.6027634])
         test_case.assertTrue(np.allclose(y, rand_0_4, atol=1e-5, rtol=1e-5))
         y = TestSourceJob().get().numpy()
-        if flow.eager_execution_enabled():
-            rand_5_9 = rand_0_4
-        else:
-            rand_5_9 = np.array(
-                [0.85794574, 0.54488325, 0.84725183, 0.42365485, 0.62356377]
-            )
+        rand_5_9 = np.array(
+            [0.85794574, 0.54488325, 0.84725183, 0.42365485, 0.62356377]
+        )
         test_case.assertTrue(np.allclose(y, rand_5_9, atol=1e-5, rtol=1e-5))
 
 

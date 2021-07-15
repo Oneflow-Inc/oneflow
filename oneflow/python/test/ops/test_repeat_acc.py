@@ -28,8 +28,6 @@ func_config.default_data_type(flow.float)
 
 def test_repeat_acc(test_case, device_type, shape, dtype, acc_num):
     flow.clear_default_session()
-    if flow.eager_execution_enabled():
-        return
 
     @flow.global_function(function_config=func_config)
     def RepeatAccJob(a: oft.Numpy.Placeholder(shape)):

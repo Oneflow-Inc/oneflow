@@ -37,11 +37,11 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
-    api = enable_if.unique([EagerLogicalBlob, LazyRemoteBlob])
+    api = LazyRemoteBlob # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(lbi, **kw)
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def EagerLogicalBlob(lbi, **kw):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
@@ -65,7 +65,6 @@ def EagerLogicalBlob(lbi, **kw):
     return blob_type(lbi, blob_object, blob_register, job_name, distribute)
 
 
-@enable_if.condition(~hob.eager_execution_enabled)
 def LazyRemoteBlob(lbi, **kw):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name

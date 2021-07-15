@@ -23,8 +23,6 @@ import unittest
 @flow.unittest.skip_unless_1n1d()
 class Test1dSspVariableProxy(flow.unittest.TestCase):
     def test_1d_ring_buffer_Wm_assign_Wc_plus_1(test_case):
-        if flow.eager_execution_enabled():
-            return
         device_name = "0:0"
 
         flow.config.cpu_device_num(2)
@@ -68,8 +66,6 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
             test_case.assertTrue(np.allclose(x, ones + ones))
 
     def test_1d_ring_buffer_Wm_assign_Wm_plus_1(test_case):
-        if flow.eager_execution_enabled():
-            return
         device_name = "0:0"
 
         flow.config.cpu_device_num(2)
@@ -118,8 +114,6 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x, ones + ones + ones + ones))
 
     def test_add_ssp_variable_proxy(test_case):
-        if flow.eager_execution_enabled():
-            return
         device_name = "0:0"
 
         flow.config.enable_debug_mode(True)

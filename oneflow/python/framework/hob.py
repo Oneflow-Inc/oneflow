@@ -47,11 +47,6 @@ def any_global_function_defined(ctx):
     return session_ctx.GetDefaultSession().AnyGlobalFunctionDefined()
 
 
-@bool_functor("Eager execution enabled")
-def eager_execution_enabled(ctx):
-    return oneflow._oneflow_internal.EagerExecutionEnabled()
-
-
 @bool_functor("Session initialized")
 def session_initialized(ctx):
     assert in_normal_mode(ctx)
@@ -61,11 +56,8 @@ def session_initialized(ctx):
 @bool_functor("Current global function is trainable")
 def is_trainable(ctx):
     assert in_global_mode(ctx)
-    if oneflow._oneflow_internal.EagerExecutionEnabled():
-        return session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
-    else:
-        job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-        return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
+    return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 
 @bool_functor("Current machine is master")

@@ -79,8 +79,6 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const;
 };
 
-bool EagerExecutionEnabled();
-
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx();

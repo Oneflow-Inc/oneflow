@@ -118,11 +118,11 @@ def api_oneflow_function(
             function_config.function_desc.job_config_proto.mutable_train_conf()
         else:
             function_config.function_desc.job_config_proto.mutable_predict_conf()
-    api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
+    api = lazy_oneflow_function # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(function_config)
 
 
-@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def eager_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)
 
@@ -146,7 +146,7 @@ def eager_oneflow_function(function_config=FunctionConfig()):
 
 
 @enable_if.condition(
-    hob.in_normal_mode & ~hob.eager_execution_enabled & ~hob.session_initialized
+    hob.in_normal_mode & ~hob.session_initialized
 )
 def lazy_oneflow_function(function_config=FunctionConfig()):
     assert isinstance(function_config, FunctionConfig)

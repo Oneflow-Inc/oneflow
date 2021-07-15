@@ -216,7 +216,6 @@ def decode_ofrecord(
         "    3)   raw = oneflow.data.ofrecord_raw_decoder(...) to decode raw data like label; \n",
         traceback.format_stack()[-2],
     )
-    assert not flow.eager_execution_enabled()
 
     ofrecord = flow.data.ofrecord_reader(
         ofrecord_dir=ofrecord_dir,

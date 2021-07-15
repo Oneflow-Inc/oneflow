@@ -699,7 +699,7 @@ def api_slice_update(
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
+    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Blob`, whose slice will be updated.
@@ -707,23 +707,23 @@ def api_slice_update(
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        import oneflow as flow 
-        import oneflow.typing as tp 
-        import numpy as np 
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
 
 
         @flow.global_function()
-        def slice_update_job(x: tp.Numpy.Placeholder(shape=(5, )), 
-                            update: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.slice_update(x=x, 
-                                    update=update, 
+        def slice_update_job(x: tp.Numpy.Placeholder(shape=(5, )),
+                            update: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy:
+            out = flow.slice_update(x=x,
+                                    update=update,
                                     slice_tup_list=[[1, 4, 1]])
 
-            return out 
+            return out
 
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         update = np.array([2, 3, 4]).astype(np.float32)
@@ -1695,7 +1695,6 @@ def sync_dynamic_resize(
     setattr(op_conf.sync_dynamic_resize_conf, "size", size.unique_name)
     setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
     setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
-    setattr(op_conf.sync_dynamic_resize_conf, "eager", flow.eager_execution_enabled())
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)

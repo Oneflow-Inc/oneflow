@@ -31,17 +31,17 @@ import oneflow._oneflow_internal
 
 
 def GetCurJobConfigProto():
-    return enable_if.unique([GetEagerCurJobConfigProto, GetLazyCurJobConfigProto])()
+    return GetLazyCurJobConfigProto() # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def GetEagerCurJobConfigProto():
     function_desc = session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
     assert function_desc is not None
     return function_desc.job_config_proto
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def GetLazyCurJobConfigProto():
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     function_desc = session_ctx.GetDefaultSession().GetLazyFunctionDesc(job_name)

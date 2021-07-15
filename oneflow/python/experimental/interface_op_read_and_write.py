@@ -44,8 +44,6 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 def _GetInterfaceBlobObject(builder, op_name):
     sess = session_ctx.GetDefaultSession()
-    if oneflow._oneflow_internal.EagerExecutionEnabled():
-        return sess.var_name2var_blob[op_name].blob_object
     sess = session_ctx.GetDefaultSession()
     op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
     cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(

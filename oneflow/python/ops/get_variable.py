@@ -178,7 +178,7 @@ def api_get_variable(
 
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
-    api = enable_if.unique([get_lazy_variable, get_eager_variable])
+    api = get_lazy_variable # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(
         name,
         shape=shape,
@@ -193,7 +193,7 @@ def api_get_variable(
     )
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def get_eager_variable(
     name,
     shape=None,
@@ -254,7 +254,7 @@ def get_eager_variable(
     return var_blob
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def get_lazy_variable(
     name,
     shape=None,

@@ -20,7 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
 COMMAND(Global<Maybe<bool>, MultiClient>::SetAllocated(
     new Maybe<bool>(Error::ValueError("is_multi_client is not set"))));
 

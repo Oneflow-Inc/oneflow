@@ -192,23 +192,19 @@ class Session(object):
             oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto)
         self.resource_ = self.config_proto.resource
-        if not oneflow._oneflow_internal.EagerExecutionEnabled():
-            c_api_util.InitLazyGlobalSession(self.config_proto)
-            for job_name, func_desc in self.job_name2function_desc_.items():
-                compiler.Compile(self, func_desc, self.config_proto)
-                self.existed_module_names_ = set()
-            self.job_name2var_name2var_blob_ = dict()
-            assert len(self.job_name2function_desc_.items()) > 0
-            oneflow._oneflow_internal.StartLazyGlobalSession()
-            self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-            # Get latest op_attr and job_name after compiler.Compile
-            self.UpdateInfo4InterfaceOp()
-            if not config_util.api_legacy_model_io_enabled():
-                check_point_v2.Init()
-        else:
-            self.eager_config_proto_ctx_ = oneflow._oneflow_internal.LogicalConfigProtoContext(
-                str(self.config_proto)
-            )
+        c_api_util.InitLazyGlobalSession(self.config_proto)
+        for job_name, func_desc in self.job_name2function_desc_.items():
+            compiler.Compile(self, func_desc, self.config_proto)
+            self.existed_module_names_ = set()
+        self.job_name2var_name2var_blob_ = dict()
+        assert len(self.job_name2function_desc_.items()) > 0
+        oneflow._oneflow_internal.StartLazyGlobalSession()
+        self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
+        # Get latest op_attr and job_name after compiler.Compile
+        self.UpdateInfo4InterfaceOp()
+        if not config_util.api_legacy_model_io_enabled():
+            check_point_v2.Init()
+
         return self
 
     def FindOrCreateLazyBlob(self, op_name, Create):
@@ -341,15 +337,9 @@ class Session(object):
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
-        if oneflow.eager_execution_enabled():
-            self.interface_op_name2op_attr_[interface_op_name] = op_attribute
-            self.interface_op_name2job_name_[
-                interface_op_name
-            ] = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-        else:
-            # In lazy mode, we update fields with
-            # the latest info in another function after compiler.Compile
-            pass
+        # In lazy mode, we update fields with
+        # the latest info in another function after compiler.Compile
+        pass
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
@@ -464,12 +454,14 @@ def find_or_create_module(module_name, create, reuse=False):
 
 @oneflow_export("eager_execution_enabled")
 def api_eager_execution_enabled() -> bool:
-    """Get current setting of the job, if enable eager execution mode ,then return True
+    """ oneflow.eager_execution_enabled() is deprecated, and the job ALWAYS run as Lazy.
+
+        Get current setting of the job, if enable eager execution mode ,then return True
 
     Returns:
-        bool: [description]
+        bool: False, [description]
     """
-    return oneflow._oneflow_internal.EagerExecutionEnabled()
+    return False
 
 
 @oneflow_export("clear_default_session")

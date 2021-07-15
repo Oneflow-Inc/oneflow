@@ -23,8 +23,6 @@ namespace oneflow {
 class ForSession {};
 class ForEnv {};
 
-class EagerExecution {};
-
 class MultiClient {};
 
 }  // namespace oneflow

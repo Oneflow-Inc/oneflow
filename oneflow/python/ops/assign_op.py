@@ -51,13 +51,13 @@ def assign(ref, value, dtype=None, name=None):
 @oneflow_export("system.assign")
 def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
-    api = enable_if.unique([lazy_system_assign, eager_system_assign])
+    api = lazy_system_assign  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(
         ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name
     )
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
     (
@@ -74,7 +74,7 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
     return ref
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
     # no backward for assign
@@ -88,7 +88,6 @@ def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=
 
 @oneflow_export("experimental.eager_assign_121")
 def api_one_to_one_assign(ref, value):
-    assert hob.eager_execution_enabled(None)
     oneflow._oneflow_internal.deprecated.LogicalRun(
         lambda builder: builder.Build121AssignInstruction(
             ref.blob_object, value.blob_object

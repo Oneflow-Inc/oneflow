@@ -50,12 +50,12 @@ def InputOpByArgBlobDef(blob_def):
 
 
 def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
-    return enable_if.unique([LazyReturnRemoteBlob, EagerReturnRemoteBlob])(
+    return LazyReturnRemoteBlob(
         remote_blob, allow_cpu_return_op
-    )
+    ) # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     assert isinstance(
         remote_blob,
@@ -71,7 +71,7 @@ def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     if not hob.is_trainable(None):
         return remote_blob

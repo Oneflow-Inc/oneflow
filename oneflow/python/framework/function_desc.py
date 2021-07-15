@@ -79,7 +79,7 @@ class FunctionDesc(object):
             raise NotImplementedError()
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def GetCurrentEagerGlobalFunctionDesc():
     sess = session_ctx.GetDefaultSession()
     ret = sess.CurrentEagerGlobalFunctionDesc()
@@ -87,7 +87,7 @@ def GetCurrentEagerGlobalFunctionDesc():
     return ret
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def GetCurrentLazyGlobalFunctionDesc():
     sess = session_ctx.GetDefaultSession()
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
@@ -98,7 +98,5 @@ def GetCurrentLazyGlobalFunctionDesc():
 
 @oneflow_export("current_global_function_desc")
 def api_current_global_function_desc() -> FunctionDesc:
-    api_func = enable_if.unique(
-        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
-    )
+    api_func = GetCurrentLazyGlobalFunctionDesc # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api_func()

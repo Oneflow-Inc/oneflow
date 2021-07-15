@@ -41,9 +41,8 @@ def api_repeat(
     return func(input, repeat_num, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def repeat(input, repeat_num, name=None):
-    assert not oneflow.eager_execution_enabled()
     return (
         oneflow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Repeat_")
@@ -68,9 +67,8 @@ def api_acc(
     return func(one, max_acc_num, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def acc(one, max_acc_num, name=None):
-    assert not oneflow.eager_execution_enabled()
     return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
         .Op("acc")
@@ -93,9 +91,8 @@ def api_unpack(
     return func(input, unpack_num, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def unpack(input, unpack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
     return (
         oneflow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Unpack_")
@@ -118,9 +115,8 @@ def api_pack(
     return func(input, pack_num, name=name)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def pack(input, pack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
     return (
         oneflow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Pack_")
@@ -150,7 +146,7 @@ def api_parallel_cast(
     )
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     if name is None:
         name = id_util.UniqueStr("ParallelCast_")
@@ -199,7 +195,7 @@ def api_hierarchical_parallel_cast(
     )
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def hierarchical_parallel_cast(
     input, parallel_distribution, grad_mode, grad_parallel_distribution, name,
 ):

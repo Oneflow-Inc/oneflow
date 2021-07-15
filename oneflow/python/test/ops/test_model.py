@@ -22,10 +22,6 @@ import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestEagerModel(flow.unittest.TestCase):
     def test_model(test_case):
         model_dir = tempfile.TemporaryDirectory()

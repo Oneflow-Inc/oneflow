@@ -85,10 +85,7 @@ def _compare_with_np(test_case, shape, dtype, device_type, assign):
 @flow.unittest.skip_unless_2n1d()
 class TestTwoNodeAssign(flow.unittest.TestCase):
     def test_2node_assign(test_case):
-        if flow.eager_execution_enabled():
-            assign = flow.experimental.eager_assign_121
-        else:
-            assign = flow.assign
+        assign = flow.assign
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
         arg_dict["dtype"] = [flow.float, flow.double]
@@ -153,18 +150,6 @@ class TestAssign(flow.unittest.TestCase):
         arg_dict["assign"] = [flow.assign]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
-
-    def test_eager_assign_121(test_case):
-        if not flow.eager_execution_enabled():
-            return
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-        arg_dict["dtype"] = [flow.float, flow.double]
-        arg_dict["device_type"] = ["cpu"]
-        arg_dict["assign"] = [flow.experimental.eager_assign_121]
-        for arg in GenArgDict(arg_dict):
-            _compare_with_np(test_case, **arg)
-
 
 if __name__ == "__main__":
     unittest.main()

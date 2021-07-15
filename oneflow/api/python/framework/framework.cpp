@@ -39,6 +39,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("LoadSavedModel", &LoadSavedModel);
 
-  m.def("EagerExecutionEnabled", []() { return oneflow::EagerExecutionEnabled(); });
   m.def("LoadLibraryNow", &LoadLibraryNow);
 }

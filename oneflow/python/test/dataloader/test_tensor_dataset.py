@@ -32,10 +32,6 @@ class LinearNet(nn.Module):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestTensorDataset(flow.unittest.TestCase):
     def test_tensor_dataset(test_case):
 

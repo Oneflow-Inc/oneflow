@@ -51,13 +51,13 @@ class CheckPoint(object):
         r"""save a checkpoint to `path`.
 
         Args:
-            path: A `string` of path to save checkpoint. 
+            path: A `string` of path to save checkpoint.
         """
         if not config_util.api_legacy_model_io_enabled():
             check_point_v2.SaveVarDict(path)
             return
         assert type(path) is str
-        enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
+        lazy_checkpoint_save(path) # NOTE(chengcheng): global_function ONLY support Lazy run.
 
     @session_ctx.try_init_default_session
     def init(self) -> None:
@@ -65,7 +65,7 @@ class CheckPoint(object):
         """
         if not config_util.api_legacy_model_io_enabled():
             return
-        enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
+        lazy_checkpoint_init() # NOTE(chengcheng): global_function ONLY support Lazy run.
 
     @session_ctx.try_init_default_session
     def load(self, path: str) -> None:
@@ -78,36 +78,36 @@ class CheckPoint(object):
             check_point_v2.LoadVariables(check_point_v2.GetCheckpoint(path))
             return
         assert type(path) is str
-        enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
+        lazy_checkpoint_load(path) # NOTE(chengcheng): global_function ONLY support Lazy run.
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def lazy_checkpoint_save(path):
     session_ctx.GetDefaultSession().LaunchJob(_MakeModelSaveJobFunc(path))
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def lazy_checkpoint_init():
     session_ctx.GetDefaultSession().LaunchJob(_MakeModelInitJobFunc())
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def lazy_checkpoint_load(path):
     session_ctx.GetDefaultSession().LaunchJob(_MakeModelLoadJobFunc(path))
 
 
-@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def eager_checkpoint_save(path):
     op_executor.EagerSaveVariableBlob(path)
 
 
-@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def eager_checkpoint_init():
     # eager variables are initialized in oneflow.get_variable()
     pass
 
 
-@enable_if.condition(hob.in_normal_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_normal_mode)
 def eager_checkpoint_load(path):
     session_ctx.GetDefaultSession().snapshot_mgr.load(path)
 

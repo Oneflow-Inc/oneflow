@@ -102,14 +102,9 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   return Maybe<void>::Ok();
 }
 
-bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
-
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled() && !LazyMode::is_enabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  }
+  // NOTE(chengcheng): flow.global_function (job) ONLY support Lazy run now.
+  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {

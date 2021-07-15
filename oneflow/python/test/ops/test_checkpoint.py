@@ -134,8 +134,6 @@ def get_add_and_reduce_mean_model(dtype):
 
 def get_checkpoint_ready_model(model_getter, dtype):
     model = model_getter(dtype)
-    if flow.eager_execution_enabled():
-        model()
     return model
 
 
@@ -342,52 +340,28 @@ def _TestAssignmentBetweenMemory(test_case, dtype):
 
 class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_save_correctness_1node_legacy_api(test_case):
         _TestSaveCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_load_correctness_1node_legacy_api(test_case):
         _TestLoadCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_save_correctness_1node(test_case):
         for dtype in [flow.float, flow.double]:
             _TestSaveCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_save_correctness_2node(test_case):
         _TestSaveCorrectness(test_case, get_large_model, flow.float, False)
 
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_load_correctness_1node(test_case):
         for dtype in [flow.float, flow.double]:
             _TestLoadCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
     def test_load_correctness_2node(test_case):
         _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
 
@@ -396,10 +370,6 @@ class TestCheckpoint(flow.unittest.TestCase):
         _TestAssignmentBetweenMemory(test_case, flow.float)
 
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "Save and load are covered by other tests in lazy mode",
-    )
     def test_round_trip(test_case):
         _TestRoundTrip(test_case, get_large_model, flow.float)
 

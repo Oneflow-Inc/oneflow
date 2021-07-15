@@ -186,18 +186,10 @@ def np_bgemm(a, b, alpha):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFusedSelfAttentionQueryMulKeyAndValue(flow.unittest.TestCase):
     def test_fp32(self):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
-
         compare_fused_with_no_fused(self, 4, 1024, 12, 64, False)
         # compare_fused_with_no_fused(self, 1, 2, 1, 3, False)
 
     def test_fp16(self):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
-
         compare_fused_with_no_fused(self, 4, 1024, 12, 64, True)
 
 

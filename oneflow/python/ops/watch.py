@@ -127,18 +127,18 @@ def Watch(
         #        [-0.12266113 -0.12266113]]]]
 
     """
-    api = enable_if.unique([EagerWatch, LazyWatch])
+    api = LazyWatch # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(blob_watched, handler_or_prompt)
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def EagerWatch(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     local_blob = local_blob_util.MakeLocalBlob4EagerBlob(blob_watched)
     handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def LazyWatch(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
@@ -326,11 +326,11 @@ def WatchDiff(
         #                        [46. 50. 54.]]]]
 
     """
-    api = enable_if.unique([EagerWatchDiff, LazyWatchDiff])
+    api = LazyWatchDiff  # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(blob_watched, handler_or_prompt)
 
 
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def EagerWatchDiff(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     handler_uuid = str(uuid.uuid1())
@@ -344,7 +344,7 @@ def EagerWatchDiff(blob_watched, handler_or_prompt=None):
     uuid2watch_handler[handler_uuid] = lambda x: EagerWatch(x, handler_or_prompt)
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+@enable_if.condition(hob.in_global_mode)
 def LazyWatchDiff(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     if isinstance(blob_watched, ConsistentBlob):
