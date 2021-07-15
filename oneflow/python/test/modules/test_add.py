@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from scipy import special
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_add_forward(test_case, shape, device):
@@ -168,6 +170,35 @@ class TestAddModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    def test_add_against_pytorch(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["op"] = ["add"]
+        for arg in GenArgList(arg_dict):
+            arg[0](
+                test_case,
+                arg[2],
+                extra_annotations={"other": flow.Tensor},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random_tensor(ndim=2, dim0=2, dim1=3),
+                },
+                device=arg[1],
+            )
+
+            arg[0](
+                test_case,
+                arg[2],
+                extra_annotations={"other": float},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random(0, 5),
+                },
+                device=arg[1],
+            )
+
 
 
 if __name__ == "__main__":
