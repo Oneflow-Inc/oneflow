@@ -114,7 +114,6 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoSourceAndSinkTick));
   JUST(WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections));
   JUST(WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections));
-  JUST(JobPass4Name("AddMultiClientSourceAndSinkPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
