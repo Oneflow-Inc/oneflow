@@ -109,8 +109,6 @@ class Operator {
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const = 0;
 
-  Maybe<void> InferParallelSignatureIf();
-
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(

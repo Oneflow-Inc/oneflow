@@ -194,21 +194,4 @@ fs::FileSystem* LocalFS() {
   return local_fs.get();
 }
 
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
-  if (file_system_conf.has_localfs_conf()) {
-    return LocalFS();
-  } else if (file_system_conf.has_networkfs_conf()) {
-    return NetworkFS();
-  } else if (file_system_conf.has_hdfs_conf()) {
-    return HadoopFS(file_system_conf.hdfs_conf());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
-fs::FileSystem* DataFS(int64_t session_id) {
-  return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
-}
-fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow

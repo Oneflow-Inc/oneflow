@@ -1,7 +1,0 @@
-inputs:
-  name:
-    description: 'Placeholder'
-    default: 'Placeholder'
-runs:
-  using: 'docker'
-  image: 'Dockerfile'

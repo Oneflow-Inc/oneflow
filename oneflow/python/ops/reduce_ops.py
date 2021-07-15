@@ -259,6 +259,7 @@ def reduce_max(
 
         x = np.array([[2, 1, 4], [5, 3, 7], [7, 4, 9]]).astype(np.float32)
         out = reduce_max_Job(x)
+
         # out [[4.]
         #      [7.]
         #      [9.]]

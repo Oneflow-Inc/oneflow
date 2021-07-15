@@ -126,8 +126,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
 };
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_

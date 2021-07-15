@@ -174,10 +174,6 @@ fs::FileSystem* LocalFS();
 fs::FileSystem* DataFS();
 fs::FileSystem* SnapshotFS();
 
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
-fs::FileSystem* DataFS();
-fs::FileSystem* DataFS(int64_t session_id);
-fs::FileSystem* SnapshotFS();
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

@@ -34,9 +34,15 @@ def OFRecordRawDecoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return (
@@ -48,7 +54,7 @@ def OFRecordRawDecoder(
         .Attr("shape", shape)
         .Attr("data_type", dtype)
         .Attr("dim1_varying_length", dim1_varying_length)
-        .Attr("auto_zero_padding", auto_zero_padding)
+        .Attr("truncate", truncate or auto_zero_padding)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -135,6 +141,7 @@ def api_ofrecord_image_decoder_random_crop(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -253,6 +260,7 @@ def OFRecordImageDecoder(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -352,6 +360,7 @@ def api_image_resize(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -1620,6 +1629,7 @@ def object_bbox_scale(
 
             # [[[ 16.0218    32.09169   64.0872   128.36676 ]
             #   [ 24.032698  40.114613  56.076298  80.229225]]]
+
             # [[[ 24.186047  37.170418  80.       148.68167 ]
             #   [ 33.488373  52.038586  70.69768   98.5016  ]]]
 
@@ -1751,6 +1761,7 @@ def object_segm_poly_flip(
             # [[[460.  40.]
             #   [400. 160.]
             #   [380. 210.]]]
+
             # of_segm_poly_list[1]
             # [[[615.  45.]
             #   [555. 165.]

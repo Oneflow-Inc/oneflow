@@ -69,6 +69,7 @@ size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_s
                            const int32_t idx_offset) {
   int64_t col_buf_elem_cnt = 1;
   int64_t ndims = out_shape.NumAxes() - 2;
+
   for (size_t i = 0; i != ndims + 1; ++i) { col_buf_elem_cnt *= weight_shape.At(i + 1); }
   for (size_t i = 0; i != ndims; ++i) { col_buf_elem_cnt *= out_shape.At(idx_offset + i); }
   return col_buf_elem_cnt;
@@ -499,6 +500,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 

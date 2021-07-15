@@ -60,6 +60,7 @@ enum {{ util.enum_name(enm) }} : unsigned int {
   {{ util.enum_value_name(value) }} = {{ util.enum_value_number(value) }},
 {% endfor %}
 };
+
 {% endfor %}{# oneof enum #}
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}

@@ -88,10 +88,6 @@ class JobDesc final {
   // merge job_conf_ and cfg_job_conf_ after cfg::JobConfigProto taken as a constructor argument
   std::shared_ptr<cfg::JobConfigProto> cfg_job_conf_;
 };
-const JobDesc& GlobalJobDesc();
-
-bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
-bool IsPushJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info);
 
 typedef HashMap<std::string, int64_t> JobName2JobId;
 

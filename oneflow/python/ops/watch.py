@@ -304,6 +304,7 @@ def WatchDiff(
                     initializer=weight_initializer
                 )
                 output = flow.nn.conv2d(images, weight, strides=1, padding="VALID")
+
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(output)
             flow.watch_diff(weight, watch_diff_handler)
@@ -319,6 +320,7 @@ def WatchDiff(
                             [13., 14., 15., 16.]]]]).astype(np.float32)
 
             watch_conv_diff_job(x)
+
         # watch_diff_handler: [[[[14. 18. 22.]
         #                        [30. 34. 38.]
         #                        [46. 50. 54.]]]]

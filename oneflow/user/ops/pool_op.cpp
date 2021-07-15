@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/utils/pool_util.h"
-#include <numeric>
 
 namespace oneflow {
 
@@ -48,21 +47,6 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
     return Maybe<void>::Ok();
   };
-}
-
-// Logically computation cost of pool op is the product of output data amount and pool kernal data
-// amount. After adding sbp, we just divide it by parallel number if output data is splited because
-// splitting input and using partial sum for output is not a valid sbp for this op for now.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
-  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
-  double logical_computation_cost =
-      std::accumulate(pool_size.begin(), pool_size.end(),
-                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
-  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-  if (sbp_parallel.has_split_parallel()) {
-    return logical_computation_cost / ctx->parallel_desc().parallel_num();
-  }
-  return logical_computation_cost;
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
@@ -139,7 +123,6 @@ REGISTER_USER_OP("avg_pool_1d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -156,7 +139,6 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 
@@ -173,7 +155,6 @@ REGISTER_USER_OP("avg_pool_2d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -190,7 +171,6 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 
@@ -207,7 +187,6 @@ REGISTER_USER_OP("avg_pool_3d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -224,7 +203,6 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 
@@ -241,7 +219,6 @@ REGISTER_USER_OP("max_pool_1d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -258,7 +235,6 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 
@@ -275,7 +251,6 @@ REGISTER_USER_OP("max_pool_2d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -292,7 +267,6 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 
@@ -309,7 +283,6 @@ REGISTER_USER_OP("max_pool_3d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(FwInferDataType);
 
@@ -326,7 +299,6 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetGetSbpFn(BwGetSbpFn)
     .SetDataTypeInferFn(BwInferDataType);
 

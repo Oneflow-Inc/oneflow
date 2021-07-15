@@ -310,6 +310,7 @@ def main(args):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+
     @flow.global_function(function_config=func_config)
     def alexnet_eval_job():
         with flow.scope.consistent_view():

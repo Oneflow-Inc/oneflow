@@ -6,6 +6,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
 
   set(${SRCS})
   set(${HDRS})
+
   foreach(FIL ${ARGN})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)

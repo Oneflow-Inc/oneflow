@@ -396,60 +396,6 @@ void Graph<NodeType, EdgeType>::DfsForEachNode(
         if (visited_nodes.find(next) == visited_nodes.end()) { stack.push(next); }
       });
     }
-  });
-}
-
-template<typename NodeType, typename EdgeType>
-std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
-    const std::list<NodeType*>& starts,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
-    const {
-  auto ForEachStart = [&](const std::function<void(NodeType*)>& Handler) {
-    for (NodeType* start : starts) { Handler(start); }
-  };
-  return FindFirstNontrivialSCC(ForEachStart, ForEachInNode, ForEachOutNode);
-}
-
-template<typename NodeType, typename EdgeType>
-std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
-    const {
-  return FindFirstNontrivialSCC(
-      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); }, ForEachInNode,
-      ForEachOutNode);
-}
-
-template<typename NodeType, typename EdgeType>
-std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC() const {
-  return FindFirstNontrivialSCC(
-      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); },
-      &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge);
-}
-
-template<typename NodeType, typename EdgeType>
-std::unique_ptr<HashSet<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
-    const std::function<void(const std::function<void(NodeType*)>&)>& ForEachStart,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
-    const {
-  std::stack<NodeType*> stack;
-  FfsForEachNode(ForEachStart, ForEachOutNode, [&](NodeType* node) { stack.push(node); });
-  HashSet<NodeType*> visited;
-  auto ForEachUnvisitedInNode = [&](NodeType* node, const std::function<void(NodeType*)>& Handler) {
-    ForEachInNode(node, [&](NodeType* in_node) {
-      if (visited.find(in_node) == visited.end()) { Handler(in_node); }
-    });
-  };
-  while (stack.empty() == false) {
-    NodeType* cur_node = stack.top();
-    stack.pop();
-    auto ret = std::make_unique<HashSet<NodeType*>>();
-    DfsForEachNode({cur_node}, ForEachUnvisitedInNode,
-                   [&](NodeType* node) { CHECK(ret->insert(node).second); });
-    for (const auto& node : *ret) { visited.insert(node); }
-    if (ret->size() > 1) { return ret; }
   }
 }
 

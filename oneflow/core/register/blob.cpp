@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 

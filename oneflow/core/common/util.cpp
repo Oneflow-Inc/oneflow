@@ -68,10 +68,6 @@ double oneflow_cast(const std::string& s) {
 #ifdef OF_PLATFORM_POSIX
 // COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
-  return 0;
-}
-
-bool IsKernelSafeInt32(int64_t n) { return n <= GetMaxVal<int32_t>() / 2; }
 
 void AbortSignalHandler(int signal) { exit(-1); }
 

@@ -43,11 +43,7 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   if (ordinal >= 0) {
     return sorted_blob_vec_.at(ordinal).get();
   } else {
-    if (lbi.is_packed_id()) {
-      return packed_blob_.get();
-    } else {
-      return nullptr;
-    }
+    return nullptr;
   }
 }
 

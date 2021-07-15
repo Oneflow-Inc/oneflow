@@ -72,6 +72,7 @@ def tensor_buffer_to_tensor(
         out = tensor_buffer_to_tensor_Job(x)
 
         # out.shape (4, 16, 64, 64)
+
     """
     if name is None:
         name = id_util.UniqueStr("TensorBufferToTensor_")

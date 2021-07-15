@@ -1620,6 +1620,7 @@ def elem_cnt(
         out = elem_cnt_Job(x)
 
         # [array([5], dtype=int32)]
+
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -2408,6 +2409,7 @@ def masked_fill(
         mask = np.array([1, 0, 0, 1], dtype=np.int8)
 
         out = masked_fill_Job(x, mask)
+
         # output [5 2 3 5]
 
     """

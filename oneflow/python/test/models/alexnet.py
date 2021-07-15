@@ -241,6 +241,7 @@ def main(args):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
+
     @flow.global_function(function_config=func_config)
     def alexnet_eval_job():
         with flow.scope.consistent_view():

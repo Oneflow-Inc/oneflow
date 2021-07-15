@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {

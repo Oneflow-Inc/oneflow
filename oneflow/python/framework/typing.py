@@ -37,6 +37,7 @@ class Numpy(PyStructCompatibleToBlob):
         def foo() -> oneflow.typing.Numpy:
             loss = ... # your network
             return loss
+
         loss = foo() # get a numpy.ndarray
         print(loss)
     """
@@ -70,6 +71,7 @@ class ListNumpy(PyStructCompatibleToBlob):
         def foo() -> oneflow.typing.ListNumpy:
             mirrored_tensors = ... # your network
             return mirrored_tensors
+
         mirrored_tensors = foo() # get a list of numpy.ndarray
         for tensor in mirrored_tensors:
             print(mirrored_tensors)
@@ -87,6 +89,7 @@ class ListNumpy(PyStructCompatibleToBlob):
                 )
             ):
                 # your network
+
             input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
             input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
             foo([input1])

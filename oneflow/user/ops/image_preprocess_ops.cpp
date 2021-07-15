@@ -127,6 +127,7 @@ REGISTER_NO_GRAD_USER_OP("crop_mirror_normalize_from_uint8")
         return Error::CheckFailedError()
                << "output_layout: " << output_layout << " is not supported";
       }
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

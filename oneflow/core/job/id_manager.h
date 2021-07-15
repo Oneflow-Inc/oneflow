@@ -57,35 +57,6 @@ class IDMgr final {
   StreamIndexGeneratorManager* GetStreamIndexGeneratorManager() { return &stream_index_gen_mgr_; }
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
-  // GetFromThrdId
-  DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
-  int64_t GetGpuPhyIdFromThrdId(int64_t thrd_id) const;
-
-  // Runtime
-  DeviceType GetDeviceTypeFromActorId(int64_t actor_id) const;
-  int64_t MachineId4ActorId(int64_t actor_id) const;
-  int64_t ThrdId4ActorId(int64_t actor_id) const;
-
-  // local_work_stream_id
-  // for cpu:
-  //   0: the actor thread
-  // for gpu:
-  //   0: the global cuda stream
-  int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
-  int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
-  // global_thread_id
-  // sign | machine_id | thrd_id | 0  | 0
-  //  1   |     10     |   11    | 21 | 21
-  int64_t GlobalThrdId4TaskId(int64_t task_id) const;
-  // global_work_stream_id
-  // sign | machine_id | thrd_id | local_work_stream_id | 0
-  //  1   |     10     |   11    |          21          | 21
-  int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
-  int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t AllocateChainId(int64_t global_work_stream_id);
-  int64_t PickCpuThrdIdEvenly(int64_t machine_id);
-
  private:
   friend class Global<IDMgr>;
   IDMgr();

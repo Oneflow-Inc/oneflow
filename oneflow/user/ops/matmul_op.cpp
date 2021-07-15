@@ -139,29 +139,6 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   }
 }
 
-// Theoretically computation cost of matrix multiplication is the products of the number of matrix
-// and first dimension of matrix a, second dimension of matrix a, second dimension of matrix
-// b. If there is any splitting sbp parallel, the computaion cost will be divided by number of
-// machines. If we use S(1) at matrix a and S(0) at matrix b, then it will be P at output matrix.
-// This is why we don't use SbpParallel at output matrix.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
-  bool transpose_b = ctx->Attr<bool>("transpose_b");
-  Shape* shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
-  int64_t n;
-  if (!transpose_b) {
-    n = shape_b->At(shape_b->NumAxes() - 1);
-  } else {
-    n = shape_b->At(shape_b->NumAxes() - 2);
-  }
-
-  double logical_computation_cost = 4 * ctx->Shape4ArgNameAndIndex("a", 0)->elem_cnt() * n;
-  if (ctx->SbpParallel4ArgNameAndIndex("a", 0).has_split_parallel()
-      || ctx->SbpParallel4ArgNameAndIndex("b", 0).has_split_parallel()) {
-    return logical_computation_cost / ctx->parallel_desc().parallel_num();
-  } else
-    return logical_computation_cost;
-}
-
 }  // namespace
 
 REGISTER_USER_OP("matmul")
@@ -225,7 +202,6 @@ REGISTER_USER_OP("matmul")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -254,7 +230,6 @@ REGISTER_USER_OP("batch_matmul")
       }
       return Maybe<void>::Ok();
     })
-    .SetComputeComplexityFn(GetComputationCostFn);
     .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")

@@ -97,6 +97,7 @@ def deprecated_consistent_strategy():
 @oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+
     Usage::
 
         with oneflow.scope.consistent_view():

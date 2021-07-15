@@ -87,8 +87,6 @@ Maybe<void> BoxingOp::InferBlobDescs(
       CHECK_EQ_OR_RETURN(first_in_blob_shape, BlobDesc4BnInOp(ibn)->shape());
     }
   }
-  return Maybe<void>::Ok();
-}
 
   DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
   JUST(InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical));

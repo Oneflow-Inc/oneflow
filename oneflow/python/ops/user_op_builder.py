@@ -263,6 +263,7 @@ class UserOpConfBuilder(object):
 
     def Input(self, input_name, input_blob_list):
         r"""Set input blob of op
+
         Args:
             input_name (str): input name of blob
             input_blob_list : list of blobs
@@ -322,6 +323,7 @@ class UserOpConfBuilder(object):
         if attr_type_name != None:
             print(
                 """WARNING: Argument 'attr_type_name' of UserOpConfBuilder.Attr has been deprecated. Please remove it.
+
             For instance:
                 -     .Attr("out_num", out_num, "AttrTypeInt64")
                 +     .Attr("out_num", out_num)

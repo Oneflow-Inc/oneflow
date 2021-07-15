@@ -240,6 +240,7 @@ def asinh(
         out = asinh_Job(x)
 
         # out [1.4436355 1.8184464 2.0947125]
+
     """
     return build_unary_elemwise_math_op("asinh", x, name)
 

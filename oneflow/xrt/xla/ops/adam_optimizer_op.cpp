@@ -84,6 +84,7 @@ class AdamOptimizerOp : public OptimizerOp {
     v = beta2 * v + (one - beta2) * gradient * gradient;
     xla::XlaOp epsilon = xla::ScalarLike(v, epsilon_val);
     xla::XlaOp weight_decay = xla::ScalarLike(weight, weight_decay_val);
+
     ctx->SetOutput("m_0", m);
     ctx->SetOutput("v_0", v);
     ctx->SetOutput("model_0", weight - lr * (m / (xla::Sqrt(v) + epsilon) + weight_decay * weight));

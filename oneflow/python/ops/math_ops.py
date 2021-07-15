@@ -300,6 +300,7 @@ def divide(
         out = divideJob(x, y)
 
         # out [2.5, 4., 4.5]
+
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -360,6 +361,7 @@ def floor_mod(
         x = np.array([16, 9, 5]).astype(np.float32)
         y = np.array([6, 4, 3]).astype(np.float32)
         out = modJob(x, y)
+
         # out [4., 1., 2.]
 
     """
@@ -731,6 +733,7 @@ def unsorted_segment_sum(
         # out [[ 4.  6.]
         #      [12. 14.]
         #      [20. 22.]]
+
         # Example 2
         import oneflow as flow
         import numpy as np
@@ -750,6 +753,7 @@ def unsorted_segment_sum(
 
         #  out [[10. 12. 14. 16.]
         #       [ 5.  6.  7.  8.]]
+
     """
     return (
         flow.user_op_builder(
@@ -812,6 +816,7 @@ def unsorted_segment_sum_like(
 
         # out [[10. 12. 14. 16.]
         #      [ 5.  6.  7.  8.]]
+
     """
     return (
         flow.user_op_builder(
@@ -1182,6 +1187,7 @@ def greater_equal(
         x = np.array([1, 1, 4]).astype(np.float32)
         y = np.array([1, 2, 3]).astype(np.float32)
         out = greater_equal_Job(x, y)
+
         # out [1 0 1]
 
     """
@@ -1371,6 +1377,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 = 12
+
         # out [12]
 
         # Example 2:
@@ -1385,6 +1392,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
+
         # out [60]
 
     """
@@ -1751,6 +1759,7 @@ def l2_normalize(
         x = np.array([1, 2, 3, 4], dtype=np.float32)
 
         out = l2_normalize_Job(x)
+
         # out [0.18257418 0.36514837 0.5477226  0.73029673]
 
     """
@@ -1875,6 +1884,7 @@ def tril(
         x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
                       dtype=np.float32)
         out = tril_Job(x).get()
+
         # output [[1, 0, 0, 0],
                   [1, 2, 0, 0],
                   [1, 2, 3, 0],

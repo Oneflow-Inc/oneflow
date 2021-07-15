@@ -30,9 +30,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+namespace oneflow {
 
 namespace {
 
@@ -511,20 +509,6 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       proxy2node[key] = copy_task;
       return copy_task;
     }
-    return out_edges_size > 0 && out_edges_size == reachable_out_edges_size;
-  };
-}
-
-bool IsInplaceAllowed(
-    TaskNode* task_node, const std::vector<std::string>& bns,
-    const std::function<const TaskNode*(const std::string&)>& TaskNode4SoleOpName) {
-  if (task_node->exec_gph().node_num() != 1) { return false; }
-  const auto& exec_node = *task_node->exec_gph().SoleNode();
-  for (const auto& bn : bns) {
-    // TaskNode for bn is not nullptr if it's on the same device with `task_node`
-    if (TaskNode4SoleOpName(exec_node.op()->BnInOp2Lbi(bn).op_name()) == nullptr) { return false; }
-    const RegstDesc& regst_desc = *exec_node.RegstDesc4BnInOp(bn);
-    if (regst_desc.NumOfLbi() != 1) { return false; }
   }
   return nullptr;
 }
@@ -782,13 +766,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
     for (const LogicalBlobId& lbi : op_edge->lbis()) {
       BuildTaskPath(nearest_src_node, dst_node, lbi);
     }
-    return new_val;
-  };
-
-  TaskNode* cur_node = src;
-  while (cur_node->machine_id() != dst->machine_id()
-         || cur_node->MemZoneId121() != dst->MemZoneId121()) {
-    cur_node = BuildTaskStep(cur_node, dst, GetBufTask, SetBufTask, use_buf_task_node);
   }
 }
 
@@ -804,51 +781,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
     if (lbis.find(lbi) != lbis.end()) {
       BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), lbi);
     }
-  } else if (cur_node->machine_id() != dst->machine_id()) {
-    next_mem_zone_id = cpu_mem_zone_id;
-    if (!use_buf_task_node || !(next_node = GetBufTask(dst->machine_id(), next_mem_zone_id))) {
-      next_node = AddCopyCommNetTaskBetween(cur_node, dst);
-      Connect<TaskNode>(cur_node, NewEdge(), next_node);
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-  if (use_buf_task_node && (next_node != dst)) {
-    SetBufTask(next_node->machine_id(), next_mem_zone_id, next_node);
-  }
-  return next_node;
-}
-
-TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
-  if (IsInterfaceTask(task)) { return nullptr; }
-  if (IsClassRegistered<int32_t, TickTockTaskType>(task->GetTaskType())) { return nullptr; }
-  CHECK_EQ(task->device_type(), DeviceType::kGPU);
-  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
-  return copy_task;
-}
-
-TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
-  CHECK_EQ(task->device_type(), DeviceType::kGPU);
-  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), task->GpuPhyId());
-  return copy_task;
-}
-
-TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
-  CHECK_NE(src->machine_id(), dst->machine_id());
-  CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
-  return copy_comm_net_task;
-}
-
-void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
-  if (src->machine_id() == dst->machine_id()) {
-    Connect(src, NewEdge(), dst);
-  } else {
-    TaskNode* copy_comm_net_task = AddCopyCommNetTaskBetween(src, dst);
-    Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
-    Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
   }
 }
 
