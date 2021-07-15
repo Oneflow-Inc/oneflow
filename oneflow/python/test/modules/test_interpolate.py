@@ -215,7 +215,6 @@ def _test_interpolate_bicubic_2d(test_case, device):
             ]
         ]
     )
-    print(of_out.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
     of_out = of_out.sum()
     of_out.backward()

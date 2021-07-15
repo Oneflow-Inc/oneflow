@@ -53,8 +53,8 @@ __global__ void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dpt
       continue;
     }
 
-    const T* in = &in_dptr[output_y * in_width + output_x];
-    T* out = &out_dptr[output_y * out_width + output_x];
+    const T* in = in_dptr;
+    T* out = out_dptr;
 
     const T real_x = GetAreaPixel(scale_width, output_x, align_corners, /*cubic=*/true);
     int64_t input_x = std::floor(real_x);
