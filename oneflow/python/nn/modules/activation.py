@@ -13,13 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+import warnings
+from typing import Optional
+
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _check_inplace_valid
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
-from typing import Optional
 
 
 def _softmax_need_transpose(x, axis):
@@ -190,7 +193,7 @@ class ReLU6(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("ReLU6 module do not support inplace now")
+            warnings.warn("ReLU6 module do not support inplace now")
         return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
 
     def extra_repr(self):
@@ -323,7 +326,7 @@ class ELU(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("ELU module do not support inplace now")
+            warnings.warn("ELU module do not support inplace now")
         return flow.F.elu(x, alpha=self.alpha)
 
     def extra_repr(self):
@@ -521,7 +524,7 @@ class Hardsigmoid(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("Hardsigmoid module do not support inplace now")
+            warnings.warn("Hardsigmoid module do not support inplace now")
         return flow.F.hardsigmoid(x)
 
     def extra_repr(self):
@@ -813,7 +816,7 @@ class Hardswish(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("Hardswish module do not support inplace now")
+            warnings.warn("Hardswish module do not support inplace now")
         return flow.F.hardswish(x)
 
     def extra_repr(self):
@@ -896,7 +899,7 @@ class Hardtanh(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("Hardtanh module do not support inplace now")
+            warnings.warn("Hardtanh module do not support inplace now")
         return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
     def extra_repr(self):
@@ -948,7 +951,7 @@ class LeakyReLU(Module):
 
     def forward(self, x):
         if self.inplace:
-            raise RuntimeError("LeakyReLU module do not support inplace now")
+            warnings.warn("LeakyReLU module do not support inplace now")
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
     def extra_repr(self):
