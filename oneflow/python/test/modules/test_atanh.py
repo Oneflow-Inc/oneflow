@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.oneflow.python.test.modules.automated_test_util import test_flow_against_pytorch, test_tensor_against_pytorch
 import unittest
 from collections import OrderedDict
 
@@ -21,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_atanh_impl(test_case, shape, device):

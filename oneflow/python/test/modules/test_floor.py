@@ -16,10 +16,13 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+from torch._C import device
+
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_floor(test_case, shape, device):
@@ -54,6 +57,18 @@ class TestFloor(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_floor(test_case, *arg)
+
+    def test_flow_floor_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "floor", device=device,
+            )
+
+    def test_flow_tensor_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "floor", device=device,
+            )
 
 
 if __name__ == "__main__":
