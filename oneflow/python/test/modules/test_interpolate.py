@@ -214,6 +214,7 @@ def _test_interpolate_bicubic_2d(test_case, device):
     np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
+
 def _test_interpolate_bicubic_same_dim_2d(test_case, device):
     input = flow.Tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)).astype(np.float32),

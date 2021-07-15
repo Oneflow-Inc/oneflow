@@ -42,17 +42,6 @@ __global__ void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dpt
     const int output_x = idx % out_width;
     const int output_y = idx / out_width;
 
-    if (in_height == out_height && in_width == out_width) {
-      const T* in = &in_dptr[output_y * in_width + output_x];
-      T* out = &out_dptr[output_y * out_width + output_x];
-      for (int64_t c = 0; c < nbatch * channels; ++c) {
-        out[0] = in[0];
-        in += in_width * in_height;
-        out += out_width * out_height;
-      }
-      continue;
-    }
-
     const T* in = in_dptr;
     T* out = out_dptr;
 
@@ -98,16 +87,6 @@ __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dp
   CUDA_1D_KERNEL_LOOP(idx, elem_cnt) {
     const int output_x = idx % out_width;
     const int output_y = idx / out_width;
-    if (in_height == out_height && in_width == out_width) {
-      T* in = &dx_dptr[output_y * in_width + output_x];
-      const T* out = &dy_dptr[output_y * out_width + output_x];
-      for (int64_t c = 0; c < nbatch * channels; ++c) {
-        in[0] = out[0];
-        in += in_width * in_height;
-        out += out_width * out_height;
-      }
-      continue;
-    }
 
     T* in = dx_dptr;
     const T* out = dy_dptr;
@@ -169,12 +148,17 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_blob->shape().At(3);
     const int64_t elem_cnt = out_height * out_width;
 
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    if (in_height == out_height && in_width == out_width) {
+      Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<void>(), x_blob->dptr<void>(),
+                               x_blob->shape().elem_cnt() * GetSizeOfDataType(x_blob->data_type()));
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    x_blob->dptr<T>(), nbatch, channels, in_height, in_width, out_height, out_width,
-                    scale_height, scale_width, align_corners, y_blob->mut_dptr<T>());
+      RUN_CUDA_KERNEL((UpsampleBicubic2dForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                      x_blob->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
+                      out_width, scale_height, scale_width, align_corners, y_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -204,12 +188,18 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_blob->shape().At(3);
     const int64_t elem_cnt = out_height * out_width;
 
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    if (in_height == out_height && in_width == out_width) {
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), dx_blob->mut_dptr<void>(), dy_blob->dptr<void>(),
+          dy_blob->shape().elem_cnt() * GetSizeOfDataType(dy_blob->data_type()));
+    } else {
+      const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+      const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    dy_blob->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
-                    out_width, scale_height, scale_width, align_corners, dx_blob->mut_dptr<T>());
+      RUN_CUDA_KERNEL((UpsampleBicubic2dBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+                      dy_blob->dptr<T>(), nbatch, channels, in_height, in_width, out_height,
+                      out_width, scale_height, scale_width, align_corners, dx_blob->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
