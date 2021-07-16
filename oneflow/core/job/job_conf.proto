@@ -147,10 +147,16 @@ message XrtConfig {
     optional bool use_int8 = 2 [default = false];
     optional string int8_calibration = 3;
   }
+  message TVMConfig {
+    // TODO
+  }
   optional bool use_xla_jit = 1 [default = false];
   optional bool use_tensorrt = 2 [default = false];
   optional XlaConfig xla_config = 3;
   optional TensorRTConfig tensorrt_config = 4;
+  optional bool use_tvm = 5 [default = false];
+  optional TVMConfig tvm_config = 6; 
+
 }
 
 message QatConfig {

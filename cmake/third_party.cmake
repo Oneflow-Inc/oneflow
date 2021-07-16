@@ -34,6 +34,10 @@ if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
+if (WITH_TVM)
+  include(tvm)
+endif()
+
 include(hwloc)
 
 option(CUDA_STATIC "" ON)
@@ -204,6 +208,11 @@ if (NOT WITH_XLA)
   list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${RE2_INCLUDE_DIR})
 endif()
 
+# (TODO:) tvm without cuda?
+if(WITH_TVM)
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${TVM_INCLUDE_DIR})
+endif()
+
 if (BUILD_CUDA)
   include(cub)
   include(nccl)
@@ -255,6 +264,10 @@ endif()
 
 if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
+endif()
+
+if(WITH_TVM)
+  list(APPEND oneflow_third_party_libs ${TVM_LIBRARIES})
 endif()
 
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
