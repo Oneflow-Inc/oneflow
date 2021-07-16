@@ -137,14 +137,15 @@ Maybe<void> GetSliceGradOpSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                    const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+                                           const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-  CHECK_NOTNULL(dy_modifier);
+  CHECK_NOTNULL_OR_RETURN(dy_modifier);
   dy_modifier->set_requires_grad(false);
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-  CHECK_NOTNULL(like_modifier);
+  CHECK_NOTNULL_OR_RETURN(like_modifier);
   like_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
@@ -269,14 +270,15 @@ Maybe<void> GetLogicalSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                             const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InferLogicalSliceAssignInputArgModifier(
+    user_op::GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
-  CHECK(ref_modifier != nullptr);
+  CHECK_OR_RETURN(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
   user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
-  CHECK(value_modifier != nullptr);
+  CHECK_OR_RETURN(value_modifier != nullptr);
   value_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
