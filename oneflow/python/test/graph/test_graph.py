@@ -319,35 +319,6 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         z = g._compile()
 
-    def test_forward_graph(test_case):
-        class CustomModule0(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.relu = flow.nn.ReLU()
-
-            def forward(self, x):
-                #x = self.relu(x)
-                return x
-
-        m = CustomModule0()
-
-        class CustomGraph0(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.m = m
-
-            def build(self, x):
-                out = self.m(x)
-                return out
-
-        g = CustomGraph0()
-        x = flow.Tensor(1, 1, 10, 10)
-        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        print(repr(g))
-        z = g._compile(x)
-        print("type(z)", type(z))
-        print("graph proto", g._graph_proto)
-
 
 if __name__ == "__main__":
     unittest.main()

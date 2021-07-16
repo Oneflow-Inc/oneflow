@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict
 from typing import Union, Optional, Iterator, Set
+import inspect
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -121,19 +122,35 @@ class Graph(object):
 
                 if not arg.is_determined:
                     arg.determine()
-                arg_tensor_in_c = arg._local_or_consistent_tensor
+                tensor_in_c = arg._local_or_consistent_tensor
 
-                lazy_arg = input_op.apply([arg_tensor_in_c], attrs)[0]
+                lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
                 lazy_args.append(lazy_arg)
             # Deal with parameter and buffer
             for s in self._state():
-                def to_lazy():
-                    # TODO(): Replace repr(s) with OpExpr(s.origin)
-                    lazy_tensor = repr(s)
+
+                def to_lazy(state_block):
+                    op_name = state_block.name_prefix + state_block.name
+                    var_conf = (
+                        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
+                    )
+                    var_conf.set_in_0("eager_in_0")
+                    var_conf.set_out_0("out_0")
+
+                    var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
+                        op_name, var_conf, ["in_0"], ["out_0"]
+                    )
+                    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+
+                    if not state_block.origin.is_determined:
+                        state_block.origin.determine()
+                    tensor_in_c = state_block.origin._local_or_consistent_tensor
+
+                    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
                     return lazy_tensor
 
                 s.set_lazy_origin_lambda(to_lazy)
-            
+
             outputs = self.build(*lazy_args)
             self._job_proto = c_api_util.GetCurrentJob()
 
@@ -417,7 +434,9 @@ class Block(object):
                                 )
                                 # Create and return lazy tensor
                                 with p_block.scope_context():
-                                    p_block._lazy_origin = p_block._lazy_origin_lambda()
+                                    p_block._lazy_origin = p_block._lazy_origin_lambda(
+                                        p_block
+                                    )
                             return p_block._lazy_origin
                         else:
                             return p_block.origin
@@ -438,7 +457,9 @@ class Block(object):
                                 )
                                 # Create and return lazy tensor
                                 with b_block.scope_context():
-                                    b_block._lazy_origin = b_block._lazy_origin_lambda()
+                                    b_block._lazy_origin = b_block._lazy_origin_lambda(
+                                        b_block
+                                    )
                             return b_block._lazy_origin
                         else:
                             return b_block.origin
