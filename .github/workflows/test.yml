@@ -140,6 +140,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    continue-on-error: true
     steps:
       - name: Check if secrets accessible
         env:
@@ -154,6 +155,7 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
+        timeout-minutes: 45
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
@@ -516,6 +518,14 @@ jobs:
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Graph API test
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test

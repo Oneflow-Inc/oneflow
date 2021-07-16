@@ -59,25 +59,26 @@ REGISTER_NO_GRAD_USER_OP("moving_average_min_max_observer")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
-      CHECK(in != nullptr);
+      CHECK_OR_RETURN(in != nullptr);
       in->set_requires_grad(false);
 
       user_op::InputArgModifier* current_train_step =
           GetInputArgModifierFn("current_train_step", 0);
-      CHECK(current_train_step != nullptr);
+      CHECK_OR_RETURN(current_train_step != nullptr);
       current_train_step->set_requires_grad(false);
 
       user_op::InputArgModifier* moving_max = GetInputArgModifierFn("moving_max", 0);
-      CHECK(moving_max != nullptr);
+      CHECK_OR_RETURN(moving_max != nullptr);
       moving_max->set_requires_grad(false);
       moving_max->set_is_mutable(true);
 
       user_op::InputArgModifier* moving_min = GetInputArgModifierFn("moving_min", 0);
-      CHECK(moving_min != nullptr);
+      CHECK_OR_RETURN(moving_min != nullptr);
       moving_min->set_requires_grad(false);
       moving_min->set_is_mutable(true);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // NOTE(Liang Depeng): all inputs need to be broadcast in order to accuratly calculate the
