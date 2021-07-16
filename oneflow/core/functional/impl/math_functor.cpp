@@ -386,6 +386,19 @@ class ClipByScalarMaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DotFunctor {
+ public:
+  DotFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dot").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -405,6 +418,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ClipByScalarMinGradFunctor>("ClipByScalarMinGrad");
   m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
   m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
+  m.add_functor<impl::DotFunctor>("Dot");
 };
 
 }  // namespace functional

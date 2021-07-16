@@ -281,4 +281,14 @@ void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float16 a
   }
 }
 
+void BlasIf<DeviceType::kGPU>::OFcuBlasSdot(DeviceCtx* ctx, const int n, const float* x, int incx,
+                                            const float* y, int incy, float* out) {
+  OF_CUBLAS_CHECK(cublasSdot(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy, out));
+}
+
+void BlasIf<DeviceType::kGPU>::OFcuBlasDdot(DeviceCtx* ctx, const int n, const double* x, int incx,
+                                            const double* y, int incy, double* out) {
+  OF_CUBLAS_CHECK(cublasDdot(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy, out));
+}
+
 }  // namespace oneflow
