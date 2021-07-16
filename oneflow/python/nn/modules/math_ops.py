@@ -404,12 +404,12 @@ class BroadcastAdd(Module):
 @oneflow_export("add")
 @register_tensor_op("add")
 @experimental_api
-def _add(x, y):
+def _add(input, other):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
-        out = x + y
+        out = input + other
 
     For example:
 
@@ -420,40 +420,40 @@ def _add(x, y):
         >>> flow.enable_eager_execution()
 
         # element-wise add
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar add
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast add
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(input, other).numpy()
         >>> out.shape
         (2, 3)
 
     """
 
-    if isinstance(x, (int, float)):
-        return ScalarAdd(x)(y)
-    elif isinstance(y, (int, float)):
-        return ScalarAdd(y)(x)
-    elif x.shape == y.shape:
-        return ElementwiseAdd()(x, y)
-    elif x.shape == (1,):
-        return ScalarAddByTensor()(y, x)
-    elif y.shape == (1,):
-        return ScalarAddByTensor()(x, y)
+    if isinstance(input, (int, float)):
+        return ScalarAdd(input)(other)
+    elif isinstance(other, (int, float)):
+        return ScalarAdd(other)(input)
+    elif input.shape == other.shape:
+        return ElementwiseAdd()(input, other)
+    elif input.shape == (1,):
+        return ScalarAddByTensor()(other, input)
+    elif other.shape == (1,):
+        return ScalarAddByTensor()(input, other)
     else:
-        return BroadcastAdd()(x, y)
+        return BroadcastAdd()(input, other)
 
 
 @register_tensor_op("add_")

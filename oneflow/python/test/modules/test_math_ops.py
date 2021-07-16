@@ -173,7 +173,18 @@ class TestSin(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
+    
+    def test_flow_sin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "sin", device=device,
+            )
+    
+    def test_tensor_flow_sin_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "sin", device=device,
+            )
 
 def _test_cos(test_case, shape, device):
     input = flow.Tensor(
@@ -213,6 +224,18 @@ class TestCos(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    def test_flow_cos_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "cos", device=device,
+            )
+    
+    def test_tensor_flow_cos_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "cos", device=device,
+            )
 
 
 def _test_log(test_case, shape, device):
@@ -263,7 +286,18 @@ class TestLog(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
+    
+    def test_flow_log_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "log", device=device,
+            )
+    
+    def test_tensor_flow_log_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "log", device=device,
+            )
 
 def _test_std(test_case, shape, device):
     np_arr = np.random.randn(*shape)
