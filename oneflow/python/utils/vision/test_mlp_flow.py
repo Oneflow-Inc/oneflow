@@ -18,16 +18,16 @@ import time
 
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-import transforms as transforms
+
 import oneflow.python.utils.data as data
-from datasets.mnist import FashionMNIST
+import oneflow.python.utils.vision.datasets as datasets
+import oneflow.python.utils.vision.transforms as transforms
 
 flow.enable_eager_execution()
 
-# ref: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
 
-
-def load_data_fashion_mnist(batch_size, resize=None, root="./test/FashionMNIST"):
+# reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
+def load_data_fashion_mnist(batch_size, resize=None, root="./data/fashion-mnist"):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
     transformer = []
@@ -36,10 +36,10 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./test/FashionMNIST")
     transformer += [transforms.ToTensor()]
     transformer = transforms.Compose(transformer)
 
-    mnist_train = FashionMNIST(
+    mnist_train = datasets.FashionMNIST(
         root=root, train=True, transform=transformer, download=True
     )
-    mnist_test = FashionMNIST(
+    mnist_test = datasets.FashionMNIST(
         root=root, train=False, transform=transformer, download=True
     )
     num_workers = 0
@@ -71,7 +71,6 @@ def get_fashion_mnist_labels(labels):
 
 num_inputs, num_outputs, num_hiddens = 784, 10, 256
 
-
 class FlattenLayer(nn.Module):
     def __init__(self):
         super(FlattenLayer, self).__init__()
@@ -80,7 +79,6 @@ class FlattenLayer(nn.Module):
         res = x.reshape(shape=[x.shape[0], -1])
         return res
 
-
 net = nn.Sequential(
     FlattenLayer(),
     nn.Linear(num_inputs, num_hiddens),
@@ -88,8 +86,7 @@ net = nn.Sequential(
     nn.Linear(num_hiddens, num_outputs),
 )
 
-for params in net.parameters():
-    nn.init.normal_(params, mean=0, std=0.01)
+
 
 device = flow.device("cuda")
 net.to(device)
@@ -139,8 +136,6 @@ def train(
     loss,
     num_epochs,
     batch_size,
-    params=None,
-    lr=None,
     optimizer=None,
 ):
     for epoch in range(num_epochs):
@@ -174,4 +169,4 @@ def train(
         )
 
 
-train(net, train_iter, test_iter, loss, num_epochs, batch_size, None, None, optimizer)
+train(net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer)

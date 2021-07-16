@@ -13,12 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import math
-import numbers
-import random
 import warnings
 from collections.abc import Sequence
-from typing import Tuple, List, Optional
 
 from . import functional as F
 from .functional import InterpolationMode, _interpolation_modes_from_int

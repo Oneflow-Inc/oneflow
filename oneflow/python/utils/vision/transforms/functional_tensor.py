@@ -13,12 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import warnings
+import oneflow as flow
+from oneflow.python.framework.tensor import Tensor
 
-import oneflow.experimental as flow
-from oneflow.experimental import Tensor
-
-# from oneflow.experimental.nn.functional import grid_sample, conv2d, interpolate, pad as flow_pad
 from typing import Optional, Tuple, List
 
 
@@ -128,7 +125,7 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
     raise NotImplementedError(
         "Not support for now because nn.functional.interpolate is not ready!"
     )
-    # img = interpolate(img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners)
+    img = interpolate(img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners)
 
     if interpolation == "bicubic" and out_dtype == flow.uint8:
         img = img.clamp(min=0, max=255)

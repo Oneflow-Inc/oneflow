@@ -18,28 +18,60 @@ import time
 
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-import transforms as transforms
+
 import oneflow.python.utils.data as data
-from datasets.mnist import FashionMNIST
+import oneflow.python.utils.vision.datasets as datasets
+import oneflow.python.utils.vision.transforms as transforms
+import oneflow.experimental.optim as optim
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
 flow.enable_eager_execution()
 
+class LeNet(nn.Module):
+    def __init__(self):
+        super(LeNet, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(1, 6, kernel_size=5),  # in_channels, out_channels, kernel_size
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # kernel_size, stride
+            nn.Conv2d(6, 16, 5),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.fc = nn.Sequential(
+            nn.Linear(16 * 4 * 4, 120),
+            nn.ReLU(),
+            nn.Linear(120, 84),
+            nn.ReLU(),
+            nn.Linear(84, 10),
+        )
 
-def load_data_fashion_mnist(batch_size, resize=None, root="./test/FashionMNIST"):
+    def forward(self, img):
+        feature = self.conv(img)
+        feature = feature.reshape(shape=[img.shape[0], -1])
+        output = self.fc(feature)
+        return output
+
+
+device = flow.device("cuda")
+net = LeNet()
+net.to(device)
+
+
+def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-mnist"):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
     trans = []
     if resize:
-        trans.append(transforms.Resize(size=resize))
+        trans.append(transforms.Resize(resize))
     trans.append(transforms.ToTensor())
     transform = transforms.Compose(trans)
 
-    mnist_train = FashionMNIST(
+    mnist_train = datasets.FashionMNIST(
         root=root, train=True, transform=transform, download=True
     )
-    mnist_test = FashionMNIST(
+    mnist_test = datasets.FashionMNIST(
         root=root, train=False, transform=transform, download=True
     )
     num_workers = 0
@@ -53,127 +85,62 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./test/FashionMNIST")
     return train_iter, test_iter
 
 
-class LeNet(nn.Module):
-    def __init__(self):
-        super(LeNet, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(1, 6, 5),  # in_channels, out_channels, kernel_size
-            nn.Sigmoid(),
-            nn.MaxPool2d(2, 2),  # kernel_size, stride
-            nn.Conv2d(6, 16, 5),
-            nn.Sigmoid(),
-            nn.MaxPool2d(2, 2),
-        )
-        self.fc = nn.Sequential(
-            nn.Linear(16 * 4 * 4, 120),
-            nn.Sigmoid(),
-            nn.Linear(120, 84),
-            nn.Sigmoid(),
-            nn.Linear(84, 10),
-        )
-
-    def forward(self, img):
-        feature = self.conv(img)
-        output = self.fc(feature.reshape(shape=[img.shape[0], -1]))
-        return output
-
-
-# define LeNet module
-class LeNet5(nn.Module):
-    def __init__(self, n_classes):
-        super(LeNet5, self).__init__()
-        self.feature_extractor = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5, stride=1),
-            nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1),
-            nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
-            nn.Tanh(),
-        )
-        self.classifier = nn.Sequential(
-            nn.Linear(in_features=120, out_features=84),
-            nn.Tanh(),
-            nn.Linear(in_features=84, out_features=n_classes),
-        )
-        self.m1 = nn.Linear(in_features=120, out_features=84)
-        self.m2 = nn.Tanh()
-        self.m3 = nn.Linear(in_features=84, out_features=n_classes)
-
-    def forward(self, x):
-        x = self.feature_extractor(x)
-        x = flow.flatten(x, 1)
-        logits = self.classifier(x)
-        probs = flow.softmax(logits, dim=1)
-        return logits
-
-
-# network = LeNet()
-network = LeNet5(n_classes=10)
-
-for params in network.parameters():
-    nn.init.normal_(params, mean=0, std=0.01)
-
-device = flow.device("cuda")  # segmentfault in cpu mode
-network.to(device)
-
-
-batch_size = 128
-train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=32)
+batch_size = 256
+train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
 loss = nn.CrossEntropyLoss()
 loss.to(device)
 
-lr, num_epochs = 0.001, 10
-optimizer = flow.optim.Adam(network.parameters(), lr=lr)
-
-
-def evaluate_accuracy(net, device, data_iter):
+def evaluate_accuracy(data_iter, net, device=None):
     if device is None and isinstance(net, nn.Module):
         device = list(net.parameters())[0].device
     acc_sum, n = 0.0, 0
     with flow.no_grad():
         for X, y in data_iter:
-            X = X.to(device=device, dtype=flow.float32)
-            y = y.to(device=device, dtype=flow.int64)
+            X = flow.tensor(X.numpy())
+            y = flow.tensor(y.numpy())
+            X = X.to(device=device)
+            y = y.to(device=device)
             if isinstance(net, nn.Module):
                 net.eval()  #  evaluating mode
-                acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
+                acc_sum += (
+                    (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
+                )
                 net.train()  # turn to training mode
             else:
                 if "is_training" in net.__code__.co_varnames:
                     # set is_training = False
                     acc_sum += (
-                        net(X, is_training=False).argmax(dim=1).numpy() == y.numpy()
-                    ).sum()
+                        (net(X, is_training=False).argmax(dim=1).numpy() == y.numpy())
+                        .float()
+                        .sum()
+                    )
                 else:
-                    acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
+                    acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).float().sum()
             n += y.shape[0]
     return acc_sum / n
 
 
-def train(net, device, train_iter, test_iter, num_epochs):
-    net = net.to(device)
-    print("training on ", device)
+def train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
+            X = X.to(device=device)
+            y = y.to(device=device)
             X.requires_grad = True
-            X = X.to(device=device, dtype=flow.float32)
-            y = y.to(device=device, dtype=flow.int64)
+            # forward
             y_hat = net(X)
-            l = loss(y_hat, y)
-
-            optimizer.zero_grad()
+            l = loss(y_hat, y).sum()
+            # backward
             l.backward()
             optimizer.step()
+            optimizer.zero_grad()
 
             train_l_sum += l.numpy()
             train_acc_sum += (y_hat.argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
             batch_count += 1
 
-        test_acc = evaluate_accuracy(net, device, test_iter)
+        test_acc = evaluate_accuracy(test_iter, net)
         print(
             "epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec"
             % (
@@ -186,4 +153,6 @@ def train(net, device, train_iter, test_iter, num_epochs):
         )
 
 
-train(network, device, train_iter, test_iter, num_epochs)
+lr, num_epochs = 0.01, 10
+optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
+train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs)

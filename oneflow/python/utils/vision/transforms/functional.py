@@ -13,14 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import math
-import numbers
 import warnings
 from enum import Enum
 
 import numpy as np
 from PIL import Image
-from typing import List, Tuple, Any, Optional
+from typing import List, Any
 
 try:
     import accimage
@@ -28,7 +26,7 @@ except ImportError:
     accimage = None
 
 import oneflow as flow
-from oneflow.experimental import Tensor
+from oneflow.python.framework.tensor import Tensor
 
 from . import functional_pil as F_pil
 from . import functional_tensor as F_t
@@ -186,12 +184,10 @@ def normalize(
     # if (std == 0).any():
     #     raise ValueError('std evaluated to zero after conversion to {}, leading to division by zero.'.format(dtype))
     if mean.ndim == 1:
-        mean = mean.unsqueeze(1).unsqueeze(1)
-        # mean = mean.view(-1, 1, 1)
+        mean = mean.reshape(shape=(-1, 1, 1))
     if std.ndim == 1:
-        std = std.unsqueeze(1).unsqueeze(1)
-        # std = std.view(-1, 1, 1)
-    tensor = tensor.sub(tensor).div(std)
+        std = std.reshape(shape=(-1, 1, 1))
+    tensor = tensor.sub(mean).div(std)
     # tensor.sub_(mean).div_(std)
     return tensor
 
