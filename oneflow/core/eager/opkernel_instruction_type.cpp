@@ -34,11 +34,11 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -512,7 +512,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      JUST(blob_object->InitBlob());
+      JUST(blob_object->TryInitBlob());
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -550,6 +550,10 @@ struct LocalCallOpKernelUtil final {
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
                                           DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+    if (operand->op_interp_ctx().state) {
+      *state = operand->op_interp_ctx().state.get();
+      return;
+    }
     operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
                                                   operand->inputs(), operand->outputs(), state);
   }

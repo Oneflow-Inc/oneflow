@@ -306,11 +306,11 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     )
     m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
     of_out = m(input)
-    np_out = np.array([[[[1.0]]]])
+    np_out = np.array([[[[2.5]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
+    np_grad = np.array([[[[0.25, 0.25], [0.25, 0.25]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
     input = flow.Tensor(
@@ -321,11 +321,39 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     )
     m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
     of_out = m(input)
-    np_out = np.array([[[[1.0]]]])
+    np_out = np.array([[[[3.0]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = np.array([[[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]])
+    np_grad = np.array([[[[0.25, 0.25, 0.0], [0.25, 0.25, 0.0], [0.0, 0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    input = flow.Tensor(
+        np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
+    of_out = m(input)
+    np_out = np.array(
+        [
+            [
+                [
+                    [1.25, 1.5, 2.0, 2.25],
+                    [3.75, 4.0, 4.5, 4.75],
+                    [6.25, 6.5, 7.0, 7.25],
+                    [8.75, 9.0, 9.5, 9.75],
+                ]
+            ]
+        ]
+    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array(
+        [[[[1.75, 1.75], [1.5, 1.5], [1.5, 1.5], [1.5, 1.5], [1.75, 1.75]]]]
+    )
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 

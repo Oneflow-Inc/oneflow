@@ -25,39 +25,48 @@ REGISTER_USER_OP("dim_gather")
     .Output("output")
     .Attr<int32_t>("dim")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      int64_t input_num_axes = in->shape().NumAxes();
+      const TensorDesc& in = ctx->InputTensorDesc("input", 0);
+      int64_t input_num_axes = in.shape().NumAxes();
       CHECK_GT_OR_RETURN(input_num_axes, 0);
       CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
 
-      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
-      int64_t index_num_axes = index->shape().NumAxes();
+      const TensorDesc& index = ctx->InputTensorDesc("index", 0);
+      int64_t index_num_axes = index.shape().NumAxes();
 
       const int32_t dim = ctx->Attr<int32_t>("dim");
       CHECK_GE_OR_RETURN(dim, 0);
       CHECK_LT_OR_RETURN(dim, input_num_axes);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
-      CHECK_EQ_OR_RETURN(in->is_dynamic(), index->is_dynamic());
+      CHECK_EQ_OR_RETURN(in.is_dynamic(), index.is_dynamic());
 
+<<<<<<< HEAD
+=======
+      FOR_RANGE(int64_t, i, 0, input_num_axes) {
+        if (i == dim) { continue; }
+        CHECK_EQ_OR_RETURN(in.shape().At(i), index.shape().At(i));
+      }
+
+>>>>>>> master
       user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
-      *out->mut_shape() = index->shape();
+      *out->mut_shape() = index.shape();
 
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
-      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
-      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      const TensorDesc& index = ctx->InputTensorDesc("index", 0);
+      CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
+      const TensorDesc& in = ctx->InputTensorDesc("input", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
-      *out->mut_data_type() = in->data_type();
+      *out->mut_data_type() = in.data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =

@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/api/python/env/env.h"
 
 namespace oneflow {
 namespace vm {
@@ -68,11 +69,11 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
   vm::InstructionMsgList instruction_list;
-  const auto& eage_instructions = cluster_instruction->eager_instruction();
-  for (const auto& instr_proto : eage_instructions.instruction_list().instruction()) {
+  const auto& eager_instructions = cluster_instruction->eager_instruction();
+  for (const auto& instr_proto : eager_instructions.instruction_list().instruction()) {
     instruction_list.EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
   }
-  return RunPhysicalInstruction(&instruction_list, eage_instructions.eager_symbol_list());
+  return RunPhysicalInstruction(&instruction_list, eager_instructions.eager_symbol_list());
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
@@ -93,6 +94,11 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(vm::InstructionMsgList* instruc
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
                                                 const vm::cfg::EagerSymbolList& eager_symbol_list) {
+  if (JUST(IsMultiClient())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return RunPhysicalInstruction(instruction_list, eager_symbol_list);
+  }
   ClusterInstructionProto cluster_instruction;
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()

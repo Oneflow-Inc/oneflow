@@ -60,6 +60,7 @@ def _conv2d_layer(
         weight,
         strides,
         padding,
+        None,
         data_format,
         dilation_rate,
         groups=group_num,

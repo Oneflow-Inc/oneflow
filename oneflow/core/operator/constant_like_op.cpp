@@ -36,10 +36,11 @@ class ConstantLikeOp final : public Operator {
   ConstantLikeOp() = default;
   ~ConstantLikeOp() = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_constant_like_conf());
     EnrollInputBn("like", false);
     EnrollOutputBn("out", false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
