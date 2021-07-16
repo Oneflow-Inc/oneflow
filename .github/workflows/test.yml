@@ -536,7 +536,6 @@ jobs:
         with:
           repository: Oneflow-Inc/models
           path: oneflow-models
-          ref: add_speed_comparing_script
       - name: Speed test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
