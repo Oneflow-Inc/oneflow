@@ -26,10 +26,7 @@ struct PoolingOpKernelState final : public user_op::OpKernelState {
 std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelComputeContext* ctx,
                                                             const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-  const std::string& padding = ctx->Attr<std::string>("padding");
-  const std::string& data_format = ctx->Attr<std::string>("data_format");
-  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
   const std::vector<int32_t>& dilation = ctx->Attr<std::vector<int32_t>>("dilation");
@@ -37,8 +34,7 @@ std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelCompu
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
   PoolingParams3D params_3d =
-      PoolingParams3D(dim, x_shape, data_format, padding, padding_before, padding_after,
-                      kernel_size, stride, dilation, return_indices, ceil_mode);
+      PoolingParams3D(dim, x_shape, padding, kernel_size, stride, dilation, return_indices, ceil_mode);
   std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d));
   return std::move(state);
 }
@@ -49,8 +45,8 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     Maxpool2dFarwardCompute<T>(
-        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[1],
-        params_3d.padding_before_3d()[2], params_3d.num_batch(), params_3d.num_channel(),
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
+        params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
         params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[1],
         params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
@@ -70,8 +66,8 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     Maxpool3dFarwardCompute<T>(
-        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding_before_3d()[0],
-        params_3d.padding_before_3d()[1], params_3d.padding_before_3d()[2], params_3d.num_batch(),
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
+        params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
         params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
         params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[0],
