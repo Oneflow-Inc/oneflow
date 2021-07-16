@@ -217,8 +217,11 @@ class Session(object):
         return self.op_name2lazy_blob_cache_[op_name]
 
     def TryClose(self):
+        if self.status_ != self.Status.CLOSED:
+            oneflow._oneflow_internal.ClearSessionById(self.id)
         if self.status_ is SessionStatus.RUNNING:
             self.Close()
+        self.status_ = SessionStatus.CLOSED
 
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -230,7 +233,6 @@ class Session(object):
         self.ForceReleaseEagerBlobs()
         oneflow._oneflow_internal.StopLazyGlobalSession()
         oneflow._oneflow_internal.DestroyLazyGlobalSession()
-        self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
@@ -428,7 +430,7 @@ class Session(object):
         self.cond_var_.release()
 
     def __del__(self):
-        oneflow._oneflow_internal.ClearSessionById(self.id)
+        self.TryClose()
 
 
 @oneflow_export("find_or_create_module")
