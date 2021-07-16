@@ -240,7 +240,6 @@ def conv_op(
     return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("nn.conv1d")
 def conv1d(
     input: oneflow._oneflow_internal.BlobDesc,
     filters: oneflow._oneflow_internal.BlobDesc,
@@ -425,7 +424,6 @@ def conv1d(
         )
 
 
-@oneflow_export("nn.conv2d")
 def conv2d(
     input: oneflow._oneflow_internal.BlobDesc,
     filters: oneflow._oneflow_internal.BlobDesc,
@@ -625,7 +623,6 @@ def conv2d(
         )
 
 
-@oneflow_export("nn.conv3d")
 def conv3d(
     input: oneflow._oneflow_internal.BlobDesc,
     filters: oneflow._oneflow_internal.BlobDesc,
@@ -829,7 +826,6 @@ def conv3d(
     return output
 
 
-@oneflow_export("nn.moments")
 def moments(
     x: oneflow._oneflow_internal.BlobDesc,
     axes: List[int],
@@ -880,8 +876,6 @@ def moments(
         )
 
 
-@oneflow_export("nn.GroupNorm")
-@stable_api
 def group_normalization(
     x: oneflow._oneflow_internal.BlobDesc,
     num_groups: int = 32,
@@ -961,8 +955,6 @@ def group_normalization(
     return reshape_back
 
 
-@oneflow_export("nn.InstanceNorm1d")
-@stable_api
 def instance_normalization1d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,
@@ -1031,8 +1023,6 @@ def instance_normalization1d(
         return normalized
 
 
-@oneflow_export("nn.InstanceNorm2d")
-@stable_api
 def instance_normalization2d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,
@@ -1087,8 +1077,6 @@ def instance_normalization2d(
     return reshape_back_to_2d
 
 
-@oneflow_export("nn.InstanceNorm3d")
-@stable_api
 def instance_normalization3d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,
@@ -1143,7 +1131,6 @@ def instance_normalization3d(
     return reshape_back_to_3d
 
 
-@oneflow_export("nn.batch_normalization")
 def batch_normalization(
     x: oneflow._oneflow_internal.BlobDesc,
     mean: oneflow._oneflow_internal.BlobDesc,
@@ -1268,7 +1255,6 @@ def batch_normalization(
         raise NotImplementedError
 
 
-@oneflow_export("nn.layer_norm")
 def layer_norm(
     inputs: oneflow._oneflow_internal.BlobDesc,
     gamma: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -1382,7 +1368,6 @@ def layer_norm(
         raise NotImplementedError
 
 
-@oneflow_export("nn.compat_conv2d")
 def tf_conv2d(
     input: oneflow._oneflow_internal.BlobDesc,
     filters: oneflow._oneflow_internal.BlobDesc,
@@ -1469,7 +1454,6 @@ def tf_conv2d(
     )
 
 
-@oneflow_export("nn.bias_add")
 def bias_add(
     value: oneflow._oneflow_internal.BlobDesc,
     bias: oneflow._oneflow_internal.BlobDesc,
@@ -1547,7 +1531,6 @@ def bias_add(
     )
 
 
-@oneflow_export("nn.fused_bias_add_gelu")
 def fused_bias_add_gelu(
     value: oneflow._oneflow_internal.BlobDesc,
     bias: oneflow._oneflow_internal.BlobDesc,
@@ -1624,7 +1607,6 @@ def fused_bias_add_gelu(
     )
 
 
-@oneflow_export("nn.fused_bias_add_dropout")
 def fused_bias_add_dropout(
     value: oneflow._oneflow_internal.BlobDesc,
     bias: oneflow._oneflow_internal.BlobDesc,
@@ -1717,7 +1699,6 @@ def fused_bias_add_dropout(
     )
 
 
-@oneflow_export("nn.max_pool1d")
 def max_pool1d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, Sequence[int]],
@@ -1746,7 +1727,6 @@ def max_pool1d(
     raise NotImplementedError
 
 
-@oneflow_export("nn.avg_pool1d")
 def avg_pool1d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, Sequence[int]],
@@ -1789,8 +1769,6 @@ def calc_pool_padding(padding, dhw_offset, ndims):
     return padding_type, ndim_pads_list
 
 
-@oneflow_export("nn.MaxPool1d")
-@stable_api
 def MaxPool1d(
     input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
@@ -1932,8 +1910,6 @@ def MaxPool1d(
         return y
 
 
-@oneflow_export("nn.MaxPool2d")
-@stable_api
 def MaxPool2d(
     input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
@@ -2066,8 +2042,6 @@ def MaxPool2d(
         return y
 
 
-@oneflow_export("nn.MaxPool3d")
-@stable_api
 def MaxPool3d(
     input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
@@ -2209,7 +2183,6 @@ def MaxPool3d(
         return y
 
 
-@oneflow_export("nn.max_pool2d")
 def max_pool2d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, IntPair],
@@ -2287,7 +2260,6 @@ def max_pool2d(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("nn.avg_pool2d")
 def avg_pool2d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, IntPair],
@@ -2364,7 +2336,6 @@ def avg_pool2d(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("nn.max_pool3d")
 def max_pool3d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, Sequence[int]],
@@ -2442,7 +2413,6 @@ def max_pool3d(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("nn.avg_pool3d")
 def avg_pool3d(
     input: oneflow._oneflow_internal.BlobDesc,
     ksize: Union[int, Sequence[int]],
@@ -2538,7 +2508,6 @@ def _softmax_need_transpose(x, axis):
     return need_transpose, permute
 
 
-@oneflow_export("nn.softmax")
 def softmax(
     logits: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[int] = None,
@@ -2609,7 +2578,6 @@ def softmax(
     return out
 
 
-@oneflow_export("nn.logsoftmax")
 def logsoftmax(
     logits: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[int] = None,
@@ -2664,7 +2632,6 @@ def logsoftmax(
     )
 
 
-@oneflow_export("nn.softmax_grad")
 def softmax_grad(
     y: oneflow._oneflow_internal.BlobDesc,
     dy: oneflow._oneflow_internal.BlobDesc,
@@ -2708,7 +2675,6 @@ def softmax_grad(
     return dx
 
 
-@oneflow_export("nn.sparse_cross_entropy")
 def sparse_cross_entropy(
     labels: oneflow._oneflow_internal.BlobDesc,
     prediction: oneflow._oneflow_internal.BlobDesc,
@@ -2798,7 +2764,6 @@ def sparse_cross_entropy(
         )
 
 
-@oneflow_export("nn.softmax_cross_entropy_with_logits")
 def softmax_cross_entropy_with_logits(
     labels: oneflow._oneflow_internal.BlobDesc,
     logits: oneflow._oneflow_internal.BlobDesc,
@@ -2866,7 +2831,6 @@ def softmax_cross_entropy_with_logits(
     return out
 
 
-@oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(
     labels: oneflow._oneflow_internal.BlobDesc,
     logits: oneflow._oneflow_internal.BlobDesc,
@@ -2964,7 +2928,6 @@ def sparse_softmax_cross_entropy_with_logits(
     return out
 
 
-@oneflow_export("nn.distributed_sparse_softmax_cross_entropy_with_logits")
 def distributed_sparse_softmax_cross_entropy_with_logits(
     labels: oneflow._oneflow_internal.BlobDesc,
     logits: oneflow._oneflow_internal.BlobDesc,
@@ -2997,7 +2960,6 @@ def distributed_sparse_softmax_cross_entropy_with_logits(
     return out
 
 
-@oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
     labels: oneflow._oneflow_internal.BlobDesc,
     logits: oneflow._oneflow_internal.BlobDesc,
@@ -3082,7 +3044,6 @@ def _GetSequence(value, n, name):
         )
 
 
-@oneflow_export("nn.random_mask_like")
 def random_mask_like(
     like: oneflow._oneflow_internal.BlobDesc,
     rate: float,
@@ -3190,7 +3151,6 @@ class RandomMaskLike(module_util.Module):
         )
 
 
-@oneflow_export("nn.dropout")
 def dropout(
     x: oneflow._oneflow_internal.BlobDesc,
     rate: float,
@@ -3283,7 +3243,6 @@ def dropout(
     )
 
 
-@oneflow_export("nn.conv2d_transpose")
 def deconv2d(
     value: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     filter: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -3520,7 +3479,6 @@ def deconv2d(
     )
 
 
-@oneflow_export("nn.torch_conv2d_transpose")
 def deconv2d_torch(
     value=None,
     filter=None,
@@ -3619,7 +3577,6 @@ def deconv2d_torch(
     )
 
 
-@oneflow_export("nn.leaky_relu")
 def leaky_relu(
     x: oneflow._oneflow_internal.BlobDesc,
     alpha: float = 0.2,
@@ -3675,7 +3632,6 @@ def leaky_relu(
     )
 
 
-@oneflow_export("nn.elu")
 def elu(
     x: oneflow._oneflow_internal.BlobDesc,
     alpha: float = 1.0,
@@ -3734,7 +3690,6 @@ def elu(
     )
 
 
-@oneflow_export("nn.hardsigmoid")
 def hard_sigmoid(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -3791,7 +3746,6 @@ def hard_sigmoid(
     )
 
 
-@oneflow_export("nn.mish")
 def mish(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -3835,7 +3789,6 @@ def mish(
     )
 
 
-@oneflow_export("nn.swish")
 def swish(
     x: oneflow._oneflow_internal.BlobDesc,
     beta: float = 1.0,
@@ -3883,7 +3836,6 @@ def swish(
     return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
 
 
-@oneflow_export("nn.hardswish")
 def hardswish(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -3937,7 +3889,6 @@ def hardswish(
     )
 
 
-@oneflow_export("nn.hardtanh")
 def hardtanh(
     x: oneflow._oneflow_internal.BlobDesc,
     min_val: float = -1.0,
@@ -4006,7 +3957,6 @@ def hardtanh(
     )
 
 
-@oneflow_export("nn.relu6")
 def relu6(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -4055,8 +4005,6 @@ def relu6(
     return flow.nn.hardtanh(x, min_val=0.0, max_val=6.0, name=name)
 
 
-@oneflow_export("nn.L1Loss")
-@stable_api
 def l1_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4173,8 +4121,6 @@ def l1_loss(
         return l1_value
 
 
-@oneflow_export("nn.BCELoss")
-@stable_api
 def bce_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4281,8 +4227,6 @@ def bce_loss(
         return _weighted_loss
 
 
-@oneflow_export("nn.BCEWithLogitsLoss")
-@stable_api
 def bce_with_logits_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4413,8 +4357,6 @@ def bce_with_logits_loss(
         return _weighted_loss
 
 
-@oneflow_export("nn.MSELoss")
-@stable_api
 def mse_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4528,8 +4470,6 @@ def mse_loss(
         return mean_squared_difference
 
 
-@oneflow_export("nn.MarginRankingLoss")
-@stable_api
 def margin_ranking_loss(
     input1: oneflow._oneflow_internal.BlobDesc,
     input2: oneflow._oneflow_internal.BlobDesc,
@@ -4630,8 +4570,6 @@ def margin_ranking_loss(
         return flow.math.reduce_sum(_clipped_margin_loss, name=name + "_reduce_sum")
 
 
-@oneflow_export("nn.TripletMarginLoss")
-@stable_api
 def triplet_margin_loss(
     anchor: oneflow._oneflow_internal.BlobDesc,
     positive: oneflow._oneflow_internal.BlobDesc,
@@ -4786,8 +4724,6 @@ def triplet_margin_loss(
         return _triplet_loss
 
 
-@oneflow_export("nn.PixelShuffle")
-@stable_api
 def pixel_shuffle(
     input: oneflow._oneflow_internal.BlobDesc,
     upscale_factor: int,
@@ -4827,7 +4763,6 @@ def pixel_shuffle(
     return flow.nn.PixelShufflev2(input, upscale_factor, upscale_factor, name=name)
 
 
-@oneflow_export("nn.PixelShufflev2")
 def pixel_shufflev2(
     input: oneflow._oneflow_internal.BlobDesc,
     h_upscale_factor: int,
@@ -4902,8 +4837,6 @@ def pixel_shufflev2(
     return out
 
 
-@oneflow_export("nn.KLDivLoss")
-@stable_api
 def kldivloss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,

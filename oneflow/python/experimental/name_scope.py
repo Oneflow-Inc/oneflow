@@ -24,10 +24,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_export(
-    "name_scope", "experimental.name_scope", "deprecated.variable_scope",
-)
-@oneflow_deprecate()
 def deprecated_name_scope(*args, **kwargs):
     print(
         "WARNING:",
@@ -40,8 +36,6 @@ def deprecated_name_scope(*args, **kwargs):
     return name_scope(*args, **kwargs)
 
 
-@oneflow_export("scope.namespace")
-@contextmanager
 def name_scope(name: str) -> None:
     r"""Create a namespace. All variables within the namespace will have a prefix `[SCOPE NAME]-`. This is for convenience only and has no other effect on the system.
     Usage::

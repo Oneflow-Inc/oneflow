@@ -28,7 +28,6 @@ class PyStructCompatibleToBlob(object):
     pass
 
 
-@oneflow_export("typing.Numpy")
 class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
     For instance::
@@ -62,7 +61,6 @@ class Numpy(PyStructCompatibleToBlob):
         return type("Numpy.Placeholder", (NumpyDef,), dict(shape=shape, dtype=dtype),)
 
 
-@oneflow_export("typing.ListNumpy")
 class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
     For instance::
@@ -120,12 +118,10 @@ class ListOfNumpyDef(OneflowNumpyDef):
         return input_blob_def.MirroredTensorDef(subclass.shape, dtype=subclass.dtype)
 
 
-@oneflow_export("typing.Callback")
 class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
 
 
-@oneflow_export("typing.Bundle")
 class Bundle(typing.Generic[typing.TypeVar("T")]):
     """
     One or a collection of  typing.Numpy/typing.ListNumpy,

@@ -44,8 +44,6 @@ def _sort_at_last_dim(
     )
 
 
-@oneflow_export("sort")
-@stable_api
 def sort(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
@@ -119,8 +117,6 @@ def _argsort_at_last_dim(
     )
 
 
-@oneflow_export("argsort")
-@stable_api
 def argsort(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,

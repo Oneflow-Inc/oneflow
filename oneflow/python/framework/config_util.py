@@ -23,7 +23,6 @@ import oneflow._oneflow_internal
 import traceback
 
 
-@oneflow_export("config.load_library")
 def api_load_library(val: str) -> None:
     r"""Load necessary library for job
 
@@ -40,7 +39,6 @@ def load_library(val):
     sess.config_proto.load_lib_path.append(val)
 
 
-@oneflow_export("config.load_library_now")
 def api_load_library_now(val: str) -> None:
     r"""Load necessary library for job now
 
@@ -56,7 +54,6 @@ def load_library_now(val):
     oneflow._oneflow_internal.LoadLibraryNow(val)
 
 
-@oneflow_export("config.machine_num")
 def api_machine_num(val: int) -> None:
     r"""Set available number of machine/node for  running job .
 
@@ -73,7 +70,6 @@ def machine_num(val):
     sess.config_proto.resource.machine_num = val
 
 
-@oneflow_export("config.gpu_device_num")
 def api_gpu_device_num(val: int) -> None:
     r"""Set number of GPUs on each machine to run oneflow on.
 
@@ -98,7 +94,6 @@ def gpu_device_num(val):
     sess.config_proto.resource.gpu_device_num = val
 
 
-@oneflow_export("config.cpu_device_num")
 def api_cpu_device_num(val: int) -> None:
     r"""Set number of CPUs on each machine to run oneflow on. Usually you don't need to set this.
 
@@ -115,7 +110,6 @@ def cpu_device_num(val):
     sess.config_proto.resource.cpu_device_num = val
 
 
-@oneflow_export("config.comm_net_worker_num")
 def api_comm_net_worker_num(val: int) -> None:
     r"""Set up the workers number in epoll  mode network,
             If use RDMA mode network, then doesn't need.
@@ -133,7 +127,6 @@ def comm_net_worker_num(val):
     sess.config_proto.resource.comm_net_worker_num = val
 
 
-@oneflow_export("config.max_mdsave_worker_num")
 def api_max_mdsave_worker_num(val: int) -> None:
     r"""Set up max number of workers for mdsave process.
 
@@ -150,7 +143,6 @@ def max_mdsave_worker_num(val):
     sess.config_proto.resource.max_mdsave_worker_num = val
 
 
-@oneflow_export("config.enable_numa_aware_cuda_malloc_host")
 def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     r"""Whether or not let numa know  that  cuda allocated host's memory.
 
@@ -162,7 +154,6 @@ def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     )
 
 
-@oneflow_export("config.compute_thread_pool_size")
 def api_compute_thread_pool_size(val: int) -> None:
     r"""Set up the size of compute thread pool
 
@@ -179,7 +170,6 @@ def compute_thread_pool_size(val):
     sess.config_proto.resource.compute_thread_pool_size = val
 
 
-@oneflow_export("config.rdma_mem_block_mbyte")
 def api_rdma_mem_block_mbyte(val: int) -> None:
     r"""Set up the memory block size in rdma mode.
 
@@ -196,7 +186,6 @@ def rdma_mem_block_mbyte(val):
     sess.config_proto.resource.rdma_mem_block_mbyte = val
 
 
-@oneflow_export("config.rdma_recv_msg_buf_mbyte")
 def api_rdma_recv_msg_buf_mbyte(val: int) -> None:
     r"""Set up the buffer size for receiving messages in rama mode
 
@@ -213,7 +202,6 @@ def rdma_recv_msg_buf_mbyte(val):
     sess.config_proto.resource.rdma_recv_msg_buf_mbyte = val
 
 
-@oneflow_export("config.reserved_host_mem_mbyte")
 def api_reserved_host_mem_mbyte(val: int) -> None:
     r"""Set up the memory size of reserved host
 
@@ -230,7 +218,6 @@ def reserved_host_mem_mbyte(val):
     sess.config_proto.resource.reserved_host_mem_mbyte = val
 
 
-@oneflow_export("config.reserved_device_mem_mbyte")
 def api_reserved_device_mem_mbyte(val: int) -> None:
     r"""Set up the memory size of reserved device
 
@@ -247,7 +234,6 @@ def reserved_device_mem_mbyte(val):
     sess.config_proto.resource.reserved_device_mem_mbyte = val
 
 
-@oneflow_export("config.use_rdma")
 def api_use_rdma(val: bool = True) -> None:
     r"""Whether use RDMA to speed up data transmission in cluster nodes or not.
           if not, then use normal epoll mode.
@@ -265,7 +251,6 @@ def use_rdma(val=True):
     sess.config_proto.resource.use_rdma = val
 
 
-@oneflow_export("config.thread_enable_local_message_queue")
 def api_thread_enable_local_message_queue(val: bool) -> None:
     """Whether or not enable thread using local  message queue.
 
@@ -282,7 +267,6 @@ def thread_enable_local_message_queue(val):
     sess.config_proto.resource.thread_enable_local_message_queue = val
 
 
-@oneflow_export("config.enable_debug_mode")
 def api_enable_debug_mode(val: bool) -> None:
     r"""Whether use debug mode or not.
 
@@ -299,13 +283,11 @@ def enable_debug_mode(val):
     sess.config_proto.resource.enable_debug_mode = val
 
 
-@oneflow_export("config.legacy_model_io_enabled")
 def api_legacy_model_io_enabled():
     sess = session_ctx.GetDefaultSession()
     return sess.config_proto.resource.enable_legacy_model_io
 
 
-@oneflow_export("config.enable_legacy_model_io")
 def api_enable_legacy_model_io(val: bool = True):
     r"""Whether or not use legacy model io.
 
@@ -322,7 +304,6 @@ def enable_legacy_model_io(val):
     sess.config_proto.resource.enable_legacy_model_io = val
 
 
-@oneflow_export("config.enable_model_io_v2")
 def api_enable_model_io_v2(val):
     r"""Whether or not use version2  of model input/output function.
 
@@ -339,7 +320,6 @@ def enable_model_io_v2(val):
     sess.config_proto.resource.enable_model_io_v2 = val
 
 
-@oneflow_export("config.collect_act_event")
 def api_collect_act_event(val: bool = True) -> None:
     r"""Whether or not collect active event.
 
@@ -356,7 +336,6 @@ def collect_act_event(val=True):
     sess.config_proto.profile_conf.collect_act_event = val
 
 
-@oneflow_export("config.collective_boxing.enable_fusion")
 def api_enable_fusion(val: bool = True) -> None:
     r"""Whether or not allow fusion the operators
 
@@ -373,7 +352,6 @@ def enable_fusion(val=True):
     sess.config_proto.resource.collective_boxing_conf.enable_fusion = val
 
 
-@oneflow_export("config.collective_boxing.num_callback_threads")
 def api_num_callback_threads(val: int) -> None:
     r"""Set up number of callback threads for boxing process.
             Boxing is used to convert between different parallel properties of logical tensor
@@ -391,7 +369,6 @@ def num_callback_threads(val):
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
 
 
-@oneflow_export("config.enable_tensor_float_32_compute")
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
     r"""Whether or not to enable Tensor-float-32 on supported GPUs
 
@@ -408,7 +385,6 @@ def enable_tensor_float_32_compute(val=True):
     sess.config_proto.resource.enable_tensor_float_32_compute = val
 
 
-@oneflow_export("config.enable_mem_chain_merge")
 def api_enable_mem_chain_merge(val: bool = True) -> None:
     r"""Whether or not to enable MemChain merge.
 
@@ -425,7 +401,6 @@ def enable_mem_chain_merge(val=True):
     sess.config_proto.resource.enable_mem_chain_merge = val
 
 
-@oneflow_export("config.nccl_use_compute_stream")
 def api_nccl_use_compute_stream(val: bool = False) -> None:
     r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
 
@@ -442,7 +417,6 @@ def nccl_use_compute_stream(val=False):
     sess.config_proto.resource.nccl_use_compute_stream = val
 
 
-@oneflow_export("config.disable_group_boxing_by_dst_parallel")
 def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
     r"""Whether or not disable group boxing by dst parallel pass to reduce boxing memory life cycle.
 
@@ -459,7 +433,6 @@ def disable_group_boxing_by_dst_parallel(val=False):
     sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
 
 
-@oneflow_export("config.collective_boxing.nccl_num_streams")
 def api_nccl_num_streams(val: int) -> None:
     r"""Set up the number of nccl parallel streams while use boxing
 
@@ -476,7 +449,6 @@ def nccl_num_streams(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_num_streams = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_threshold_mb")
 def api_nccl_fusion_threshold_mb(val: int) -> None:
     r"""Set up threshold for oprators fusion
 
@@ -493,7 +465,6 @@ def nccl_fusion_threshold_mb(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_threshold_mb = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_all_reduce_use_buffer")
 def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
     r"""Whether or not use buffer during nccl fusion progress
 
@@ -512,7 +483,6 @@ def nccl_fusion_all_reduce_use_buffer(val):
     )
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_all_reduce")
 def api_nccl_fusion_all_reduce(val: bool) -> None:
     r"""Whether or not use nccl fusion during all reduce progress
 
@@ -529,7 +499,6 @@ def nccl_fusion_all_reduce(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_reduce_scatter")
 def api_nccl_fusion_reduce_scatter(val: bool) -> None:
     r"""Whether or not  use nccl fusion during reduce scatter progress
 
@@ -546,7 +515,6 @@ def nccl_fusion_reduce_scatter(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_reduce_scatter = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_all_gather")
 def api_nccl_fusion_all_gather(val: bool) -> None:
     r"""Whether or not use nccl fusion during all  gather progress
 
@@ -563,7 +531,6 @@ def nccl_fusion_all_gather(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_gather = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_reduce")
 def api_nccl_fusion_reduce(val: bool) -> None:
     r"""Whether or not use nccl fusion during reduce progress
 
@@ -580,7 +547,6 @@ def nccl_fusion_reduce(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_reduce = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_broadcast")
 def api_nccl_fusion_broadcast(val: bool) -> None:
     r"""Whether or not use nccl fusion during broadcast progress
 
@@ -597,7 +563,6 @@ def nccl_fusion_broadcast(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_broadcast = val
 
 
-@oneflow_export("config.collective_boxing.nccl_fusion_max_ops")
 def api_nccl_fusion_max_ops(val: int) -> None:
     r"""Maximum number of ops for nccl fusion.
 
@@ -614,7 +579,6 @@ def nccl_fusion_max_ops(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_max_ops = val
 
 
-@oneflow_export("config.collective_boxing.nccl_enable_all_to_all")
 def api_nccl_enable_all_to_all(val: bool) -> None:
     r"""Whether or not use nccl all2all during s2s boxing
 
@@ -631,7 +595,6 @@ def nccl_enable_all_to_all(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_enable_all_to_all = val
 
 
-@oneflow_export("config.collective_boxing.nccl_enable_mixed_fusion")
 def api_nccl_enable_mixed_fusion(val: bool) -> None:
     r"""Whether or not use nccl mixed fusion
 

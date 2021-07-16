@@ -21,7 +21,6 @@ import time
 import oneflow as flow
 
 
-@oneflow_export("summary.Projector")
 class Projector(object):
     r"""The class of Projector
 

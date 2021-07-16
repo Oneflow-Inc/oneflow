@@ -34,7 +34,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 
 
-@oneflow_export("summary.text")
 def text(text, tag=None):
     r"""Add a text list to Summary
 
@@ -83,7 +82,6 @@ def _get_tensor(values, dtype=None, shape=None):
     return tensor_proto
 
 
-@oneflow_export("summary.hparams")
 def hparams(hparams):
     r"""Add hparams to Summary
 
@@ -166,7 +164,6 @@ def _get_value(value):
         return value
 
 
-@oneflow_export("summary.Hparam")
 class HParam(object):
     r"""The class of Hparam
 
@@ -200,7 +197,6 @@ class HParam(object):
         return self.dtype_
 
 
-@oneflow_export("summary.IntegerRange")
 class IntegerRange(object):
     r"""The class of IntegerRange
 
@@ -238,7 +234,6 @@ class IntegerRange(object):
         return self.max_value_
 
 
-@oneflow_export("summary.RealRange")
 class RealRange(object):
     r"""The class of RealRange
 
@@ -276,7 +271,6 @@ class RealRange(object):
         return self.max_value_
 
 
-@oneflow_export("summary.ValueSet")
 class ValueSet(object):
     r"""The class of ValueSet
 
@@ -321,7 +315,6 @@ class ValueSet(object):
         return list(self.values_)
 
 
-@oneflow_export("summary.Metric")
 class Metric(object):
     r"""The class of Metric
 

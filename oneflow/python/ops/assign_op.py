@@ -33,7 +33,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 
 
-@oneflow_export("assign")
 def assign(ref, value, dtype=None, name=None):
     if name is None:
         name = id_util.UniqueStr("Assign_")
@@ -48,7 +47,6 @@ def assign(ref, value, dtype=None, name=None):
     op.InferAndTryRun()
 
 
-@oneflow_export("system.assign")
 def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
     api = enable_if.unique([lazy_system_assign, eager_system_assign])
@@ -86,7 +84,6 @@ def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=
     return ref
 
 
-@oneflow_export("experimental.eager_assign_121")
 def api_one_to_one_assign(ref, value):
     assert hob.eager_execution_enabled(None)
     oneflow._oneflow_internal.deprecated.LogicalRun(

@@ -110,7 +110,6 @@ def GetEagerInterfaceBlob(op_name):
     return sess.FindOrCreateLazyBlob(op_name, CreateBlob)
 
 
-@oneflow_export("experimental.get_interface_blob_value")
 def GetInterfaceBlobValue(op_name):
     sync_default_session_if_normal()
 
@@ -165,7 +164,6 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
     oneflow._oneflow_internal.deprecated.LogicalRun(build)
 
 
-@oneflow_export("experimental.set_interface_blob_value")
 def FeedValueToInterfaceBlob(op_name, ndarray):
     sync_default_session_if_normal()
 

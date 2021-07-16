@@ -65,7 +65,6 @@ def _do_reduce(x, name, op_type_name, keepdims, axis):
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("math.reduce_sum")
 def reduce_sum(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -124,7 +123,6 @@ def reduce_sum(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("math.reduce_any")
 def reduce_any(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -176,7 +174,6 @@ def reduce_any(
     return _do_reduce(x, name, "reduce_any", keepdims, axis)
 
 
-@oneflow_export("math.reduce_min")
 def reduce_min(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -224,7 +221,6 @@ def reduce_min(
     return _do_reduce(x, name, "reduce_min", keepdims, axis)
 
 
-@oneflow_export("math.reduce_max")
 def reduce_max(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -272,7 +268,6 @@ def reduce_max(
     return _do_reduce(x, name, "reduce_max", keepdims, axis)
 
 
-@oneflow_export("math.reduce_prod")
 def reduce_prod(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -320,7 +315,6 @@ def reduce_prod(
     return _do_reduce(x, name, "reduce_prod", keepdims, axis)
 
 
-@oneflow_export("math.reduce_all")
 def reduce_all(
     x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -372,7 +366,6 @@ def reduce_all(
     return _do_reduce(x, name, "reduce_all", keepdims, axis)
 
 
-@oneflow_export("math.reduce_euclidean_norm")
 def reduce_euclidean_norm(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -431,7 +424,6 @@ def reduce_euclidean_norm(
     )
 
 
-@oneflow_export("math.reduce_logsumexp")
 def reduce_logsumexp(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -492,7 +484,6 @@ def reduce_logsumexp(
     )
 
 
-@oneflow_export("math.reduce_std")
 def reduce_std(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
@@ -553,7 +544,6 @@ def reduce_std(
     )
 
 
-@oneflow_export("math.reduce_variance")
 def reduce_variance(
     input_tensor: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,

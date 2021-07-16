@@ -28,7 +28,6 @@ import oneflow._oneflow_internal
 IntPair = Tuple[int, int]
 
 
-@oneflow_export("layers.dense")
 def dense(
     inputs: oneflow._oneflow_internal.BlobDesc,
     units: int,
@@ -163,7 +162,6 @@ def dense(
     return out
 
 
-@oneflow_export("layers.conv1d")
 def conv1d(
     inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
@@ -360,7 +358,6 @@ def conv1d(
     return output
 
 
-@oneflow_export("layers.conv2d")
 def conv2d(
     inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
@@ -560,7 +557,6 @@ def conv2d(
     return output
 
 
-@oneflow_export("layers.conv3d")
 def conv3d(
     inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
@@ -775,7 +771,6 @@ def conv3d(
     return output
 
 
-@oneflow_export("layers.layer_norm")
 def layer_norm(
     inputs: oneflow._oneflow_internal.BlobDesc,
     center: bool = True,
@@ -915,7 +910,6 @@ def layer_norm(
         raise NotImplementedError
 
 
-@oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
     dy: oneflow._oneflow_internal.BlobDesc,
     x: oneflow._oneflow_internal.BlobDesc,
@@ -952,7 +946,6 @@ def layer_norm_grad(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
     dy: oneflow._oneflow_internal.BlobDesc,
     norm: oneflow._oneflow_internal.BlobDesc,
@@ -1104,7 +1097,6 @@ def _get_batch_normalization_variables(
     return beta, gamma, moving_mean, moving_variance
 
 
-@oneflow_export("layers.batch_normalization")
 def batch_normalization(
     inputs: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
@@ -1285,7 +1277,6 @@ def batch_normalization(
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("layers.batch_normalization_add_relu")
 def batch_normalization_add_relu(
     inputs: oneflow._oneflow_internal.BlobDesc,
     addend: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -1416,7 +1407,6 @@ def batch_normalization_add_relu(
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("layers.batch_normalization_relu")
 def batch_normalization_relu(
     inputs: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
@@ -1479,7 +1469,6 @@ Raises:
     )
 
 
-@oneflow_export("layers.upsample_2d")
 def upsample(
     x: oneflow._oneflow_internal.BlobDesc,
     size: Sequence[int] = (2, 2),

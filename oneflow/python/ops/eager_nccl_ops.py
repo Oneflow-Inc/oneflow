@@ -24,7 +24,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("eager_nccl_all_reduce")
 def eager_nccl_all_reduce(
     x: oneflow._oneflow_internal.BlobDesc,
     parallel_conf: str,

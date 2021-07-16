@@ -24,7 +24,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
 
-@oneflow_export("losses.add_loss")
 def api_add_loss(loss: oneflow._oneflow_internal.BlobDesc) -> None:
     r"""Mark a `Blob` as a loss. Auto grad starts at every loss blob. It doesn't has to be a product of typical "loss" operator like softmax loss but can also be a `Blob` produced by any operator.
 

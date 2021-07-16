@@ -20,7 +20,6 @@ import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
-@oneflow_export("regularizers.l1_l2")
 def l1_l2_regularizer(
     l1: float = 0.01, l2: float = 0.01
 ) -> regularizer_conf_util.RegularizerConf:
@@ -70,7 +69,6 @@ def l1_l2_regularizer(
     return regularizer
 
 
-@oneflow_export("regularizers.l1")
 def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L1 weight regularizer. 
 
@@ -114,7 +112,6 @@ def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     return l1_l2_regularizer(l1=l, l2=0.0)
 
 
-@oneflow_export("regularizers.l2")
 def l2_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L2 weight regularizer. 
 

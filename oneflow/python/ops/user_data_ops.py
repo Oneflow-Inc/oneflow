@@ -27,7 +27,6 @@ import sys
 import traceback
 
 
-@oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
 def OFRecordRawDecoder(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     blob_name: str,
@@ -61,7 +60,6 @@ def OFRecordRawDecoder(
     )
 
 
-@oneflow_export("data.OFRecordBytesDecoder", "data.ofrecord_bytes_decoder")
 def OFRecordBytesDecoder(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     blob_name: str,
@@ -81,9 +79,6 @@ def OFRecordBytesDecoder(
     )
 
 
-@oneflow_export(
-    "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
-)
 def api_ofrecord_image_decoder_random_crop(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     blob_name: str,
@@ -210,7 +205,6 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
         )
 
 
-@oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
 def OFRecordImageDecoder(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     blob_name: str,
@@ -283,7 +277,6 @@ def OFRecordImageDecoder(
     )
 
 
-@oneflow_export("image.Resize", "image.resize", "image_resize")
 def api_image_resize(
     image: oneflow._oneflow_internal.BlobDesc,
     target_size: Union[int, Sequence[int]] = None,
@@ -497,7 +490,6 @@ def api_image_resize(
     return res_image, scale, new_size
 
 
-@oneflow_export("image.target_resize", "image_target_resize")
 def api_image_target_resize(
     images: oneflow._oneflow_internal.BlobDesc,
     target_size: int,
@@ -612,7 +604,6 @@ def api_image_target_resize(
     return res_image, new_size, scale
 
 
-@oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
 def CropMirrorNormalize(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     mirror_blob: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -748,7 +739,6 @@ def CropMirrorNormalize(
     )
 
 
-@oneflow_export("image.random_crop", "image_random_crop")
 def api_image_random_crop(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     num_attempts: int = 10,
@@ -893,7 +883,6 @@ class ImageRandomCropModule(module_util.Module):
         )
 
 
-@oneflow_export("random.CoinFlip", "random.coin_flip")
 def api_coin_flip(
     batch_size: int = 1,
     seed: Optional[int] = None,
@@ -1012,7 +1001,6 @@ class CoinFlipModule(module_util.Module):
         )
 
 
-@oneflow_export("image.decode", "image_decode")
 def image_decode(
     images_bytes_buffer: oneflow._oneflow_internal.BlobDesc,
     dtype: flow.dtype = flow.uint8,
@@ -1092,7 +1080,6 @@ def image_decode(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("image.batch_align", "image_batch_align")
 def image_batch_align(
     images: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -1203,7 +1190,6 @@ def image_batch_align(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("image.normalize", "image_normalize")
 def image_normalize(
     image: oneflow._oneflow_internal.BlobDesc,
     std: Sequence[float],
@@ -1298,7 +1284,6 @@ def image_normalize(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("image.flip", "image_flip")
 def image_flip(
     image: oneflow._oneflow_internal.BlobDesc,
     flip_code: Union[int, oneflow._oneflow_internal.BlobDesc],
@@ -1406,7 +1391,6 @@ def image_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
 def object_bbox_flip(
     bbox: oneflow._oneflow_internal.BlobDesc,
     image_size: oneflow._oneflow_internal.BlobDesc,
@@ -1523,7 +1507,6 @@ def object_bbox_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("detection.object_bbox_scale", "object_bbox_scale")
 def object_bbox_scale(
     bbox: oneflow._oneflow_internal.BlobDesc,
     scale: oneflow._oneflow_internal.BlobDesc,
@@ -1652,9 +1635,6 @@ def object_bbox_scale(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip"
-)
 def object_segm_poly_flip(
     poly: oneflow._oneflow_internal.BlobDesc,
     image_size: oneflow._oneflow_internal.BlobDesc,
@@ -1798,9 +1778,6 @@ def object_segm_poly_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale"
-)
 def object_segm_poly_scale(
     poly: oneflow._oneflow_internal.BlobDesc,
     scale: oneflow._oneflow_internal.BlobDesc,
@@ -1943,10 +1920,6 @@ def object_segm_poly_scale(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export(
-    "detection.object_segmentation_polygon_to_mask",
-    "object_segmentation_polygon_to_mask",
-)
 def object_segm_poly_to_mask(
     poly: oneflow._oneflow_internal.BlobDesc,
     poly_index: oneflow._oneflow_internal.BlobDesc,
@@ -2139,7 +2112,6 @@ def object_segm_poly_to_mask(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("data.coco_reader")
 def api_coco_reader(
     annotation_file: str,
     image_dir: str,
@@ -2223,7 +2195,6 @@ class COCOReader(module_util.Module):
         )
 
 
-@oneflow_export("data.ofrecord_image_classification_reader")
 def ofrecord_image_classification_reader(
     ofrecord_dir: str,
     image_feature_name: str,
@@ -2325,7 +2296,6 @@ def ofrecord_image_classification_reader(
     return image, label
 
 
-@oneflow_export("data.OneRecDecoder", "data.onerec_decoder")
 def OneRecDecoder(
     input_blob,
     key,
@@ -2367,7 +2337,6 @@ def OneRecDecoder(
     )
 
 
-@oneflow_export("data.megatron_gpt_mmap_data_loader", "data.MegatronGPTMMapDataLoader")
 def gpt_data_loader(
     data_file_prefix: str,
     seq_length: int,

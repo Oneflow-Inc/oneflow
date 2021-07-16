@@ -20,7 +20,6 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 
 
-@oneflow_export("experimental.enable_typing_check")
 def api_enable_typing_check(val: bool = True) -> None:
     """ enable typing check for global_function """
     return enable_if.unique([enable_typing_check])(val)

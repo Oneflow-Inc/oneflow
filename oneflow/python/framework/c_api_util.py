@@ -249,7 +249,6 @@ def GetInterfaceOpAttributes():
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
-@oneflow_export("experimental.get_job_set")
 def GetJobSet():
     job_set = oneflow._oneflow_internal.GetSerializedJobSet()
     ret = job_set_pb.JobSet()

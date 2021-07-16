@@ -131,7 +131,6 @@ class UserOpModule(object):
         raise NotImplementedError
 
 
-@oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
     r"""Build a wrapper of user op.
 
@@ -196,7 +195,6 @@ class EagerUserOp(UserOp):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
 
-@oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
@@ -420,7 +418,6 @@ class UserOpConfBuilder(object):
         return self
 
 
-@oneflow_export("user_op_module_builder")
 def api_user_op_module_builder(op_type_name):
     api = enable_if.unique(
         [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
@@ -501,7 +498,6 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
 
-@oneflow_export("consistent_user_op_module_builder")
 def api_consistent_user_op_module_builder(op_type_name):
     api = enable_if.unique(
         [

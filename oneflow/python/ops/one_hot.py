@@ -28,7 +28,6 @@ import oneflow._oneflow_internal
 from typing import Optional, Union
 
 
-@oneflow_export("one_hot")
 def one_hot(
     indices: oneflow._oneflow_internal.BlobDesc,
     depth: int,

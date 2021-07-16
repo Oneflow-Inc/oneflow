@@ -19,6 +19,5 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
-@oneflow_export("util.unique_str")
 def UniqueStr(prefix):
     return oneflow._oneflow_internal.UniqueStr(prefix)

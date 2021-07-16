@@ -28,7 +28,6 @@ from typing import Union, Tuple, List, Optional, Sequence, Callable
 import oneflow._oneflow_internal
 
 
-@oneflow_export("advanced.distribute_clone")
 def api_distribute_clone(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
@@ -58,7 +57,6 @@ def distribute_clone(x, name=None):
     return tuple(ret)
 
 
-@oneflow_export("advanced.distribute_add")
 def api_distribute_add(
     xs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -84,7 +82,6 @@ def distribute_add(xs, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("advanced.distribute_split")
 def api_distribute_split(
     x: oneflow._oneflow_internal.BlobDesc, axis: int = 0, name: Optional[str] = None
 ) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
@@ -115,7 +112,6 @@ def distribute_split(x, axis=0, name=None):
     return tuple(ret)
 
 
-@oneflow_export("advanced.distribute_concat")
 def api_distribute_concat(
     xs: Sequence[oneflow._oneflow_internal.BlobDesc],
     axis: int = 0,
@@ -144,7 +140,6 @@ def distribute_concat(xs, axis=0, name=None):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-@oneflow_export("advanced.distribute_map")
 def api_distribute_map(
     xs: Union[
         Sequence[oneflow._oneflow_internal.BlobDesc], oneflow._oneflow_internal.BlobDesc
@@ -176,7 +171,6 @@ def distribute_map(xs, f, axis=0):
     return tuple(result)
 
 
-@oneflow_export("cast_to_current_logical_view")
 def cast_to_current_logical_view(
     x: oneflow._oneflow_internal.BlobDesc,
 ) -> oneflow._oneflow_internal.BlobDesc:

@@ -45,7 +45,6 @@ class ClipGradientConf:
         raise NotImplementedError()
 
 
-@oneflow_export("optimizer.grad_clipping.by_global_norm")
 class by_global_norm(ClipGradientConf):
     r"""This operator limits the norm of `Input` with `clip_norm`.
 
@@ -110,7 +109,6 @@ class WarmupConf:
         raise NotImplementedError()
 
 
-@oneflow_export("optimizer.warmup.constant")
 class constant(WarmupConf):
     r"""This operator use the constant warmup strategy to adjust the learning rate.
 
@@ -170,7 +168,6 @@ class constant(WarmupConf):
         return warmup_conf
 
 
-@oneflow_export("optimizer.warmup.linear")
 class linear(WarmupConf):
     r"""This operator uses the linear warmup strategy to adjust the learning rate.
 
@@ -265,7 +262,6 @@ class LrScheduler:
                 )
 
 
-@oneflow_export("optimizer.CosineScheduler")
 class CosineScheduler(LrScheduler):
     r"""This operator creates a Cosine decayed learning rate scheduler.
 
@@ -341,7 +337,6 @@ class CosineScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.CustomScheduler")
 class CustomScheduler(LrScheduler):
     def __init__(self, lbn: Text):
         super().__init__(lr_lbn=lbn)
@@ -353,7 +348,6 @@ class CustomScheduler(LrScheduler):
         return None
 
 
-@oneflow_export("optimizer.PiecewiseConstantScheduler")
 class PiecewiseConstantScheduler(LrScheduler):
     r"""This operator creates a piecewise constant learning rate scheduler.
 
@@ -429,7 +423,6 @@ class PiecewiseConstantScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.PiecewiseScalingScheduler")
 class PiecewiseScalingScheduler(LrScheduler):
     """This operator creates a piecewise scaled decayed learning rate scheduler.
 
@@ -511,7 +504,6 @@ class PiecewiseScalingScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.PolynomialScheduler")
 class PolynomialScheduler(LrScheduler):
     r"""This operator creates a polynomial decayed learning rate scheduler.
 
@@ -600,8 +592,6 @@ class PolynomialScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.PolynomialSchduler")
-@oneflow_deprecate()
 class PolynomialSchduler(PolynomialScheduler):
     def __init__(
         self,
@@ -630,7 +620,6 @@ class PolynomialSchduler(PolynomialScheduler):
         )
 
 
-@oneflow_export("optimizer.LinearCosineScheduler")
 class LinearCosineScheduler(LrScheduler):
     r"""This operator creates a linear cosine decayed learning rate scheduler.
 
@@ -715,7 +704,6 @@ class LinearCosineScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
     r"""This operator creates a exponential decayed learning rate scheduler.
 
@@ -803,7 +791,6 @@ class ExponentialScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
     r"""This operator creates a inverse time decayed learning rate scheduler.
 
@@ -891,7 +878,6 @@ class InverseTimeScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
     r"""This operator creates a natural exponential decayed learning rate scheduler.
 
@@ -980,7 +966,6 @@ class LossScalePolicy:
         raise NotImplementedError()
 
 
-@oneflow_export("optimizer.loss_scale.static_loss_scale")
 class StaticLossScalePolicy(LossScalePolicy):
     def __init__(self, loss_scale_factor: float):
         super().__init__()
@@ -990,7 +975,6 @@ class StaticLossScalePolicy(LossScalePolicy):
         train_conf.loss_scale_factor = self.loss_scale_factor
 
 
-@oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
 class DynamicLossScalePolicy(LossScalePolicy):
     def __init__(
         self, initial_loss_scale=(2 ** 30), increment_period=2000, multiplier=2.0
@@ -1065,7 +1049,6 @@ class Optimizer:
             flow.losses.add_loss(x)
 
 
-@oneflow_export("optimizer.SGD")
 class SGD(Optimizer):
     r"""The optimizer of the stochastic gradient descent algorithm.
 
@@ -1155,7 +1138,6 @@ class SGD(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.SGDW")
 class SGDW(Optimizer):
     r"""The optimizer of the stochastic-gradient-descent-weight-decay algorithm.
 
@@ -1281,7 +1263,6 @@ class SGDW(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
     r"""The optimizer of the Adam algorithm.
 
@@ -1400,7 +1381,6 @@ class Adam(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.AdamW")
 class AdamW(Optimizer):
     r"""The optimizer of the Adam-weight-decay algorithm.
 
@@ -1559,7 +1539,6 @@ class AdamW(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.RMSProp")
 class RMSProp(Optimizer):
     r"""The optimizer of the RMSProp algorithm.
 
@@ -1663,7 +1642,6 @@ class RMSProp(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.LARS")
 class LARS(Optimizer):
     r"""The optimizer of the LARS algorithm.
 
@@ -1785,7 +1763,6 @@ class LARS(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.LazyAdam")
 class LazyAdam(Optimizer):
     r"""
     The optimizer of the LazyAdam algorithm.
@@ -1879,7 +1856,6 @@ class LazyAdam(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.LAMB")
 class LAMB(Optimizer):
 
     r"""
@@ -1971,7 +1947,6 @@ class LAMB(Optimizer):
             optimizer_conf.add_variable_op_names(variable)
 
 
-@oneflow_export("optimizer.CombinedOptimizer")
 class CombinedOptimizer(Optimizer):
     r"""
     Combined optimizer for multi optimizer case.

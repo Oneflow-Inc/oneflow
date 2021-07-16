@@ -31,7 +31,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional
 
 
-@oneflow_export("experimental.square_sum")
 def square_sum(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:

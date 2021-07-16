@@ -22,8 +22,6 @@ from typing import Optional
 import oneflow._oneflow_internal
 
 
-@oneflow_export("diag")
-@stable_api
 def diag(
     input: oneflow._oneflow_internal.BlobDesc,
     diagonal: Optional[int] = 0,

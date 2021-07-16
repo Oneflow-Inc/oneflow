@@ -26,8 +26,6 @@ import traceback
 import oneflow._oneflow_internal
 
 
-@oneflow_export("device_prior_placement", "fixed_placement")
-@oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
     print(
         "WARNING:",
@@ -40,7 +38,6 @@ def deprecated_placement(*args, **kwargs):
     return api_placement(*args, **kwargs)
 
 
-@oneflow_export("scope.placement")
 def api_placement(
     device_tag: str, machine_device_ids: str, hierarchy=None
 ) -> placement_ctx.PlacementScope:

@@ -40,7 +40,6 @@ import os
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
-@oneflow_export("get_variable")
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,

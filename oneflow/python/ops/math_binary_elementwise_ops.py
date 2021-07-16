@@ -40,7 +40,6 @@ def build_math_binary_elementwise_op(math_op, x, y, name=None):
     )
 
 
-@oneflow_export("math.atan2")
 def atan2(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -89,7 +88,6 @@ def atan2(
     return build_math_binary_elementwise_op("atan2", x, y, name)
 
 
-@oneflow_export("math.pow")
 def pow(
     x: oneflow._oneflow_internal.BlobDesc,
     y: Union[oneflow._oneflow_internal.BlobDesc, float],
@@ -173,7 +171,6 @@ def pow(
         return build_math_binary_elementwise_op("pow", x, y, name)
 
 
-@oneflow_export("math.floordiv")
 def floordiv(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -214,7 +211,6 @@ def floordiv(
     return build_math_binary_elementwise_op("floordiv", x, y, name)
 
 
-@oneflow_export("math.xdivy")
 def xdivy(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,
@@ -256,7 +252,6 @@ def xdivy(
     return build_math_binary_elementwise_op("xdivy", x, y, name)
 
 
-@oneflow_export("math.xlogy")
 def xlogy(
     x: oneflow._oneflow_internal.BlobDesc,
     y: oneflow._oneflow_internal.BlobDesc,

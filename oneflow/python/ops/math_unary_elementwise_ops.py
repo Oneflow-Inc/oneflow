@@ -44,7 +44,6 @@ def build_unary_elemwise_math_op(math_op, x, name=None):
     )
 
 
-@oneflow_export("math.abs")
 def abs(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -81,7 +80,6 @@ def abs(
     return build_unary_elemwise_math_op("abs", x, name)
 
 
-@oneflow_export("math.acos")
 def acos(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -120,7 +118,6 @@ def acos(
     return build_unary_elemwise_math_op("acos", x, name)
 
 
-@oneflow_export("math.acosh")
 def acosh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -163,7 +160,6 @@ def acosh(
     return build_unary_elemwise_math_op("acosh", x, name)
 
 
-@oneflow_export("math.asin")
 def asin(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -202,7 +198,6 @@ def asin(
     return build_unary_elemwise_math_op("asin", x, name)
 
 
-@oneflow_export("math.asinh")
 def asinh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -245,7 +240,6 @@ def asinh(
     return build_unary_elemwise_math_op("asinh", x, name)
 
 
-@oneflow_export("math.atan")
 def atan(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -283,7 +277,6 @@ def atan(
     return build_unary_elemwise_math_op("atan", x, name)
 
 
-@oneflow_export("math.atanh")
 def atanh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -326,7 +319,6 @@ def atanh(
     return build_unary_elemwise_math_op("atanh", x, name)
 
 
-@oneflow_export("math.ceil")
 def ceil(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -363,7 +355,6 @@ def ceil(
     return build_unary_elemwise_math_op("ceil", x, name)
 
 
-@oneflow_export("math.cos")
 def cos(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -399,7 +390,6 @@ def cos(
     return build_unary_elemwise_math_op("cos", x, name)
 
 
-@oneflow_export("math.cosh")
 def cosh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -442,7 +432,6 @@ def cosh(
     return build_unary_elemwise_math_op("cosh", x, name)
 
 
-@oneflow_export("math.erf")
 def erf(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -485,7 +474,6 @@ def erf(
     return build_unary_elemwise_math_op("erf", x, name)
 
 
-@oneflow_export("math.erfc")
 def erfc(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -523,7 +511,6 @@ def erfc(
     return build_unary_elemwise_math_op("erfc", x, name)
 
 
-@oneflow_export("math.exp")
 def exp(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -565,7 +552,6 @@ def exp(
     return build_unary_elemwise_math_op("exp", x, name)
 
 
-@oneflow_export("math.expm1")
 def expm1(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -602,7 +588,6 @@ def expm1(
     return build_unary_elemwise_math_op("expm1", x, name)
 
 
-@oneflow_export("math.floor")
 def floor(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -639,7 +624,6 @@ def floor(
     return build_unary_elemwise_math_op("floor", x, name)
 
 
-@oneflow_export("math.lgamma")
 def lgamma(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -682,7 +666,6 @@ def lgamma(
     return build_unary_elemwise_math_op("lgamma", x, name)
 
 
-@oneflow_export("math.log")
 def log(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -719,7 +702,6 @@ def log(
     return build_unary_elemwise_math_op("log", x, name)
 
 
-@oneflow_export("math.log1p")
 def log1p(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -756,7 +738,6 @@ def log1p(
     return build_unary_elemwise_math_op("log1p", x, name)
 
 
-@oneflow_export("math.log_sigmoid")
 def log_sigmoid(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -799,7 +780,6 @@ def log_sigmoid(
     return build_unary_elemwise_math_op("log_sigmoid", x, name)
 
 
-@oneflow_export("math.negative")
 def negative(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -836,7 +816,6 @@ def negative(
     return build_unary_elemwise_math_op("negative", x, name)
 
 
-@oneflow_export("math.reciprocal")
 def reciprocal(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -879,7 +858,6 @@ def reciprocal(
     return build_unary_elemwise_math_op("reciprocal", x, name)
 
 
-@oneflow_export("math.reciprocal_no_nan")
 def reciprocal_no_nan(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -917,7 +895,6 @@ def reciprocal_no_nan(
     return build_unary_elemwise_math_op("reciprocal_no_nan", x, name)
 
 
-@oneflow_export("math.rint")
 def rint(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -954,7 +931,6 @@ def rint(
     return build_unary_elemwise_math_op("rint", x, name)
 
 
-@oneflow_export("math.round")
 def round(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -991,7 +967,6 @@ def round(
     return build_unary_elemwise_math_op("round", x, name)
 
 
-@oneflow_export("math.rsqrt")
 def rsqrt(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1034,7 +1009,6 @@ def rsqrt(
     return build_unary_elemwise_math_op("rsqrt", x, name)
 
 
-@oneflow_export("math.sigmoid_v2")
 def sigmoid_v2(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1076,7 +1050,6 @@ def sigmoid_v2(
     return build_unary_elemwise_math_op("sigmoid_v2", x, name)
 
 
-@oneflow_export("math.sign")
 def sign(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1113,7 +1086,6 @@ def sign(
     return build_unary_elemwise_math_op("sign", x, name)
 
 
-@oneflow_export("math.sin")
 def sin(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1150,7 +1122,6 @@ def sin(
     return build_unary_elemwise_math_op("sin", x, name)
 
 
-@oneflow_export("math.sinh")
 def sinh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1193,7 +1164,6 @@ def sinh(
     return build_unary_elemwise_math_op("sinh", x, name)
 
 
-@oneflow_export("math.softplus")
 def softplus(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1236,7 +1206,6 @@ def softplus(
     return build_unary_elemwise_math_op("softplus", x, name)
 
 
-@oneflow_export("math.sqrt")
 def sqrt(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1273,7 +1242,6 @@ def sqrt(
     return build_unary_elemwise_math_op("sqrt", x, name)
 
 
-@oneflow_export("math.square")
 def square(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1310,7 +1278,6 @@ def square(
     return build_unary_elemwise_math_op("square", x, name)
 
 
-@oneflow_export("math.tan")
 def tan(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1347,7 +1314,6 @@ def tan(
     return build_unary_elemwise_math_op("tan", x, name)
 
 
-@oneflow_export("math.tanh")
 def tanh(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1390,7 +1356,6 @@ def tanh(
     return build_unary_elemwise_math_op("tanh", x, name)
 
 
-@oneflow_export("math.tanh_v2")
 def tanh_v2(
     x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
