@@ -13,29 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
-#define ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
 
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/framework/stride.h"
 
 namespace oneflow {
 
-//#define DISABLE_FIXED_SHAPE_VEC
-#define SHAPE_MAX_AXIS_SIZE 20
+Stride::Stride(const Shape& shape) {
+  if (shape.NumAxes() > 0) {
+    stride_vec_.resize(shape.NumAxes());
+    int64_t stride = 1;
+    for (size_t i = shape.NumAxes(); i > 0; --i) {
+      stride_vec_.at(i) = stride;
+      stride += shape.At(i - 1);
+    }
+  }
+}
 
-#if defined(DISABLE_FIXED_SHAPE_VEC)
+std::string Stride::ToString() const {
+  std::stringstream ss;
+  int32_t idx = 0;
+  ss << "(";
+  for (int64_t dim : stride_vec_) {
+    ss << dim;
+    if (++idx != stride_vec_.size() || stride_vec_.size() == 1) { ss << ","; }
+  }
+  ss << ")";
+  return ss.str();
+}
 
-typedef std::vector<int64_t> DimVector;
-typedef std::vector<int64_t> AxisVector;
-typedef std::vector<int64_t> StrideVector;
+std::string Stride::DebugStr() const { return ToString(); }
 
-#else
-
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> StrideVector;
-
-#endif
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
