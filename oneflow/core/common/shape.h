@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
@@ -67,6 +68,8 @@ class Shape final {
   AxisVector Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
 
   bool Containing(const Shape& small_shape) const;
+
+  Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
 
  private:
   void UpdateElemCnt();
