@@ -253,13 +253,14 @@ def _test_maxpool1d_impl(test_case, device):
 
 
 def _test_maxpool1d_zero_padding(test_case, device):
-    arr = np.arange(1000).reshape(4, 5, 50)
+    arr = np.arange(1000).reshape(4, 5, 50).astype(np.float)
     input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
     m1 = flow.nn.MaxPool1d(kernel_size=3, stride=3, padding=0)
     of_out = m1(input)
 
     m2 = MaxPoolNumpy(2, kernel_size=(3, 1), stride=(3, 1), padding=(0, 0))
-    np_out = np.squeeze(m2(arr.reshape(4, 5, 50, 1)), axis=3)
+    np_out = m2(arr.reshape(4, 5, 50, 1))
+    np_out = np.squeeze(np_out, axis=3)
     test_case.assertTrue(np.allclose(np_out, of_out.numpy(), 1e-4, 1e-4))
 
 
