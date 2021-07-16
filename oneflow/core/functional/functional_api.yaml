@@ -610,3 +610,6 @@
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True
 
+- name: "dot"
+  signature: "Tensor Dot(Tensor input, Tensor other)"
+  bind_python: True
