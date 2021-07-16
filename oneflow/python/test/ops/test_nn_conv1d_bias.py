@@ -13,6 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import unittest
 import os
 from collections import OrderedDict
@@ -75,9 +90,16 @@ def compare_with_tensorflow(
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
             )
+            bias = flow.get_variable(
+                "conv-bias",
+                shape=(filters,),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+            )
             loss = flow.nn.conv1d(
                 x,
                 weight,
+                bias=bias,
                 strides=[stride],
                 padding=of_padding,
                 data_format=data_format,
@@ -92,6 +114,8 @@ def compare_with_tensorflow(
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(weight, test_global_storage.Setter("weight"))
             flow.watch_diff(weight, test_global_storage.Setter("weight_diff"))
+            flow.watch(bias, test_global_storage.Setter("bias"))
+            flow.watch_diff(bias, test_global_storage.Setter("bias_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
@@ -99,6 +123,7 @@ def compare_with_tensorflow(
 
     # OneFlow
     of_out = ConvJob().get()
+    flow.clear_default_session()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x").transpose(xy_data_transpose))
@@ -109,7 +134,7 @@ def compare_with_tensorflow(
             test_global_storage.Get("weight").transpose(weight_data_transpose)
         )
 
-        tf_out = tf.nn.conv1d(
+        conv_out = tf.nn.conv1d(
             x,
             weight,
             stride=[1, stride, 1],
@@ -117,10 +142,14 @@ def compare_with_tensorflow(
             data_format="NWC",
             dilations=[1, dilation, 1],
         )
+        bias = tf.Variable(test_global_storage.Get("bias"))
+        tf_out = tf.nn.bias_add(conv_out, bias, data_format="NWC")
 
     loss_diff = test_global_storage.Get("loss_diff").transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
+    tf_bias_diff = tape.gradient(tf_out, bias, loss_diff)
+
     assert np.allclose(
         of_out.numpy().transpose(xy_data_transpose),
         tf_out.numpy(),
@@ -139,10 +168,16 @@ def compare_with_tensorflow(
         rtol=1e-5,
         atol=1e-5,
     )
+    assert np.allclose(
+        test_global_storage.Get("bias_diff"),
+        tf_bias_diff.numpy(),
+        rtol=1e-5,
+        atol=1e-5,
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNnConv1d(flow.unittest.TestCase):
+class TestNnConv1dBias(flow.unittest.TestCase):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

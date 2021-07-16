@@ -167,8 +167,8 @@ def compare_with_tensorflow(
     assert np.allclose(
         of_out.numpy().transpose(xy_data_transpose),
         tf_out.numpy(),
-        rtol=5e-3,
-        atol=5e-3,
+        rtol=1e-5,
+        atol=1e-5,
     ), max_diff
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(xy_data_transpose),
@@ -179,14 +179,14 @@ def compare_with_tensorflow(
     assert np.allclose(
         test_global_storage.Get("weight_diff").transpose(weight_data_transpose),
         tf_weight_diff.numpy(),
-        rtol=5e-3,
-        atol=5e-3,
+        rtol=1e-5,
+        atol=1e-5,
     )
     assert np.allclose(
         test_global_storage.Get("bias_diff"),
         tf_bias_diff.numpy(),
-        rtol=5e-3,
-        atol=5e-3,
+        rtol=1e-5,
+        atol=1e-5,
     )
 
 

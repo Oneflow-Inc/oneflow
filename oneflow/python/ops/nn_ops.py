@@ -246,6 +246,7 @@ def conv1d(
     filters: oneflow._oneflow_internal.BlobDesc,
     strides: Union[int, Tuple[int]],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     data_format: str = "NCW",
     dilations: Optional[Union[int, Tuple[int]]] = None,
     groups: int = 1,
@@ -326,6 +327,9 @@ def conv1d(
     assert len(input.shape) == 3
     assert len(filters.shape) == 3
 
+    if bias is not None:
+        assert len(bias.shape) == 1
+
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 1, ValueError(
             "strides length must be 1 when passed as a list."
@@ -375,7 +379,8 @@ def conv1d(
     assert groups <= input.shape[in_channel_axis]
     assert input.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == input.shape[in_channel_axis] // groups
-
+    if bias is not None:
+        assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
@@ -390,6 +395,11 @@ def conv1d(
         filter_split_list = ConvUtil.split(
             filters, axis=filter_out_axis, split_num=groups
         )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
+        )
         out_list = []
         name = name if name is not None else id_util.UniqueStr("Conv1d_")
         for i in range(len(in_split_list)):
@@ -398,7 +408,7 @@ def conv1d(
                     "conv1d",
                     in_split_list[i],
                     filter_split_list[i],
-                    None,
+                    bias_spilt_list[i],
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -414,7 +424,7 @@ def conv1d(
             "conv1d",
             inputs,
             filters,
-            None,
+            bias,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -631,6 +641,7 @@ def conv3d(
     filters: oneflow._oneflow_internal.BlobDesc,
     strides: Union[int, Sequence[int]],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     data_format: str = "NCDHW",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
@@ -726,6 +737,9 @@ def conv3d(
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
 
+    if bias is not None:
+        assert len(bias.shape) == 1
+
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 3, ValueError(
             "strides length must be 3 when passed as a list."
@@ -775,7 +789,8 @@ def conv3d(
     assert groups <= input.shape[in_channel_axis]
     assert input.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == input.shape[1] // groups
-
+    if bias is not None:
+        assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
@@ -790,6 +805,11 @@ def conv3d(
         filter_split_list = ConvUtil.split(
             filters, axis=filter_out_axis, split_num=groups
         )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
+        )
         out_list = []
         name = name if name is not None else id_util.UniqueStr("Conv3d_")
         for i in range(len(in_split_list)):
@@ -798,7 +818,7 @@ def conv3d(
                     "conv3d",
                     in_split_list[i],
                     filter_split_list[i],
-                    None,
+                    bias_spilt_list[i],
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -814,7 +834,7 @@ def conv3d(
             "conv3d",
             inputs,
             filters,
-            None,
+            bias,
             padding_before,
             channel_pos,
             kernel_size_list,
