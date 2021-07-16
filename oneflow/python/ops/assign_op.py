@@ -51,7 +51,8 @@ def assign(ref, value, dtype=None, name=None):
 @oneflow_export("system.assign")
 def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     # TODO(lixinqi): check ref.is_lvalue
-    api = lazy_system_assign  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([lazy_system_assign])
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
     return api(
         ref, value, validate_shape=validate_shape, use_locking=use_locking, name=name
     )

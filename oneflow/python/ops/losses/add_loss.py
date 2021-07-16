@@ -31,9 +31,8 @@ def api_add_loss(loss: oneflow._oneflow_internal.BlobDesc) -> None:
     Args:
         loss: A `Blob`.
     """
-    return lazy_add_loss(
-        loss
-    )  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    return enable_if.unique([lazy_add_loss])(loss)
 
 
 @enable_if.condition(hob.in_global_mode & hob.is_trainable)

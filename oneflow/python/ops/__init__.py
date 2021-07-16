@@ -50,9 +50,8 @@ def InputOpByArgBlobDef(blob_def):
 
 
 def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
-    return LazyReturnRemoteBlob(
-        remote_blob, allow_cpu_return_op
-    )  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    return enable_if.unique([LazyReturnRemoteBlob])(remote_blob, allow_cpu_return_op)
 
 
 @enable_if.condition(hob.in_global_mode)

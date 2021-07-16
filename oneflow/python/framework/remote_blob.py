@@ -37,7 +37,8 @@ blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
-    api = LazyRemoteBlob  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([LazyRemoteBlob])
     return api(lbi, **kw)
 
 

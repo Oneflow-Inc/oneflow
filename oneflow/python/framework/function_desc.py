@@ -98,5 +98,6 @@ def GetCurrentLazyGlobalFunctionDesc():
 
 @oneflow_export("current_global_function_desc")
 def api_current_global_function_desc() -> FunctionDesc:
-    api_func = GetCurrentLazyGlobalFunctionDesc  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api_func = enable_if.unique([GetCurrentLazyGlobalFunctionDesc])
     return api_func()

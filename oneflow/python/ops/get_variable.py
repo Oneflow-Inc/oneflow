@@ -178,7 +178,8 @@ def api_get_variable(
 
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
-    api = get_lazy_variable  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([get_lazy_variable])
     return api(
         name,
         shape=shape,

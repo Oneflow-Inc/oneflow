@@ -118,7 +118,8 @@ def api_oneflow_function(
             function_config.function_desc.job_config_proto.mutable_train_conf()
         else:
             function_config.function_desc.job_config_proto.mutable_predict_conf()
-    api = lazy_oneflow_function  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([lazy_oneflow_function])
     return api(function_config)
 
 

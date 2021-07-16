@@ -150,9 +150,8 @@ def api_user_op_builder(op_name):
     Returns:
         UserOpConfBuilder: `UserOpConfBuilder` object used to build a wrapper of user op.
     """
-    api = (
-        lazy_user_op_builder  # NOTE(chengcheng): global_function ONLY support Lazy run.
-    )
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([lazy_user_op_builder])
     return api(op_name)
 
 
@@ -420,7 +419,8 @@ class UserOpConfBuilder(object):
 
 @oneflow_export("user_op_module_builder")
 def api_user_op_module_builder(op_type_name):
-    api = lazy_user_op_module_builder  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([lazy_user_op_module_builder])
     return api(op_type_name)
 
 
@@ -500,7 +500,7 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
 @oneflow_export("consistent_user_op_module_builder")
 def api_consistent_user_op_module_builder(op_type_name):
     # NOTE(chengcheng): global_function ONLY support Lazy run.
-    api = lazy_consistent_user_op_module_builder
+    api = enable_if.unique([lazy_consistent_user_op_module_builder])
     return api(op_type_name)
 
 

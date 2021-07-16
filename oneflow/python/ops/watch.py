@@ -127,7 +127,8 @@ def Watch(
         #        [-0.12266113 -0.12266113]]]]
 
     """
-    api = LazyWatch  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([LazyWatch])
     return api(blob_watched, handler_or_prompt)
 
 
@@ -326,7 +327,8 @@ def WatchDiff(
         #                        [46. 50. 54.]]]]
 
     """
-    api = LazyWatchDiff  # NOTE(chengcheng): global_function ONLY support Lazy run.
+    # NOTE(chengcheng): global_function ONLY support Lazy run.
+    api = enable_if.unique([LazyWatchDiff])
     return api(blob_watched, handler_or_prompt)
 
 
