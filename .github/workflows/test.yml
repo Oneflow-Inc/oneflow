@@ -526,7 +526,6 @@ jobs:
       - name: Graph API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
-          exit 1
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/graph \
