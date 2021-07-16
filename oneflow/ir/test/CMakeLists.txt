@@ -18,3 +18,5 @@ add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests"
 set_target_properties(check-oneflow PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(ONEFLOW ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${ONEFLOW_TEST_DEPENDS})
+
+add_custom_target(c1 DEPENDS check-oneflow)
