@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/api/python/env/env.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -64,7 +63,7 @@ MultiClientSessionContext::~MultiClientSessionContext() {
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
+    CHECK_OR_RETURN(JUST(GlobalMultiClientEnv()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();
