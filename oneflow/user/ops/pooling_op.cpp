@@ -27,10 +27,7 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const std::string& padding = ctx->Attr<std::string>("padding");
-    const std::vector<int32_t>& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const std::vector<int32_t>& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+    const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
     const std::vector<int32_t>& dilation = ctx->Attr<std::vector<int32_t>>("dilation");
@@ -41,14 +38,13 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
     CHECK_EQ_OR_RETURN(stride.size(), dim);
     for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
-    for (int32_t i = 0; i < padding_after.size(); i++) {
-      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding_after[i])
+    for (int32_t i = 0; i < padding.size(); i++) {
+      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])
           << "pad should be smaller than half of kernel size";
     }
 
-    const PoolingParams3D params_3d(dim, *x_shape, data_format, padding, padding_before,
-                                    padding_after, kernel_size, stride, dilation, return_indices,
-                                    ceil_mode);
+    const PoolingParams3D params_3d(dim, *x_shape, padding, kernel_size, stride, 
+                                    dilation, return_indices, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
@@ -64,10 +60,9 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
 
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    if (padding_before[i] == 0 && padding_after[i] == 0) {
+    if (padding[i] == 0) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Split(user_op::OpArg("y", 0), i)
@@ -85,10 +80,9 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 
 Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    if (padding_before[i] == 0 && padding_after[i] == 0) {
+    if (padding[i] == 0) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Split(user_op::OpArg("y", 0), i)
@@ -122,10 +116,7 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
               .Input("indice", op.output("indice", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::string>("padding"))
-              .Attr("padding_before", op.attr<std::vector<int32_t>>("padding_before"))
-              .Attr("padding_after", op.attr<std::vector<int32_t>>("padding_after"))
+              .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
               .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
               .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
               .Attr("dilation", op.attr<std::vector<int32_t>>("dilation"))
@@ -144,10 +135,7 @@ REGISTER_USER_OP("maxpool_2d")
     .Input("x")
     .Output("y")
     .Output("indice")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("padding")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -163,10 +151,7 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .Input("indice")
     .Input("dy")
     .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("padding")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -182,10 +167,7 @@ REGISTER_USER_OP("maxpool_3d")
     .Input("x")
     .Output("y")
     .Output("indice")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("padding")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -201,10 +183,7 @@ REGISTER_USER_OP("maxpool_3d_grad")
     .Input("indice")
     .Input("dy")
     .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("padding")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
