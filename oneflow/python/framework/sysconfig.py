@@ -72,6 +72,11 @@ def with_xla() -> bool:
     return oneflow._oneflow_internal.flags.with_xla()
 
 
+@oneflow_export("sysconfig.with_mlir")
+def with_cuda() -> bool:
+    return oneflow._oneflow_internal.flags.with_mlir()
+
+
 @oneflow_export("sysconfig.has_rpc_backend_grpc")
 def has_rpc_backend_grpc() -> bool:
     return oneflow._oneflow_internal.flags.has_rpc_backend_grpc()

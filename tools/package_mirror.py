@@ -24,6 +24,7 @@ def glob_by_pattern(dir_path, pattern):
 def scan_urls(dir_path):
     cmakes = glob_by_pattern(dir_path, "**/*.cmake")
     cmakes += glob_by_pattern(dir_path, "**/*.bzl")
+    cmakes += glob_by_pattern(dir_path, "**/CMakeLists.txt")
     urls = []
     for cmake_path in cmakes:
         with open(cmake_path) as f:
@@ -65,7 +66,7 @@ def should_be_mirrored(url: str):
         not parsed.port
         and not parsed.query
         and not parsed.params
-        and url.endswith(("gz", "tar", "zip"))
+        and url.endswith(("gz", "tar", "zip", "xz"))
         and not "mirror.tensorflow.org" in url
         and not "mirror.bazel.build" in url
         and not "aliyuncs.com" in url
@@ -119,4 +120,4 @@ if __name__ == "__main__":
         upload_to_aliyun(args.src_path)
     if args.url != None:
         oss_url = convert_url_to_oss_https_url(args.url)
-        print(oss_url)
+        print(oss_url, end="")

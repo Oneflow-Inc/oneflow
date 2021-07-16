@@ -39,6 +39,7 @@ jobs:
           python3 -m pip install -U pip setuptools wheel
           python3 -m pip install oss2
           python3 tools/package_mirror.py -i cmake
+          python3 tools/package_mirror.py -i oneflow/ir
 
   check_license_and_format:
     name: License and format
@@ -168,7 +169,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu", "xla", "xla_cpu"]
+        test_suite: ["cuda", "cpu", "xla", "xla_cpu", "mlir"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
@@ -193,6 +194,12 @@ jobs:
             extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
+            python_version: 3.6
+          - test_suite: mlir
+            cuda_version: 10.2
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DWITH_MLIR=ON
+            os: [self-hosted, linux, release]
+            allow_fail: false
             python_version: 3.6
     steps:
       - name: Set environments from secrets
@@ -352,6 +359,10 @@ jobs:
             os: [self-hosted, linux, gpu]
             allow_fail: true
             build_env: build.xla.env
+          - test_suite: "mlir"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
+            build_env: build.mlir.env
           - test_suite: "xla_cpu"
             os: [self-hosted, linux, cpu]
             allow_fail: true
@@ -438,25 +449,25 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed, 1st try)
-        if: matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         continue-on-error: true
         id: distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 2nd try)
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+        if: contains(fromJson('["cuda", "mlir"]'), matrix.test_suite) && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 3rd try)
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+        if: contains(fromJson('["cuda", "mlir"]'), matrix.test_suite) && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
-        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
@@ -465,7 +476,7 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
-        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
@@ -533,7 +544,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
+        if: contains(fromJson('["cuda_op", "mlir", "cpu"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
@@ -541,7 +552,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Model test
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "mlir", "cpu"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
