@@ -99,7 +99,7 @@ def _test_sinh_impl(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class Testsinh(flow.unittest.TestCase):
+class TestSinh(flow.unittest.TestCase):
     def test_sinh(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
@@ -117,6 +117,46 @@ class Testsinh(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
                 test_case, "sinh", device=device,
+            )
+
+
+def _test_cosh_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    np_x_grad = np.sinh(np_input)
+    of_out = flow.cosh(of_input)
+    np_out = np.cosh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestCosh(flow.unittest.TestCase):
+    def test_cosh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_cosh_impl(test_case, *arg)
+
+    def test_flow_cosh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "cosh", device=device,
+            )
+
+    def test_flow_tensor_cosh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "cosh", device=device,
             )
 
 
