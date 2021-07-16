@@ -27,7 +27,7 @@ class DistributeSplitOp final : public Operator {
   DistributeSplitOp() = default;
   ~DistributeSplitOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
@@ -50,13 +50,14 @@ class DistributeSplitOp final : public Operator {
   int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
 
-void DistributeSplitOp::InitFromOpConf() {
+Maybe<void> DistributeSplitOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_split_conf());
   EnrollInputBn("in");
   EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
     ob_modifier->set_header_infered_before_compute(false);
     ob_modifier->set_is_mutable(op_conf().distribute_split_conf().is_variable_ref());
   });
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeSplitOp::InferLogicalOutBlobDescs(
@@ -108,11 +109,11 @@ Maybe<void> DistributeSplitOp::InferBlobParallelDesc() {
     bn2parallel_desc[output_bns().Get(i)] =
         std::make_shared<const ParallelDesc>(op_parallel_desc->GetParallelIdOnlyParallelConf(i));
   }
-  FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+  JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
     auto it = bn2parallel_desc.find(bn);
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
-  });
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -127,7 +128,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   cfg::SbpSignatureList sbp_sig_list;
-  GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list));
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
 }

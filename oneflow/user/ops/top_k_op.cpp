@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("top_k")
+REGISTER_NO_GRAD_USER_OP("top_k")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("k")

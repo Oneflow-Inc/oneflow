@@ -60,14 +60,14 @@ Maybe<void> Device::Init() {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
   Device device(type, device_id);
   JUST(device.Init());
   return SymbolOf(device);
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                             int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
+                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
   auto* vec = &type2device_id2device[type];
@@ -77,7 +77,7 @@ Maybe<void> Device::Init() {
   return *pptr;
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type) {
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
 }
 
@@ -92,13 +92,17 @@ Maybe<const std::string&> Device::of_type() const {
   return MapAt(type2device_tag, type());
 }
 
-Maybe<const std::string&> Device::local_call_instruction_name() const {
+Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
   };
-  return MapAt(type2instr_name, type());
+  return MapAt(type2instr_name, type);
+}
+
+Maybe<const std::string&> Device::local_call_instruction_name() const {
+  return GetLocalCallInstructionName(type());
 }
 
 std::string Device::ToRepr() const {

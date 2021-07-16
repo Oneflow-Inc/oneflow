@@ -124,7 +124,8 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
       const auto& op_name2sbp_sig = job_parallel_view_conf->op_name2sbp_signature_conf();
       const auto it = op_name2sbp_sig.find(pair.first);
       CHECK(it != op_name2sbp_sig.end());
-      CheckSbpSignatureAndParallelDistributionEquals(it->second, pair.second);
+      CheckSbpSignatureAndParallelDistributionEquals(
+          cfg::SbpSignature(it->second), cfg::ParallelDistributionSignature(pair.second));
     }
   }
   FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
@@ -315,14 +316,16 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
   MutOpsOnlyOnce(mut_ops);
 }
 
-void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
+Maybe<void> JobBuilder::ForEachOperator(
+    const std::function<Maybe<void>(const Operator&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
     auto it = op_name2parallel_conf_.find(pair.first);
-    CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
+    CHECK_OR_RETURN(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
-    Handler(*op);
+    std::shared_ptr<Operator> op = JUST(ConstructOp(*pair.second, device_type));
+    JUST(Handler(*op));
   }
+  return Maybe<void>::Ok();
 }
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {

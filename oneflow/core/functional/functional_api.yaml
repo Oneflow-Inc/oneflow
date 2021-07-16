@@ -16,27 +16,27 @@
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
-#   "BoolList", "DataType", "Shape"
+#   "BoolList", "DataType", "Shape", "Generator", "TensorIndex"
 # }
 
 - name: "add_n"
-  signature: "Tensor AddN(TensorTuple inputs)"
+  signature: "Tensor AddN(TensorTuple inputs, *, Bool inplace=False)"
   bind_python: True
 
 - name: "add"
-  signature: "Tensor Add(Tensor x, Tensor y)"
+  signature: "Tensor Add(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: True
 
 - name: "add_scalar"
-  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha)"
+  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha, Bool inplace=False)"
   bind_python: True
 
 - name: "add_scalar_by_tensor"
-  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar)"
+  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar, *, Bool inplace=False)"
   bind_python: True
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: True
 
 - name: "sub_scalar_by_tensor"
@@ -59,6 +59,11 @@
   signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
   bind_python: True
 
+- name: "bernoulli"
+  signature:
+    "Tensor Bernoulli(Tensor x, DataType dtype=kFloat, Generator generator=None)"
+  bind_python: True
+
 - name: "broadcast_mul"
   signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
   bind_python: True
@@ -75,12 +80,24 @@
   signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_not_equal"
+  signature: "Tensor BroadcastNotEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_greater"
   signature: "Tensor BroadcastGreater(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_greater_equal"
+  signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_less"
   signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_less_equal"
+  signature: "Tensor BroadcastLessEqual(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "pow"
@@ -95,6 +112,10 @@
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
   bind_python: True
 
+- name: "reduce_mean"
+  signature: "Tensor ReduceMean(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
 - name: "transpose"
   signature: "Tensor Transpose(Tensor x, *, Int32List perm)"
   bind_python: True
@@ -107,8 +128,12 @@
   signature: "Tensor ReciprocalNoNan(Tensor x)"
   bind_python: True
 
+- name: "image_flip"
+  signature: "Tensor ImageFlip(Tensor x, Tensor flip_code)"
+  bind_python: True
+
 - name: "sin"
-  signature: "Tensor Sin(Tensor x)"
+  signature: "Tensor Sin(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "cos"
@@ -136,7 +161,7 @@
   bind_python: True
 
 - name: "relu"
-  signature: "Tensor Relu(Tensor x)"
+  signature: "Tensor Relu(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "relu_grad"
@@ -254,12 +279,18 @@
   signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
   bind_python: True
 
-- name: "conv2d"
+- name: "conv1d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv1d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
+- name: "conv2d"
+  signature:
+    "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
+  
 - name: "conv_data_grad"
   signature:
     "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
@@ -276,7 +307,9 @@
   bind_python: False
 
 - name: "conv_bias_grad"
-  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  signature:
+    "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims,
+                         String data_format=\"channels_first\")"
   bind_python: False
 
 - name: "expand"
@@ -299,6 +332,14 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "gather_nd"
+  signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
+  bind_python: True
+
+- name: "scatterndlike"
+  signature: "Tensor ScatterNdLike(Tensor like, Tensor updates, Tensor indices)"
+  bind_python: True
+
 - name: "matmul"
   signature:
     "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
@@ -314,6 +355,15 @@
 - name: "sparse_softmax_cross_entropy"
   signature: "Tensor SparseSoftmaxCrossEntropy(Tensor logits, Tensor label, *, Int64 depth)"
   bind_python: True
+
+- name: "smooth_l1_loss"
+  signature: "Tensor SmoothL1Loss(Tensor logits, Tensor label, *, Float beta)"
+  bind_python: True
+
+- name: "smooth_l1_loss_grad"
+  signature:
+    "Tensor SmoothL1LossGrad(Tensor loss_grad, Tensor prediction, Tensor label, *, Float beta)"
+  bind_python: False
 
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
@@ -376,6 +426,29 @@
                        Int32List strides, Bool ceil_mode)"
   bind_python: False
 
+- name: "maxpool_2d"
+  signature:
+    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "maxpool_3d"
+  signature:
+    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "pooling_grad"
+  signature:
+    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, String data_format,
+                       String padding, Int32List padding_before, Int32List padding_after, Int32List kernel_size,
+                       Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
+  bind_python: False
+
 - name: "prelu"
   signature: "Tensor PRelu(Tensor x, Tensor alpha)"
   bind_python: True
@@ -389,7 +462,9 @@
   bind_python: True
 
 - name: "slice_update"
-  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
+                        Int64List step)"
   bind_python: True
 
 - name: "logical_slice"
@@ -397,7 +472,9 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop,
+                             Int64List step)"
   bind_python: True
 
 - name: "squeeze"
@@ -413,6 +490,90 @@
     "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
                      String interpolation, String data_format=\"channels_first\")"
   bind_python: True
+
+- name: "upsample_linear_1d"
+  signature:
+    "Tensor UpsampleLinear1D(Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_linear_1d_grad"
+  signature:
+    "Tensor UpsampleLinear1DGrad(Tensor dy, Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_1d"
+  signature:
+    "Tensor UpsampleNearest1D(Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_1d_grad"
+  signature:
+    "Tensor UpsampleNearest1DGrad(Tensor dy, Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_2d"
+  signature:
+    "Tensor UpsampleNearest2D(Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_2d_grad"
+  signature:
+    "Tensor UpsampleNearest2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: False 
+
+- name: "upsample_bilinear_2d"
+  signature:
+    "Tensor UpsampleBilinear2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bilinear_2d_grad"
+  signature:
+    "Tensor UpsampleBilinear2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_bicubic_2d"
+  signature:
+    "Tensor UpsampleBicubic2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bicubic_2d_grad"
+  signature:
+    "Tensor UpsampleBicubic2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_3d"
+  signature:
+    "Tensor UpsampleNearest3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_nearest_3d_grad"
+  signature:
+    "Tensor UpsampleNearest3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_trilinear_3d"
+  signature:
+    "Tensor UpsampleTrilinear3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_trilinear_3d_grad"
+  signature:
+    "Tensor UpsampleTrilinear3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: False
 
 - name: "abs"
   signature: "Tensor Abs(Tensor x)"
@@ -495,6 +656,10 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "triu"
+  signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
+  bind_python: True
+  
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
   bind_python: True
@@ -518,3 +683,29 @@
 - name: "clip_by_scalar_max_grad"
   signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"
   bind_python: False
+
+- name: "dropout"
+  signature:
+    "Tensor Dropout(Tensor x, *, Float p, Generator generator=None)"
+  bind_python: True
+
+- name: "pad"
+  signature: "Tensor Pad(Tensor x, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: True
+
+- name: "pad_grad"
+  signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: False
+
+- name: "diag"
+  signature: "Tensor Diag(Tensor x, *, Int32 diagonal=0)"
+  bind_python: True
+
+- name: "diag_grad"
+  signature: "Tensor DiagGrad(Tensor dy, Tensor in, *, Int32 diagonal=0)"
+  bind_python: False
+
+- name: "tensor_getitem"
+  signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
+  bind_python: True
+

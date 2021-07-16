@@ -27,7 +27,7 @@ def variable_scope_test_job_1(a=of.FixedTensorDef((1, 3, 6, 6))):
             initializer=of.random_uniform_initializer(),
             trainable=True,
         )
-        conv = of.nn.conv2d(a, convw, 1, "SAME", "NCHW", name="conv")
+        conv = of.nn.conv2d(a, convw, 1, "SAME", None, "NCHW", name="conv")
 
         with of.scope.namespace("job1_scope2"):
             fcw = of.get_variable(

@@ -66,6 +66,9 @@ class JobBuildAndInferCtx {
   Maybe<void> Rebuild();
   Maybe<std::string> GetOpBlobLbn(const std::string& op_name, const std::string& bn_in_op) const;
 
+  // NOTE(chengcheng): Only used in multi-client.
+  Maybe<std::string> NewUniqueOpNameByFunctionalOpConf(const OperatorConf& op_conf);
+
   virtual Maybe<void> Complete() = 0;
 
  protected:
@@ -132,9 +135,9 @@ class JobBuildAndInferCtx {
   Maybe<const LogicalBlobId*> GetSubLbi(int64_t scope_symbol_id, const LogicalBlobId& lbi,
                                         int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
-  void InferBlobBackwardSignature(Operator* op);
-  void InferBlobBackwardSignature(const Operator& op,
-                                  std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
+  Maybe<void> InferBlobBackwardSignature(Operator* op);
+  Maybe<void> InferBlobBackwardSignature(
+      const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
 
   Job* job_;
   int64_t job_id_;
@@ -152,6 +155,7 @@ class JobBuildAndInferCtx {
   bool is_job_conf_frozen_;
   bool has_job_conf_;
   HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
+  int64_t unique_op_name_index_;
 };
 
 class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {

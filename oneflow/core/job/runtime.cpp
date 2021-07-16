@@ -85,8 +85,6 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   LOG(INFO) << "Actors on this machine constructed";
   OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
-  if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  OF_SESSION_BARRIER();
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
@@ -130,7 +128,8 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
-  Global<ThreadMgr>::New(plan);
+  Global<ThreadMgr>::New();
+  Global<ThreadMgr>::Get()->AddPlan(plan);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
   Global<summary::EventsWriter>::New();

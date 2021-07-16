@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/api/python/env/env.h"
 
 namespace oneflow {
 
@@ -139,18 +140,24 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
   std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
       bn_in_op2blob_object =
           std::make_shared<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>();
-  builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
-                            bn_in_op2blob_object);
+  JUST(builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
+                                 bn_in_op2blob_object));
   return JUST(MapAt(*bn_in_op2blob_object, "out"));
 }
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
-  JUST(LogicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(LogicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
-  JUST(PhysicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(PhysicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -228,6 +235,18 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   instruction->add_int64_operand(object_id);
   instruction_list_->PushBack(instruction.Mutable());
   return object_id;
+}
+
+Maybe<void> InstructionsBuilder::RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                                            const one::EagerBlobObjectListPtr& outputs,
+                                            const one::EagerBlobObjectListPtr& parameters,
+                                            const std::shared_ptr<NNGraphIf>& nn_graph) const {
+  static std::string instr_name("RunLazyJob");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::RunLazyJobPhyInstrOperand>(inputs, outputs, parameters, nn_graph);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
 }
 
 Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
@@ -453,7 +472,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
   CHECK((*parallel_desc_symbol) == (*op_arg_parallel_attr->parallel_desc_symbol()));
   std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
       JUST(NewBlobObject(op_arg_parallel_attr, blob_object->op_arg_blob_attr()));
-  ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object});
+  JUST(ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object}));
   return ref_blob_object;
 }
 
@@ -604,8 +623,8 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
       std::make_tuple(token_id_0, token_id_1);
-  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
-  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
+  JUST(BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids));
+  JUST(BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids));
   return Maybe<void>::Ok();
 }
 
@@ -647,13 +666,14 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -879,7 +899,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -891,7 +911,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -922,7 +942,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -1557,7 +1577,13 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
+  if (JUST(IsMultiClient())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return PhysicalRun(Build);
+  }
+
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1565,19 +1591,19 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   const auto& eager_symbol_list = sess->eager_symbol_list();
   InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
                                            eager_symbol_list.get(), _ReleaseLogicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   JUST(Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
-  Build(&instructions_builder);
+  JUST(Build(&instructions_builder));
   if (debug::RecordingInstructions()) {
     OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
       debug::RecordInstruction(instruction_msg);
