@@ -455,6 +455,288 @@ class UpsampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UpsampleLinear1DFunctor {
+ public:
+  UpsampleLinear1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_linear_1d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const bool& align_corners, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleLinear1DGradFunctor {
+ public:
+  UpsampleLinear1DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_linear_1d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const bool& align_corners, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest1DFunctor {
+ public:
+  UpsampleNearest1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_1d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest1DGradFunctor {
+ public:
+  UpsampleNearest1DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_1d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest2DFunctor {
+ public:
+  UpsampleNearest2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest2DGradFunctor {
+ public:
+  UpsampleNearest2DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_2d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleBilinear2DFunctor {
+ public:
+  UpsampleBilinear2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_bilinear_2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleBilinear2DGradFunctor {
+ public:
+  UpsampleBilinear2DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_bilinear_2d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleBicubic2DFunctor {
+ public:
+  UpsampleBicubic2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_bicubic_2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleBicubic2DGradFunctor {
+ public:
+  UpsampleBicubic2DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_bicubic_2d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest3DFunctor {
+ public:
+  UpsampleNearest3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_3d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearest3DGradFunctor {
+ public:
+  UpsampleNearest3DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_3d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleTrilinear3DFunctor {
+ public:
+  UpsampleTrilinear3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_trilinear_3d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
+                           const bool& align_corners, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleTrilinear3DGradFunctor {
+ public:
+  UpsampleTrilinear3DGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_trilinear_3d_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
+                           const float& height_scale, const float& width_scale,
+                           const bool& align_corners, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class UnsortedSegmentSumLikeFunctor {
  public:
   UnsortedSegmentSumLikeFunctor() {
@@ -642,6 +924,20 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
+  m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
+  m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
+  m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
+  m.add_functor<impl::UpsampleBilinear2DGradFunctor>("UpsampleBilinear2DGrad");
+  m.add_functor<impl::UpsampleLinear1DFunctor>("UpsampleLinear1D");
+  m.add_functor<impl::UpsampleLinear1DGradFunctor>("UpsampleLinear1DGrad");
+  m.add_functor<impl::UpsampleNearest1DFunctor>("UpsampleNearest1D");
+  m.add_functor<impl::UpsampleNearest1DGradFunctor>("UpsampleNearest1DGrad");
+  m.add_functor<impl::UpsampleBicubic2DFunctor>("UpsampleBicubic2D");
+  m.add_functor<impl::UpsampleBicubic2DGradFunctor>("UpsampleBicubic2DGrad");
+  m.add_functor<impl::UpsampleNearest3DFunctor>("UpsampleNearest3D");
+  m.add_functor<impl::UpsampleNearest3DGradFunctor>("UpsampleNearest3DGrad");
+  m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
+  m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
