@@ -461,6 +461,10 @@ def api_eager_execution_enabled() -> bool:
     Returns:
         bool: False, [description]
     """
+    print(
+        "INFO: 'oneflow.eager_execution_enabled()' is deprecated, ",
+        "has no effect and will be removed in the future.",
+    )
     return False
 
 
