@@ -73,25 +73,26 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
     const bool align_corners = ctx->Attr<bool>("align_corners");
-    const int64_t elem_cnt = y_blob->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 3> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
-                                              x_blob->shape().At(2));
-    NdIndexOffsetHelper<int64_t, 3> out_helper(y_blob->shape().At(0), y_blob->shape().At(1),
-                                               y_blob->shape().At(2));
-    const int64_t in_height = x_blob->shape().At(2);
-    const int64_t out_height = y_blob->shape().At(2);
+    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
+    NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
+                                              x_tensor->shape().At(2));
+    NdIndexOffsetHelper<int64_t, 3> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
+                                               y_tensor->shape().At(2));
+    const int64_t in_height = x_tensor->shape().At(2);
+    const int64_t out_height = y_tensor->shape().At(2);
     if (in_height == out_height) {
-      Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y_blob->mut_dptr<void>(), x_blob->dptr<void>(),
-                               x_blob->shape().elem_cnt() * GetSizeOfDataType(x_blob->data_type()));
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
+          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       RUN_CUDA_KERNEL((UpsampleLinear1DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                      x_blob->dptr<T>(), in_helper, out_helper, in_height, scale_height,
-                      align_corners, y_blob->mut_dptr<T>());
+                      x_tensor->dptr<T>(), in_helper, out_helper, in_height, scale_height,
+                      align_corners, y_tensor->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -105,29 +106,29 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
-                             dx_blob->shape().elem_cnt() * sizeof(T));
-    const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
-                                              dy_blob->shape().At(2));
-    NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_blob->shape().At(0), dx_blob->shape().At(1),
-                                              dx_blob->shape().At(2));
-    const int64_t elem_cnt = dy_blob->shape().elem_cnt();
-    const int64_t in_height = dx_blob->shape().At(2);
-    const int64_t out_height = dy_blob->shape().At(2);
+    NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
+                                              dy_tensor->shape().At(2));
+    NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
+                                              dx_tensor->shape().At(2));
+    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
+    const int64_t in_height = dx_tensor->shape().At(2);
+    const int64_t out_height = dy_tensor->shape().At(2);
     if (in_height == out_height) {
       Memcpy<DeviceType::kGPU>(
-          ctx->device_ctx(), dx_blob->mut_dptr<void>(), dy_blob->dptr<void>(),
-          dy_blob->shape().elem_cnt() * GetSizeOfDataType(dy_blob->data_type()));
+          ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       RUN_CUDA_KERNEL((UpsampleLinear1DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                      dy_blob->dptr<T>(), dy_helper, dx_helper, in_height, scale_height,
-                      align_corners, dx_blob->mut_dptr<T>());
+                      dy_tensor->dptr<T>(), dy_helper, dx_helper, in_height, scale_height,
+                      align_corners, dx_tensor->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
