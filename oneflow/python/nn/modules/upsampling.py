@@ -97,7 +97,13 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.experimental.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, mode=self.mode, align_corners=self.align_corners)
+        return flow.experimental.nn.functional.interpolate(
+            x,
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=self.mode,
+            align_corners=self.align_corners,
+        )
 
 
 @oneflow_export("nn.UpsamplingNearest2d")
