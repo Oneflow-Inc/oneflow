@@ -18,8 +18,10 @@ from collections import OrderedDict
 
 import numpy as np
 
+import torch
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_concat_origin(test_case, device):
@@ -120,6 +122,54 @@ def _test_concat_grad_and_no_grad(test_case, device):
     )
 
 
+def _test_concat_with_torch(test_case, device):
+    ndim = np.random.randint(2, 5)
+    n_tensors = np.random.randint(2, 5)
+    cat_dim = np.random.randint(0, ndim - 1)
+
+    shapes = []
+    for i in range(ndim):
+        shapes.append(np.random.randint(2, 5))
+
+    flow_tensors = []
+    torch_tensors = []
+    for i in range(n_tensors):
+        shapes[cat_dim] = np.random.randint(2, 5)
+        np_arr = np.random.randn(*shapes)
+
+        flow_input = flow.Tensor(
+            np_arr, dtype=flow.float32, device=device, requires_grad=True
+        )
+        torch_input = torch.tensor(
+            np_arr, dtype=torch.float32, device=device, requires_grad=True
+        )
+
+        flow_tensors.append(flow_input)
+        torch_tensors.append(torch_input)
+
+    of_out = flow.cat(flow_tensors, dim=cat_dim)
+    of_out = of_out.sum()
+    of_out.backward()
+
+    torch_out = torch.cat(torch_tensors, dim=cat_dim)
+    torch_out = torch_out.sum()
+    torch_out.backward()
+
+    test_case.assertTrue(
+        np.allclose(torch_out.cpu().detach().numpy(), of_out.numpy(), 1e-4, 1e-4)
+    )
+
+    for i in range(n_tensors):
+        test_case.assertTrue(
+            np.allclose(
+                torch_tensors[i].grad.cpu().detach().numpy(),
+                flow_tensors[i].grad.numpy(),
+                1e-4,
+                1e-4,
+            )
+        )
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -133,6 +183,7 @@ class TestModule(flow.unittest.TestCase):
             _test_concat_with_three_tensor,
             _test_concat_with_three_tensor_backward,
             _test_concat_grad_and_no_grad,
+            _test_concat_with_torch,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
