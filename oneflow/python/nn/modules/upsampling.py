@@ -23,34 +23,40 @@ from typing import Optional, Union, Tuple
 @oneflow_export("nn.Upsample")
 @experimental_api
 class Upsample(Module):
-    r"""Upsamples a given multi-channel 2D (spatial) data.
+    r"""The interface is consistent with PyTorch.    
+    
+    The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/modules/upsampling.html#Upsample
+    
+    Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 
     The input data is assumed to be of the form
-    `minibatch x channels x height x width`.
-    Hence, for spatial inputs, we expect a 4D Tensor.
+    `minibatch x channels x [optional depth] x [optional height] x width`.
+    Hence, for spatial inputs, we expect a 4D Tensor and for volumetric inputs, we expect a 5D Tensor.
 
-    The algorithms available for upsampling are nearest neighbor,
-    bilinear, 4D input Tensor, respectively.
+    The algorithms available for upsampling are nearest neighbor and linear,
+    bilinear, bicubic and trilinear for 3D, 4D and 5D input Tensor,
+    respectively.
 
     One can either give a :attr:`scale_factor` or the target output :attr:`size` to
     calculate the output size. (You cannot give both, as it is ambiguous)
 
     Args:
-        size (int or Tuple[int, int] optional):
+        size (int or Tuple[int] or Tuple[int, int] or Tuple[int, int, int], optional):
             output spatial sizes
-        scale_factor (float or Tuple[float, float], optional):
+        scale_factor (float or Tuple[float] or Tuple[float, float] or Tuple[float, float, float], optional):
             multiplier for spatial size. Has to match input size if it is a tuple.
         mode (str, optional): the upsampling algorithm: one of ``'nearest'``,
-            ``'bilinear'``.
+            ``'linear'``, ``'bilinear'``, ``'bicubic'`` and ``'trilinear'``.
             Default: ``'nearest'``
         align_corners (bool, optional): if ``True``, the corner pixels of the input
             and output tensors are aligned, and thus preserving the values at
-            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``.
-            Default: ``False``
+            those pixels. This only has effect when :attr:`mode` is
+            ``'linear'``, ``'bilinear'``, or ``'trilinear'``. Default: ``False``
 
     Shape:
-        - Input: : :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` , where
+        - Input: :math:`(N, C, W_{in})`, :math:`(N, C, H_{in}, W_{in})` or :math:`(N, C, D_{in}, H_{in}, W_{in})`
+        - Output: :math:`(N, C, W_{out})`, :math:`(N, C, H_{out}, W_{out})`
+          or :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
 
     .. math::
         D_{out} = \left\lfloor D_{in} \times \text{scale_factor} \right\rfloor
@@ -61,8 +67,18 @@ class Upsample(Module):
     .. math::
         W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
 
+    .. warning::
+        With ``align_corners = True``, the linearly interpolating modes
+        (`linear`, `bilinear`, `bicubic`, and `trilinear`) don't proportionally
+        align the output and input pixels, and thus the output values can depend
+        on the input size. This was the default behavior for these modes up to
+        version 0.3.1. Since then, the default behavior is
+        ``align_corners = False``. See below for concrete examples on how this
+        affects the outputs.
+
     .. note::
         If you want downsampling/general resizing, you should use :func:`~nn.functional.interpolate`.
+
 
     For example:
 
@@ -70,7 +86,6 @@ class Upsample(Module):
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
@@ -97,7 +112,13 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.experimental.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, mode=self.mode, align_corners=self.align_corners)
+        return flow.experimental.nn.functional.interpolate(
+            x,
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=self.mode,
+            align_corners=self.align_corners,
+        )
 
 
 @oneflow_export("nn.UpsamplingNearest2d")
