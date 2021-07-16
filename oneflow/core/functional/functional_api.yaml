@@ -133,7 +133,7 @@
   bind_python: True
 
 - name: "sin"
-  signature: "Tensor Sin(Tensor x)"
+  signature: "Tensor Sin(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "cos"
