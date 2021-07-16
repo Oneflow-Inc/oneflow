@@ -17,9 +17,21 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sorted_rank_ranges.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 namespace test {
+
+namespace {
+
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
+}  // namespace
 
 TEST(ParallelDesc, push_pull_key_4_ranks_simple) {
   InitNumProcessPerNode();
