@@ -92,59 +92,12 @@ class Upsample(Module):
     ):
         super().__init__()
         self.size = size
-        if isinstance(scale_factor, tuple):
-            self.scale_factor = tuple(float(factor) for factor in scale_factor)
-        else:
-            self.scale_factor = float(scale_factor) if scale_factor else None
-
+        self.scale_factor = scale_factor
         self.mode = mode
-        if align_corners == None:
-            align_corners = False
-
         self.align_corners = align_corners
-        self.height_scale = None
-        self.width_scale = None
-
-        if isinstance(self.scale_factor, float):
-            self.height_scale = self.scale_factor
-            self.width_scale = self.scale_factor
-        elif isinstance(self.scale_factor, tuple):
-            self.height_scale = self.scale_factor[0]
-            self.width_scale = self.scale_factor[1]
-        else:
-            pass
-
-        if self.mode != "nearest" and self.mode != "bilinear":
-            raise ValueError('interpolation must be "nearest" or "bilinear".')
-
-        if self.mode == "nearest" and self.align_corners:
-            raise ValueError('interpolation "nearest" does not support align_corners.')
 
     def forward(self, x):
-        assert (
-            self.size != None or self.scale_factor != None
-        ), f"size and scale_factor can not be none at the same time!"
-        h, w = x.shape[2], x.shape[3]
-        if self.height_scale == None:
-            if isinstance(self.size, int):
-                self.height_scale = 1.0 * self.size / h
-            else:
-                self.height_scale = 1.0 * self.size[0] / h
-        if self.width_scale == None:
-            if isinstance(self.size, int):
-                self.width_scale = 1.0 * self.size / w
-            else:
-                self.width_scale = 1.0 * self.size[1] / w
-
-        res = flow.F.upsample(
-            x,
-            height_scale=self.height_scale,
-            width_scale=self.width_scale,
-            align_corners=self.align_corners,
-            interpolation=self.mode,
-            data_format="channels_first",
-        )
-        return res
+        return flow.experimental.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, mode=self.mode, align_corners=self.align_corners)
 
 
 @oneflow_export("nn.UpsamplingNearest2d")
