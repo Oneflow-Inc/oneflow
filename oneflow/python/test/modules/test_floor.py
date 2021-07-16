@@ -16,8 +16,6 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
-from torch._C import device
-
 import numpy as np
 
 import oneflow.experimental as flow
