@@ -91,6 +91,9 @@ jobs:
         if: ${{ failure() }}
         run: |
           exit 1
+      - name: Check source code (prevent creating files at wrong places)
+        run: |
+          python3 tools/check_src.py
 
   static_analysis_with_clang:
     name: Static analysis with clang
@@ -133,7 +136,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -251,9 +254,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
       - name: Build OneFlow
+        timeout-minutes: 45
         if: env.is_built != '1'
         uses: ./.github/actions/whl
-        timeout-minutes: 45
         with:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
@@ -261,6 +264,7 @@ jobs:
           extra_docker_args: $extra_docker_args
           python_version: ${{ matrix.python_version }}
       - name: Custom Op test (run by oneflow build docker)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cpu' && env.is_built != '1'
         run: |
           set -x
@@ -423,6 +427,7 @@ jobs:
         run: |
           bash docker/ci/test/build.sh
       - name: Exe test
+        timeout-minutes: 45
         if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
         run: |
           set -x
@@ -431,6 +436,7 @@ jobs:
             ${image_name} \
             ${bin_dir}/oneflow_testexe
       - name: Build documentation
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -438,18 +444,21 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed, 1st try)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         continue-on-error: true
         id: distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 2nd try)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Op test (distributed, 3rd try)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
@@ -472,6 +481,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Doctest
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -480,6 +490,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/doctest.sh"
       - name: Dry run test (run without runtime)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -508,6 +519,7 @@ jobs:
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
       - name: Module API test
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -515,7 +527,17 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Dataloader API test
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/dataloader \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -541,6 +563,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Model test
+        timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -549,6 +572,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
       - name: Model serve test
+        timeout-minutes: 45
         id: model_serve_test
         if: matrix.test_suite == 'cuda'
         run: |
@@ -564,6 +588,7 @@ jobs:
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Benchmark (mainly for backward compatibility)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -571,6 +596,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
       - name: Benchmark FP16 (mainly for backward compatibility)
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -578,6 +604,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
+        timeout-minutes: 45
         if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
         run: |
           set -x
@@ -585,11 +612,13 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: Query system status
+        timeout-minutes: 45
         if: ${{ failure() }}
         run: |
           nvidia-smi
           docker ps
       - name: Remove container
+        timeout-minutes: 45
         if: always()
         run: |
           docker rm -f ${container_name} || true
