@@ -432,7 +432,7 @@ Maybe<void> CalcFwBwObaPairs(const OpGraph& op_graph,
   for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
     CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
   }
-  JUST(job_builder.ForEachOperator([&](const Operator& op) {
+  JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
     for (const auto& ibn : op.input_bns()) {
       const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
       if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
@@ -457,6 +457,7 @@ Maybe<void> CalcFwBwObaPairs(const OpGraph& op_graph,
         *pair->mutable_second() = clone_out_oba_it->second;
       }
     }
+    return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
