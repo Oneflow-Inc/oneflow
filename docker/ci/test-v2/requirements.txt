@@ -6,4 +6,4 @@ pycocotools
 opencv-python==4.2.0.34
 scipy
 pillow
-piprepo
+pipindex
