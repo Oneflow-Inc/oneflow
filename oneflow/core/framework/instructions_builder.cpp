@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 

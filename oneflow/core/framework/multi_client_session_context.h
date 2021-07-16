@@ -34,8 +34,6 @@ class MultiClientSessionContext {
   bool is_inited_;
 };
 
-Maybe<bool> GlobalMultiClientEnv();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_

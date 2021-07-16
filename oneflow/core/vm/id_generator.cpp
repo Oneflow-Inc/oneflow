@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace vm {

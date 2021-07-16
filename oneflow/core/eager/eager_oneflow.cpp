@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -34,7 +35,6 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
 
 namespace oneflow {
 namespace vm {

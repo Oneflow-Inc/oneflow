@@ -17,8 +17,8 @@ limitations under the License.
 
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
 #include <json.hpp>
 
 namespace oneflow {
