@@ -1600,7 +1600,7 @@ Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& B
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
