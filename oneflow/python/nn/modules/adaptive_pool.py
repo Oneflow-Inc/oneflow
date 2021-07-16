@@ -67,18 +67,10 @@ class AdaptiveAvgPool1d(Module):
         super().__init__()
         self.output_size = output_size
 
-        self._op = (
-            flow.builtin_op("adaptive_avg_pool1d")
-                .Input("x")
-                .Attr("output_size", [])
-                .Output("y")
-                .Build()
-        )
-
     def forward(self, x):
         assert len(x.shape) == 3
         assert isinstance(self.output_size, int), "'output_size' should be integer"
-        return self._op(x, output_size=(self.output_size,))[0]
+        return flow.F.adaptive_avg_pool1d(x, output_size=(self.output_size,))
 
 
 @oneflow_export("nn.AdaptiveAvgPool2d")
@@ -128,18 +120,10 @@ class AdaptiveAvgPool2d(Module):
         super().__init__()
         self.output_size = output_size
 
-        self._op = (
-            flow.builtin_op("adaptive_avg_pool2d")
-            .Input("x")
-            .Attr("output_size", [])
-            .Output("y")
-            .Build()
-        )
-
     def forward(self, x):
         assert len(x.shape) == 4
         new_output_size = _generate_output_size(x.shape, self.output_size)
-        return self._op(x, output_size=new_output_size)[0]
+        return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
 
 @oneflow_export("nn.AdaptiveAvgPool3d")
@@ -189,18 +173,10 @@ class AdaptiveAvgPool3d(Module):
         super().__init__()
         self.output_size = output_size
 
-        self._op = (
-            flow.builtin_op("adaptive_avg_pool3d")
-                .Input("x")
-                .Attr("output_size", [])
-                .Output("y")
-                .Build()
-        )
-
     def forward(self, x):
         assert len(x.shape) == 5
         new_output_size = _generate_output_size(x.shape, self.output_size)
-        return self._op(x, output_size=new_output_size)[0]
+        return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
 
 
 if __name__ == "__main__":
