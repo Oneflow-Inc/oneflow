@@ -41,9 +41,11 @@ def _test_adaptive_avgpool1d_forward(test_case, device):
     )
     m = flow.nn.AdaptiveAvgPool1d(4)
     m.to(device)
-    of_out = m(input)
+    of_out_1 = m(input)
+    of_out_2 = flow.adaptive_avg_pool1d(input, 4)
     np_out = np.array([[[-0.31585359573364258, -1.13851499557495117, 0.07601694762706757, -0.55234599113464355]]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_1.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_2.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_adaptive_avgpool1d_backward(test_case, device):
@@ -104,14 +106,16 @@ def _test_adaptive_avgpool2d_forward(test_case, device):
     )
     m = flow.nn.AdaptiveAvgPool2d((2, 2))
     m.to(device)
-    of_out = m(input)
+    of_out_1 = m(input)
+    of_out_2 = flow.adaptive_avg_pool2d(input, (2, 2))
     np_out = np.array([[
         [
             [0.20976251363754272, 0.4091767966747284],
             [-0.1199183315038681, -0.8454304933547974],
         ]
     ]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_1.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_2.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_adaptive_avgpool2d_backward(test_case, device):
@@ -247,7 +251,8 @@ def _test_adaptive_avgpool3d_forward(test_case, device):
     )
     m = flow.nn.AdaptiveAvgPool3d((2, 2, 2))
     m.to(device)
-    of_out = m(input)
+    of_out_1 = m(input)
+    of_out_2 = flow.adaptive_avg_pool3d(input, (2, 2, 2))
     np_out = np.array([[
         [
             [
@@ -260,7 +265,8 @@ def _test_adaptive_avgpool3d_forward(test_case, device):
             ]
         ]
     ]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_1.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out_2.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_adaptive_avgpool3d_backward(test_case, device):
