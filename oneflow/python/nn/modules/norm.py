@@ -443,4 +443,4 @@ def matrix_norm_tensor_op(input, ord='fro', dim=(-2,-1), keepdim=False):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
