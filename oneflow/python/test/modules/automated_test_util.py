@@ -66,7 +66,7 @@ def convert_torch_object_to_flow(x):
 
 
 def pack(x):
-    if isinstance(x, func):
+    if isinstance(x, generator):
         return x
     return constant(x)
 
@@ -75,7 +75,7 @@ class Nothing:
     pass
 
 
-class func:
+class generator:
     def __init__(self, children):
         self.children = children
         self._value = None
@@ -129,7 +129,7 @@ class func:
         pass
 
 
-class add(func):
+class add(generator):
     def __init__(self, a, b):
         self.a = pack(a)
         self.b = pack(b)
@@ -139,7 +139,7 @@ class add(func):
         return self.a.value() + self.b.value()
 
 
-class neg(func):
+class neg(generator):
     def __init__(self, a):
         self.a = pack(a)
         super().__init__([self.a])
@@ -148,7 +148,7 @@ class neg(func):
         return -self.a.value()
 
 
-class oneof(func):
+class oneof(generator):
     def __init__(self, *args, possibility=None):
         self.args = list(map(pack, args))
         super().__init__(self.args)
@@ -172,7 +172,7 @@ class oneof(func):
         return sum([x.size() for x in self.args])
 
 
-class tuple(func):
+class tuple(generator):
     def __init__(self, *args):
         self.args = list(map(pack, args))
         super().__init__(self.args)
@@ -181,7 +181,7 @@ class tuple(func):
         return py_tuple([x.value() for x in self.args])
 
 
-class constant(func):
+class constant(generator):
     def __init__(self, x):
         super().__init__([])
         self.x = x
@@ -190,7 +190,7 @@ class constant(func):
         return self.x
 
 
-class nothing(func):
+class nothing(generator):
     def __init__(self):
         super().__init__([])
 
@@ -198,7 +198,7 @@ class nothing(func):
         return Nothing()
 
 
-class random(func):
+class random(generator):
     def __init__(self, low, high):
         self.low = pack(low)
         self.high = pack(high)
@@ -260,7 +260,7 @@ def random_or_nothing(low, high):
 
 
 @data_generator(torch.Tensor)
-class random_tensor(func):
+class random_tensor(generator):
     def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None):
         if ndim is None:
             ndim = random(1, 6)
@@ -305,7 +305,7 @@ class random_tensor(func):
 
 
 @data_generator(bool)
-class random_bool(func):
+class random_bool(generator):
     def __init__(self):
         pass
 
