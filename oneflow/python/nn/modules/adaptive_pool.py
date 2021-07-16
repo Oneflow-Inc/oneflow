@@ -73,6 +73,20 @@ class AdaptiveAvgPool1d(Module):
         return flow.F.adaptive_avg_pool1d(x, output_size=(self.output_size,))
 
 
+@oneflow_export("adaptive_avg_pool1d")
+@experimental_api
+def adaptive_avg_pool1d(input, output_size):
+    r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool1d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer)
+    """
+    return AdaptiveAvgPool1d(output_size)(input)
+
+
 @oneflow_export("nn.AdaptiveAvgPool2d")
 @experimental_api
 class AdaptiveAvgPool2d(Module):
@@ -126,6 +140,20 @@ class AdaptiveAvgPool2d(Module):
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
 
+@oneflow_export("adaptive_avg_pool2d")
+@experimental_api
+def adaptive_avg_pool2d(input, output_size):
+    r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool2d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer or double-integer tuple)
+    """
+    return AdaptiveAvgPool2d(output_size)(input)
+
+
 @oneflow_export("nn.AdaptiveAvgPool3d")
 @experimental_api
 class AdaptiveAvgPool3d(Module):
@@ -177,6 +205,20 @@ class AdaptiveAvgPool3d(Module):
         assert len(x.shape) == 5
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
+
+
+@oneflow_export("adaptive_avg_pool3d")
+@experimental_api
+def adaptive_avg_pool3d(input, output_size):
+    r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+
+    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool3d`
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer or triple-integer tuple)
+    """
+    return AdaptiveAvgPool3d(output_size)(input)
 
 
 if __name__ == "__main__":
