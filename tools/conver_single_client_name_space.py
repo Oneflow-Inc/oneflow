@@ -18,7 +18,7 @@ assert len(single_client_python_files) > 0
 
 def convert_name_sapce(python_file):
     os.system(
-        "sed 's/compatible_single_client_python/compatible\.single_client.python/g' -i "
+        "sed 's/compatible_single_client_python/compatible\.single_client\.python/g' -i "
         + python_file
     )
 
