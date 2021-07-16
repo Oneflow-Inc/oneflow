@@ -13,15 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import builtins
-from typing import Iterator, Union, Optional, Sequence, List, TypeVar, Generic, Sized
+from typing import Iterator, Optional, Sequence, List, TypeVar, Generic, Sized
 import numpy as np
 import oneflow as flow
-from oneflow.python.framework.tensor import Tensor
 
 
 T_co = TypeVar("T_co", covariant=True)
-
 
 class Sampler(Generic[T_co]):
     r"""Base class for all Samplers.
@@ -148,21 +145,22 @@ class RandomSampler(Sampler[int]):
         else:
             generator = self.generator
         if self.replacement:
-            raise NotImplementedError("Not support replacement yet!")
-            # # TODO: flow.randint
-            # for _ in range(self.num_samples // 32):
-            #     yield from flow.randint(
-            #         high=n, size=(32,), dtype=flow.int64, generator=generator
-            #     ).tolist()
-            # yield from flow.randint(
-            #     high=n,
-            #     size=(self.num_samples % 32,),
-            #     dtype=flow.int64,
-            #     generator=generator,
-            # ).tolist()
+            # TODO: flow.randint
+            raise NotImplementedError("Not support replacement=True yet!")
+            for _ in range(self.num_samples // 32):
+                yield from flow.randint(
+                    high=n, size=(32,), dtype=flow.int64, generator=generator
+                ).tolist()
+            yield from flow.randint(
+                high=n,
+                size=(self.num_samples % 32,),
+                dtype=flow.int64,
+                generator=generator,
+            ).tolist()
         else:
             yield from np.random.permutation(n).tolist()
-            # TODO: yield from flow.randperm(n, generator=generator).tolist()
+            # TODO: flow.randperm
+            # yield from flow.randperm(n, generator=generator).tolist()
 
     def __len__(self):
         return self.num_samples
