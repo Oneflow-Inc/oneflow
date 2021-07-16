@@ -110,24 +110,25 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DInterpState
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleNearest2DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(
-          out_grads.at(0), x, ctx->height_scale, ctx->width_scale, ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(out_grads.at(0), x, ctx->height_scale,
+                                                             ctx->width_scale, ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 
@@ -154,26 +155,27 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DInterpSta
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleBilinear2DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleBilinear2DGrad(
-          out_grads.at(0), x, ctx->height_scale, ctx->width_scale, ctx->align_corners,
-          ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleBilinear2DGrad(out_grads.at(0), x, ctx->height_scale,
+                                                              ctx->width_scale, ctx->align_corners,
+                                                              ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 
@@ -199,24 +201,25 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DInterpState> 
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleLinear1DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleLinear1DGrad(
-          out_grads.at(0), x, ctx->scale_factor, ctx->align_corners, ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleLinear1DGrad(out_grads.at(0), x, ctx->scale_factor,
+                                                            ctx->align_corners, ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 
@@ -241,23 +244,24 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DInterpState
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleNearest1DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleNearest1DGrad(
-          out_grads.at(0), x, ctx->scale_factor, ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(
+        functional::UpsampleNearest1DGrad(out_grads.at(0), x, ctx->scale_factor, ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 
@@ -284,26 +288,26 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DInterpState
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleBicubic2DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(
-          functional::UpsampleBicubic2DGrad(out_grads.at(0), x, ctx->height_scale, ctx->width_scale,
-                                            ctx->align_corners, ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleBicubic2DGrad(out_grads.at(0), x, ctx->height_scale,
+                                                             ctx->width_scale, ctx->align_corners,
+                                                             ctx->data_format));
     return Maybe<void>::Ok();
   }
 
@@ -330,26 +334,27 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DInterpState
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->depth_scale = JUST(composed_attrs.GetAttr<float>("depth_scale"));
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleNearest3DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(out_grads.at(0), x, ctx->depth_scale,
-                                                               ctx->height_scale, ctx->width_scale,
-                                                               ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(out_grads.at(0), x, ctx->depth_scale,
+                                                             ctx->height_scale, ctx->width_scale,
+                                                             ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 
@@ -377,27 +382,28 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DInterpS
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->depth_scale = JUST(composed_attrs.GetAttr<float>("depth_scale"));
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const UpsampleTrilinear3DInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    if (ctx->requires_grad) {
-      MutableAttrMap attrs;
-      const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-      in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::UpsampleTrilinear3DGrad(
-          out_grads.at(0), x, ctx->depth_scale, ctx->height_scale, ctx->width_scale,
-          ctx->align_corners, ctx->data_format));
-    }
+    MutableAttrMap attrs;
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::UpsampleTrilinear3DGrad(
+        out_grads.at(0), x, ctx->depth_scale, ctx->height_scale, ctx->width_scale,
+        ctx->align_corners, ctx->data_format));
+
     return Maybe<void>::Ok();
   }
 

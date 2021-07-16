@@ -169,5 +169,6 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(double)
+REGISTER_UPSAMPLE_BILINEAR_2D_GPU_KERNEL(int)
 
 }  // namespace oneflow
