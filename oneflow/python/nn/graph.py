@@ -107,51 +107,18 @@ class Graph(object):
             # Deal with input
             lazy_args = []
             for arg in args:
-                assert isinstance(arg, Tensor)
-                op_name = "input_" + str(len(lazy_args))
-                input_conf = (
-                    oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+                lazy_args.append(
+                    graph_build_util.build_graph_input_arg(arg, len(lazy_args))
                 )
-                input_conf.set_in_0("eager_in_0")
-                input_conf.set_out_0("out_0")
-
-                input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-                    op_name, input_conf, ["in_0"], ["out_0"]
-                )
-                attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-                if not arg.is_determined:
-                    arg.determine()
-                tensor_in_c = arg._local_or_consistent_tensor
-
-                lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
-                lazy_args.append(lazy_arg)
             # Deal with parameter and buffer
             for s in self._state():
-
-                def to_lazy(state_block):
-                    op_name = state_block.name_prefix + state_block.name
-                    var_conf = (
-                        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
-                    )
-                    var_conf.set_in_0("eager_in_0")
-                    var_conf.set_out_0("out_0")
-
-                    var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
-                        op_name, var_conf, ["in_0"], ["out_0"]
-                    )
-                    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-                    if not state_block.origin.is_determined:
-                        state_block.origin.determine()
-                    tensor_in_c = state_block.origin._local_or_consistent_tensor
-
-                    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
-                    return lazy_tensor
-
-                s.set_lazy_origin_lambda(to_lazy)
+                s.set_lazy_origin_builder(graph_build_util.build_graph_state)
 
             outputs = self.build(*lazy_args)
+
+            # TODO(): build output
+
+            # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
         self._is_compiled = True
@@ -270,11 +237,11 @@ class Block(object):
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
             self._lazy_origin = None
-            self._lazy_origin_lambda = None
+            self._lazy_origin_builder = None
         elif isinstance(value, Tensor):
             self._type = BlockType.BUFFER
             self._lazy_origin = None
-            self._lazy_origin_lambda = None
+            self._lazy_origin_builder = None
         else:
             raise NotImplementedError()
 
@@ -301,17 +268,17 @@ class Block(object):
         ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin
 
-    def lazy_origin_lambda(self):
+    def lazy_origin_builder(self):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
-        return self._lazy_origin_lambda
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        return self._lazy_origin_builder
 
-    def set_lazy_origin_lambda(self, fn=None):
+    def set_lazy_origin_builder(self, fn=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
-        self._lazy_origin_lambda = fn
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        self._lazy_origin_builder = fn
 
     @property
     def prev_scope(self):
@@ -428,13 +395,13 @@ class Block(object):
                         # Return Tensor for running when getattr inside it's father Block's forward()
                         if graph_build_util.lazy_mode.is_enabled():
                             if p_block._lazy_origin is None:
-                                assert p_block._lazy_origin_lambda is not None, (
+                                assert p_block._lazy_origin_builder is not None, (
                                     repr(p_block)
                                     + " has no lazy Tensor creation function."
                                 )
                                 # Create and return lazy tensor
                                 with p_block.scope_context():
-                                    p_block._lazy_origin = p_block._lazy_origin_lambda(
+                                    p_block._lazy_origin = p_block._lazy_origin_builder(
                                         p_block
                                     )
                             return p_block._lazy_origin
@@ -451,13 +418,13 @@ class Block(object):
                         # Return Tensor for running when getattr inside it's father Block's forward()
                         if graph_build_util.lazy_mode.is_enabled():
                             if b_block._lazy_origin is None:
-                                assert b_block._lazy_origin_lambda is not None, (
+                                assert b_block._lazy_origin_builder is not None, (
                                     repr(b_block)
                                     + " has no lazy Tensor creation function."
                                 )
                                 # Create and return lazy tensor
                                 with b_block.scope_context():
-                                    b_block._lazy_origin = b_block._lazy_origin_lambda(
+                                    b_block._lazy_origin = b_block._lazy_origin_builder(
                                         b_block
                                     )
                             return b_block._lazy_origin

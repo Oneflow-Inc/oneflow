@@ -27,6 +27,7 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.session_context as session_context
 import oneflow._oneflow_internal
+from oneflow.python.framework.tensor import Tensor
 
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
@@ -125,3 +126,46 @@ def make_new_block_scope(prev_scope, block):
 
 def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
+
+
+def build_graph_input_arg(arg, input_idx):
+    assert isinstance(arg, Tensor)
+    op_name = "input_" + str(input_idx)
+    input_conf = (
+        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+    )
+    input_conf.set_in_0("eager_in_0")
+    input_conf.set_out_0("out_0")
+
+    input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+        op_name, input_conf, ["in_0"], ["out_0"]
+    )
+    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+
+    if not arg.is_determined:
+        arg.determine()
+    tensor_in_c = arg._local_or_consistent_tensor
+
+    lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
+    return lazy_arg
+
+
+def build_graph_state(state_block):
+    op_name = state_block.name_prefix + state_block.name
+    var_conf = (
+        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
+    )
+    var_conf.set_in_0("eager_in_0")
+    var_conf.set_out_0("out_0")
+
+    var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
+        op_name, var_conf, ["in_0"], ["out_0"]
+    )
+    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+
+    if not state_block.origin.is_determined:
+        state_block.origin.determine()
+    tensor_in_c = state_block.origin._local_or_consistent_tensor
+
+    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
+    return lazy_tensor

@@ -31,10 +31,6 @@ import oneflow.python.framework.graph_build_util as graph_build_util
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
         class CustomModule0(flow.nn.Module):
