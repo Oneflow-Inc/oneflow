@@ -77,7 +77,7 @@ DLManagedTensor XrtParameter2DLManagedTensor(const Parameter& para, TVMContext c
   ret.manager_ctx = nullptr;
   ret.deleter = nullptr;
   auto& tensor = ret.dl_tensor;
-  CHECK(IsAligned(para.data(), tvm::runtime::kAllocAlignment));
+  // CHECK(IsAligned(para.data(), tvm::runtime::kAllocAlignment));
   tensor.data = para.data();
   tensor.ctx = ctx;
   tensor.ndim = para.shape().NumAxes();
@@ -109,7 +109,7 @@ bool TVMExecutable::Run(const std::vector<Parameter>& inputs,
     auto create_fn = tvm::runtime::Registry::Get("tvm.graph_runtime.create");
     executor_ = (*create_fn)(graph_json_, built_mod_, (int)ctx_.device_type, (int)ctx_.device_id);
     run_ = executor_->GetFunction("run", false);
-    set_input_zero_copy_ = executor_->GetFunction("set_input_zero_copy", false);
+    set_input_ = executor_->GetFunction("set_input", false);
     get_output_ = executor_->GetFunction("get_output", false);
     get_num_outputs_ = executor_->GetFunction("get_num_outputs", false);
 
@@ -121,8 +121,7 @@ bool TVMExecutable::Run(const std::vector<Parameter>& inputs,
   std::vector<DLManagedTensor> dl_managed_tensors;
   for (const auto& input : inputs) {
     dl_managed_tensors.emplace_back(XrtParameter2DLManagedTensor(input, ctx_));
-    set_input_zero_copy_(input.name(),
-                         tvm::runtime::NDArray::FromDLPack(&dl_managed_tensors.back()));
+    set_input_(input.name(), tvm::runtime::NDArray::FromDLPack(&dl_managed_tensors.back()));
   }
 
   run_();

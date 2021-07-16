@@ -25,15 +25,8 @@ class InstallPlatlib(install):
 parser = argparse.ArgumentParser()
 parser.register("type", "bool", lambda v: v.lower() == "true")
 parser.add_argument(
-    "--with_xla",
-    type="bool",
-    default=False,
-    help="Package xla libraries if true, otherwise not.",
-)
-parser.add_argument(
     "--with_tvm",
-    type='bool',
-    default=False,
+    action="store_true",
     help="Package tvm libraries if true, otherwise not"
 )
 parser.add_argument("--build_dir", type=str, default="build")
@@ -119,7 +112,7 @@ class Develop(develop):
             return
 
         ROOT_DIR = os.path.realpath(os.path.dirname(__file__))
-        TVM_INSTALL_LIB_DIR = os.path.join(ROOT_DIR, 'third_party', 'tvm', 'lib')
+        TVM_INSTALL_LIB_DIR = os.path.join(ROOT_DIR, 'build', 'third_party_install', 'tvm', 'lib')
         TVM_SRC_DIR = os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm')
         TVM_SRC_BUILD_DIR = os.path.join(TVM_SRC_DIR, 'build')
 
@@ -145,9 +138,9 @@ class Develop(develop):
         # must pass 'develop' other than 'install' to setup.py, cuz 'install' will copy tvm lib to
         # site-packages directory to invalidate the symbol-link
         with cd(os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm', 'python')):
-            subprocess.check_call("{} setup.py develop".format(sys.executable), shell=True)
-        with cd(os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm', 'topi', 'python')):
-            subprocess.check_call("{} setup.py develop".format(sys.executable), shell=True)
+            subprocess.check_call("{} setup.py develop {}".format(sys.executable, ' '.join(remain_args)), shell=True)
+        # with cd(os.path.join(ROOT_DIR, 'build', 'third_party', 'tvm', 'src', 'tvm', 'topi', 'python')):
+        #     subprocess.check_call("{} setup.py develop {}".format(sys.executable, ' '.join(remain_args)), shell=True)
 
 cmd_class = {
     "install": InstallPlatlib,

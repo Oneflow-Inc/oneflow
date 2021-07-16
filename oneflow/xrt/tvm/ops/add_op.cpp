@@ -30,7 +30,7 @@ class AddOp final : public TVMOpKernel {
     node_inputs.push_back(ctx->GetExpr4InputName("in_1"));
 
     auto op = tvm::relay::Op::Get("add");
-    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(), {});
+    auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(), {});
     ctx->SetExpr4OutputName("out_0", std::move(expr));
 
     // auto reg = tvm::runtime::Registry::Get("relay.op._Register");

@@ -17,9 +17,10 @@ limitations under the License.
 #define ONEFLOW_XRT_TVM_GRAPH_COMPILER_H_
 
 #include "oneflow/xrt/graph_compiler.h"
-#include <tvm/build_module.h>
+#include <tvm/runtime/module.h>
 #include <tvm/relay/expr.h>
 #include <tvm/relay/op.h>
+#include <tvm/relay/function.h>
 
 namespace oneflow {
 namespace xrt {

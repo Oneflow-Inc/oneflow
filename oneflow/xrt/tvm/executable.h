@@ -18,7 +18,8 @@ limitations under the License.
 
 #include "oneflow/xrt/executable.h"
 #include "oneflow/xrt/parameter.h"
-#include <tvm/build_module.h>
+#include <tvm/runtime/module.h>
+#include <tvm/runtime/registry.h>
 #include <tvm/runtime/device_api.h>
 
 namespace oneflow {
@@ -45,7 +46,7 @@ class TVMExecutable final : public Executable {
   TVMContext ctx_;
   std::vector<DLManagedTensor> output_dltensors_;
   tvm::runtime::Module executor_;
-  tvm::runtime::PackedFunc set_input_zero_copy_;
+  tvm::runtime::PackedFunc set_input_;
   tvm::runtime::PackedFunc run_;
   tvm::runtime::PackedFunc get_output_;
   tvm::runtime::PackedFunc get_num_outputs_;
