@@ -38,6 +38,31 @@ def _generate_output_size(input_size, output_size):
 @oneflow_export("nn.AdaptiveAvgPool1d")
 @experimental_api
 class AdaptiveAvgPool1d(Module):
+    r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+
+    The output size is H, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size H
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> m = nn.AdaptiveAvgPool1d(5)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 5])
+
+    """
+
     def __init__(self, output_size) -> None:
         super().__init__()
         self.output_size = output_size
@@ -52,8 +77,8 @@ class AdaptiveAvgPool1d(Module):
 
     def forward(self, x):
         assert len(x.shape) == 3
-        new_output_size = _generate_output_size(x.shape, self.output_size)
-        return self._op(x, output_size=new_output_size)[0]
+        assert isinstance(self.output_size, int), "'output_size' should be integer"
+        return self._op(x, output_size=(self.output_size,))[0]
 
 
 @oneflow_export("nn.AdaptiveAvgPool2d")
@@ -120,6 +145,46 @@ class AdaptiveAvgPool2d(Module):
 @oneflow_export("nn.AdaptiveAvgPool3d")
 @experimental_api
 class AdaptiveAvgPool3d(Module):
+    r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+
+    The output is of size D x H x W, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the form D x H x W.
+                     Can be a tuple (D, H, W) or a single number D for a cube D x D x D.
+                     D, H and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> m = nn.AdaptiveAvgPool3d((5,7,9))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 5, 7, 9])
+
+        >>> m = nn.AdaptiveAvgPool3d(7)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 7, 7, 7])
+
+        >>> m = nn.AdaptiveAvgPool3d((7, None, None))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 7, 9, 8])
+
+    """
+
     def __init__(self, output_size) -> None:
         super().__init__()
         self.output_size = output_size
