@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+from oneflow._oneflow_internal.exception import ValueException
+
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
@@ -451,7 +453,12 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __getitem__(self, key):
-        return flow.F.tensor_getitem(self, key)
+        try:
+            return flow.F.tensor_getitem(self, key)
+        except ValueException as e:
+            # The stop condition of for in python is IndexError,
+            # so we have to catch ValueException from C++ and throw IndexError
+            raise IndexError(e)
 
     @_auto_determine
     @register_local_tensor_method()
