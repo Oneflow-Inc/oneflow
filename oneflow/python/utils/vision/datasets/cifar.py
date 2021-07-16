@@ -20,7 +20,7 @@ import numpy as np
 import pickle
 from typing import Any, Callable, Optional, Tuple
 
-from vision import VisionDataset
+from .vision import VisionDataset
 from .utils import check_integrity, download_and_extract_archive
 
 

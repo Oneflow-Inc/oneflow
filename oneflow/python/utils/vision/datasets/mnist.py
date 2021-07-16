@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from vision import VisionDataset
 import warnings
 from PIL import Image
 import os
@@ -24,6 +23,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.error import URLError
 
 import oneflow.experimental as flow
+from .vision import VisionDataset
 from .utils import download_and_extract_archive, check_integrity
 
 

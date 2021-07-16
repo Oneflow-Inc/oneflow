@@ -29,7 +29,6 @@ import urllib.request
 import urllib.error
 import pathlib
 
-import oneflow as flow
 
 try:
     from tqdm.auto import (

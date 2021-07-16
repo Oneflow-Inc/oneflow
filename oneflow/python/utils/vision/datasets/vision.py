@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import oneflow.python.utils.data as data
 from typing import Any, Callable, List, Optional, Tuple
 
-# utils/vision reference:
-# https://github.com/pytorch/vision/commit/d1f1a5445dcbbd0d733dc38a32d9ae153337daae
+import oneflow.python.utils.data as data
 
+# reference: https://github.com/pytorch/vision/commit/d1f1a5445dcbbd0d733dc38a32d9ae153337daae
 string_classes = (str, bytes)
-
 
 class VisionDataset(data.Dataset):
     _repr_indent = 4
