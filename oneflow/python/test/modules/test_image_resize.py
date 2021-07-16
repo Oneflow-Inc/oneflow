@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-import oneflow.python.test.ops.image_test_util as image_test_util
+import image_test_util
 
 
 def _of_image_resize(
