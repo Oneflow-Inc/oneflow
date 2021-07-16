@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 class CopyHdActor final : public Actor {
  public:

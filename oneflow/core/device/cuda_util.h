@@ -186,6 +186,7 @@ int GetCudaPtxVersion();
 
 #else
 
+#if !defined(WITH_ROCM)
 namespace oneflow {
 
 enum class CudaWorkType {};
@@ -193,6 +194,7 @@ enum class CudaWorkType {};
 inline size_t GetCudaWorkTypeSize() { return 0; }
 
 }  // namespace oneflow
+#endif
 
 #endif  // WITH_CUDA
 

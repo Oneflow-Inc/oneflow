@@ -16,10 +16,12 @@ limitations under the License.
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/rocm_stream_handle.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/device/rocm_device_descriptor.h"
 
 namespace oneflow {
 
@@ -61,6 +63,62 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
       OF_CUDA_CHECK(cudaEventSynchronize(cb_event.event));
       cb_event.callback();
       OF_CUDA_CHECK(cudaEventDestroy(cb_event.event));
+    }
+  });
+}
+
+GpuThread::~GpuThread() {
+  cb_event_chan_.Close();
+  cb_event_poller_.join();
+}
+
+REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(
+    DeviceType::kGPU, ([](const StreamId& stream_id) -> Thread* {
+      int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
+      int64_t dev_id = static_cast<int64_t>(stream_id.device_id().device_index());
+      return new GpuThread(thrd_id, dev_id);
+    }));
+
+#endif
+
+#ifdef WITH_ROCM
+
+namespace {
+
+void SetAffinityByDevice(int64_t dev_id) {
+  auto node_device_desc =
+      Global<device::NodeDeviceDescriptorManager>::Get()->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const device::RocmDeviceDescriptor>(
+      node_device_desc->GetDevice(device::kRocmDeviceDescriptorClassName, dev_id));
+  if (!cuda_device) { return; }
+  node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
+  node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
+}
+
+}  // namespace
+
+GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
+  set_thrd_id(thrd_id);
+  mut_actor_thread() = std::thread([this, dev_id, thrd_id]() {
+    SetAffinityByDevice(dev_id);
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
+                                      + std::to_string(thrd_id) + ")");
+    OF_ROCM_CHECK(hipSetDevice(dev_id));
+    ThreadCtx ctx;
+    ctx.g_rocm_stream.reset(new RocmStreamHandle(&cb_event_chan_));
+    ctx.cb_event_chan = &cb_event_chan_;
+    PollMsgChannel(ctx);
+  });
+  cb_event_poller_ = std::thread([this, dev_id, thrd_id]() {
+    SetAffinityByDevice(dev_id);
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
+                                      + std::to_string(thrd_id) + ")");
+    OF_ROCM_CHECK(hipSetDevice(dev_id));
+    RocmCBEvent cb_event;
+    while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
+      OF_ROCM_CHECK(hipEventSynchronize(cb_event.event));
+      cb_event.callback();
+      OF_ROCM_CHECK(hipEventDestroy(cb_event.event));
     }
   });
 }

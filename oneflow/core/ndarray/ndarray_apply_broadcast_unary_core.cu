@@ -20,6 +20,13 @@ namespace oneflow {
 namespace {
 
 template<typename T, int NDIMS, template<typename> class unary_func>
+struct NdarrayApplyBroadcastUnaryCore final {
+  OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+    y.template Assign<NDIMS>(x.Broadcast(y.shape()).template UnaryFunc<unary_func>());
+  }
+};
+
+template<typename T, int NDIMS, template<typename> class unary_func>
 __global__ void GpuBroadcastUnaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
   NdarrayApplyBroadcastUnaryCore<T, NDIMS, unary_func>::Apply(y, x);
 }

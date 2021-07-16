@@ -38,21 +38,6 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper final {
                            const XpuVarNdarray<const T>& x);
 };
 
-template<typename T, int NDIMS, template<typename> class binary_func>
-struct NdarrayApplyBroadcastBinaryCore final {
-  OF_DEVICE_FUNC static void Apply(
-      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
-      const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-    const auto& ret =
-        a.Broadcast(y.shape()).template BinaryFunc<binary_func>(b.Broadcast(y.shape()));
-    y.template Assign<NDIMS>(ret);
-  }
-  OF_DEVICE_FUNC static void InplaceApply(const XpuVarNdarray<T>& y,
-                                          const XpuVarNdarray<const T>& x) {
-    y.template BinaryAssign<binary_func, NDIMS>(x.Broadcast(y.shape()));
-  }
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_APPLY_BROADCAST_BINARY_CORE_H_

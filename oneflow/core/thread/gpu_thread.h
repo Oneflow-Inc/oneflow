@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 class GpuThread final : public Thread {
  public:
@@ -31,8 +31,13 @@ class GpuThread final : public Thread {
   GpuThread(int64_t thrd_id, int64_t dev_id);
 
  private:
+#if defined(WITH_CUDA)
   Channel<CudaCBEvent> cb_event_chan_;
+#elif defined(WITH_ROCM)
+  Channel<RocmCBEvent> cb_event_chan_;
+#endif
   std::thread cb_event_poller_;
+
 };
 
 #endif

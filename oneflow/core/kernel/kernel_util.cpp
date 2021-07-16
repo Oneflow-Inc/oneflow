@@ -264,7 +264,7 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
     func = &Memcpy<DeviceType::kCPU>;
   } else {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     func = &Memcpy<DeviceType::kGPU>;
 #else
     UNIMPLEMENTED();
@@ -279,6 +279,8 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   if (src_mem_case.has_device_cuda_mem() || dst_mem_case.has_device_cuda_mem()) {
 #ifdef WITH_CUDA
     OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+#elif WITH_ROCM
+    OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
@@ -291,7 +293,7 @@ void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
   if (dst_mem_case.has_host_mem()) {
     func = &Memset<DeviceType::kCPU>;
   } else {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     func = &Memset<DeviceType::kGPU>;
 #else
     UNIMPLEMENTED();

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/rocm_stream_handle.h"
 #include "oneflow/core/common/callback.msg.h"
 #include "oneflow/core/vm/cuda_host_allocator.h"
 
@@ -63,6 +64,47 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 };
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+class CudaCopyD2HDeviceCtx : public DeviceCtx {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaCopyD2HDeviceCtx);
+  CudaCopyD2HDeviceCtx() = delete;
+  ~CudaCopyD2HDeviceCtx() override = default;
+
+  CudaCopyD2HDeviceCtx(CallbackMsgListPtr callback_msg_list)
+      : cuda_handler_(new RocmStreamHandle(nullptr)), callback_msg_list_(callback_msg_list) {}
+
+  const hipStream_t& rocm_stream() const override { return *(cuda_handler_->rocm_stream()); }
+  const hipblasHandle_t& hipblas_pmh_handle() const override {
+    return *(cuda_handler_->hipblas_pmh_handle());
+  }
+  const hipblasHandle_t& hipblas_tensor_op_math_handle() const override {
+    return *(cuda_handler_->hipblas_tensor_op_math_handle());
+  }
+  const hipblasHandle_t& hipblas_pmd_handle() const override {
+    return *(cuda_handler_->hipblas_pmd_handle());
+  }
+
+  const miopenHandle_t& miopen_handle() const override { return *(cuda_handler_->miopen_handle()); }
+
+  void SyncDevice() override { OF_ROCM_CHECK(hipStreamSynchronize(rocm_stream())); }
+
+  void AddCallBack(std::function<void()> callback) const override {
+    callback_msg_list_->EmplaceBack(ObjectMsgPtr<CallbackMsg>::New(callback));
+  }
+
+  vm::Allocator* mut_allocator() override { return &cuda_allocator_; }
+
+ protected:
+  std::unique_ptr<RocmStreamHandle> cuda_handler_;
+  CallbackMsgListPtr callback_msg_list_;
+  CudaHostAllocator cuda_allocator_;
+};
+
+#endif
+
 }  // namespace vm
 }  // namespace oneflow
 

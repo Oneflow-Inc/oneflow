@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/rocm_stream_handle.h"
 
 namespace oneflow {
 
@@ -24,6 +25,11 @@ struct ThreadCtx {
 #ifdef WITH_CUDA
   std::unique_ptr<CudaStreamHandle> g_cuda_stream;
   Channel<CudaCBEvent>* cb_event_chan;
+#endif
+
+#ifdef WITH_ROCM
+  std::unique_ptr<RocmStreamHandle> g_rocm_stream;
+  Channel<RocmCBEvent>* cb_event_chan;
 #endif
 };
 

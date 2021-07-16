@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/where_kernel_util.h"
+#include "oneflow/core/rocm/elementwise_rocm.h"
 
 namespace oneflow {
 
@@ -27,5 +28,32 @@ struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+
+#if defined(WITH_ROCM)
+
+namespace {
+
+template<typename T, typename CondT>
+struct WhereFunctor {
+  OF_DEVICE_FUNC T operator()(CondT cond, T lhs, T rhs) const {
+    return static_cast<bool>(cond) ? lhs : rhs;
+  }
+};
+
+}  // namespace
+
+template<typename T, typename CondT>
+struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
+  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                    const T* rhs, T* out) {
+    rocm::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
+                               ctx->rocm_stream());
+  }
+};
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kGPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+
+#endif
 
 }  // namespace oneflow

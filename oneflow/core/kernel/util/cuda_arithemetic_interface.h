@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+// #ifdef WITH_CUDA
+#if defined (WITH_CUDA) || defined (WITH_ROCM)
 
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_CUDA_ARITHEMETIC_INTERFACE_H_
 #define ONEFLOW_CORE_KERNEL_UTIL_CUDA_ARITHEMETIC_INTERFACE_H_

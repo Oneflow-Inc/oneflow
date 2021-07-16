@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/device_register_gpu.h"
+#include "oneflow/core/framework/device_registry_manager.h"
 
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
@@ -80,5 +81,33 @@ void GpuDumpVersionInfo() {
     }
   }
 }
+
+REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 }  // namespace oneflow
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+
+namespace {
+std::string GetRocmVersionString(int version) {
+  return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
+}
+}  // namespace
+
+namespace oneflow {
+void GpuDumpVersionInfo() {
+  {
+    int rocm_runtime_version;
+    hipError_t err = hipRuntimeGetVersion(&rocm_runtime_version);
+    if (err == hipSuccess) {
+      LOG(INFO) << "ROCM runtime version: " << GetRocmVersionString(rocm_runtime_version);
+    } else {
+      LOG(ERROR) << "Failed to get cuda runtime version: " << hipGetErrorString(err);
+    }
+  }
+}
+
+REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
+}  // namespace oneflow
+#endif  // WITH_ROCM

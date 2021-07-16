@@ -18,16 +18,19 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 
 namespace oneflow {
 
 #if defined(__CUDACC__)
 #define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
+#elif defined(__HIP_DEVICE_COMPILE__)
+#define XPU_1D_KERNEL_LOOP(i, n) ROCM_1D_KERNEL_LOOP(i, n)
 #else
 #define XPU_1D_KERNEL_LOOP(i, n) FOR_RANGE(int64_t, i, 0, n)
 #endif
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIP_DEVICE_COMPILE__)
 #define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)     \
   for (int64_t i = blockIdx.x; i < (m); i += gridDim.x) \
     for (int64_t j = threadIdx.x; j < (n); j += blockDim.x)
@@ -37,7 +40,7 @@ namespace oneflow {
     for (int64_t j = 0; j < (n); ++j)
 #endif
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIP_PLATFORM_HCC__)
 #define OF_GLOBAL_FUNC __global__
 #else
 #define OF_GLOBAL_FUNC

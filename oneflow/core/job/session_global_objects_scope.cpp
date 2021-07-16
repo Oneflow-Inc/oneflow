@@ -36,6 +36,10 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+#include "oneflow/core/device/rocm_device_descriptor.h"
+#endif  // WITH_ROCM
+
 namespace oneflow {
 
 namespace {
@@ -60,6 +64,22 @@ AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
     }
   }
 #endif
+#ifdef WITH_ROCM
+  const auto rocm_device_list =
+      node_desc->GetDeviceDescriptorList(device::kRocmDeviceDescriptorClassName);
+  CHECK(rocm_device_list);
+  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+    if (i >= rocm_device_list->DeviceCount()) {
+      LOG(WARNING) << "Invalid ROCM device ordinal: rank " << rank << " ordinal " << i;
+      machine_mem_desc.add_zone_size(0);
+    } else {
+      const auto rocm_device = std::dynamic_pointer_cast<const device::RocmDeviceDescriptor>(
+          rocm_device_list->GetDevice(i));
+      CHECK(rocm_device);
+      machine_mem_desc.add_zone_size(rocm_device->GlobalMemorySizeBytes());
+    }
+  }
+#endif
   machine_mem_desc.add_zone_size(node_desc->HostMemorySizeBytes());
   return machine_mem_desc;
 }
@@ -74,7 +94,7 @@ AvailableMemDesc GetAvailableMemDesc() {
 
 AvailableMemDesc GetDryRunAvailableMemDesc() {
   AvailableMemDescOfMachine this_machine_mem_desc;
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
     this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
   }

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 #ifndef ONEFLOW_CORE_VM_ASYNC_CUDA_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_ASYNC_CUDA_STREAM_TYPE_H_

@@ -279,6 +279,24 @@ struct BinaryFuncFloorMod<half> final {
   }
 };
 
+#elif defined(__HIP_DEVICE_COMPILE__)
+
+template<>
+struct BinaryFuncFloorMod<float> final {
+  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+    const float trunc_mod = fmodf(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<double> final {
+  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+    const double trunc_mod = fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+  }
+};
+
 #else
 
 template<>

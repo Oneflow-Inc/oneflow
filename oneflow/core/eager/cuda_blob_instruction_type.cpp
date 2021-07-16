@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"

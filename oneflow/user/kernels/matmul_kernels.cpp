@@ -84,7 +84,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
@@ -196,7 +196,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
@@ -357,6 +357,9 @@ REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kCPU, double);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float16);
+#elif defined(WITH_ROCM)
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float);
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
 
 #define REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(device, dtype)                                  \
@@ -378,6 +381,9 @@ REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, double);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, double);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float16);
+#elif defined(WITH_ROCM)
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float);
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, double);
 #endif
 
 }  // namespace oneflow

@@ -20,6 +20,10 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
+#ifdef WITH_ROCM
+#include <hip/hip_fp16.h>
+#endif
+
 namespace oneflow {
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
@@ -32,7 +36,19 @@ struct IsFloat16;
 template<>
 struct IsFloat16<half> : std::true_type {};
 
-REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+void GpuDumpVersionInfo();
+
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
+#endif
+
+
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_

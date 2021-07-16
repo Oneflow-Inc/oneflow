@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 
 namespace oneflow {
 
@@ -24,7 +25,7 @@ class DeviceCtx;
 
 namespace vm {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 class CudaInstrStatusQuerier {
  public:
   ~CudaInstrStatusQuerier() = default;
@@ -48,7 +49,11 @@ class CudaInstrStatusQuerier {
 
   volatile bool launched_;
   int64_t device_id_;
+#if defined(WITH_CUDA)
   cudaEvent_t event_;
+#elif defined(WITH_ROCM)
+  hipEvent_t event_;
+#endif
 };
 
 #endif

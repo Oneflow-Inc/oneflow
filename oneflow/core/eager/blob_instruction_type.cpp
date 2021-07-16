@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/rocm_util.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
 #include "oneflow/core/operator/operator.h"
@@ -98,6 +99,66 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
       return;
     }
     OF_CUDA_CHECK(cuda_error);
+  }
+};
+COMMAND(
+    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
+#endif
+
+#ifdef WITH_ROCM
+class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
+ public:
+  CudaHostRegisterBlobInstructionType() = default;
+  ~CudaHostRegisterBlobInstructionType() override = default;
+
+  using stream_type = vm::DeviceHelperStreamType;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override {
+    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
+    CHECK(blob->mem_case().has_host_mem());
+    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
+    void* dptr = blob->mut_dptr();
+    CHECK_NOTNULL(dptr);
+    size_t size = blob->AlignedByteSizeOfBlobBody();
+    hipError_t cuda_error = hipHostRegister(dptr, size, hipHostRegisterDefault);
+    if (cuda_error == hipErrorHostMemoryAlreadyRegistered) {
+      hipGetLastError();
+      return;
+    }
+    OF_ROCM_CHECK(cuda_error);
+  }
+};
+COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
+
+class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
+ public:
+  CudaHostUnregisterBlobInstructionType() = default;
+  ~CudaHostUnregisterBlobInstructionType() override = default;
+
+  using stream_type = vm::DeviceHelperStreamType;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override {
+    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
+    CHECK(blob->mem_case().has_host_mem());
+    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
+    void* dptr = blob->mut_dptr();
+    CHECK_NOTNULL(dptr);
+    hipError_t cuda_error = hipHostUnregister(dptr);
+    if (cuda_error == hipErrorHostMemoryNotRegistered) {
+      hipGetLastError();
+      return;
+    }
+    OF_ROCM_CHECK(cuda_error);
   }
 };
 COMMAND(
