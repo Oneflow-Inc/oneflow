@@ -586,8 +586,8 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: Remove automerge
+        if: matrix.test_suite == 'cuda_new_interface' && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
         uses: actions/github-script@v4
-        if: ${{ failure() }} && matrix.test_suite == 'cuda_new_interface'
         with:
           script: |
             github.issues.removeLabel({
@@ -603,7 +603,7 @@ jobs:
               body: 'CI failed, removing label automerge'
             })
       - name: Query system status
-        if: ${{ failure() }}
+        if: failure()
         run: |
           nvidia-smi
           docker ps
