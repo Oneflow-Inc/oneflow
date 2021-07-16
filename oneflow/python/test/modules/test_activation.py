@@ -889,5 +889,94 @@ class TestMishModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+def _np_silu_grad(x):
+    _sig = 1 / (1 + np.exp(-x))
+    return _sig * (1 + x * (1 - _sig))
+
+
+def _test_silu_impl(test_case, shape, device):
+    m = flow.nn.SiLU()
+    np_input = np.random.randn(*shape)
+    np_out = np_input / (1 + np.exp(-np_input))
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_out = m(of_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), _np_silu_grad(np_input), 1e-5, 1e-5)
+    )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestSiluModule(flow.unittest.TestCase):
+    def test_silu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_silu_impl]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_silu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.SiLU", device=device, n=2)
+
+
+def _np_selu(x):
+    scale = 1.0507009873554804934193349852946
+    alpha = 1.6732632423543772848170429916717
+    return np.where(x < 0, scale * alpha * (np.exp(x) - 1), scale * x)
+
+
+def _np_selu_grad(x):
+    scale = 1.0507009873554804934193349852946
+    alpha = 1.6732632423543772848170429916717
+    return np.where(x < 0, scale * alpha * np.exp(x), scale)
+
+
+def _test_selu_impl(test_case, shape, device):
+    m = flow.nn.SELU()
+    np_input = np.random.randn(*shape)
+    np_out = _np_selu(np_input)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_out = m(of_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), _np_selu_grad(np_input), 1e-5, 1e-5)
+    )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestSeluModule(flow.unittest.TestCase):
+    def test_selu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_selu_impl]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_selu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.SELU", device=device, n=2)
+
+
 if __name__ == "__main__":
     unittest.main()

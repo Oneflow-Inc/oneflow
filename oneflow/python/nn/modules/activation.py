@@ -905,7 +905,7 @@ class LeakyReLU(Module):
 @oneflow_export("nn.Mish")
 @experimental_api
 class Mish(Module):
-    r"""Applies the element-wise function:
+    r"""Mish activation: A Self Regularized Non-Monotonic Neural Activation Function.
 
     .. math::
         \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
@@ -936,11 +936,10 @@ class Mish(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
-        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+        return flow.F.mish(x)
 
 
 @oneflow_export("mish")
@@ -950,10 +949,10 @@ def mish_op(x):
 
     .. math::
         \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
-
+    
     .. note::
         See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
-
+    
     See :mod:`oneflow.experimental.nn.Mish`
     """
 
@@ -969,6 +968,233 @@ def mish_op_tensor(x):
     """
 
     return Mish()(x)
+
+
+@oneflow_export("nn.SiLU")
+@experimental_api
+class SiLU(Module):
+    r"""SiLU(Swish) activation:
+
+    .. math::
+        \text{SiLU}(x) = x * sigmoid(x)
+
+    .. note::
+        See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
+        where the SiLU (Sigmoid Linear Unit) was originally coined, and see
+        `Sigmoid-Weighted Linear Units for Neural Network Function Approximation
+        in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
+        a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
+        where the SiLU was experimented with later.
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> silu = flow.nn.SiLU()
+
+        >>> out = silu(input)
+        >>> out
+        tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.silu(x)
+
+
+@oneflow_export("silu")
+@experimental_api
+def silu_op(x):
+    r"""SiLU(Swish) activation:
+
+    .. math::
+        \text{SiLU}(x) = x * sigmoid(x)
+
+    .. note::
+        See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
+        where the SiLU (Sigmoid Linear Unit) was originally coined, and see
+        `Sigmoid-Weighted Linear Units for Neural Network Function Approximation
+        in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
+        a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
+        where the SiLU was experimented with later.
+
+    See :mod:`oneflow.experimental.nn.SiLU`
+
+    """
+
+    return SiLU()(x)
+
+
+@register_tensor_op("silu")
+@experimental_api
+def silu_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.silu`
+    """
+
+    return SiLU()(x)
+
+
+@oneflow_export("nn.SELU")
+@experimental_api
+class SELU(Module):
+    r"""Applies the element-wise function:
+
+    The formula is: 
+    
+    .. math::  
+    
+        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
+
+    with :math:`\alpha = 1.6732632423543772848170429916717` and
+    
+    :math:`\text{scale} = 1.0507009873554804934193349852946`.
+
+    .. warning::
+        When using ``kaiming_normal`` or ``kaiming_normal_`` for initialisation,
+        ``nonlinearity='linear'`` should be used instead of ``nonlinearity='selu'``
+        in order to get `Self-Normalizing Neural Networks`_.
+        See :func:`torch.nn.init.calculate_gain` for more information.
+
+    More details can be found in the paper `Self-Normalizing Neural Networks <https://arxiv.org/abs/1706.02515>`_.
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> selu = flow.nn.SELU()
+
+        >>> out = selu(input)
+        >>> out
+        tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.selu(x)
+
+
+@oneflow_export("selu")
+@experimental_api
+def selu_op(x):
+    r"""The SELU activation.
+
+    The formula is: 
+    
+    .. math::  
+    
+        \text{SELU}(x) = \begin{cases}
+				scale * (x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
+    		    \end{cases}
+
+    See :mod:`oneflow.experimental.nn.SELU`
+    """
+
+    return SELU()(x)
+
+
+@register_tensor_op("selu")
+@experimental_api
+def selu_op_tensor(x):
+    r"""
+    selu() -> Tensor
+    See :func:`oneflow.experimental.selu`
+    """
+    return SELU()(x)
+
+
+@oneflow_export("nn.Softsign")
+@experimental_api
+class Softsign(Module):
+    r"""The SoftSign activation.
+
+    The formula is: 
+    
+    .. math::  
+    
+        SoftSign(x) = \frac{x}{1 + |x|}
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softsign = flow.nn.Softsign()
+
+        >>> out = softsign(input)
+        >>> out
+        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return flow.F.softsign(x)
+
+
+@oneflow_export("softsign")
+@experimental_api
+def softsign_op(x):
+    r"""The SoftSign activation.
+
+    The formula is: 
+    
+    .. math::  
+        SoftSign(x) = \frac{x}{1 + |x|}
+
+    See :mod:`oneflow.experimental.nn.Softsign`
+    """
+
+    return Softsign()(x)
+
+
+@register_tensor_op("softsign")
+@experimental_api
+def softsign_op_tensor(x):
+    r"""
+    softsign() -> Tensor
+    See :func:`oneflow.experimental.softsign`
+    """
+    return Softsign()(x)
 
 
 if __name__ == "__main__":
