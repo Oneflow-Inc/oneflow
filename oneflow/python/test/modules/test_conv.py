@@ -1811,12 +1811,13 @@ class TestConv2d(flow.unittest.TestCase):
     @unittest.skip("need a more relaxed tolerance")
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
+            channels = random(1, 6)
             test_module_against_pytorch(
                 test_case,
                 "nn.Conv2d",
                 extra_generators={
-                    "input": random_tensor(ndim=4, dim1=4),
-                    "in_channels": constant(4),
+                    "input": random_tensor(ndim=4, dim1=channels),
+                    "in_channels": channels,
                     "out_channels": random(1, 129),
                     "kernel_size": random(1, 4),
                     "stride": random(1, 4),
