@@ -133,7 +133,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet 
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy -p build -quiet
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -531,6 +531,23 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+      - name: Remove automerge
+        uses: actions/github-script@v4
+        if: ${{ failure() }} && matrix.test_suite == 'cuda_new_interface'
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })
       - name: Op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
