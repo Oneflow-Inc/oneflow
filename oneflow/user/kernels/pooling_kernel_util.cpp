@@ -87,8 +87,6 @@ void PoolingParams3D::Reset(const ShapeView& x_shape) {
 
 Shape PoolingParams3D::GetYShape() const {
   DimVector y_dim_vec;
-  std::cout<<"dim is: "<<dim_<<std::endl; 
-  std::cout<<"y_3d_ size is: "<<y_3d_.size()<<std::endl;
   if (dim_ == 1) {
     y_dim_vec = {y_3d_.at(2)};
   } else if (dim_ == 2) {
