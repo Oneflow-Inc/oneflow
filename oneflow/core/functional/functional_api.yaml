@@ -313,7 +313,7 @@
   bind_python: False
 
 - name: "expand"
-  signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  signature: "Tensor Expand(Tensor x, *, Shape shape)"
   bind_python: True
 
 - name: "expand_dims"
@@ -709,3 +709,6 @@
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True
 
+- name: "tensor_setitem"
+  signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
+  bind_python: True
