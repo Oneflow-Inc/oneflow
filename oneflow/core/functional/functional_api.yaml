@@ -482,6 +482,90 @@
                      String interpolation, String data_format=\"channels_first\")"
   bind_python: True
 
+- name: "upsample_linear_1d"
+  signature:
+    "Tensor UpsampleLinear1D(Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_linear_1d_grad"
+  signature:
+    "Tensor UpsampleLinear1DGrad(Tensor dy, Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_1d"
+  signature:
+    "Tensor UpsampleNearest1D(Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_1d_grad"
+  signature:
+    "Tensor UpsampleNearest1DGrad(Tensor dy, Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_2d"
+  signature:
+    "Tensor UpsampleNearest2D(Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_2d_grad"
+  signature:
+    "Tensor UpsampleNearest2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: False 
+
+- name: "upsample_bilinear_2d"
+  signature:
+    "Tensor UpsampleBilinear2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bilinear_2d_grad"
+  signature:
+    "Tensor UpsampleBilinear2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_bicubic_2d"
+  signature:
+    "Tensor UpsampleBicubic2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bicubic_2d_grad"
+  signature:
+    "Tensor UpsampleBicubic2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_3d"
+  signature:
+    "Tensor UpsampleNearest3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_nearest_3d_grad"
+  signature:
+    "Tensor UpsampleNearest3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_trilinear_3d"
+  signature:
+    "Tensor UpsampleTrilinear3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_trilinear_3d_grad"
+  signature:
+    "Tensor UpsampleTrilinear3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: False
+
 - name: "abs"
   signature: "Tensor Abs(Tensor x)"
   bind_python: True
