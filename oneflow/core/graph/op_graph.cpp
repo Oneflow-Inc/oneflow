@@ -56,7 +56,7 @@ const cfg::ParallelDistribution& OpNode::ParallelDistribution4Lbi(const LogicalB
 OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
                const OperatorConf& op_conf)
     : parallel_desc_(parallel_desc),
-      op_(ConstructOp(op_conf, parallel_desc->device_type())),
+      op_(CHECK_JUST(ConstructOp(op_conf, parallel_desc->device_type()))),
       ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
   CHECK_JUST(op_->FillOpParallelDesc(parallel_desc));
 }

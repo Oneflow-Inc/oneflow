@@ -49,9 +49,10 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 
 }  // namespace
 
-void ShapeElemCntOp::InitFromOpConf() {
+Maybe<void> ShapeElemCntOp::InitFromOpConf() {
   EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {

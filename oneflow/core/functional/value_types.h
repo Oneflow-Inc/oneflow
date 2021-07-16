@@ -34,9 +34,11 @@ class AttrValue;
 namespace one {
 class Tensor;
 class TensorTuple;
+class Generator;
 
 namespace functional {
 class Scalar;
+class TensorIndex;
 }  // namespace functional
 }  // namespace one
 
@@ -76,6 +78,10 @@ enum ValueType {
   kATTR_MAP,
   kDTYPE,
   kSHAPE,
+  kGENERATOR,
+  kGENERATOR_REF,
+  kGENERATOR_MAYBE,
+  kTENSOR_INDEX,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -122,6 +128,10 @@ VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
 VALUE_TYPE_OF_IMPL(DataType, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
+VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
+VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
+VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
 
 #undef VALUE_TYPE_OF_IMPL
 

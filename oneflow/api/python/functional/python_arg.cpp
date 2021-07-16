@@ -23,7 +23,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
 
@@ -153,6 +155,49 @@ Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
     UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to Shape from "
                                 << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
+}
+
+template<>
+Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()
+    const {
+  return detail::cast<std::shared_ptr<one::Generator>>(Borrow());
+}
+
+template<>
+Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
+  return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
+
+template<>
+Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
+  auto tensor_index = std::make_shared<TensorIndex>();
+  if (object_ == Py_Ellipsis) {
+    detail::IndexItem index(detail::EllipsisIndex{});
+    tensor_index->emplace_back(index);
+  } else if (PySlice_Check(object_)) {
+    Py_ssize_t start, end, step;
+    JUST(detail::PySliceUnpack(object_, &start, &end, &step));
+    detail::IndexItem index(start, end, step);
+    tensor_index->emplace_back(index);
+  } else if (PyLong_Check(object_) && object_ != Py_False && object_ != Py_True) {
+    detail::IndexItem index(static_cast<int64_t>(PyLong_AsLongLong(object_)));
+    tensor_index->emplace_back(index);
+  } else if (object_ == Py_False || object_ == Py_True) {
+    detail::IndexItem index(object_ == Py_True);
+    tensor_index->emplace_back(index);
+  } else if (object_ == Py_None) {
+    detail::IndexItem index(detail::NoneIndex{});
+    tensor_index->emplace_back(index);
+  } else {
+    PyObject* tuple = PySequence_Tuple(object_);
+    size_t size = PyTuple_GET_SIZE(tuple);
+    tensor_index->resize(size);
+    for (size_t i = 0; i < size; ++i) {
+      PyObject* obj = PyTuple_GET_ITEM(tuple, i);
+      tensor_index->at(i) = *JUST(detail::UnpackIndexItem(obj));
+    }
+  }
+  return tensor_index;
 }
 
 }  // namespace functional
