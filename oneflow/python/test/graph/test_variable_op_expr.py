@@ -33,10 +33,6 @@ import oneflow.python.framework.c_api_util as c_api_util
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    "default use eager mode to test this case",
-)
 class TestFeedVariableTensor(unittest.TestCase):
     def test_feed_var_tensor(test_case):
         test_case.assertTrue(oneflow.distributed.is_multi_client())
