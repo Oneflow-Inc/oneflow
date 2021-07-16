@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import warnings
+import numbers
 from enum import Enum
 
 import numpy as np
@@ -65,6 +66,24 @@ pil_modes_mapping = {
     InterpolationMode.HAMMING: 5,
     InterpolationMode.LANCZOS: 1,
 }
+
+
+def _get_image_size(img: Tensor) -> List[int]:
+    """Returns image size as [w, h]
+    """
+    if isinstance(img, flow.Tensor):
+        return F_t._get_image_size(img)
+
+    return F_pil._get_image_size(img)
+
+
+def _get_image_num_channels(img: Tensor) -> int:
+    """Returns number of image channels
+    """
+    if isinstance(img, flow.Tensor):
+        return F_t._get_image_num_channels(img)
+
+    return F_pil._get_image_num_channels(img)
 
 
 def _is_pil_image(img: Any) -> bool:
@@ -138,6 +157,62 @@ def to_tensor(pic):
     if img.dtype == flow.int:
         res = res.to(dtype=default_float_dtype).div(255)
     return res
+
+
+def pil_to_tensor(pic):
+    """Convert a ``PIL Image`` to a tensor of the same type.
+
+    See :class:`~vision.transforms.PILToTensor` for more details.
+
+    Args:
+        pic (PIL Image): Image to be converted to tensor.
+
+    Returns:
+        Tensor: Converted image.
+    """
+    if not F_pil._is_pil_image(pic):
+        raise TypeError('pic should be PIL Image. Got {}'.format(type(pic)))
+
+    if accimage is not None and isinstance(pic, accimage.Image):
+        # accimage format is always uint8 internally, so always return uint8 here
+        nppic = np.zeros([pic.channels, pic.height, pic.width], dtype=np.uint8)
+        pic.copyto(nppic)
+        return flow.tensor(nppic)
+
+    # handle PIL Image
+    img = flow.tensor(np.asarray(pic))
+    img = img.view(pic.size[1], pic.size[0], len(pic.getbands()))
+    # put it from HWC to CHW format
+    img = img.permute((2, 0, 1))
+    return img
+
+
+def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> flow.Tensor:
+    """Convert a tensor image to the given ``dtype`` and scale the values accordingly
+    This function does not support PIL Image.
+
+    Args:
+        image (flow.Tensor): Image to be converted
+        dtype (flow.dtype): Desired data type of the output
+
+    Returns:
+        Tensor: Converted image
+
+    .. note::
+
+        When converting from a smaller to a larger integer ``dtype`` the maximum values are **not** mapped exactly.
+        If converted back and forth, this mismatch has no effect.
+
+    Raises:
+        RuntimeError: When trying to cast :class:`flow.float32` to :class:`flow.int32` or :class:`flow.int64` as
+            well as for trying to cast :class:`flow.float64` to :class:`flow.int64`. These conversions might lead to
+            overflow errors since the floating point ``dtype`` cannot store consecutive integers over the whole range
+            of the integer ``dtype``.
+    """
+    if not isinstance(image, flow.Tensor):
+        raise TypeError('Input img should be Tensor Image')
+
+    return F_t.convert_image_dtype(image, dtype)
 
 
 def normalize(
@@ -233,3 +308,147 @@ def resize(
         return F_pil.resize(img, size=size, interpolation=pil_interpolation)
 
     return F_t.resize(img, size=size, interpolation=interpolation.value)
+
+
+def scale(*args, **kwargs):
+    warnings.warn("The use of the transforms.Scale transform is deprecated, " +
+                  "please use transforms.Resize instead.")
+    return resize(*args, **kwargs)
+
+
+def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "constant") -> Tensor:
+    r"""Pad the given image on all sides with the given "pad" value.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means at most 2 leading dimensions for mode reflect and symmetric,
+    at most 3 leading dimensions for mode edge,
+    and an arbitrary number of leading dimensions for mode constant
+
+    Args:
+        img (PIL Image or Tensor): Image to be padded.
+        padding (int or sequence): Padding on each border. If a single int is provided this
+            is used to pad all borders. If sequence of length 2 is provided this is the padding
+            on left/right and top/bottom respectively. If a sequence of length 4 is provided
+            this is the padding for the left, top, right and bottom borders respectively.
+
+        fill (number or str or tuple): Pixel fill value for constant fill. Default is 0.
+            If a tuple of length 3, it is used to fill R, G, B channels respectively.
+            This value is only used when the padding_mode is constant.
+            Only number is supported for oneflow Tensor.
+            Only int or str or tuple value is supported for PIL Image.
+        padding_mode (str): Type of padding. Should be: constant, edge, reflect or symmetric.
+            Default is constant.
+
+            - constant: pads with a constant value, this value is specified with fill
+
+            - edge: pads with the last value at the edge of the image.
+              If input a 5D oneflow Tensor, the last 3 dimensions will be padded instead of the last 2
+
+            - reflect: pads with reflection of image without repeating the last value on the edge.
+              For example, padding [1, 2, 3, 4] with 2 elements on both sides in reflect mode
+              will result in [3, 2, 1, 2, 3, 4, 3, 2]
+
+            - symmetric: pads with reflection of image repeating the last value on the edge.
+              For example, padding [1, 2, 3, 4] with 2 elements on both sides in symmetric mode
+              will result in [2, 1, 1, 2, 3, 4, 4, 3]
+
+    Returns:
+        PIL Image or Tensor: Padded image.
+    """
+    if not isinstance(img, flow.Tensor):
+        return F_pil.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
+
+    return F_t.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
+
+
+def crop(img: Tensor, top: int, left: int, height: int, width: int) -> Tensor:
+    """Crop the given image at specified location and output size.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions.
+    If image size is smaller than output size along any edge, image is padded with 0 and then cropped.
+
+    Args:
+        img (PIL Image or Tensor): Image to be cropped. (0,0) denotes the top left corner of the image.
+        top (int): Vertical component of the top left corner of the crop box.
+        left (int): Horizontal component of the top left corner of the crop box.
+        height (int): Height of the crop box.
+        width (int): Width of the crop box.
+
+    Returns:
+        PIL Image or Tensor: Cropped image.
+    """
+
+    if not isinstance(img, flow.Tensor):
+        return F_pil.crop(img, top, left, height, width)
+
+    return F_t.crop(img, top, left, height, width)
+
+
+def center_crop(img: Tensor, output_size: List[int]) -> Tensor:
+    """Crops the given image at the center.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions.
+    If image size is smaller than output size along any edge, image is padded with 0 and then center cropped.
+
+    Args:
+        img (PIL Image or Tensor): Image to be cropped.
+        output_size (sequence or int): (height, width) of the crop box. If int or sequence with single int,
+            it is used for both directions.
+
+    Returns:
+        PIL Image or Tensor: Cropped image.
+    """
+    if isinstance(output_size, numbers.Number):
+        output_size = (int(output_size), int(output_size))
+    elif isinstance(output_size, (tuple, list)) and len(output_size) == 1:
+        output_size = (output_size[0], output_size[0])
+
+    image_width, image_height = _get_image_size(img)
+    crop_height, crop_width = output_size
+
+    if crop_width > image_width or crop_height > image_height:
+        padding_ltrb = [
+            (crop_width - image_width) // 2 if crop_width > image_width else 0,
+            (crop_height - image_height) // 2 if crop_height > image_height else 0,
+            (crop_width - image_width + 1) // 2 if crop_width > image_width else 0,
+            (crop_height - image_height + 1) // 2 if crop_height > image_height else 0,
+        ]
+        img = pad(img, padding_ltrb, fill=0)  # PIL uses fill value 0
+        image_width, image_height = _get_image_size(img)
+        if crop_width == image_width and crop_height == image_height:
+            return img
+
+    crop_top = int(round((image_height - crop_height) / 2.))
+    crop_left = int(round((image_width - crop_width) / 2.))
+    return crop(img, crop_top, crop_left, crop_height, crop_width)
+
+
+def resized_crop(
+        img: Tensor, top: int, left: int, height: int, width: int, size: List[int],
+        interpolation: InterpolationMode = InterpolationMode.BILINEAR
+) -> Tensor:
+    """Crop the given image and resize it to desired size.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
+
+    Notably used in :class:`~vision.transforms.RandomResizedCrop`.
+
+    Args:
+        img (PIL Image or Tensor): Image to be cropped. (0,0) denotes the top left corner of the image.
+        top (int): Vertical component of the top left corner of the crop box.
+        left (int): Horizontal component of the top left corner of the crop box.
+        height (int): Height of the crop box.
+        width (int): Width of the crop box.
+        size (sequence or int): Desired output size. Same semantics as ``resize``.
+        interpolation (InterpolationMode): Desired interpolation enum defined by
+            :class:`vision.transforms.InterpolationMode`.
+            Default is ``InterpolationMode.BILINEAR``. If input is Tensor, only ``InterpolationMode.NEAREST``,
+            ``InterpolationMode.BILINEAR`` and ``InterpolationMode.BICUBIC`` are supported.
+            For backward compatibility integer values (e.g. ``PIL.Image.NEAREST``) are still acceptable.
+
+    Returns:
+        PIL Image or Tensor: Cropped image.
+    """
+    img = crop(img, top, left, height, width)
+    img = resize(img, size, interpolation)
+    return img
+
