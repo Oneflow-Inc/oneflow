@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 
 namespace oneflow {
 
@@ -1578,7 +1578,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  if (JUST(IsMultiClient())) {
+  if (JUST(GlobalMultiClientEnv())) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return PhysicalRun(Build);

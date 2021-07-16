@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 
 namespace oneflow {
 namespace vm {
 
 Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
-  if (JUST(IsMultiClient())) {
+  if (JUST(GlobalMultiClientEnv())) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::Rank());
@@ -32,7 +32,7 @@ Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
 }
 
 Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
-  if (JUST(IsMultiClient())) {
+  if (JUST(GlobalMultiClientEnv())) {
     // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
     //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
     return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::Rank());

@@ -34,7 +34,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -94,7 +94,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(vm::InstructionMsgList* instruc
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
                                                 const vm::cfg::EagerSymbolList& eager_symbol_list) {
-  if (JUST(IsMultiClient())) {
+  if (JUST(GlobalMultiClientEnv())) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return RunPhysicalInstruction(instruction_list, eager_symbol_list);

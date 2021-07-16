@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include <json.hpp>
 
 namespace oneflow {
@@ -105,10 +106,15 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled() && !LazyMode::is_enabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
+  if (JUST(GlobalMultiClientEnv())) {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  } else {
+    // single-client
+    if (EagerExecutionEnabled()) {
+      return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+    } else {
+      return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+    }
   }
 }
 
