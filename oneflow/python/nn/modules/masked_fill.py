@@ -34,7 +34,7 @@ class MaskedFill(Module):
 @oneflow_export("masked_fill")
 @register_tensor_op("masked_fill")
 @experimental_api
-def masked_fill_op(tensor, mask, value):
+def masked_fill_op(input, mask, value):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
     The shape of :attr:`mask` must be broadcastable with the shape of the underlying tensor.
@@ -72,7 +72,7 @@ def masked_fill_op(tensor, mask, value):
         #  [-1.9009,  8.7654,  8.7654,  8.7654]]], dtype=oneflow.float32)
 
     """
-    return MaskedFill(value)(tensor, mask)
+    return MaskedFill(value)(input, mask)
 
 
 if __name__ == "__main__":
