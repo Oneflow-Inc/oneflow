@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from collections import OrderedDict
-from typing import Union
+from typing import Union, Optional, Iterator, Set
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -80,21 +80,20 @@ class Graph(object):
         self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
         Graph._child_init_cnt[child_name] += 1
 
-    def _named_state(self):
+    def _state(self):
         for _, b in self._blocks.items():
-            prefix = b.name + "."
-            p_gen = b.origin.named_parameters()
-            for n, p in p_gen:
-                yield prefix + n, p
-            b_gen = b.origin.named_buffers()
-            for n, b in b_gen:
-                yield prefix + n, b
+            pa_gen = b.parameters(recurse=True)
+            for pa in pa_gen:
+                yield pa
+            bu_gen = b.buffers(recurse=True)
+            for bu in bu_gen:
+                yield bu
 
     def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        state = tuple(t for _, t in self._named_state())
+        state = tuple(s.origin for s in self._state())
         if len(state) > 0:
             self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state)
 
@@ -103,9 +102,19 @@ class Graph(object):
         session.TryInit()
 
         with graph_build_util.graph_build_context(self.config.proto, session):
+            # Deal with parameter and buffer
+            for s in self._state():
+
+                def to_lazy():
+                    # TODO(): Replace repr(s) with OpExpr(s.origin)
+                    lazy_tensor = repr(s)
+                    return lazy_tensor
+
+                s.set_lazy_origin_lambda(to_lazy)
             outputs = self.build(*args)
 
         self._is_compiled = True
+        return outputs
 
     def _launch(self):
         # TODO(xuxiaoyu)
@@ -202,10 +211,13 @@ class Block(object):
         self._name_prefix = prefix
         self._type = BlockType.NONE
         self._origin = value
-        self._config = BlockConfig()
+        self.config = BlockConfig()
+        self._scope = None
+        self._prev_scope = None
 
         if isinstance(value, Module):
             self._type = BlockType.MODULE
+            self._is_executing_forward = False
             self._modules = OrderedDict()
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
@@ -217,8 +229,12 @@ class Block(object):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
+            self._lazy_origin = None
+            self._lazy_origin_lambda = None
         elif isinstance(value, Tensor):
             self._type = BlockType.BUFFER
+            self._lazy_origin = None
+            self._lazy_origin_lambda = None
         else:
             raise NotImplementedError()
 
@@ -238,14 +254,92 @@ class Block(object):
     def origin(self):
         return self._origin
 
+    @property
+    def lazy_origin(self):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin"
+        return self._lazy_origin
+
+    def lazy_origin_lambda(self):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
+        return self._lazy_origin_lambda
+
+    def set_lazy_origin_lambda(self, fn=None):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_lambda"
+        self._lazy_origin_lambda = fn
+
+    @property
+    def prev_scope(self):
+        if self._prev_scope is None:
+            self._prev_scope = oneflow._oneflow_internal.GetCurrentScope()
+        return self._prev_scope
+
+    @property
+    def scope(self):
+        if self._scope is None:
+            self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
+        return self._scope
+
+    def scope_context(self):
+        return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
+
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
-        # TODO(): with oneflow_c_api.set_scope(self.config_):
-        return self._origin.__class__.__call__(self, *args)
+        # nn.Module.__call__ will call self.forward()
+        # so the scope is set in self.forward()
+        result = self._origin.__class__.__call__(self, *args)
+        return result
 
     def forward(self, *args):
         assert self._type == BlockType.MODULE
-        return self._origin.__class__.forward(self, *args)
+        self._is_executing_forward = True
+        # TODO(xuxiaoyu): only build scope in lazy mode
+        with self.scope_context():
+            result = self._origin.__class__.forward(self, *args)
+        self._is_executing_forward = False
+        return result
+
+    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield self
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                for m in module.modules(memo):
+                    yield m
+
+    def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        memo = set()
+        modules = self.modules() if recurse else [self]
+        for module in modules:
+            members = get_members_fn(module)
+            for k, v in members:
+                if v is None or v in memo:
+                    continue
+                memo.add(v)
+                yield v
+
+    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        gen = self._members(lambda module: module._parameters.items(), recurse=recurse)
+        for elem in gen:
+            yield elem
+
+    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
+        gen = self._members(lambda module: module._buffers.items(), recurse=recurse)
+        for elem in gen:
+            yield elem
 
     def __setattr__(self, name: str, value=None) -> None:
         if value is None or not isinstance(value, Block):
@@ -289,15 +383,45 @@ class Block(object):
             if "_parameters" in self.__dict__:
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
-                    # TODO(): return block when need config
-                    # return _parameters[name]
-                    return _parameters[name].origin
+                    p_block = _parameters[name]
+                    if self._is_executing_forward:
+                        # Return Tensor for running when getattr inside it's father Block's forward()
+                        if graph_build_util.lazy_mode.is_enabled():
+                            if p_block._lazy_origin is None:
+                                assert p_block._lazy_origin_lambda is not None, (
+                                    repr(p_block)
+                                    + " has no lazy Tensor creation function."
+                                )
+                                # Create and return lazy tensor
+                                with p_block.scope_context():
+                                    p_block._lazy_origin = p_block._lazy_origin_lambda()
+                            return p_block._lazy_origin
+                        else:
+                            return p_block.origin
+                    else:
+                        # Return Block for config when getattr outside it's father Block's forward()
+                        return p_block
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
-                    # TODO(): return block when need config
-                    # return _buffers[name]
-                    return _buffers[name].origin
+                    b_block = _buffers[name]
+                    if self._is_executing_forward:
+                        # Return Tensor for running when getattr inside it's father Block's forward()
+                        if graph_build_util.lazy_mode.is_enabled():
+                            if b_block._lazy_origin is None:
+                                assert b_block._lazy_origin_lambda is not None, (
+                                    repr(b_block)
+                                    + " has no lazy Tensor creation function."
+                                )
+                                # Create and return lazy tensor
+                                with b_block.scope_context():
+                                    b_block._lazy_origin = b_block._lazy_origin_lambda()
+                            return b_block._lazy_origin
+                        else:
+                            return b_block.origin
+                    else:
+                        # Return Block for config when getattr outside it's father Block's forward()
+                        return b_block
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
 
@@ -324,6 +448,7 @@ class Block(object):
 
         main_str = (
             "("
+            + self._name_prefix
             + self._name
             + ":"
             + self._origin.__class__.__name__
@@ -335,10 +460,6 @@ class Block(object):
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
-
-    @property
-    def scope(self):
-        return self._config.scope
 
 
 @oneflow_export("nn.graph.GraphConfig")
@@ -372,12 +493,7 @@ class GraphConfig(FunctionConfig):
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
-        self._activation_checkpointing = False
-
-    @property
-    def scope(self):
-        # TODO(xuxiaoyu): support generating Scope Object
-        print("BlockConfig.scope todo")
+        self._activation_checkpointing = None
 
     @property
     def stage_id(self):
