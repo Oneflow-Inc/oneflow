@@ -56,17 +56,17 @@ class TestTan(flow.unittest.TestCase):
             _test_tan_impl(test_case, *arg)
 
     def test_flow_tan_with_random_data(test_case):
-        for device in ["cpu","cuda"]:
+        for device in ["cpu", "cuda"]:
             test_flow_against_pytorch(
                 test_case, "tan", device=device,
             )
 
     def test_flow_tensor_tan_with_random_data(test_case):
-        for device in ["cpu","cuda"]:
+        for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
                 test_case, "tan", device=device,
             )
-    
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -89,7 +89,7 @@ class TestAtanh(flow.unittest.TestCase):
             )
 
     def test_flow_tensor_atanh_with_random_data(test_case):
-        for device in ["cpu","cuda"]:
+        for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(
                 test_case, "atanh", device=device,
             )
