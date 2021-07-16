@@ -21,6 +21,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_log1p(test_case, shape, device):
@@ -73,6 +74,18 @@ class TestLog1p(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_flow_log1p_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "log1p", device=device,
+            )
+
+    def test_flow_tensor_log1p_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "log1p", device=device,
+            )
 
 
 if __name__ == "__main__":
