@@ -102,7 +102,9 @@ class generator:
 
     def __or__(self, other):
         other = pack(other)
-        return oneof(self, other, possibility=self.size() / (self.size() + other.size()))
+        return oneof(
+            self, other, possibility=self.size() / (self.size() + other.size())
+        )
 
     def __ror__(self, other):
         return self | other
@@ -256,7 +258,7 @@ class random(generator):
 
 
 def random_or_nothing(low, high):
-    return oneof(random(low, high), nothing(), possibility=2/3)
+    return oneof(random(low, high), nothing(), possibility=2 / 3)
 
 
 @data_generator(torch.Tensor)
@@ -280,7 +282,9 @@ class random_tensor(generator):
         self.dim2 = pack(dim2).to(int)
         self.dim3 = pack(dim3).to(int)
         self.dim4 = pack(dim4).to(int)
-        super().__init__([self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4])
+        super().__init__(
+            [self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4]
+        )
 
     def _calc_value(self):
         ndim = self.ndim.value()
@@ -393,7 +397,7 @@ def test_against_pytorch(
         annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
 
-    if 'input' not in annotations:
+    if "input" not in annotations:
         annotations.update({"input": torch.Tensor})
 
     def has_default(name):
@@ -418,9 +422,11 @@ def test_against_pytorch(
         flow_attr_dict = {}
         torch_attr_dict = {}
 
-        generator_tuple = tuple(*([get_generator(name) for name in args] + [get_generator('input')]))
+        generator_tuple = tuple(
+            *([get_generator(name) for name in args] + [get_generator("input")])
+        )
         values = generator_tuple.eval()
-        
+
         for i, name in enumerate(args):
             torch_data = values[i]
             if isinstance(torch_data, Nothing):
