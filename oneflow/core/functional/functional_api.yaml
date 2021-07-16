@@ -427,8 +427,8 @@
 
 - name: "pooling_grad"
   signature:
-    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, String data_format,
-                       String padding, Int32List padding_before, Int32List padding_after, Int32List kernel_size,
+    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, 
+                       Int32List padding, Int32List kernel_size,
                        Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
   bind_python: False
 
