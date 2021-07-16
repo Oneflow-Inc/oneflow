@@ -532,6 +532,7 @@ jobs:
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Checkout Oneflow-Inc/models
+        if: matrix.test_suite == 'cuda_new_interface'
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
