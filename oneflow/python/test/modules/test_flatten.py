@@ -74,7 +74,7 @@ class TestFlattenModule(flow.unittest.TestCase):
         test_module_against_pytorch(
             test_case,
             "nn.Flatten",
-            extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
+            extra_generators={"start_dim": random_or_nothing(1, 6), "end_dim": random_or_nothing(1, 6),},
         )
 
 

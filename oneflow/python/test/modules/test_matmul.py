@@ -17,9 +17,11 @@ from collections import OrderedDict
 
 import unittest
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_matmul(test_case, device):
@@ -335,6 +337,17 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_flow_matmul_with_random_data(test_case):
+        k = random(1, 6)
+        test_flow_against_pytorch(
+            test_case,
+            "matmul",
+            extra_annotations={"other": torch.Tensor},
+            extra_generators={"input": random_tensor(ndim=2, dim1=k), "other": random_tensor(ndim=2, dim0=k),},
+            # the following generator fails the test. We do not support 2d and 1d tensor matmul (while PyTorch supports it)
+            # extra_generators={"input": random_tensor(ndim=2, dim1=k), "other": random_tensor(ndim=2, dim0=k) | random_tensor(ndim=1, dim0=k),},
+        )
 
 
 if __name__ == "__main__":
