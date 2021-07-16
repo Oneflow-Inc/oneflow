@@ -1200,7 +1200,11 @@ def batch_normalization(
 
     params_shape = [inputs.shape[axis]]
     # Float32 required to avoid precision-loss when using fp16 input/output
-    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+    params_dtype = (
+        flow.float32
+        if inputs.dtype == flow.float16 or inputs.dtype == flow.bfloat16
+        else inputs.dtype
+    )
 
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
@@ -1374,7 +1378,11 @@ def batch_normalization_add_relu(
 
     params_shape = [inputs.shape[axis]]
     # Float32 required to avoid precision-loss when using fp16 input/output
-    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+    params_dtype = (
+        flow.float32
+        if inputs.dtype == flow.float16 or inputs.dtype == flow.bfloat16
+        else inputs.dtype
+    )
 
     beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
         name,

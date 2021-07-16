@@ -96,6 +96,10 @@ const void* CudnnSPOnePtr();
 template<typename T>
 const void* CudnnSPZeroPtr();
 
+const void* CudnnSPOnePtr(const DataType dtype);
+
+const void* CudnnSPZeroPtr(const DataType dtype);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA

@@ -90,6 +90,30 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   }
 }
 
+#if CUDA_VERSION >= 11000
+template<>
+void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
+          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const double alpha,
+          const nv_bfloat16* a, const nv_bfloat16* b, const double beta, nv_bfloat16* c) {
+  const float alpha_f = static_cast<float>(alpha);
+  const float beta_f = static_cast<float>(beta);
+  int lda, ldb, ldc;
+  cublasOperation_t cublas_trans_a, cublas_trans_b;
+  std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
+  if (GetCudaSmVersion() >= 500) {
+    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                 cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16BF, ldb, a,
+                                 CUDA_R_16BF, lda, &beta_f, c, CUDA_R_16BF, ldc, CUDA_R_32F,
+                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
+  } else {
+    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16BF, ldb, a,
+                                  CUDA_R_16BF, lda, &beta_f, c, CUDA_R_16BF, ldc));
+  }
+}
+#endif
+
 std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
                                          const Blob* c) {
   const auto& a_shape = a->shape_view();
@@ -190,6 +214,33 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 }
 #endif
 
+#if CUDA_VERSION >= 11000
+template<>
+void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                     const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                     int batch_size, int m, int n, int k, const double alpha, const nv_bfloat16* a,
+                     const nv_bfloat16* b, const double beta, nv_bfloat16* c) {
+  int a_stride, b_stride, c_stride;
+  int lda, ldb, ldc;
+  cublasOperation_t cublas_trans_a, cublas_trans_b;
+  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
+
+  if (GetCudaSmVersion() >= 500) {
+    const float alpha_f = static_cast<float>(alpha);
+    const float beta_f = static_cast<float>(beta);
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
+    OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
+        ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        reinterpret_cast<const void*>(b), CUDA_R_16BF, ldb, b_stride,
+        reinterpret_cast<const void*>(a), CUDA_R_16BF, lda, a_stride, &beta_f,
+        reinterpret_cast<void*>(c), CUDA_R_16BF, ldc, c_stride, batch_size, CUDA_R_32F, algo));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+#endif
+
 __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
                             const int incy) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
@@ -232,6 +283,14 @@ void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans
   Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, reinterpret_cast<const half*>(a),
              reinterpret_cast<const half*>(b), beta, reinterpret_cast<half*>(c));
 }
+#if CUDA_VERSION >= 11000
+void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                      const int k, const double alpha, const nv_bfloat16* a,
+                                      const nv_bfloat16* b, const double beta, nv_bfloat16* c) {
+  Gemm<nv_bfloat16>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+}
+#endif
 
 void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                              enum CBLAS_TRANSPOSE trans_b, const int batch_size,
@@ -258,6 +317,17 @@ void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
                         reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
                         reinterpret_cast<half*>(c));
 }
+#if CUDA_VERSION >= 11000
+void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                                             enum CBLAS_TRANSPOSE trans_b, const int batch_size,
+                                             const int m, const int n, const int k,
+                                             const double alpha, const nv_bfloat16* a,
+                                             const nv_bfloat16* b, const double beta,
+                                             nv_bfloat16* c) {
+  BatchedGemmImpl<nv_bfloat16>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a,
+                               b, beta, c);
+}
+#endif
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
                                     const int incx, float* y, const int incy) {

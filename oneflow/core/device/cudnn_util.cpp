@@ -25,6 +25,9 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   if (val == GetDataType<type_cpp>::value) { return type_cudnn; }
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
 #undef MAKE_ENTRY
+#if CUDNN_VERSION >= 8100
+  if (val == kBFloat16) { return CUDNN_DATA_BFLOAT16; }
+#endif
   UNIMPLEMENTED();
 }
 
@@ -161,6 +164,12 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
       break;
     }
 #endif
+#if CUDNN_VERSION >= 8100
+    case CUDNN_DATA_BFLOAT16: {
+      byte_size = 2;
+      break;
+    }
+#endif
     default: {
       UNIMPLEMENTED();
     }
@@ -195,5 +204,35 @@ template const void* CudnnSPOnePtr<float16>();
 template const void* CudnnSPZeroPtr<float>();
 template const void* CudnnSPZeroPtr<double>();
 template const void* CudnnSPZeroPtr<float16>();
+
+const void* CudnnSPOnePtr(const DataType dtype) {
+  if (dtype == kDouble) {
+    return CudnnSPOnePtr<double>();
+  } else if (dtype == kFloat) {
+    return CudnnSPOnePtr<float>();
+  } else if (dtype == kFloat16) {
+    return CudnnSPOnePtr<float16>();
+  } else if (dtype == kBFloat16) {
+    // NOTE(guoran): kBFloat16 use float OnePtr
+    return CudnnSPOnePtr<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const void* CudnnSPZeroPtr(const DataType dtype) {
+  if (dtype == kDouble) {
+    return CudnnSPZeroPtr<double>();
+  } else if (dtype == kFloat) {
+    return CudnnSPZeroPtr<float>();
+  } else if (dtype == kFloat16) {
+    return CudnnSPZeroPtr<float16>();
+  } else if (dtype == kBFloat16) {
+    // NOTE(guoran): kBFloat16 use float ZeroPtr
+    return CudnnSPZeroPtr<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 }  // namespace oneflow

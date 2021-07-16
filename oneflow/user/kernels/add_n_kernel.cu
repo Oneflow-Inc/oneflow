@@ -15,6 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 
+#if CUDA_VERSION >= 11000
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+#endif
 namespace oneflow {
 
 namespace {
@@ -197,4 +200,79 @@ REGISTER_USER_KERNEL("add_n")
       return Maybe<void>::Ok();
     });
 
+#if CUDA_VERSION >= 11000
+
+namespace {
+
+template<int32_t N>
+__global__ void gpu_bfloat16_add(const int64_t n, Param<nv_bfloat16, N> para) {
+  if (para.out == para.in[0]) {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      nv_bfloat16 tmp = 0.0;
+#pragma unroll
+      for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
+      para.out[i] = __hadd(para.out[i], tmp);
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      nv_bfloat16 tmp = para.in[0][i];
+#pragma unroll
+      for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
+      para.out[i] = tmp;
+    }
+  }
+}
+
+template<int32_t N>
+struct GpuAddCaller<nv_bfloat16, N> {
+  static void call(user_op::KernelComputeContext* ctx) {
+    CHECK_EQ(N, ctx->inputs().size());
+
+    Param<nv_bfloat16, N> para;
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t n = out->shape().elem_cnt();
+    para.out = reinterpret_cast<nv_bfloat16*>(out->mut_dptr());
+    for (int32_t i = 0; i < N; ++i) {
+      para.in[i] =
+          reinterpret_cast<const nv_bfloat16*>(ctx->Tensor4ArgNameAndIndex("in", i)->dptr());
+    }
+
+    gpu_bfloat16_add<N>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, para);
+  }
+};
+
+}  // namespace
+
+class GpuAddNBFloat16Kernel : public user_op::OpKernel {
+ public:
+  GpuAddNBFloat16Kernel() = default;
+  ~GpuAddNBFloat16Kernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    int32_t in_num = ctx->inputs().size();
+
+    const auto* caller = LookUpInRegistry<nv_bfloat16>(in_num);
+    CHECK(caller != nullptr) << "GpuAddNBFloat16Kernel: Cannot find registered funtion for in_num: "
+                             << in_num << " of data_type: " << DataType_Name(DataType::kBFloat16);
+    (*caller)(ctx);
+  }
+};
+
+REGISTER_USER_KERNEL("add_n")
+    .SetCreateFn<GpuAddNBFloat16Kernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+                     & (user_op::HobDataType("in", 0) == DataType::kBFloat16))
+    .SetInplaceProposalFn([](const user_op::InferContext&,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
+
+#endif

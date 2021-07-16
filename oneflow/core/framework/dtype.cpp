@@ -71,6 +71,7 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
       {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
+      {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };

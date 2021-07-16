@@ -153,6 +153,8 @@ struct ArithemeticIf<DeviceType::kGPU> {
   static void Fill(DeviceCtx* ctx, const int64_t n, const int8_t value, int8_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int32_t value, int32_t* y);
   static void Fill(DeviceCtx* ctx, const int64_t n, const int64_t value, int64_t* y);
+  static void Fill(DeviceCtx* ctx, const int64_t n, const DataType data_type, const void* value_ptr,
+                   void* y);
 
   static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
                              const float* x, const int64_t x_col_offset, const int64_t x_lda,

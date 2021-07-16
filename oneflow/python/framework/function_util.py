@@ -759,6 +759,21 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
     func_desc.job_config_proto.set_enable_auto_mixed_precision(value)
 
 
+@oneflow_function_config("mixed_precision_data_type")
+def set_mixed_precision_data_type(func_desc, value):
+    r"""Set mixed_precision data type for job
+
+    Args:
+        func_desc ([type]): job function
+        value ([type]): data type. e.g. flow.float
+    """
+    func_desc.job_config_proto.set_mixed_precision_data_type(
+        data_type_cfg.DataType(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(value)
+        )
+    )
+
+
 @oneflow_function_config("enable_keep_header_only")
 def set_enable_keep_header_only(func_desc, value=True):
     r"""deprecated api.

@@ -286,6 +286,28 @@ FILL(int64_t);
 
 #undef FILL
 
+void ArithemeticIf<DeviceType::kCPU>::Fill(DeviceCtx* ctx, const int64_t n,
+                                           const DataType data_type, const void* value_ptr,
+                                           void* y) {
+  if (data_type == kFloat) {
+    return Fill(ctx, n, *(reinterpret_cast<const float*>(value_ptr)), reinterpret_cast<float*>(y));
+  } else if (data_type == kDouble) {
+    return Fill(ctx, n, *(reinterpret_cast<const double*>(value_ptr)),
+                reinterpret_cast<double*>(y));
+  } else if (data_type == kInt8) {
+    return Fill(ctx, n, *(reinterpret_cast<const int8_t*>(value_ptr)),
+                reinterpret_cast<int8_t*>(y));
+  } else if (data_type == kInt32) {
+    return Fill(ctx, n, *(reinterpret_cast<const int32_t*>(value_ptr)),
+                reinterpret_cast<int32_t*>(y));
+  } else if (data_type == kInt64) {
+    return Fill(ctx, n, *(reinterpret_cast<const int64_t*>(value_ptr)),
+                reinterpret_cast<int64_t*>(y));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 #define COPY_COLS_REGION(T)                                                              \
   void ArithemeticIf<DeviceType::kCPU>::CopyColsRegion(                                  \
       DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,          \
