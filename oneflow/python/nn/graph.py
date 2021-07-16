@@ -110,8 +110,8 @@ class Graph(object):
                     graph_build_util.build_graph_input_arg(arg, len(lazy_args))
                 )
             # Deal with parameter and buffer
-            for s in self._state():
-                s.set_lazy_origin_builder(graph_build_util.build_graph_state)
+            for state_block in self._state():
+                state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
 
             outputs = self.build(*lazy_args)
 
