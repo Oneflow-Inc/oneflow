@@ -14,69 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
 
-#define IMPLEMENT_DIMGATHER_KERNEL_CLASS(binop)                                                 \
-  template<DeviceType device_type, typename IN_T, typename IDX_T>                               \
-  class DimGather##binop##Kernel final : public DimGatherBaseKernel<device_type, IN_T, IDX_T> { \
-   public:                                                                                      \
-    DimGather##binop##Kernel() = default;                                                       \
-    ~DimGather##binop##Kernel() override = default;                                             \
-                                                                                                \
-   private:                                                                                     \
-    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,             \
-                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt, \
-                  int32_t dim, const IDX_T* index, const IN_T* input,                           \
-                  IN_T* output) const override {                                                \
-      DimGather##binop##Functor<device_type, IN_T, IDX_T>()(                                    \
-          ctx, input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input, output);    \
-    }                                                                                           \
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                    \
-  };
+namespace {
 
-#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype, optypename, binop)              \
-  REGISTER_USER_KERNEL(optypename)                                                       \
-      .SetCreateFn<DimGather##binop##Kernel<device, dtype, itype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
+template<typename IDX_T>
+void ConvertShape2Array(const ShapeView& shape_view, IDX_T* array, int64_t num_axis) {
+  FOR_RANGE(int64_t, i, 0, num_axis) { array[i] = shape_view.At(i); }
+}
 
-#define REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(device, optypename, binop) \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t, optypename, binop)     \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t, optypename, binop)    \
-  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t, optypename, binop)   \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t, optypename, binop)     \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t, optypename, binop)    \
-  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t, optypename, binop)
-
-#define REGISTER_DIM_GATHER_CPUKERNELS(optypename, binop) \
-  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kCPU, optypename, binop);
-
-#ifdef WITH_CUDA
-#define REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop)                            \
-  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);     \
-  REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
-  REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
-#else
-#define REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop)
-#endif  // WITH_CUDA
-
-#define REGISTER_GATHER_KERNEL(optypename, binop)    \
-  REGISTER_DIM_GATHER_CPUKERNELS(optypename, binop); \
-  REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop);
+}  // namespace
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class DimGatherBaseKernel : public user_op::OpKernel {
+class DimGatherKernel final : public user_op::OpKernel {
  public:
-  DimGatherBaseKernel() = default;
-  ~DimGatherBaseKernel() override = default;
-  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                        const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
-                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* input,
-                        IN_T* output) const = 0;
+  DimGatherKernel() = default;
+  ~DimGatherKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -100,14 +59,35 @@ class DimGatherBaseKernel : public user_op::OpKernel {
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
 
-    BinaryOp(ctx->device_ctx(), input_nd_helper, index_nd_helper, ndim,
-             index_tensor->shape().elem_cnt(), dim, index, input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(
+        ctx->device_ctx(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
+        dim, index, input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-IMPLEMENT_DIMGATHER_KERNEL_CLASS(Update);
-REGISTER_GATHER_KERNEL("dim_gather", Update);
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype)                                 \
+  REGISTER_USER_KERNEL("dim_gather")                                                     \
+      .SetCreateFn<DimGatherKernel<device, dtype, itype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
+
+#define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(device) \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t)    \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t)   \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t)  \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t)    \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t)   \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t)
+
+REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kCPU);
+
+#ifdef WITH_CUDA
+REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t);
+REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t);
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow

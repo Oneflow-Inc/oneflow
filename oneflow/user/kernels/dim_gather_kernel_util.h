@@ -15,39 +15,48 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
-#include "oneflow/user/kernels/dim_gather_scatter_util.h"
-
-// Steps for adding a binary operation on gathers are as follows:
-// 1. implment binop in DeviceBinOp, for example "Mul":
-//    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
-//
-// 2. Declare Functor in dim_gather_kernel_util.h:
-//    DECLARE_DIMGATHER_FUNCTOR(Mul);
-//
-// 3. Implement functors in dim_gather_kernel_util.cu and cpp file:
-//    in .cu file:
-//      IMPLEMENT_DIMGATHER_GPUFUNCTOR(Mul);
-//      INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Mul);
-//    in .cpp file:
-//      IMPLEMENT_DIMGATHER_CPUFUNCTOR(Mul);
-//      INSTANTIATE_DIM_GATHER_CPUFUNCTORS(Mul);
-//
-// 4. Implement kernels in dim_gather_kernels.cpp:
-//    IMPLEMENT_DIMGATHER_KERNEL_CLASS(Mul);
-//
-// 5. Register kernels in dim_gather_kernels.cpp:
-//    REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_mul_like", Mul);
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
+#include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
+
+#define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
+  FLOATING_DATA_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+
+#define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
+  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \
+  FLOAT16_DATA_TYPE_SEQ
+
+constexpr int kDimGatherMaxDimCount = 8;
+
+template<typename T>
+using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
+
 namespace user_op {
 
-DECLARE_DIMGATHER_FUNCTOR(Update);
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+struct DimGatherFunctor final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
+                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
+};
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+struct DimScatterAddFunctor final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
+                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
+};
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimGatherBinop(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                                     const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
-                                     int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                     const IN_T* input, IN_T* output, BinaryOpFn<IN_T> bin_op) {
+OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
+                                int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     const IDX_T x = index[index_offset];
@@ -55,32 +64,40 @@ OF_DEVICE_FUNC void DoDimGatherBinop(const DimOpIndexNdHelper<IDX_T>& input_nd_h
     coordinate[dim] = x;
 
     IDX_T input_offset = input_nd_helper.NdIndexToOffset(coordinate, ndim);
-    bin_op(input + input_offset, output + index_offset);
+    output[index_offset] = input[input_offset];
   }
 }
 
-#define INSTANTIATE_DIM_GATHER_FUNCTOR(devicetype, dtype, itype, binop) \
-  template struct DimGather##binop##Functor<devicetype, dtype, itype>;
+template<typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+#ifdef __CUDA_ARCH__
+    cuda::atomic::Add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
+#else
+    *y += *x;
+#endif
+  };
+};
 
-#define INSTANTIATE_DIM_GATHER_GPUFUNCTORS(binop)                           \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, int32_t, int32_t, binop) \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float, int32_t, binop)   \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, double, int32_t, binop)  \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float16, int32_t, binop) \
-                                                                            \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, int32_t, int64_t, binop) \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float, int64_t, binop)   \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, double, int64_t, binop)  \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float16, int64_t, binop)
+template<typename IN_T, typename IDX_T>
+OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                    const IN_T* input, IN_T* output) {
+  XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
+    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
+    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
+    coordinate[dim] = index[input_offset];
 
-#define INSTANTIATE_DIM_GATHER_CPUFUNCTORS(binop)                           \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, int32_t, int32_t, binop) \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, float, int32_t, binop)   \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, double, int32_t, binop)  \
-                                                                            \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, int32_t, int64_t, binop) \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, float, int64_t, binop)   \
-  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, double, int64_t, binop)
+    IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
+    DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
+  }
+}
+
+// macros for functors instantiate(used by dim_gather_kernel_util.cu and dim_gather_kernel_uti.cpp)
+#define INSTANTIATE_DIM_GATHER_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
+  template struct DimGatherFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                   OF_PP_PAIR_FIRST(itype_pair)>;
 
 }  // namespace user_op
 }  // namespace oneflow
