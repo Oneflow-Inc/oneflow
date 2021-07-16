@@ -28,7 +28,9 @@ def _generate_output_size(input_size, output_size):
             if output_size[i] is None:
                 new_output_size.append(input_size[i + 2])
             else:
-                assert isinstance(output_size[i], int), "numbers in 'output_size' should be integer"
+                assert isinstance(
+                    output_size[i], int
+                ), "numbers in 'output_size' should be integer"
                 new_output_size.append(output_size[i])
     else:
         raise ValueError("invalid 'output_size', 'int' or 'tuple' expected")

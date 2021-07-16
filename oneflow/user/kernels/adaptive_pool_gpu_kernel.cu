@@ -54,7 +54,7 @@ inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int3
 
 template<typename T>
 __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_elems, int in_d,
-                                            int in_h, int in_w, int out_d, int out_h, int out_w) {
+                                          int in_h, int in_w, int out_d, int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
 
@@ -86,7 +86,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
           sum += val;
         }
       }
-      in_ptr += in_h * in_w; // next input depth
+      in_ptr += in_h * in_w;  // next input depth
     }
     // Update output
     output[idx] = sum / k_d / k_h / k_w;
@@ -95,8 +95,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
 
 template<typename T>
 __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num_elems, int in_d,
-                                                int in_h, int in_w, int out_d, int out_h,
-                                                int out_w) {
+                                              int in_h, int in_w, int out_d, int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
 
@@ -125,7 +124,7 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
       for (int ih = 0; ih < k_h; ++ih) {
         for (int iw = 0; iw < k_w; ++iw) { *(input_ptr + ih * in_w + iw) += grad_delta; }
       }
-      input_ptr += in_h * in_w; // next input depth
+      input_ptr += in_h * in_w;  // next input depth
     }
   }
 }
@@ -170,8 +169,8 @@ void BackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const int out_elems = out_tensor->shape().elem_cnt();
 
   RUN_CUDA_KERNEL((InitPtr<T>), ctx->device_ctx(), in_elems, in_elems, in_ptr);
-  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr, out_elems,
-                  in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
+  RUN_CUDA_KERNEL((AdaptiveAvgPoolGradCudaKernel<T>), ctx->device_ctx(), out_elems, in_ptr, out_ptr,
+                  out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
 }
 
 template<DeviceType device_type, typename T>
