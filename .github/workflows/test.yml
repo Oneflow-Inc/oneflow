@@ -611,9 +611,26 @@ jobs:
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+      - name: Remove automerge
+        if: matrix.test_suite == 'cuda_new_interface' && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })
       - name: Query system status
         timeout-minutes: 45
-        if: ${{ failure() }}
+        if: failure()
         run: |
           nvidia-smi
           docker ps
