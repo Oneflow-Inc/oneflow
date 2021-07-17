@@ -128,10 +128,6 @@ def _test_repeat_same_dim_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestRepeat(flow.unittest.TestCase):
     def test_repeat(test_case):
         arg_dict = OrderedDict()
