@@ -74,10 +74,12 @@ class DstFile:
         self.segs.append(seg)
 
     def append_import(self, seg):
-        self.imports.update(seg)
+        self.imports.add(seg)
 
     def __str__(self) -> str:
-        return "\n".join(list(self.imports) + self.segs)
+        imports = list(self.imports)
+        imports.sort()
+        return "\n".join(imports + self.segs)
 
 
 class DstFileDict:
@@ -91,6 +93,7 @@ class DstFileDict:
     @classmethod
     def append_imports(cls, path=None, imports=None):
         cls.create_if_absent(path=path)
+        assert isinstance(imports, list)
         for i in imports:
             cls.state[path].append_import(i)
 
@@ -111,7 +114,7 @@ class DstFileDict:
                 dst_f.write("\n")
 
 
-def handle_export(node=None, export_d=None):
+def handle_export(node=None, export_d=None, imports=None):
     f_src_seg = ast.get_source_segment(txt, node)
     assert len(export_d.args) > 0
     for (i, a) in enumerate(export_d.args):
@@ -121,6 +124,9 @@ def handle_export(node=None, export_d=None):
                     d_src_seg = ast.get_source_segment(txt, d)
                     DstFileDict.append_seg(
                         path=get_dst_path(export=a.value), seg=f"@{d_src_seg}",
+                    )
+                    DstFileDict.append_imports(
+                        path=get_dst_path(export=a.value), imports=imports,
                     )
             DstFileDict.append_seg(
                 path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
@@ -144,16 +150,17 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                 module = ast.parse(txt)
                 is_exported = False
                 # print(ast.dump(parsed))
+                imports = []
                 for node in module.body:
                     if isinstance(node, (ast.ImportFrom, ast.Import)):
                         import_seg = ast.get_source_segment(txt, node)
-                        print(import_seg)
+                        imports.append(import_seg)
                 for node in module.body:
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if is_export_decorator(d):
                                 is_exported == True
-                                handle_export(node=node, export_d=d)
+                                handle_export(node=node, export_d=d, imports=imports)
                     if not is_exported:
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
