@@ -56,6 +56,21 @@ def get_rel_import(exportN: str = None, export0: str = None):
             return f"from {relpath} import {item0} as {itemN}"
 
 
+def handle_export(node=None):
+    f_src_seg = ast.get_source_segment(txt, node)
+    assert len(d.args) > 0
+    for (i, a) in enumerate(d.args):
+        if i == 0:
+            append_seg(
+                path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
+            )
+        else:
+            append_seg(
+                path=get_dst_path(export=a.value),
+                seg=f"{get_rel_import(exportN=a.value, export0=d.args[0].value)}\n",
+            )
+
+
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
     if "python/test" in dirpath:
         continue
@@ -64,30 +79,23 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
             with open(os.path.join(dirpath, src_file), "r") as f:
                 txt = f.read()
                 parsed = ast.parse(txt)
-                node = ast.NodeVisitor()
+                is_exported = False
                 for node in ast.walk(parsed):
                     if isinstance(node, ast.FunctionDef) or isinstance(
                         node, ast.ClassDef
                     ):
                         for d in node.decorator_list:
-                            d_src_seg = ast.get_source_segment(txt, d)
                             if (
                                 isinstance(d, ast.Call)
                                 and isinstance(d.func, ast.Name)
                                 and d.func.id == "oneflow_export"
                             ):
-                                splits = d_src_seg.split(".")
-                                dst_path = None
-                                f_src_seg = ast.get_source_segment(txt, node)
-                                assert len(d.args) > 0
-                                for (i, a) in enumerate(d.args):
-                                    if i == 0:
-                                        append_seg(
-                                            path=get_dst_path(export=a.value),
-                                            seg=f"{f_src_seg}\n",
-                                        )
-                                    else:
-                                        append_seg(
-                                            path=get_dst_path(export=a.value),
-                                            seg=f"{get_rel_import(exportN=a.value, export0=d.args[0].value)}\n",
-                                        )
+                                is_exported == True
+                                handle_export(node=node)
+                    if isinstance(node, ast.FunctionDef) or isinstance(
+                        node, ast.ClassDef
+                    ):
+                        if is_exported:
+                            d_src_seg = ast.get_source_segment(txt, node)
+                            print(d_src_seg)
+                            # print(node.name)
