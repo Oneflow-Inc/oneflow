@@ -230,11 +230,9 @@ class Session(object):
         self.ForceReleaseEagerBlobs()
         oneflow._oneflow_internal.StopLazyGlobalSession()
         oneflow._oneflow_internal.DestroyLazyGlobalSession()
-        self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow._oneflow_internal.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -427,6 +425,9 @@ class Session(object):
         self.running_job_cnt_ -= 1
         self.cond_var_.notify()
         self.cond_var_.release()
+
+    def __del__(self):
+        oneflow._oneflow_internal.ClearSessionById(self.id)
 
 
 @oneflow_export("find_or_create_module")

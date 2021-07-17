@@ -25,6 +25,9 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
+class Tensor;
+
 namespace functional {
 
 namespace detail {
@@ -94,7 +97,11 @@ class TensorIndex : public std::vector<detail::IndexItem> {
 };
 
 int64_t CountSpecifiedDims(const TensorIndex& index);
-Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& shape);
+
+Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
+                                std::vector<detail::Slice>* slice_indices,
+                                std::vector<std::shared_ptr<Tensor>>* tensor_indices,
+                                std::vector<int64_t>* target_dims);
 
 }  // namespace functional
 }  // namespace one
