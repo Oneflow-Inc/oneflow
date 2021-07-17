@@ -31,7 +31,6 @@ def append_seg(path=None, seg=None):
 
 def get_dst_path_(export: str = None):
     splits = export.split(".")
-    print(splits)
     if len(splits) == 1:
         return "__init__.py"
     else:
@@ -67,8 +66,9 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                 parsed = ast.parse(txt)
                 node = ast.NodeVisitor()
                 for node in ast.walk(parsed):
-                    if isinstance(node, ast.FunctionDef):
-                        # print(node.name)
+                    if isinstance(node, ast.FunctionDef) or isinstance(
+                        node, ast.ClassDef
+                    ):
                         for d in node.decorator_list:
                             d_src_seg = ast.get_source_segment(txt, d)
                             if (
@@ -76,8 +76,6 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                                 and isinstance(d.func, ast.Name)
                                 and d.func.id == "oneflow_export"
                             ):
-                                # print(d_src_seg)
-                                # print(ast.dump(d))
                                 splits = d_src_seg.split(".")
                                 dst_path = None
                                 f_src_seg = ast.get_source_segment(txt, node)
@@ -93,6 +91,3 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                                             path=get_dst_path(export=a.value),
                                             seg=f"{get_rel_import(exportN=a.value, export0=d.args[0].value)}\n",
                                         )
-                    if isinstance(node, ast.ClassDef):
-                        pass
-                        # print(node.name)
