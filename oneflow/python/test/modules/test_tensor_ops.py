@@ -37,6 +37,10 @@ def _test_long(test_case, shape, device, dtype):
     test_case.assertEqual(input.dtype, flow.int64)
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTensorOps(flow.unittest.TestCase):
     def test_type_as(test_case):
         arg_dict = OrderedDict()

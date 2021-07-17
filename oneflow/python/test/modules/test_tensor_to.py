@@ -20,6 +20,10 @@ import numpy as np
 import oneflow.experimental as flow
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTo(flow.unittest.TestCase):
     def test_tensor_to_h2d(test_case):
         input = flow.Tensor(np.random.randn(2, 3, 4, 5))

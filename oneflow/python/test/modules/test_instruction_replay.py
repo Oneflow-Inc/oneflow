@@ -44,6 +44,10 @@ def _test_instruction_replay_impl(test_case, device, shape):
     oneflow._oneflow_internal.debug.clear_recorded_instructions()
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestIntructionReplay(flow.unittest.TestCase):
     def test_instruction_replay(test_case):
         arg_dict = OrderedDict()

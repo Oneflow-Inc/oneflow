@@ -120,6 +120,10 @@ def _test_concat_grad_and_no_grad(test_case, device):
     )
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestModule(flow.unittest.TestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()

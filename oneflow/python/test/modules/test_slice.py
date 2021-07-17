@@ -125,6 +125,10 @@ def _test_slice_backward(test_case, device):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
@@ -143,6 +147,10 @@ class TestSlice(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
@@ -153,6 +161,10 @@ class TestSliceUpdate(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestLogicalSliceAssign(flow.unittest.TestCase):
     # this is an in-place operation, so requires_grad should be False(no grad in backward)
     def test_logical_slice_assign(test_case):

@@ -40,6 +40,10 @@ def _test_bernoulli_with_generator(test_case, shape):
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestBernoulli(flow.unittest.TestCase):
     def test_bernoulli(test_case):
         arg_dict = OrderedDict()

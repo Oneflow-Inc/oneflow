@@ -99,6 +99,10 @@ def _test_in_top_k_impl(test_case, shape, k, device):
     )
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestInTopK(flow.unittest.TestCase):
     def test_in_top_k(test_case):
         arg_dict = OrderedDict()

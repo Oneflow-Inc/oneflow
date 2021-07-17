@@ -23,6 +23,10 @@ import numpy as np
 import oneflow.experimental as flow
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestOFRecordModule(flow.unittest.TestCase):
     def test_record(test_case):
         batch_size = 1
@@ -255,6 +259,10 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"

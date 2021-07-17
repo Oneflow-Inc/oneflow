@@ -97,6 +97,10 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestConstantPad2dModule(flow.unittest.TestCase):
     def test_ConstantPad2d(test_case):
         arg_dict = OrderedDict()

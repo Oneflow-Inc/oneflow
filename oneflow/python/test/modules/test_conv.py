@@ -1591,6 +1591,10 @@ def _test_conv2d_large_out_channel(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_default_init(test_case):
         for device in ["cuda", "cpu"]:

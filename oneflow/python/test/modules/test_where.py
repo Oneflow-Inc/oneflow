@@ -172,6 +172,10 @@ def _test_where_broadcast_x_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestWhere(flow.unittest.TestCase):
     def test_where(test_case):
         arg_dict = OrderedDict()

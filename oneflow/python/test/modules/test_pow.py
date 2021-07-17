@@ -90,6 +90,10 @@ def _test_pow_backward_impl(test_case, device):
     test_x_grad_scalar()
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestPow(flow.unittest.TestCase):
     def test_pow_forward(test_case):
         arg_dict = OrderedDict()

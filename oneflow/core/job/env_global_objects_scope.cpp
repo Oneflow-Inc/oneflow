@@ -35,10 +35,6 @@ limitations under the License.
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
-#include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 
 namespace oneflow {
 
@@ -87,25 +83,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
   resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
-}
-
-void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
-
-  Global<symbol::Storage<Scope>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
-
-  Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
-
-  Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
-
-  Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
-  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
 }  // namespace
@@ -200,7 +177,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
-  ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
 }
 

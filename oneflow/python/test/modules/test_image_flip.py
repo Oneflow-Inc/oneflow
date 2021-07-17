@@ -65,6 +65,10 @@ def _compare_image_flip_with_cv(test_case, image_files):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestImageFlip(flow.unittest.TestCase):
     def test_image_flip(test_case):
         _compare_image_flip_with_cv(

@@ -42,6 +42,10 @@ def _test_tan_impl(test_case, shape, device):
     )
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTan(flow.unittest.TestCase):
     def test_tan(test_case):
         arg_dict = OrderedDict()

@@ -1006,3 +1006,4 @@ class BoxingUtil(oneflow._oneflow_internal.deprecated.ForeignBoxingUtil):
 
 
 _global_boxing_util = BoxingUtil()
+oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(_global_boxing_util)

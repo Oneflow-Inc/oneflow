@@ -72,6 +72,10 @@ def compare_with_numpy_sgd(
     )
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestOptimizers(flow.unittest.TestCase):
     def test_sgd(test_case):
         arg_dict = OrderedDict()

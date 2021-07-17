@@ -80,6 +80,10 @@ def _test_masked_select_broadcast(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestAbs(flow.unittest.TestCase):
     def test_cosh(test_case):
         arg_dict = OrderedDict()
