@@ -52,14 +52,9 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  {
-    header_buffer_.reset();
-    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    const auto& FreeHeader = [header_byte_size](char* dptr) { std::free(dptr); };
-    char* ptr = reinterpret_cast<char*>(std::malloc(header_byte_size));
-    header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
-  }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
+  char* header_buffer =
+      reinterpret_cast<char*>(const_cast<int64_t*>(blob_desc_.shape().dim_vec().data()));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));
   return Maybe<void>::Ok();
 }
 
