@@ -34,6 +34,7 @@ def get_dst_path_(export: str = None):
     if len(splits) == 1:
         return "__init__.py"
     else:
+        splits = splits[0:-1]
         return f"{os.path.join(*splits)}.py"
 
 
@@ -44,10 +45,8 @@ def get_dst_path(export: str = None):
 
 def get_rel_import(exportN: str = None, export0: str = None):
     item0 = export0.split(".")[-1]
-    path0 = os.path.join(*export0.split("."))
-    pathN = os.path.join(*exportN.split("."))
-    relpath = os.path.relpath(pathN, path0).replace("/", ".")
-    return f"from {relpath} import {item0}"
+    abspath = ".".join(export0.split(".")[0:-1])
+    return f"from oneflow.{abspath} import {item0}"
 
 
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
