@@ -69,6 +69,8 @@ class Shape final {
 
   bool Containing(const Shape& small_shape) const;
 
+  Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
+
  private:
   void UpdateElemCnt();
 
