@@ -314,10 +314,11 @@ def conv1d(
     output = flow.nn.conv1d(
         inputs,
         weight,
-        strides,
-        padding,
-        data_format,
-        dilation_rate,
+        strides=strides,
+        padding=padding,
+        bias=None,
+        data_format=data_format,
+        dilations=dilation_rate,
         groups=groups,
         name=name,
     )
@@ -726,10 +727,11 @@ def conv3d(
     output = flow.nn.conv3d(
         inputs,
         weight,
-        strides,
-        padding,
-        data_format,
-        dilation_rate,
+        strides=strides,
+        padding=padding,
+        bias=None,
+        data_format=data_format,
+        dilations=dilation_rate,
         groups=groups,
         name=name,
     )
