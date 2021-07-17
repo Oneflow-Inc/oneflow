@@ -52,6 +52,13 @@ void ForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   const T* in_ptr = in_tensor->dptr<T>();
   T* out_ptr = out_tensor->mut_dptr<T>();
 
+  const int64_t input_width = in.Count(4);
+  const int64_t output_width = out.Count(4);
+  const int64_t input_image_size = in.Count(3);
+  const int64_t output_image_size = out.Count(3);
+  const int64_t input_size = in.Count(2);
+  const int64_t output_size = out.Count(2);
+
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
       FOR_RANGE(int64_t, od, 0, out.At(2)) {
@@ -72,16 +79,16 @@ void ForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
-                  sum += in_ptr[id * in.Count(3) + ih * in.Count(4) + iw];
+                  sum += in_ptr[id * input_image_size + ih * input_width + iw];
                 }
               }
             }
-            out_ptr[od * out.Count(3) + oh * out.Count(4) + ow] = sum / kd / kh / kw;
+            out_ptr[od * output_image_size + oh * output_width + ow] = sum / kd / kh / kw;
           }
         }
       }
-      in_ptr += in.Count(2);
-      out_ptr += out.Count(2);
+      in_ptr += input_size;
+      out_ptr += output_size;
     }
   }
 }
@@ -103,6 +110,13 @@ void BackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
 
   std::fill(in_ptr, in_ptr + grad_input->shape().elem_cnt(), static_cast<T>(0));
 
+  const int64_t input_width = in.Count(4);
+  const int64_t output_width = out.Count(4);
+  const int64_t input_image_size = in.Count(3);
+  const int64_t output_image_size = out.Count(3);
+  const int64_t input_size = in.Count(2);
+  const int64_t output_size = out.Count(2);
+
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
       FOR_RANGE(int64_t, od, 0, out.At(2)) {
@@ -118,19 +132,19 @@ void BackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
             int64_t iw1 = end_index(ow, out.At(4), in.At(4));
             int64_t kw = iw1 - iw0;
 
-            T grad_delta = out_ptr[od * out.Count(3) + oh * out.Count(4) + ow] / kd / kh / kw;
+            T grad_delta = out_ptr[od * output_image_size + oh * output_width + ow] / kd / kh / kw;
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
-                  in_ptr[id * in.Count(3) + ih * in.Count(4) + iw] += grad_delta;
+                  in_ptr[id * input_image_size + ih * input_width + iw] += grad_delta;
                 }
               }
             }
           }
         }
       }
-      in_ptr += in.Count(2);
-      out_ptr += out.Count(2);
+      in_ptr += input_size;
+      out_ptr += output_size;
     }
   }
 }
