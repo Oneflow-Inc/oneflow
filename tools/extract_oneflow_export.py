@@ -83,9 +83,7 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                 parsed = ast.parse(txt)
                 is_exported = False
                 for node in ast.walk(parsed):
-                    if isinstance(node, ast.FunctionDef) or isinstance(
-                        node, ast.ClassDef
-                    ):
+                    if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if (
                                 isinstance(d, ast.Call)
