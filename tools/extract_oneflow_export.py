@@ -45,8 +45,8 @@ def get_dst_path(export: str = None):
 
 def get_rel_import(exportN: str = None, export0: str = None):
     item0 = export0.split(".")[-1]
-    abspath = ".".join(export0.split(".")[0:-1])
-    return f"from oneflow.{abspath} import {item0}"
+    abspath = ".".join((["oneflow"] + export0.split("."))[0:-1])
+    return f"from {abspath} import {item0}"
 
 
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
