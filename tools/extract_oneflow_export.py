@@ -64,6 +64,53 @@ def is_export_decorator(d):
     )
 
 
+class DstFile:
+    def __init__(self, path):
+        self.path = path
+        self.imports = set()
+        self.segs = []
+
+    def append_seg(self, seg):
+        self.segs.append(seg)
+
+    def append_import(self, seg):
+        self.imports.update(seg)
+
+    def __str__(self) -> str:
+        return "\n".join(list(self.imports) + self.segs)
+
+
+class DstFileDict:
+    state = {}
+
+    @classmethod
+    def create_if_absent(cls, path=None):
+        if path not in cls.state:
+            cls.state[path] = DstFile(path)
+
+    @classmethod
+    def append_imports(cls, path=None, imports=None):
+        cls.create_if_absent(path=path)
+        for i in imports:
+            cls.state[path].append_import(i)
+
+    @classmethod
+    def append_seg(cls, path=None, seg=None):
+        cls.create_if_absent(path=path)
+        cls.state[path].append_seg(seg)
+
+    @classmethod
+    def save(cls):
+        for path, f in cls.state.items():
+            assert path == f.path
+            dir_path = os.path.dirname(path)
+            if dir_path:
+                subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
+            with open(path, "w") as dst_f:
+                dst_f.write(str(f))
+                dst_f.write("\n")
+
+
 def handle_export(node=None, export_d=None):
     f_src_seg = ast.get_source_segment(txt, node)
     assert len(export_d.args) > 0
@@ -72,14 +119,14 @@ def handle_export(node=None, export_d=None):
             for d in node.decorator_list:
                 if is_export_decorator(d) == False:
                     d_src_seg = ast.get_source_segment(txt, d)
-                    append_seg(
+                    DstFileDict.append_seg(
                         path=get_dst_path(export=a.value), seg=f"@{d_src_seg}",
                     )
-            append_seg(
+            DstFileDict.append_seg(
                 path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
             )
         else:
-            append_seg(
+            DstFileDict.append_seg(
                 path=get_dst_path(export=a.value),
                 seg=f"{get_rel_import(exportN=a.value, export0=export_d.args[0].value)}\n",
             )
@@ -111,9 +158,10 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
                         dirpath_without_root = "/".join(dirpath_without_root)
-                        append_seg(
+                        DstFileDict.append_seg(
                             path=os.path.join(
                                 args.out_dir, dirpath_without_root, src_file
                             ),
                             seg=f"{src_seg}\n",
                         )
+DstFileDict.save()
