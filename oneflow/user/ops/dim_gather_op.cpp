@@ -95,10 +95,10 @@ REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardO
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder
         .OpTypeName(
-            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, input) -> output
+            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, src) -> output
         .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
         .InputBind("src",
-                   ctx->FwOp().output_grad("output", 0))  // scatter.input <- grad of gather.out
+                   ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
         .InputBind("like", ctx->FwOp().input("input", 0))
         .Output("output")
         .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
