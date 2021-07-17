@@ -110,6 +110,7 @@ class DstFileDict:
             if dir_path:
                 subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
             with open(path, "w") as dst_f:
+                print("[save]", f.path)
                 dst_f.write(str(f))
                 dst_f.write("\n")
 
@@ -168,10 +169,13 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
                         dirpath_without_root = "/".join(dirpath_without_root)
-                        DstFileDict.append_seg(
+                        append_seg(
                             path=os.path.join(
                                 args.out_dir, dirpath_without_root, src_file
                             ),
                             seg=f"{src_seg}\n",
                         )
 DstFileDict.save()
+import sys
+
+subprocess.check_call(f"{sys.executable} -m black .", shell=True, cwd=args.out_dir)
