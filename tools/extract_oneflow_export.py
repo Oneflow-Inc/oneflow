@@ -156,12 +156,15 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                         import_seg = ast.get_source_segment(txt, node)
                         imports.append(import_seg)
                 for node in module.body:
+                    is_exported = False
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if is_export_decorator(d):
                                 is_exported == True
-                                handle_export(node=node, export_d=d, imports=imports)
-                    if not is_exported:
+                    if is_exported:
+                        for d in node.decorator_list:
+                            handle_export(node=node, export_d=d, imports=imports)
+                    else:
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
                         dirpath_without_root = "/".join(dirpath_without_root)
