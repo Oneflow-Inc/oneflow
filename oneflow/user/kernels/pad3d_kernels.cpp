@@ -60,7 +60,6 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 
 namespace user_op {
 
-
 template<DeviceType device_type, typename IN_T>
 class ConstantPad3dKernel final : public OpKernel {
  public:
@@ -71,8 +70,8 @@ class ConstantPad3dKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const ShapeView& x_shape =  x->shape();
-    const ShapeView& y_shape =  y->shape();
+    const ShapeView& x_shape = x->shape();
+    const ShapeView& y_shape = y->shape();
     CHECK_EQ(x->shape().NumAxes(), 5);
     const std::vector<int64_t>& padding = ctx->Attr<std::vector<int64_t>>("padding");
     CHECK_EQ(padding.size(), 6);
@@ -85,10 +84,8 @@ class ConstantPad3dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 5> index_helper(y_vector.data());
 
-    ConstantPad3dFunctor<device_type, IN_T>()(
-        ctx->device_ctx(), src, dest, index_helper, 
-        x_shape, y_shape, padding, constant_value
-    );
+    ConstantPad3dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, x_shape,
+                                              y_shape, padding, constant_value);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -104,8 +101,8 @@ class ConstantPad3dGradKernel final : public OpKernel {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     CHECK_EQ(dy->shape().NumAxes(), 5);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ShapeView& dx_shape =  dx->shape();
-    const ShapeView& dy_shape =  dy->shape();
+    const ShapeView& dx_shape = dx->shape();
+    const ShapeView& dy_shape = dy->shape();
 
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     CHECK_EQ(padding.size(), 6);
@@ -119,9 +116,8 @@ class ConstantPad3dGradKernel final : public OpKernel {
     size_t out_bytes_size = dx->shape().Count(0) * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
-    ConstantPad3dGradFunctor<device_type, IN_T>()(
-      ctx->device_ctx(), src, dest, index_helper, dy_shape, dx_shape, padding
-    );
+    ConstantPad3dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+                                                  dy_shape, dx_shape, padding);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

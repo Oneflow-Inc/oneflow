@@ -397,15 +397,14 @@ class PadFunctor {
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
-      switch(x->shape()->NumAxes()){
-        case 4:
-          return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
-        case 5:
-          return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_, {x}, attrs);
+      switch (x->shape()->NumAxes()) {
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_, {x}, attrs);
         default:
-          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << x->shape()->NumAxes() << "d-tensor is not support yet! ";
+          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << x->shape()->NumAxes()
+                                      << "d-tensor is not support yet! ";
       }
-      
+
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {

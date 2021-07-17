@@ -245,6 +245,7 @@ class ConstantPad2d(Module):
                   [ 1.,  1., 15., 16., 17.,  1.,  1.],
                   [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
     """
+
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
@@ -262,8 +263,8 @@ class ConstantPad2d(Module):
         if x.dtype in (flow.float32, flow.float16, flow.float64):
             self.value = float(self.value)
         else:
-            self.value  = int(self.value)
-        
+            self.value = int(self.value)
+
         return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
@@ -324,11 +325,19 @@ class ConstantPad3d(Module):
                    [9, 9, 9, 9],
                    [9, 9, 9, 9]]]]], dtype=oneflow.int32)
     """
+
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
             assert len(padding) == 6, ValueError("Length of padding must be 6")
-            boundary = [padding[0], padding[1], padding[2], padding[3], padding[4], padding[5]]
+            boundary = [
+                padding[0],
+                padding[1],
+                padding[2],
+                padding[3],
+                padding[4],
+                padding[5],
+            ]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding, padding, padding]
         else:
@@ -341,7 +350,7 @@ class ConstantPad3d(Module):
         if x.dtype in (flow.float32, flow.float16, flow.float64):
             self.value = float(self.value)
         else:
-            self.value  = int(self.value)
+            self.value = int(self.value)
         return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 

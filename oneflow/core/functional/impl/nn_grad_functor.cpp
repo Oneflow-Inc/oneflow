@@ -253,13 +253,12 @@ class PadGradFunctor {
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
-      switch(dy->shape()->NumAxes()){
-        case 4:
-          return OpInterpUtil::Dispatch<Tensor>(*constant_pad_grad_, {dy}, attrs);
-        case 5:
-          return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_grad_, {dy}, attrs);
+      switch (dy->shape()->NumAxes()) {
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_grad_, {dy}, attrs);
+        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_grad_, {dy}, attrs);
         default:
-          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << dy->shape()->NumAxes() << "d-tensor is not support yet! ";
+          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but "
+                                      << dy->shape()->NumAxes() << "d-tensor is not support yet! ";
       }
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
