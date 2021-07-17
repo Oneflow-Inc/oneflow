@@ -1,6 +1,7 @@
 import os
 import argparse
 import ast
+from posixpath import relpath
 import subprocess
 
 parser = argparse.ArgumentParser()
@@ -45,8 +46,15 @@ def get_dst_path(export: str = None):
 
 def get_rel_import(exportN: str = None, export0: str = None):
     item0 = export0.split(".")[-1]
-    abspath = ".".join((["oneflow"] + export0.split("."))[0:-1])
-    return f"from {abspath} import {item0}"
+    itemN = exportN.split(".")[-1]
+    if export0.split(".")[0:-1] == exportN.split(".")[0:-1]:
+        return f"{itemN} == {item0}"
+    else:
+        relpath = ".".join((["oneflow"] + export0.split("."))[0:-1])
+        if item0 == itemN:
+            return f"from {relpath} import {item0}"
+        else:
+            return f"from {relpath} import {item0} as {itemN}"
 
 
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
