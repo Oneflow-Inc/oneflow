@@ -19,16 +19,6 @@ subprocess.check_call(f"rm -rf {args.out_dir}", shell=True)
 subprocess.check_call(f"mkdir -p {args.out_dir}", shell=True)
 
 
-def append_seg(path=None, seg=None):
-    path = os.path.join(path)
-    dir_path = os.path.dirname(path)
-    if dir_path:
-        subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
-    with open(path, "a") as dst_f:
-        dst_f.write(seg)
-        dst_f.write("\n")
-
-
 def get_dst_path_(export: str = None):
     splits = export.split(".")
     if len(splits) == 1:
@@ -40,6 +30,7 @@ def get_dst_path_(export: str = None):
 
 def get_dst_path(export: str = None):
     path = get_dst_path_(export=export)
+    print([export], path)
     return os.path.join(args.out_dir, path)
 
 
@@ -169,6 +160,18 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
                         dirpath_without_root = "/".join(dirpath_without_root)
+
+                        def append_seg(path=None, seg=None):
+                            path = os.path.join(path)
+                            dir_path = os.path.dirname(path)
+                            if dir_path:
+                                subprocess.check_call(
+                                    f"mkdir -p {dir_path}", shell=True
+                                )
+                            with open(path, "a") as dst_f:
+                                dst_f.write(seg)
+                                dst_f.write("\n")
+
                         append_seg(
                             path=os.path.join(
                                 args.out_dir, dirpath_without_root, src_file
@@ -178,4 +181,6 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
 DstFileDict.save()
 import sys
 
-subprocess.check_call(f"{sys.executable} -m black .", shell=True, cwd=args.out_dir)
+subprocess.check_call(
+    f"{sys.executable} -m black . --quiet", shell=True, cwd=args.out_dir
+)
