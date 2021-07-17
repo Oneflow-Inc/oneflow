@@ -98,6 +98,10 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                 is_exported = False
                 # print(ast.dump(parsed))
                 for node in module.body:
+                    if isinstance(node, (ast.ImportFrom, ast.Import)):
+                        import_seg = ast.get_source_segment(txt, node)
+                        print(import_seg)
+                for node in module.body:
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if is_export_decorator(d):
