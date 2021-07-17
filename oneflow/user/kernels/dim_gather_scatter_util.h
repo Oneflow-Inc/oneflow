@@ -50,6 +50,22 @@ struct DeviceBinOp {
   OF_DEVICE_FUNC static void Update(const T* x, T* y) { *y = *x; }
 };
 
+template<typename T>
+struct BinOpAddFunctor {
+  OF_DEVICE_FUNC static void apply(const T* x, T* y) {
+#ifdef __CUDA_ARCH__
+    cuda::atomic::Add(y, *x);
+#else
+    *y += *x;
+#endif
+  }
+};
+
+template<typename T>
+struct BinOpUpdateFunctor {
+  OF_DEVICE_FUNC static void Update(const T* x, T* y) { *y = *x; }
+};
+
 // ----- macros for scatter functors -----
 #define DECLARE_DIMSCATTER_FUNCTOR(binop)                                                 \
   template<DeviceType device_type, typename IN_T, typename IDX_T>                         \
