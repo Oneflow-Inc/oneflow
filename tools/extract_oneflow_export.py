@@ -56,18 +56,32 @@ def get_rel_import(exportN: str = None, export0: str = None):
             return f"from {relpath} import {item0} as {itemN}"
 
 
-def handle_export(node=None):
+def is_export_decorator(d):
+    return (
+        isinstance(d, ast.Call)
+        and isinstance(d.func, ast.Name)
+        and d.func.id == "oneflow_export"
+    )
+
+
+def handle_export(node=None, export_d=None):
     f_src_seg = ast.get_source_segment(txt, node)
-    assert len(d.args) > 0
-    for (i, a) in enumerate(d.args):
+    assert len(export_d.args) > 0
+    for (i, a) in enumerate(export_d.args):
         if i == 0:
+            for d in node.decorator_list:
+                if is_export_decorator(d) == False:
+                    d_src_seg = ast.get_source_segment(txt, d)
+                    append_seg(
+                        path=get_dst_path(export=a.value), seg=f"@{d_src_seg}",
+                    )
             append_seg(
                 path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
             )
         else:
             append_seg(
                 path=get_dst_path(export=a.value),
-                seg=f"{get_rel_import(exportN=a.value, export0=d.args[0].value)}\n",
+                seg=f"{get_rel_import(exportN=a.value, export0=export_d.args[0].value)}\n",
             )
 
 
@@ -86,13 +100,9 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                 for node in module.body:
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
-                            if (
-                                isinstance(d, ast.Call)
-                                and isinstance(d.func, ast.Name)
-                                and d.func.id == "oneflow_export"
-                            ):
+                            if is_export_decorator(d):
                                 is_exported == True
-                                handle_export(node=node)
+                                handle_export(node=node, export_d=d)
                     if not is_exported:
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
