@@ -69,7 +69,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd, gt_np))
 
-        image = resize(image_raw_buffer)
+        image = resize(image_raw_buffer)[0]
 
         resized_image_raw_buffer_nd = image.numpy()[0]
         gt_np = cv2.imread(

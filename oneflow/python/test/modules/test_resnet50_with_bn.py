@@ -78,7 +78,7 @@ class TestResNet50(flow.unittest.TestCase):
             val_record = record_reader()
             label = record_label_decoder(val_record)
             image_raw_buffer = record_image_decoder(val_record)
-            image = resize(image_raw_buffer)
+            image = resize(image_raw_buffer)[0]
             image = crop_mirror_normal(image)
             image = image.to("cuda")
             label = label.to("cuda")
