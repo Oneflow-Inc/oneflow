@@ -97,7 +97,7 @@ REGISTER_USER_OP("pad_grad")
     });
 
 REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                       user_op::AddOpFn AddOp) {
+                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op =
@@ -112,10 +112,12 @@ REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrap
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP_GRAD("pad_grad")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("dy", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -130,6 +132,7 @@ REGISTER_USER_OP_GRAD("pad_grad")
         op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dy", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow
