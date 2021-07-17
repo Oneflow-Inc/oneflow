@@ -30,7 +30,7 @@ def get_dst_path_(export: str = None):
 
 def get_dst_path(export: str = None):
     path = get_dst_path_(export=export)
-    print([export], path)
+    print("[export]", path)
     return os.path.join(args.out_dir, path)
 
 
@@ -108,7 +108,7 @@ class DstFileDict:
 
 def handle_export(node=None, export_d=None, imports=None):
     f_src_seg = ast.get_source_segment(txt, node)
-    assert len(export_d.args) > 0
+    assert len(export_d.args) > 0, str(ast.dump(export_d))
     for (i, a) in enumerate(export_d.args):
         if i == 0:
             for d in node.decorator_list:
@@ -152,11 +152,9 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if is_export_decorator(d):
-                                is_exported == True
-                    if is_exported:
-                        for d in node.decorator_list:
-                            handle_export(node=node, export_d=d, imports=imports)
-                    else:
+                                is_exported = True
+                                handle_export(node=node, export_d=d, imports=imports)
+                    if is_exported == False:
                         src_seg = ast.get_source_segment(txt, node)
                         dirpath_without_root = dirpath.split("/")[1::]
                         dirpath_without_root = "/".join(dirpath_without_root)
