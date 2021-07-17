@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 
+#include <infiniband/verbs.h>
+#include <cstdint>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
 
@@ -48,6 +50,11 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
+struct IbvSendWrSgePair {
+  ibv_send_wr wr;
+  ibv_sge sge;
+};
+
 struct IBVerbsCommNetRMADesc;
 
 class IBVerbsQP final {
@@ -64,10 +71,12 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
+  void AddMsgToPenddingList(const ibv_send_wr& wr);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
   void RecvDone(WorkRequestId*);
+  void ReadSendDoneHandle();
 
  private:
   WorkRequestId* NewWorkRequestId();
@@ -82,6 +91,13 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
+  std::mutex num_msg_in_send_buf_mutex_;
+  uint32_t num_msg_in_send_buf_;
+  uint32_t max_send_wr_in_send_buf_;
+  std::mutex msg_pendding_list_mutex_;
+  std::queue<IbvSendWrSgePair> msg_pendding_list_;
+  std::mutex use_pendding_list_mutex_;
+  bool use_pendding_list_;
 };
 
 }  // namespace oneflow
