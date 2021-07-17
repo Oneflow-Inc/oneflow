@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_atanh_impl(test_case, shape, device):
@@ -74,6 +75,30 @@ class TestAtanh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_atanh_impl(test_case, *arg)
             _test_arctanh_impl(test_case, *arg)
+
+    def test_flow_atanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "atanh", device=device,
+            )
+
+    def test_flow_arctanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "arctanh", device=device,
+            )
+
+    def test_flow_tensor_atanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "atanh", device=device,
+            )
+
+    def test_flow_tensor_arctanh_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "arctanh", device=device,
+            )
 
 
 if __name__ == "__main__":

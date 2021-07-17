@@ -31,7 +31,6 @@ class Log1p(Module):
 
 
 @oneflow_export("log1p")
-@register_tensor_op("log1p")
 @experimental_api
 def log1p_op(input):
     r"""Returns a new tensor with the natural logarithm of (1 + input).
@@ -50,6 +49,19 @@ def log1p_op(input):
         >>> out = flow.log1p(x).numpy()
         >>> out
         array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
+
+    """
+    return Log1p()(input)
+
+
+@register_tensor_op("log1p")
+@experimental_api
+def log1p_op_tensor(input):
+    r"""
+
+    log1p() -> Tensor
+
+    See :func:`oneflow.experimental.log1p`
 
     """
     return Log1p()(input)
