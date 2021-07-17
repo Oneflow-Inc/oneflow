@@ -235,6 +235,11 @@ class Session(object):
         if self.status_ is SessionStatus.RUNNING:
             self.Close()
 
+        if self.status_ != SessionStatus.CLOSED:
+            oneflow._oneflow_internal.ClearSessionById(self.id)
+
+        self.status_ = SessionStatus.CLOSED
+
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
@@ -442,7 +447,7 @@ class Session(object):
         self.cond_var_.release()
 
     def __del__(self):
-        oneflow._oneflow_internal.ClearSessionById(self.id)
+        self.TryClose()
 
 
 @oneflow_export("find_or_create_module")
