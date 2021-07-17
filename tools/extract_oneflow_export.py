@@ -80,9 +80,10 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
             print("[exract]", os.path.join(dirpath, src_file))
             with open(os.path.join(dirpath, src_file), "r") as f:
                 txt = f.read()
-                parsed = ast.parse(txt)
+                module = ast.parse(txt)
                 is_exported = False
-                for node in ast.walk(parsed):
+                # print(ast.dump(parsed))
+                for node in module.body:
                     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                         for d in node.decorator_list:
                             if (
@@ -92,16 +93,13 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                             ):
                                 is_exported == True
                                 handle_export(node=node)
-                    if hasattr(node, "level") == False or node.level > 0:
-                        continue
-                    else:
-                        if not is_exported:
-                            src_seg = ast.get_source_segment(txt, node)
-                            dirpath_without_root = dirpath.split("/")[1::]
-                            dirpath_without_root = "/".join(dirpath_without_root)
-                            append_seg(
-                                path=os.path.join(
-                                    args.out_dir, dirpath_without_root, src_file
-                                ),
-                                seg=f"{src_seg}\n",
-                            )
+                    if not is_exported:
+                        src_seg = ast.get_source_segment(txt, node)
+                        dirpath_without_root = dirpath.split("/")[1::]
+                        dirpath_without_root = "/".join(dirpath_without_root)
+                        append_seg(
+                            path=os.path.join(
+                                args.out_dir, dirpath_without_root, src_file
+                            ),
+                            seg=f"{src_seg}\n",
+                        )
