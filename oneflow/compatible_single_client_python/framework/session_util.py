@@ -232,11 +232,11 @@ class Session(object):
         return self.op_name2lazy_blob_cache_[op_name]
 
     def TryClose(self):
-        if self.status_ != SessionStatus.CLOSED:
-            oneflow._oneflow_internal.ClearSessionById(self.id)
-
         if self.status_ is SessionStatus.RUNNING:
             self.Close()
+
+        if self.status_ != SessionStatus.CLOSED:
+            oneflow._oneflow_internal.ClearSessionById(self.id)
 
         self.status_ = SessionStatus.CLOSED
 
