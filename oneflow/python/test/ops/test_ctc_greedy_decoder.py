@@ -126,8 +126,8 @@ def compare_with_np(
         log_probs, input_lengths, merge_repeated
     )
 
-    np.allclose(of_decoded, np_decoded, atol=1e-5)
-    np.allclose(of_neg_sum_logits, np_neg_sum_logits, atol=1e-5)
+    assert np.allclose(of_decoded, np_decoded, atol=1e-5)
+    assert np.allclose(of_neg_sum_logits, np_neg_sum_logits, atol=1e-5)
 
 
 def gen_arg_list(type):
