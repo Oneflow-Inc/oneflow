@@ -73,9 +73,11 @@ def handle_export(node=None):
 
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
     if "python/test" in dirpath:
+        print("[skip]", dirpath)
         continue
     for src_file in filenames:
         if src_file.endswith(".py"):
+            print("[exract]", os.path.join(dirpath, src_file))
             with open(os.path.join(dirpath, src_file), "r") as f:
                 txt = f.read()
                 parsed = ast.parse(txt)
@@ -92,10 +94,16 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                             ):
                                 is_exported == True
                                 handle_export(node=node)
-                    if isinstance(node, ast.FunctionDef) or isinstance(
-                        node, ast.ClassDef
-                    ):
-                        if is_exported:
-                            d_src_seg = ast.get_source_segment(txt, node)
-                            print(d_src_seg)
-                            # print(node.name)
+                    if hasattr(node, "level") == False or node.level > 0:
+                        continue
+                    else:
+                        if not is_exported:
+                            src_seg = ast.get_source_segment(txt, node)
+                            dirpath_without_root = dirpath.split("/")[1::]
+                            dirpath_without_root = "/".join(dirpath_without_root)
+                            append_seg(
+                                path=os.path.join(
+                                    args.out_dir, dirpath_without_root, src_file
+                                ),
+                                seg=f"{src_seg}\n",
+                            )
