@@ -353,6 +353,7 @@ REGISTER_USER_OP("constant_pad3d")
       const Shape& x_shape = ctx->InputShape("x", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
       CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
+      // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
       const int64_t n_idx = 0;
       const int64_t c_idx = 1;
       const int64_t d_idx = 2;
@@ -432,11 +433,12 @@ REGISTER_USER_OP("constant_pad3d_grad")
     });
 
 REGISTER_USER_OP_GRAD("constant_pad3d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("constant_pad2d_grad")
+            builder.Op("constant_pad3d_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Output("dx")
                 .Attr("padding", op.attr<std::vector<int64_t>>("padding"))
@@ -446,6 +448,7 @@ REGISTER_USER_OP_GRAD("constant_pad3d")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow
