@@ -9,7 +9,7 @@ parser.add_argument(
     "--src_dir", type=str, default="oneflow/python",
 )
 parser.add_argument(
-    "--out_dir", type=str, default=".cache/extract_from_oneflow_export",
+    "--out_dir", type=str, default=".cache/extract_from_oneflow_export/oneflow",
 )
 args = parser.parse_args()
 assert args.out_dir
