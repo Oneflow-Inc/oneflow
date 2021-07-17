@@ -28,13 +28,18 @@ def append_seg(path=None, seg=None):
         dst_f.write("\n")
 
 
-def get_dst_path(export: str = None):
+def get_dst_path_(export: str = None):
     splits = export.split(".")
     print(splits)
     if len(splits) == 1:
         return "__init__.py"
     else:
         return f"{os.path.join(*splits)}.py"
+
+
+def get_dst_path(export: str = None):
+    path = get_dst_path_(export=export)
+    return os.path.join(args.out_dir, path)
 
 
 def get_rel_import(exportN: str = None, export0: str = None):
@@ -73,12 +78,12 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                                 for (i, a) in enumerate(d.args):
                                     if i == 0:
                                         append_seg(
-                                            path=get_dst_path(a.value),
+                                            path=get_dst_path(export=a.value),
                                             seg=f"{f_src_seg}\n",
                                         )
                                     else:
                                         append_seg(
-                                            path=get_dst_path(a.value),
+                                            path=get_dst_path(export=a.value),
                                             seg=f"{get_rel_import(exportN=a.value, export0=d.args[0].value)}\n",
                                         )
                     if isinstance(node, ast.ClassDef):
