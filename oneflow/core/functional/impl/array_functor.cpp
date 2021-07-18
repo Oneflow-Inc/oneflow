@@ -167,10 +167,42 @@ class ConcatFunctor {
 class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t>& in_shape,
-                           const std::vector<int32_t>& out_shape,
-                           const std::vector<int32_t>& stride) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
+        << "The desired expanded dims should not be less than the input dims.";
+    std::vector<int32_t> in_shape(x->shape()->NumAxes());
+    for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
+
+    // calculate the original stride.
+    std::vector<int32_t> original_stride(in_shape.size(), 1);
+    for (int i = x->shape()->NumAxes() - 2; i >= 0; --i) {
+      original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
+    }
+    std::vector<int32_t> out_shape(shape.NumAxes());
+    std::vector<int32_t> stride(shape.NumAxes());
+    int shift = out_shape.size() - in_shape.size();
+    for (int i = out_shape.size() - 1; i >= 0; --i) {
+      int index = i - shift;
+      if (index >= 0) {
+        if (shape.At(i) == -1 || shape.At(i) == in_shape.at(index)) {
+          out_shape[i] = in_shape.at(index);
+          stride[i] = original_stride.at(index);
+        } else {
+          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
+              << "Invalid expand shape " << shape.ToString();
+          out_shape[i] = shape.At(i);
+          stride[i] = 0;
+        }
+      } else {
+        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
+        out_shape[i] = shape.At(i);
+        if (shape.At(i) == 1 && i < out_shape.size() - 1) {
+          stride[i] = stride.at(i + 1);
+        } else {
+          stride[i] = 0;
+        }
+      }
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("out_shape", out_shape));
@@ -773,41 +805,24 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    const auto& regular_index = JUST(RegularTensorIndex(index, *(x->shape())));
     int64_t ndims = x->shape()->NumAxes();
-    CHECK_GE_OR_RETURN(regular_index->size(), ndims) << "Tensor index failed to be regularlized.";
-    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-    int dim = 0;
-    DimVector result_dims;
-    for (int i = 0; i < regular_index->size(); ++i) {
-      const auto& index_item = regular_index->at(i);
-      CHECK_OR_RETURN(!index_item.IsEllipsis())
-          << "Tensor index should not have ellipsis once regularlized.";
-      if (index_item.IsSlice()) {
-        CHECK_LT_OR_RETURN(dim, ndims);
-        start[dim] = index_item.slice().start();
-        end[dim] = index_item.slice().end();
-        step[dim] = index_item.slice().step();
-        int64_t length = (end[dim] - start[dim] + step[dim] - 1) / step[dim];
-        result_dims.emplace_back(length);
-        dim++;
-      } else if (index_item.IsInteger()) {
-        CHECK_LT_OR_RETURN(dim, ndims);
-        start[dim] = index_item.integer();
-        end[dim] = start[dim] + 1;
-        step[dim] = 1;
-        dim++;
-      } else if (index_item.IsNone()) {
-        result_dims.emplace_back(1);
-      } else if (index_item.IsBoolean()) {
-        CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
-        result_dims.emplace_back(1);
-      }
-    }
-    CHECK_EQ_OR_RETURN(dim, ndims)
-        << "Specified dims count for regularlized tensor index should equal to tensor dimension "
-        << ndims;
+    std::vector<detail::Slice> slice_indices;
+    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    std::vector<int64_t> target_dims;
 
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
+    CHECK_GT_OR_RETURN(target_shape.Count(0), 0)
+        << "Target shape is zero shape which was not supported yet.";
+
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    for (int i = 0; i < ndims; ++i) {
+      const auto& slice = slice_indices.at(i);
+      start[i] = slice.start();
+      end[i] = slice.end();
+      step[i] = slice.step();
+    }
     bool is_identity = [&]() {
       for (int i = 0; i < ndims; ++i) {
         if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
@@ -821,11 +836,66 @@ class TensorGetItemFunctor {
       result = JUST(functional::Slice(x, start, end, step));
     }
 
-    Shape shape(result_dims);
+    Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      return functional::Reshape(result, shape);
+      result = JUST(functional::Reshape(result, shape));
     }
     return result;
+  }
+};
+
+class TensorSetItemFunctor {
+ public:
+  TensorSetItemFunctor() {}
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index,
+                         const std::shared_ptr<one::Tensor>& value) const {
+    int64_t ndims = x->shape()->NumAxes();
+    std::vector<detail::Slice> slice_indices;
+    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    std::vector<int64_t> target_dims;
+
+    JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
+    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
+    if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
+
+    const auto& value_shape = value->shape();
+    bool matched = [&]() {
+      for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
+        if (value_shape->At(i) != 1) { return false; }
+      }
+      return true;
+    }();
+    CHECK_OR_RETURN(matched) << "The tensor size mismatch. Target sizes: "
+                             << target_shape.ToString()
+                             << ", value sizes: " << value_shape->ToString();
+    std::shared_ptr<one::Tensor> value_tensor(value);
+    if (target_shape.NumAxes() != 0 &&  // NOLINT
+        /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
+      // Remove the beginning redundant 1-dimensions.
+      if (value_shape->NumAxes() > target_shape.NumAxes()) {
+        int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
+        const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
+        value_tensor = JUST(functional::Reshape(value, *shape));
+      }
+      value_tensor = JUST(functional::Expand(value_tensor, target_shape));
+    }
+
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    DimVector slice_dims(ndims);
+    for (int i = 0; i < ndims; ++i) {
+      const auto& slice = slice_indices.at(i);
+      start[i] = slice.start();
+      end[i] = slice.end();
+      step[i] = slice.step();
+      slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+    }
+    Shape slice_shape(slice_dims);
+    if (slice_shape != *(value_tensor->shape())) {
+      value_tensor = JUST(functional::Reshape(value_tensor, slice_shape));
+    }
+    JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+    return Maybe<void>::Ok();
   }
 };
 
@@ -873,6 +943,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
+  m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
 };
 
 }  // namespace functional
