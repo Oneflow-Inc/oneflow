@@ -419,6 +419,10 @@
     "Tensor AdaptiveAvgPool3D(Tensor x, *, Int64List output_size)"
   bind_python: True
 
+- name: "adaptive_pool_grad"
+  signature:
+    "Tensor AdaptivePoolNdGrad(Tensor x, Tensor dy, *, String mode, Int32 ndims)"
+
 - name: "pool_grad"
   signature:
     "Tensor PoolNdGrad(Tensor x, Tensor y, Tensor dy, *, String mode, Int32 ndims, String data_format,
