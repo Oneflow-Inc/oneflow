@@ -33,25 +33,13 @@ struct DimScatterFunctor<DeviceType::kCPU, IN_T, IDX_T, Opt> final {
   }
 };
 
-template struct DimScatterFunctor<DeviceType::kCPU, int32_t, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, float, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, double, int32_t, BinOpAddFunctor>;
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpAddFunctor);
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, int32_t, int64_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, float, int64_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, double, int64_t, BinOpAddFunctor>;
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int64_t, BinOpAddFunctor>;
 
-template struct DimScatterFunctor<DeviceType::kCPU, int32_t, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, float, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, double, int32_t, BinOpUpdateFunctor>;
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpUpdateFunctor);
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, int32_t, int64_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, float, int64_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kCPU, double, int64_t, BinOpUpdateFunctor>;
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int64_t, BinOpUpdateFunctor>;
 
-// IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Update);
-// INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Update);
 }  // namespace user_op
 }  // namespace oneflow

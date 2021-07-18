@@ -58,22 +58,8 @@ struct DimScatterFunctor<DeviceType::kGPU, float16, IDX_T, Opt> final {
   }
 };
 
-template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, float, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, double, int32_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int64_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, float, int64_t, BinOpAddFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, double, int64_t, BinOpAddFunctor>;
-
-template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, float, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, double, int32_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int64_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, float, int64_t, BinOpUpdateFunctor>;
-template struct DimScatterFunctor<DeviceType::kGPU, double, int64_t, BinOpUpdateFunctor>;
-
-// IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Update);
-// INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Update);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpUpdateFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow
