@@ -155,6 +155,9 @@ class PixelShufflev2(Module):
 
         return out
 
+    def extra_repr(self) -> str:
+        return f"w_upscale_factor={self.w_upscale_factor}, h_upscale_factor={self.h_upscale_factor}"
+
 
 if __name__ == "__main__":
     import doctest

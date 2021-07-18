@@ -81,10 +81,6 @@ def _test_greater_float_scalar(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestGreater(flow.unittest.TestCase):
     def test_greter(test_case):
         arg_dict = OrderedDict()

@@ -131,6 +131,11 @@ class GroupNorm(Module):
 
         return res
 
+    def extra_repr(self) -> str:
+        return "{num_groups}, {num_channels}, eps={eps}, " "affine={affine}".format(
+            **self.__dict__
+        )
+
 
 @oneflow_export("nn.LayerNorm")
 @experimental_api
