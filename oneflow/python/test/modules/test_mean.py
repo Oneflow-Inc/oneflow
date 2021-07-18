@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_mean(test_case, shape, device):
@@ -63,10 +64,6 @@ def _test_mean_backward(test_case, shape, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMean(flow.unittest.TestCase):
     def test_mean(test_case):
         arg_dict = OrderedDict()
@@ -79,6 +76,13 @@ class TestMean(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_mean_against_pytorch(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, "mean", device=arg[1])
 
 
 if __name__ == "__main__":

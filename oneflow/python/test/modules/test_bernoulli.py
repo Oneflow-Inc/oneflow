@@ -41,10 +41,6 @@ def _test_bernoulli_with_generator(test_case, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestBernoulli(flow.unittest.TestCase):
     def test_bernoulli(test_case):
         arg_dict = OrderedDict()

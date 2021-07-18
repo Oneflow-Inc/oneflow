@@ -413,10 +413,6 @@ g_samples = [
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModule(flow.unittest.TestCase):
     def test_AvgPool2d(test_case):
         global g_samples

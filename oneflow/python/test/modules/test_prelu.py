@@ -75,10 +75,6 @@ def _test_prelu_grad(test_case, shape, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestPReLU(flow.unittest.TestCase):
     def test_prelu(test_case):
         arg_dict = OrderedDict()

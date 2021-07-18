@@ -78,10 +78,6 @@ def _test_less_equal_float_scalar(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestLessEqual(flow.unittest.TestCase):
     def test_less_equal(test_case):
         arg_dict = OrderedDict()

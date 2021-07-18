@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_min(test_case, device, shape, dim, keepdims):
@@ -67,12 +68,8 @@ def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMinModule(flow.unittest.TestCase):
-    def test_max(test_case):
+    def test_min(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_min, _test_min_tensor_function]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -81,6 +78,13 @@ class TestMinModule(flow.unittest.TestCase):
         arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_min_against_pytorch(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, "min", device=arg[1])
 
 
 def _test_max(test_case, device, shape, dim, keepdims):
@@ -127,10 +131,7 @@ def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
     def test_max(test_case):
         arg_dict = OrderedDict()
@@ -141,6 +142,13 @@ class TestMaxModule(flow.unittest.TestCase):
         arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_max_against_pytorch(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, "max", device=arg[1])
 
 
 if __name__ == "__main__":

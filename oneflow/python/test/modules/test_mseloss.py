@@ -67,10 +67,6 @@ def _test_mseloss_impl(test_case, device, shape, reduction):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMSELossModule(flow.unittest.TestCase):
     def test_mseloss(test_case):
         arg_dict = OrderedDict()

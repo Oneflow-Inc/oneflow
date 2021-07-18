@@ -302,10 +302,6 @@ def gen_arg_list():
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestCTCLoss1n1d(flow.unittest.TestCase):
     def test_ctc_loss(test_case):
         for arg in gen_arg_list():

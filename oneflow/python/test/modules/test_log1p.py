@@ -62,10 +62,6 @@ def _test_log1p_tensor_function(test_case, shape, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestLog1p(flow.unittest.TestCase):
     def test_log1p(test_case):
         arg_dict = OrderedDict()

@@ -96,10 +96,6 @@ def _test_smoothl1loss_impl(test_case, device, shape, data_type, reduction, beta
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestSmoothL1LossModule(flow.unittest.TestCase):
     def test_smoothl1loss(test_case):
         arg_dict = OrderedDict()

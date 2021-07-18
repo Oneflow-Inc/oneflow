@@ -19,6 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
+from automated_test_util import *
 from test_util import (
     GenArgList,
     FlattenArray,
@@ -97,10 +98,6 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestConstantPad2dModule(flow.unittest.TestCase):
     def test_ConstantPad2d(test_case):
         arg_dict = OrderedDict()
@@ -111,6 +108,23 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             _test_ConstantPad2d(test_case, *arg)
+
+    def test_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            spatial_size = np.random.randint(10, 20)
+            test_module_against_pytorch(
+                test_case,
+                "nn.ConstantPad2d",
+                extra_annotations={"padding": int, "value": float},
+                extra_generators={
+                    "input": random_tensor(
+                        ndim=4, dim2=spatial_size, dim3=spatial_size
+                    ),
+                    "padding": random(0, 6),
+                    "value": random(0, 6),
+                },
+                device=device,
+            )
 
 
 if __name__ == "__main__":

@@ -44,10 +44,6 @@ def _test_floor(test_case, shape, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestFloor(flow.unittest.TestCase):
     def test_floor(test_case):
         arg_dict = OrderedDict()

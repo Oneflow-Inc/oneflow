@@ -20,10 +20,6 @@ import numpy as np
 
 
 @flow.unittest.skip_unless_1n2d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAllReduce(flow.unittest.TestCase):
     def test_all_reduce(test_case):
         arr_rank1 = np.array([1, 2])

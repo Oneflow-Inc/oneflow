@@ -1592,10 +1592,6 @@ def _test_conv2d_large_out_channel(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_default_init(test_case):
         for device in ["cuda", "cpu"]:

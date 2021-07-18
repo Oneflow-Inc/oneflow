@@ -317,10 +317,6 @@ def _test_nllloss_bert_sum(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestNLLLossModule(flow.unittest.TestCase):
     def test_nllloss(test_case):
         arg_dict = OrderedDict()

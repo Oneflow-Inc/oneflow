@@ -69,10 +69,6 @@ def _test_pixel_shuffle_impl(
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestPixelShuffleModule(flow.unittest.TestCase):
     def test_pixel_shuffle(test_case):
         arg_dict = OrderedDict()
