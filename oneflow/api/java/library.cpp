@@ -202,21 +202,20 @@ class JavaForeignJobInstance : public ForeignJobInstance {
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jbyteArray path) {
+void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path) {
   std::string load_job_name = convert_jstring_to_string(env, load_job);
   
-  int _path_length = (*env).GetArrayLength(path);
-  int64_t *_shape = new int64_t[1]{ _path_length };
-  signed char *_path = (*env).GetByteArrayElements(path, NULL);
+  int _path_length = (*env).GetDirectBufferCapacity(path);
+  int64_t *_shape = new int64_t[1]{ _path_length };  // Todo: is there a better way to allocate memory?
+  void *_path = (*env).GetDirectBufferAddress(path);
 
   auto copy_model_load_path = [_shape, _path, _path_length](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->CopyShapeFrom(_shape, 1);
-    of_blob->AutoMemCopyFrom(_path, _path_length);
+    of_blob->AutoMemCopyFrom((signed char*) _path, _path_length);
 
     delete []_shape;
-    delete []_path;
   };
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
     new oneflow::JavaForeignJobInstance(load_job_name, "", "", copy_model_load_path, nullptr, nullptr)
@@ -225,22 +224,18 @@ void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobje
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject buffer, jlongArray shape, jint dtype_code, jstring job_name, jstring op_name) {
+void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name) {
   // get address and length
-  void *data_arr = (*env).GetDirectBufferAddress(buffer);
-  std::cout << data_arr << std::endl;
+  void *data_arr = (*env).GetDirectBufferAddress(data);
 
   // copy shape
-  long *shape_arr = (*env).GetLongArrayElements(shape, NULL);
-  int shape_arr_length = (*env).GetArrayLength(shape);
-  long *_shape = new long[shape_arr_length];
-  std::copy(shape_arr, shape_arr + shape_arr_length, _shape);
-  (*env).ReleaseLongArrayElements(shape, shape_arr, JNI_ABORT);
+  long *shape_arr = (long*) (*env).GetDirectBufferAddress(shape);
+  long shape_arr_length = (*env).GetDirectBufferCapacity(shape);
 
   // number of elements
   long element_number = 1;
   for (int i = 0; i < shape_arr_length; i++) {
-    element_number = element_number * _shape[i];
+    element_number = element_number * shape_arr[i];
   }
 
   // job_name & op_name
@@ -248,19 +243,15 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
   std::string _op_name = convert_jstring_to_string(env, op_name);
   
   auto job_instance_fun = [=](uint64_t of_blob_ptr) -> void {
-    std::cout << data_arr << std::endl;
-
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->CopyShapeFrom(_shape, shape_arr_length);
+    of_blob->CopyShapeFrom(shape_arr, shape_arr_length);
     if (dtype_code == kFloat) {
       of_blob->AutoMemCopyFrom((float*) data_arr, element_number);
     }
     if (dtype_code == kInt32) {
       of_blob->AutoMemCopyFrom((int*) data_arr, element_number);
     }
-
-    delete []_shape;
   };
   const std::shared_ptr<oneflow::ForeignJobInstance> job_instance(
     new oneflow::JavaForeignJobInstance(_job_name, _op_name, "", job_instance_fun, nullptr, nullptr)

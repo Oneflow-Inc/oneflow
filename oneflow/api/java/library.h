@@ -28,8 +28,8 @@ JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_closeJobBuildA
 
 // launch
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_startLazyGlobalSession(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jbyteArray path);
-JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject buffer, jlongArray shape, jint dtype_code, jstring job_name, jstring op_name);
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path);
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT jobject       JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name);
 
