@@ -130,7 +130,7 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
 }
 
 template<typename T>
-void ForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
+void AvgFWCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
   Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
   const T* in_ptr = in_tensor->dptr<T>();
@@ -151,7 +151,7 @@ void ForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
 }
 
 template<typename T>
-void BackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
+void AvgBWCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
   Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
   const T* out_ptr = out_tensor->dptr<T>();
@@ -180,7 +180,7 @@ class GpuAdaptiveAvgPool1dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 1); }
+  void Compute(KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 1); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -192,7 +192,7 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 2); }
+  void Compute(KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 2); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -204,7 +204,7 @@ class GpuAdaptiveAvgPool3dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 3); }
+  void Compute(KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 3); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -216,7 +216,7 @@ class GpuAdaptiveAvgPool1dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 1); }
+  void Compute(KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 1); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -227,7 +227,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 2); }
+  void Compute(KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 2); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -238,7 +238,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 3); }
+  void Compute(KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 3); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

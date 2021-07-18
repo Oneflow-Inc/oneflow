@@ -38,7 +38,7 @@ inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int3
 }
 
 template<typename T>
-void ForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
+void AvgFWCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
   user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
@@ -94,7 +94,7 @@ void ForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
 }
 
 template<typename T>
-void BackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
+void AvgBWCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {
   user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
   const user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
   const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
@@ -157,7 +157,7 @@ class AdaptivePool1DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool1DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 1); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 1); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -169,7 +169,7 @@ class AdaptivePool2DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool2DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 2); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 2); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -181,7 +181,7 @@ class AdaptivePool3DCpuKernel final : public user_op::OpKernel {
   ~AdaptivePool3DCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { ForwardCompute<T>(ctx, 3); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgFWCompute<T>(ctx, 3); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -192,7 +192,7 @@ class AdaptivePool1DCpuGradKernel final : public user_op::OpKernel {
   ~AdaptivePool1DCpuGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 1); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 1); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -203,7 +203,7 @@ class AdaptivePool2DCpuGradKernel final : public user_op::OpKernel {
   ~AdaptivePool2DCpuGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 2); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 2); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 template<DeviceType device_type, typename T>
@@ -213,7 +213,7 @@ class AdaptivePool3DCpuGradKernel final : public user_op::OpKernel {
   ~AdaptivePool3DCpuGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { BackwardCompute<T>(ctx, 3); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { AvgBWCompute<T>(ctx, 3); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
