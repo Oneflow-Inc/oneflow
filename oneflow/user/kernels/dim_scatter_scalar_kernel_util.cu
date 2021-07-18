@@ -20,32 +20,31 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename IN_T, typename IDX_T>
-__global__ void DoCUDADimScatterUpdateScalar(const DimOpIndexNdHelper<IDX_T> idx_nd_helper,
-                                             const DimOpIndexNdHelper<IDX_T> output_nd_helper,
-                                             const int ndim, const int64_t elem_cnt,
-                                             const int32_t dim, const int64_t upper_bound,
-                                             const IDX_T* index, const IN_T src_scalar,
-                                             IN_T* output) {
-  DoScatterUpdateScalarFunctor<IN_T, IDX_T>(idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
-                                            upper_bound, index, src_scalar, output);
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+__global__ void DoCUDADimScatterScalar(const DimOpIndexNdHelper<IDX_T> idx_nd_helper,
+                                       const DimOpIndexNdHelper<IDX_T> output_nd_helper,
+                                       const int ndim, const int64_t elem_cnt, const int32_t dim,
+                                       const int64_t upper_bound, const IDX_T* index,
+                                       const IN_T src_scalar, IN_T* output) {
+  DoScatterScalarFunctor<IN_T, IDX_T, Opt>(idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
+                                           upper_bound, index, src_scalar, output);
 }
 
-template<typename IN_T, typename IDX_T>
-struct DimScatterUpdateScalarFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+struct DimScatterScalarFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, int64_t upper_bound,
                   const IDX_T* index, const IN_T src, IN_T* output) {
-    RUN_CUDA_KERNEL((DoCUDADimScatterUpdateScalar<IN_T, IDX_T>), ctx,
-                    BlocksNum4ThreadsNum(elem_cnt), idx_nd_helper, output_nd_helper, ndim, elem_cnt,
-                    dim, upper_bound, index, src, output);
+    RUN_CUDA_KERNEL((DoCUDADimScatterScalar<IN_T, IDX_T, Opt>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+                    idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim, upper_bound, index, src,
+                    output);
   }
 };
 
-INSTANTIATE_DIM_SCATTER_UPDATE_SCARLAR_FUNCTORS(DeviceType::kGPU);
-template struct DimScatterUpdateScalarFunctor<DeviceType::kGPU, float16, int32_t>;
-template struct DimScatterUpdateScalarFunctor<DeviceType::kGPU, float16, int64_t>;
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, UpdateScalarFunctor);
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, AddScalarFunctor);
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, MulScalarFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow

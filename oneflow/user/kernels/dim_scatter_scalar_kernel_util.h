@@ -15,6 +15,9 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_SCATTER_SCALAR_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_SCALAR_KERNEL_UTIL_H_
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -27,31 +30,52 @@ namespace user_op {
 
 constexpr int kDimGatherMaxDimCount = 8;
 
-#define INSTANTIATE_DIM_SCATTER_UPDATE_SCARLAR_FUNCTORS(device_type)            \
-  template struct DimScatterUpdateScalarFunctor<device_type, int32_t, int32_t>; \
-  template struct DimScatterUpdateScalarFunctor<device_type, float, int32_t>;   \
-  template struct DimScatterUpdateScalarFunctor<device_type, double, int32_t>;  \
-  template struct DimScatterUpdateScalarFunctor<device_type, int32_t, int64_t>; \
-  template struct DimScatterUpdateScalarFunctor<device_type, float, int64_t>;   \
-  template struct DimScatterUpdateScalarFunctor<device_type, double, int64_t>;
+template<typename T>
+struct AddScalarFunctor {
+  OF_DEVICE_FUNC static void apply(const T x, T* y) {
+#ifdef __CUDA_ARCH__
+    cuda::atomic::Add(y, x);
+#else
+    *y += x;
+#endif
+  }
+};
+
+template<typename T>
+struct UpdateScalarFunctor {
+  OF_DEVICE_FUNC static void apply(const T x, T* y) { *y = x; }
+};
+
+template<typename T>
+struct MulScalarFunctor {
+  OF_DEVICE_FUNC static void apply(const T x, T* y) { *y *= x; }
+};
+
+#define INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(device_type, opt)             \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int32_t, opt>;  \
+  template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
+  template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;
 
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterUpdateScalarFunctor final {
+template<DeviceType device_type, typename IN_T, typename IDX_T, template<typename T> class Opt>
+struct DimScatterScalarFunctor final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, int64_t upper_bound,
                   const IDX_T* index, const IN_T src, IN_T* output);
 };
 
-template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoScatterUpdateScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
-                                                 const DimOpIndexNdHelper<IDX_T>& output_nd_helper,
-                                                 const int ndim, const int64_t elem_cnt,
-                                                 const int32_t dim, int64_t upper_bound,
-                                                 const IDX_T* index, const IN_T src, IN_T* output) {
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                                           const DimOpIndexNdHelper<IDX_T>& output_nd_helper,
+                                           const int ndim, const int64_t elem_cnt,
+                                           const int32_t dim, int64_t upper_bound,
+                                           const IDX_T* index, const IN_T src, IN_T* output) {
   XPU_1D_KERNEL_LOOP(idx_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
 
@@ -68,7 +92,7 @@ OF_DEVICE_FUNC void DoScatterUpdateScalarFunctor(const DimOpIndexNdHelper<IDX_T>
     }
     coordinate[dim] = idx_elem;
     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
-    *(output + output_offset) = src;
+    Opt<IN_T>::apply(src, output + output_offset);
   }
 }
 

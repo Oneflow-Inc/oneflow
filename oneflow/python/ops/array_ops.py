@@ -2765,7 +2765,7 @@ def dim_scatter_update(
                 if name is not None
                 else id_util.UniqueStr("DimScatterScalarUpdate_")
             )
-            .Op("dim_scatter_scalar_update")
+            .Op("dim_scatter_update_scalar")
             .Input("input", [input])
             .Input("index", [index])
             .Attr("src_scalar", float(src))

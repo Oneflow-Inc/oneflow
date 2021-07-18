@@ -203,7 +203,7 @@ void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
                             });
   const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";
   ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("dim_scatter_scalar_update")
+    return builder.OpTypeName("dim_scatter_update_scalar")
         .InputBind("index", ctx->FwOp().input("index", 0))
         .InputBind("input", ctx->FwOp().output_grad("output", 0))
         .Output("output")
@@ -255,15 +255,15 @@ void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
       .SetDataTypeInferFn(InferScalarDtype)          \
       .SetGetSbpFn(SetSbpScatter)
 
-#define REGISTER_USER_OP_GRAD_SCATTER(optypename) \
+#define REGISTER_SCATTER_GRAD(optypename) \
   REGISTER_USER_OP_GRAD(optypename).SetBackwardOpConfGenFn(ScatterBackward);
 
-#define REGISTER_USER_OP_GRAD_SCATTER_SCALAR(optypename)                                       \
+#define REGISTER_SCATTER_SCALAR_GRAD(optypename)                                               \
   REGISTER_USER_OP_GRAD(optypename)                                                            \
       .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                        \
         const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                 \
         ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
-          return builder.OpTypeName("dim_scatter_scalar_update")                               \
+          return builder.OpTypeName("dim_scatter_update_scalar")                               \
               .InputBind("index", ctx->FwOp().input("index", 0))                               \
               .InputBind("input", ctx->FwOp().output_grad("output", 0))                        \
               .Output("output")                                                                \
@@ -282,12 +282,15 @@ REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_OP("dim_scatter_add");
 REGISTER_SCATTER_OP("dim_scatter_update");
 
-REGISTER_SCATTER_SCALAR_OP("dim_scatter_scalar_update");
-REGISTER_SCATTER_SCALAR_OP("dim_scatter_scalar_add");
+REGISTER_SCATTER_SCALAR_OP("dim_scatter_update_scalar");
+REGISTER_SCATTER_SCALAR_OP("dim_scatter_add_scalar");
+REGISTER_SCATTER_SCALAR_OP("dim_scatter_mul_scalar");
 
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
+REGISTER_SCATTER_GRAD("dim_scatter_add");
+REGISTER_SCATTER_GRAD("dim_scatter_update");
 
-REGISTER_USER_OP_GRAD_SCATTER_SCALAR("dim_scatter_scalar_update");
+REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_update_scalar");
+REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_add_scalar");
+REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_mul_scalar");
 }  // namespace user_op
 }  // namespace oneflow

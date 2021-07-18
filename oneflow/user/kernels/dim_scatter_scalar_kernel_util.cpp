@@ -19,20 +19,28 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename IN_T, typename IDX_T>
-struct DimScatterUpdateScalarFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+struct DimScatterScalarFunctor<DeviceType::kCPU, IN_T, IDX_T, Opt> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, int64_t upper_bound,
                   const IDX_T* index, const IN_T src, IN_T* output) {
-    DoScatterUpdateScalarFunctor<IN_T, IDX_T>(idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
-                                              upper_bound, index, src, output);
+    DoScatterScalarFunctor<IN_T, IDX_T, Opt>(idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
+                                             upper_bound, index, src, output);
   }
 };
 
-INSTANTIATE_DIM_SCATTER_UPDATE_SCARLAR_FUNCTORS(DeviceType::kCPU);
-template struct DimScatterUpdateScalarFunctor<DeviceType::kCPU, float16, int32_t>;
-template struct DimScatterUpdateScalarFunctor<DeviceType::kCPU, float16, int64_t>;
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, UpdateScalarFunctor);
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, UpdateScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, UpdateScalarFunctor>;
+
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, AddScalarFunctor);
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, AddScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, AddScalarFunctor>;
+
+INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, MulScalarFunctor);
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, MulScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, MulScalarFunctor>;
 
 }  // namespace user_op
 }  // namespace oneflow

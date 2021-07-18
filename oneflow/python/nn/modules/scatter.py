@@ -32,11 +32,20 @@ class Scatter(Module):
             flow.Tensor,
             float,
         ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
-        assert reduce is None, "reduce not implemented yet"
+
+        assert reduce in [
+            "add",
+            "multiply",
+            None,
+        ], "reduce must be 'add', 'multiply' or None"
 
         if isinstance(src, flow.Tensor):
             return flow.F.dim_scatter(input, index, src, dim)
         elif isinstance(src, float):
+            if reduce == "add":
+                return flow.F.dim_scatter_add_scalar(input, index, src, dim)
+            elif reduce == "multiply":
+                return flow.F.dim_scatter_mul_scalar(input, index, src, dim)
             return flow.F.dim_scatter_scalar(input, index, src, dim)
 
 
@@ -75,20 +84,30 @@ def scatter_op(input, dim, index, src, reduce: Optional[str] = None):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
 
-        >>> input = flow.ones((3,5))
+        >>> input = flow.ones((3,5))*2
         >>> index = flow.tensor(np.array([[0,1,2],[0,1,4]], ), dtype=flow.int32)
         >>> src = flow.Tensor(np.array([[0,10,20,30,40],[50,60,70,80,90]]))
         >>> out = flow.scatter(input, 1, index, src)
         >>> out
-        tensor([[ 0., 10., 20.,  1.,  1.],
-                [50., 60.,  1.,  1., 70.],
-                [ 1.,  1.,  1.,  1.,  1.]], dtype=oneflow.float32)
+        tensor([[ 0., 10., 20.,  2.,  2.],
+                [50., 60.,  2.,  2., 70.],
+                [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
         >>> out = flow.scatter(input, 1, index, 3.14)
         >>> out
-        tensor([[3.14, 3.14, 3.14, 1.  , 1.  ],
-                [3.14, 3.14, 1.  , 1.  , 3.14],
-                [1.  , 1.  , 1.  , 1.  , 1.  ]], dtype=oneflow.float32)
-     
+        tensor([[3.14, 3.14, 3.14, 2.  , 2.  ],
+                [3.14, 3.14, 2.  , 2.  , 3.14],
+                [2.  , 2.  , 2.  , 2.  , 2.  ]], dtype=oneflow.float32)
+        >>> out = flow.scatter(input, 1, index, 3.14, reduce="add")
+        >>> out
+        tensor([[5.14, 5.14, 5.14, 2.  , 2.  ],
+                [5.14, 5.14, 2.  , 2.  , 5.14],
+                [2.  , 2.  , 2.  , 2.  , 2.  ]], dtype=oneflow.float32)
+        >>> out = flow.scatter(input, 1, index, 3.14, reduce="multiply")
+        >>> out
+        tensor([[6.28, 6.28, 6.28, 2.  , 2.  ],
+                [6.28, 6.28, 2.  , 2.  , 6.28],
+                [2.  , 2.  , 2.  , 2.  , 2.  ]], dtype=oneflow.float32)
+
     """
 
     return Scatter()(input, dim, index, src, reduce)

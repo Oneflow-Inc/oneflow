@@ -19,11 +19,11 @@ namespace oneflow {
 
 namespace user_op {
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-class DimScatterUpdateScalarKernel final : public user_op::OpKernel {
+template<DeviceType device_type, typename IN_T, typename IDX_T, template<typename T> class Opt>
+class DimScatterScalarKernel final : public user_op::OpKernel {
  public:
-  DimScatterUpdateScalarKernel() = default;
-  ~DimScatterUpdateScalarKernel() = default;
+  DimScatterScalarKernel() = default;
+  ~DimScatterScalarKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -62,7 +62,7 @@ class DimScatterUpdateScalarKernel final : public user_op::OpKernel {
 
     int64_t upper_bound = input_tensor->shape().At(dim);
 
-    DimScatterUpdateScalarFunctor<device_type, IN_T, IDX_T>()(
+    DimScatterScalarFunctor<device_type, IN_T, IDX_T, Opt>()(
         ctx->device_ctx(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
         dim, upper_bound, index, src_scalar, output);
   }
@@ -70,25 +70,33 @@ class DimScatterUpdateScalarKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCATTERSCALAR_KERNEL(device, dtype, itype)                              \
-  REGISTER_USER_KERNEL("dim_scatter_scalar_update")                                      \
-      .SetCreateFn<DimScatterUpdateScalarKernel<device, dtype, itype>>()                 \
+#define REGISTER_SCATTERSCALAR_KERNEL(op_type_name, device, dtype, itype, opt)           \
+  REGISTER_USER_KERNEL(op_type_name)                                                     \
+      .SetCreateFn<DimScatterScalarKernel<device, dtype, itype, opt>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int64_t);
+#define REGISTER_SCATTER_SCALAR_CPU_KERNELS(op_type_name, opt)                         \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, float, int32_t, opt);  \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, float, int64_t, opt);  \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, double, int32_t, opt); \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kCPU, double, int64_t, opt);
+
+#define REGISTER_SCATTER_SCALAR_GPU_KERNELS(op_type_name, opt)                         \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, float, int32_t, opt);  \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, float, int64_t, opt);  \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, double, int32_t, opt); \
+  REGISTER_SCATTERSCALAR_KERNEL(op_type_name, DeviceType::kGPU, double, int64_t, opt);
+
+REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
+REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
+REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_mul_scalar", MulScalarFunctor);
 
 #ifdef WITH_CUDA
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int32_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int64_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int32_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int64_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int32_t);
-REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int64_t);
+REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
+REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
+REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_mul_scalar", MulScalarFunctor);
 #endif  // WITH_CUDA
 
 }  // namespace user_op
