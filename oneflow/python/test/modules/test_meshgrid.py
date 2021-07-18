@@ -66,10 +66,6 @@ def _test_meshgrid_forawd_3tensor(test_case, device):
     test_case.assertTrue(np.allclose(of_z.numpy(), np_z, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMeshGrid(flow.unittest.TestCase):
     def test_meshgrid(test_case):
         arg_dict = OrderedDict()

@@ -34,10 +34,6 @@ def _test_tensor_buffer_convert(test_case, device):
     test_case.assertTrue(np.array_equal(input.numpy(), orig_tensor.numpy()))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestTensorBufferOps(flow.unittest.TestCase):
     def test_tensor_buffer_convert(test_case):
         arg_dict = OrderedDict()

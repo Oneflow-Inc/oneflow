@@ -61,10 +61,6 @@ def _test_variance_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestVariance(flow.unittest.TestCase):
     def test_variance(test_case):
         arg_dict = OrderedDict()
@@ -95,10 +91,6 @@ def _test_sinh_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class Testsinh(flow.unittest.TestCase):
     def test_sinh(test_case):
         arg_dict = OrderedDict()
@@ -157,10 +149,6 @@ def _test_inplace_sin(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestSin(flow.unittest.TestCase):
     def test_sin(test_case):
         arg_dict = OrderedDict()
@@ -198,10 +186,6 @@ def _test_cos_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestCos(flow.unittest.TestCase):
     def test_cos(test_case):
         arg_dict = OrderedDict()
@@ -251,10 +235,6 @@ def _test_log_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestLog(flow.unittest.TestCase):
     def test_log(test_case):
         arg_dict = OrderedDict()
@@ -289,10 +269,6 @@ def _test_std_negative_dim(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestStd(flow.unittest.TestCase):
     def test_std(test_case):
         arg_dict = OrderedDict()
@@ -332,10 +308,6 @@ def _test_sqrt_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestSqrt(flow.unittest.TestCase):
     def test_sqrt(test_case):
         arg_dict = OrderedDict()
@@ -370,10 +342,6 @@ def _test_rsqrt_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestRsqrt(flow.unittest.TestCase):
     def test_rsqrt(test_case):
         arg_dict = OrderedDict()
@@ -407,10 +375,6 @@ def _test_square_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestSquare(flow.unittest.TestCase):
     def test_square(test_case):
         arg_dict = OrderedDict()
@@ -448,10 +412,6 @@ def _test_pow_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestPow(flow.unittest.TestCase):
     def test_pow(test_case):
         arg_dict = OrderedDict()
@@ -500,10 +460,6 @@ def _test_arcsin(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAsin(flow.unittest.TestCase):
     def test_asin(test_case):
         arg_dict = OrderedDict()
@@ -572,10 +528,6 @@ def _test_arcsinh(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAsinh(flow.unittest.TestCase):
     def test_asinh(test_case):
         arg_dict = OrderedDict()
@@ -749,10 +701,6 @@ def _test_topk_original(test_case, device):
         )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestPow(flow.unittest.TestCase):
     def test_pow(test_case):
         input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
@@ -767,10 +715,6 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestTopk(flow.unittest.TestCase):
     def test_topk(test_case):
         arg_dict = OrderedDict()
