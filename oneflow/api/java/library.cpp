@@ -27,10 +27,10 @@
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/shut_down_util.h"
-#include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
@@ -52,7 +52,7 @@ jboolean JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobj
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring env_proto_str) {
-  oneflow::InitEnv(ConvertToString(env, env_proto_str)).GetOrThrow();
+  oneflow::InitEnv(ConvertToString(env, env_proto_str), false).GetOrThrow();
 }
 
 JNIEXPORT
@@ -62,11 +62,12 @@ void JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobje
   job_conf->set_job_name("");
 
   std::shared_ptr<oneflow::Scope> scope;
-  auto BuildInitialScope = [&scope, &job_conf](oneflow::InstructionsBuilder* builder) mutable -> void {
+  auto BuildInitialScope = [&scope, &job_conf](oneflow::InstructionsBuilder* builder) mutable -> oneflow::Maybe<void> {
     int session_id = oneflow::GetDefaultSessionId().GetOrThrow();
     const std::vector<std::string> machine_device_ids({"0:0"});
     std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf, "cpu", machine_device_ids, nullptr, false).GetPtrOrThrow();
     scope = initialScope;
+    return oneflow::Maybe<void>::Ok();
   };
   oneflow::LogicalRun(BuildInitialScope);
   oneflow::InitThreadLocalScopeStack(scope);  // fixme: bug? Is LogicalRun asynchronous or synchronous?
@@ -80,26 +81,34 @@ jboolean JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj) {
   // default configuration, Todo: configuration
+  // reference: oneflow/python/framework/session_util.py
   std::shared_ptr<oneflow::ConfigProto> config_proto = std::make_shared<oneflow::ConfigProto>();
-  config_proto->mutable_resource()->set_machine_num(1);
+  config_proto->mutable_resource()->set_machine_num(oneflow::GetNodeSize().GetOrThrow());
   config_proto->mutable_resource()->set_gpu_device_num(1);
   config_proto->set_session_id(oneflow::GetDefaultSessionId().GetOrThrow());
-  config_proto->mutable_io_conf()->mutable_data_fs_conf()->mutable_localfs_conf();
-  config_proto->mutable_io_conf()->mutable_snapshot_fs_conf()->mutable_localfs_conf();
-  config_proto->mutable_resource()->set_gpu_device_num(1);
-  config_proto->mutable_io_conf()->set_enable_legacy_model_io(true);
+  config_proto->mutable_resource()->set_enable_legacy_model_io(true);
+  // config_proto->mutable_io_conf()->mutable_data_fs_conf()->mutable_localfs_conf();
+  // config_proto->mutable_io_conf()->mutable_snapshot_fs_conf()->mutable_localfs_conf();
+  // config_proto->mutable_io_conf()->set_enable_legacy_model_io(true);
 
   oneflow::InitLazyGlobalSession(config_proto->DebugString());
 }
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
+  oneflow::SetIsMultiClient(false);
   oneflow::JobBuildAndInferCtx_Open(ConvertToString(env, job_name)).GetOrThrow();
 }
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
-  oneflow::CurJobBuildAndInferCtx_SetJobConf(ConvertToString(env, job_conf_proto)).GetOrThrow();
+  oneflow::JobConfigProto job_conf;
+  std::string job_conf_txt = ConvertToString(env, job_conf_proto);
+  oneflow::TxtString2PbMessage(job_conf_txt, &job_conf);
+
+  oneflow::cfg::JobConfigProto job_conf_cfg;
+  job_conf_cfg.InitFromProto(job_conf);
+  oneflow::CurJobBuildAndInferCtx_SetJobConf(job_conf_cfg).GetOrThrow();
 }
 
 JNIEXPORT
@@ -112,11 +121,12 @@ void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jo
   job_conf_cfg->InitFromProto(job_conf);
 
   std::shared_ptr<oneflow::Scope> scope;
-  auto BuildInitialScope = [&scope, &job_conf_cfg](oneflow::InstructionsBuilder* builder) mutable -> void {
+  auto BuildInitialScope = [&scope, &job_conf_cfg](oneflow::InstructionsBuilder* builder) mutable -> oneflow::Maybe<void> {
     int session_id = oneflow::GetDefaultSessionId().GetOrThrow();
     const std::vector<std::string> machine_device_ids({"0:0"});
     std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf_cfg, "gpu", machine_device_ids, nullptr, false).GetPtrOrThrow();
     scope = initialScope;
+    return oneflow::Maybe<void>::Ok();
   };
   oneflow::LogicalRun(BuildInitialScope);
   oneflow::ThreadLocalScopeStackPush(scope).GetOrThrow();  // fixme: bug?
@@ -164,7 +174,7 @@ void JNICALL Java_org_oneflow_InferenceSession_startLazyGlobalSession(JNIEnv* en
 
 namespace oneflow {
 
-class JavaForeignJobInstance : public ForeignJobInstance {
+class JavaForeignJobInstance : public JobInstance {
  public:
   JavaForeignJobInstance(std::string job_name,  std::string sole_input_op_name_in_user_job,
                          std::string sole_output_op_name_in_user_job, std::function<void(uint64_t)> push_cb,
@@ -217,7 +227,7 @@ void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobje
 
     delete []_shape;
   };
-  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
+  const std::shared_ptr<oneflow::JobInstance> job_inst(
     new oneflow::JavaForeignJobInstance(load_job_name, "", "", copy_model_load_path, nullptr, nullptr)
   );
   oneflow::LaunchJob(job_inst);
@@ -253,7 +263,7 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
       of_blob->AutoMemCopyFrom((int*) data_arr, element_number);
     }
   };
-  const std::shared_ptr<oneflow::ForeignJobInstance> job_instance(
+  const std::shared_ptr<oneflow::JobInstance> job_instance(
     new oneflow::JavaForeignJobInstance(_job_name, _op_name, "", job_instance_fun, nullptr, nullptr)
   );
   oneflow::LaunchJob(job_instance);
@@ -262,7 +272,7 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr) {
   std::string inference_job_name = ConvertToString(env, jstr);
-  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
+  const std::shared_ptr<oneflow::JobInstance> job_inst(
     new oneflow::JavaForeignJobInstance(inference_job_name, "", "", nullptr, nullptr, nullptr)
   );
   oneflow::LaunchJob(job_inst);
@@ -318,7 +328,7 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
 
-  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_return_17(
+  const std::shared_ptr<oneflow::JobInstance> job_inst_return_17(
     new oneflow::JavaForeignJobInstance(job_name_, "", op_name_, nullptr, return_17, nullptr)
   );
   oneflow::LaunchJob(job_inst_return_17);
