@@ -13,12 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+import warnings
+from typing import Optional
+
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.utils import _check_inplace_valid
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
-from typing import Optional
 
 
 def _softmax_need_transpose(x, axis):
@@ -92,13 +96,12 @@ class PReLU(Module):
         super().__init__()
         self.num_parameters = num_parameters
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
-        self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
         assert (
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
-        return self.op(x, self.weight)[0]
+        return flow.F.prelu(x, self.weight)
 
 
 @oneflow_export("nn.ReLU")
@@ -133,9 +136,16 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
-        return flow.F.relu(x)
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.relu(x, self.inplace)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.ReLU6")
@@ -179,9 +189,16 @@ class ReLU6(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("ReLU6 module do not support inplace now")
         return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Tanh")
@@ -305,9 +322,17 @@ class ELU(Module):
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
         self.alpha = alpha
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("ELU module do not support inplace now")
         return flow.F.elu(x, alpha=self.alpha)
+
+    def extra_repr(self):
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.GELU")
@@ -495,9 +520,16 @@ class Hardsigmoid(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardsigmoid module do not support inplace now")
         return flow.F.hardsigmoid(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Softmax")
@@ -516,6 +548,9 @@ class Softmax(Module):
         if need_transpose:
             res = flow.F.transpose(res, perm=permute)
         return res
+
+    def extra_repr(self):
+        return f"axis={self.axis}"
 
 
 @oneflow_export("softmax")
@@ -634,7 +669,7 @@ class LogSoftmax(Module):
         return res
 
     def extra_repr(self):
-        return "dim={dim}".format(dim=self.dim)
+        return f"dim={self.dim}"
 
 
 @oneflow_export("nn.LogSigmoid")
@@ -732,6 +767,9 @@ class Softplus(Module):
             * flow.experimental.log(1.0 + flow.experimental.exp(self.beta * x)),
         )
 
+    def extra_repr(self):
+        return f"beta={self.beta}, threshold={self.threshold}"
+
 
 @oneflow_export("nn.Hardswish")
 @experimental_api
@@ -774,9 +812,16 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardswish module do not support inplace now")
         return flow.F.hardswish(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Hardtanh")
@@ -850,9 +895,17 @@ class Hardtanh(Module):
 
         self.min_val = min_val
         self.max_val = max_val
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardtanh module do not support inplace now")
         return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
+
+    def extra_repr(self):
+        param_str = f"min_val={self.min_val}, max_val={self.max_val}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.LeakyReLU")
@@ -894,9 +947,17 @@ class LeakyReLU(Module):
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
         self.negative_slope = negative_slope
+        self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("LeakyReLU module do not support inplace now")
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
+
+    def extra_repr(self):
+        param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.Mish")

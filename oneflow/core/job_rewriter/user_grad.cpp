@@ -25,7 +25,7 @@ Maybe<void> GenerateBackwardOpConf(
     const Operator& fw_op, std::vector<OperatorConf>* bw_op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
-  CHECK(fw_op.op_conf().has_user_conf());
+  CHECK_OR_RETURN(fw_op.op_conf().has_user_conf());
   const UserOpConf& user_conf = fw_op.op_conf().user_conf();
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
@@ -43,13 +43,13 @@ Maybe<void> GenerateBackwardOpConf(
     auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
       bw_op_confs->push_back(wrapper.op_conf());
     };
-    val->gen_bw_fn(fw_user_op, AddOp);
+    JUST(val->gen_bw_fn(fw_user_op, AddOp));
   }
 
   for (const std::string& ibn : fw_op.input_bns()) {
     LogicalBlobId* lbi = DiffLbi4BnInOp(ibn);
     if (lbi != nullptr) {
-      CHECK(lbi->has_op_name() && lbi->has_blob_name())
+      CHECK_OR_RETURN(lbi->has_op_name() && lbi->has_blob_name())
           << " user_op: " << fw_op.op_name() << " op_type_name: " << user_conf.op_type_name()
           << " 's input blob " << ibn << " has not generate input diff blob !";
     }

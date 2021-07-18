@@ -30,8 +30,6 @@ class _NormBase(Module):
         momentum: float = 0.1,
         affine: bool = True,
         track_running_stats: bool = True,
-        device: Union[str, flow.device] = None,
-        dtype: flow.dtype = None,
     ) -> None:
         super().__init__()
         self.num_features = num_features
@@ -39,23 +37,19 @@ class _NormBase(Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
-        self.device = device
-        self.dtype = dtype
 
         if self.affine:
-            self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features, device=self.device)
-            )
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features, device=self.device))
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features, device=self.device),
+                "running_mean", flow.Tensor(num_features),
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features, device=self.device),
+                "running_var", flow.Tensor(num_features),
             )
         else:
             self.register_parameter("running_mean", None)
@@ -97,6 +91,12 @@ class _NormBase(Module):
             error_msgs,
         )
 
+    def extra_repr(self):
+        return (
+            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "track_running_stats={track_running_stats}".format(**self.__dict__)
+        )
+
 
 class _BatchNorm(_NormBase):
     def __init__(
@@ -106,28 +106,19 @@ class _BatchNorm(_NormBase):
         momentum=0.1,
         affine=True,
         track_running_stats=True,
-        device=None,
-        dtype=None,
     ):
-        super().__init__(
-            num_features, eps, momentum, affine, track_running_stats, device, dtype
-        )
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
     def forward(self, x):
-        if self.dtype is None:
-            self.dtype = x.dtype
-        if self.device is None:
-            self.device = x.device
-
         self._check_input_dim(x)
-        reduce_axis = []
-        for dim in range(len(x.shape)):
-            if dim != 1:
-                reduce_axis.append(dim)
-        mean = x.mean(dim=reduce_axis, keepdim=False)
-        variance = x.var(dim=reduce_axis, keepdim=False)
-
         if x.device == flow.device("cpu"):
+            reduce_axis = []
+            for dim in range(len(x.shape)):
+                if dim != 1:
+                    reduce_axis.append(dim)
+            mean = x.mean(dim=reduce_axis, keepdim=False)
+            variance = x.var(dim=reduce_axis, keepdim=False)
+
             if self.training and self.track_running_stats:
                 running_mean = (
                     self.momentum * self.running_mean + (1 - self.momentum) * mean
@@ -173,21 +164,38 @@ class _BatchNorm(_NormBase):
                 affined = affined * weight
             if self.bias:
                 affined = affined + bias
-            return affined.to(dtype=self.dtype)
+            return affined
 
         else:
-            res = flow.F.normalization(
-                x,
-                self.running_mean if self.track_running_stats else mean,
-                self.running_var if self.track_running_stats else variance,
-                self.weight,
-                self.bias,
-                axis=1,
-                epsilon=self.eps,
-                momentum=self.momentum,
-                is_training=self.training,
-            )
-            return res.to(dtype=self.dtype, device=self.device)
+            if self.track_running_stats:
+                return flow.F.normalization(
+                    x,
+                    self.running_mean,
+                    self.running_var,
+                    self.weight,
+                    self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                    momentum=self.momentum,
+                    is_training=self.training,
+                )
+            else:
+                reduce_axis = []
+                for dim in range(len(x.shape)):
+                    if dim != 1:
+                        reduce_axis.append(dim)
+
+                return flow.F.normalization(
+                    x,
+                    x.mean(dim=reduce_axis, keepdim=False),
+                    x.var(dim=reduce_axis, keepdim=False),
+                    self.weight,
+                    self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                    momentum=self.momentum,
+                    is_training=self.training,
+                )
 
 
 @oneflow_export("nn.BatchNorm1d")

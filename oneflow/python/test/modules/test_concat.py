@@ -98,10 +98,28 @@ def _test_concat_with_three_tensor_backward(test_case, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+def _test_concat_grad_and_no_grad(test_case, device):
+    input1 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    input2 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
+    )
+
+    of_out = flow.cat([input1, input2], dim=1)
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-4, 1e-4)
+    )
+
+
 class TestModule(flow.unittest.TestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()
@@ -110,6 +128,7 @@ class TestModule(flow.unittest.TestCase):
             _test_concat_with_axis_one,
             _test_concat_with_three_tensor,
             _test_concat_with_three_tensor_backward,
+            _test_concat_grad_and_no_grad,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

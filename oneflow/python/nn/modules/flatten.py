@@ -51,6 +51,9 @@ class Flatten(Module):
     def forward(self, input):
         return flow.F.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
 
+    def extra_repr(self) -> str:
+        return "start_dim={}, end_dim={}".format(self.start_dim, self.end_dim)
+
 
 @oneflow_export("flatten")
 @register_tensor_op("flatten")

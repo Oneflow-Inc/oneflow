@@ -66,6 +66,7 @@ header_fmt = (
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {{
 namespace one {{
@@ -149,6 +150,7 @@ types_allowed = {
     "DataType",
     "Shape",
     "Generator",
+    "TensorIndex",
 }
 
 generic_type_aliases = {
@@ -176,6 +178,7 @@ argument_type_aliases = {
     "DataType": "const DataType&",
     "Shape": "const Shape&",
     "Generator": "const std::shared_ptr<one::Generator>&",
+    "TensorIndex": "const TensorIndex&",
     **generic_type_aliases,
 }
 
@@ -195,6 +198,7 @@ optional_argument_type_aliases = {
     "DataType": "const Optional<DataType>&",
     "Shape": "const Optional<Shape>&",
     "Generator": "const Optional<one::Generator>&",
+    "TensorIndex": "const Optional<TensorIndex>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -456,6 +460,18 @@ class FunctionalGenerator:
             schema_fmt += "  static std::vector<ArgumentDef> argument_def;\n"
             schema_fmt += "};\n"
             schema_fmt += "\n"
+            schema_fmt += "constexpr size_t {0}Schema::max_args;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr size_t {0}Schema::max_positionals;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr size_t {0}Schema::max_keywords;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr char const* {0}Schema::signature;\n".format(
+                signature._name
+            )
             schema_fmt += "ReturnDef {0}Schema::return_def = ReturnDef(ValueTypeOf<{1}>());\n".format(
                 signature._name, return_type,
             )

@@ -22,16 +22,16 @@ REGISTER_USER_OP("prelu")
     .Input("alpha")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const Shape& alpha_shape = ctx->InputShape("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_shape.NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc->shape().At(i))
+      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_shape.NumAxes() + 1);
+      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
+        CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
                         || (alpha_shape.At(i - 1) == 1));
       }
-      *y_desc->mut_shape() = x_desc->shape();
-      *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
+      *y_desc->mut_shape() = x_desc.shape();
+      *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -66,21 +66,21 @@ REGISTER_USER_OP("prelu_grad")
     .Output("dx")
     .Output("alpha_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      const user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_desc->shape().NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_desc->shape().At(i - 1) == x_desc->shape().At(i))
-                        || (alpha_desc->shape().At(i - 1) == 1));
+      const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
+      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_desc.shape().NumAxes() + 1);
+      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
+        CHECK_OR_RETURN((alpha_desc.shape().At(i - 1) == x_desc.shape().At(i))
+                        || (alpha_desc.shape().At(i - 1) == 1));
       }
-      CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
-      CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
-      *dx_desc->mut_shape() = x_desc->shape();
-      *dx_desc->mut_is_dynamic() = x_desc->is_dynamic();
-      *ctx->OutputShape("alpha_diff", 0) = alpha_desc->shape();
-      *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc->is_dynamic();
+      CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
+      CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
+      *dx_desc->mut_shape() = x_desc.shape();
+      *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
+      *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
+      *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -121,7 +121,7 @@ REGISTER_USER_OP("prelu_grad")
     });
 
 REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
+                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("alpha", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("prelu_grad")
@@ -146,6 +146,7 @@ REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWr
       op.BindGradTensorWithOpInput(alpha_identity_op.output("out", 0), "alpha", 0);
     }
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

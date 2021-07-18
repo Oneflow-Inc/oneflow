@@ -77,10 +77,18 @@ def _test_dropout_eval(test_case, shape, device):
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+def _test_dropout_with_generator(test_case, shape, device):
+    generator = flow.Generator()
+    generator.manual_seed(0)
+    m = flow.nn.Dropout(p=0.5, generator=generator)
+    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    y_1 = m(x)
+    y_1.numpy()  # sync
+    generator.manual_seed(0)
+    y_2 = m(x)
+    test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
+
+
 class TestDropout(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()
@@ -90,6 +98,7 @@ class TestDropout(flow.unittest.TestCase):
             _test_dropout_backward_p0,
             _test_dropout_backward_p1,
             _test_dropout_eval,
+            _test_dropout_with_generator,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]

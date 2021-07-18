@@ -35,6 +35,10 @@ limitations under the License.
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/symbol_id_cache.h"
+#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_conf.cfg.h"
 
 namespace oneflow {
 
@@ -85,9 +89,28 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
+void ClearAllSymbolAndIdCache() {
+  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
+  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
+
+  Global<symbol::Storage<Scope>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
+
+  Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
+
+  Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
+
+  Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
+  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
+  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
+}
+
 }  // namespace
 
-Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto, bool is_multi_client) {
+Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   is_default_physical_env_ = env_proto.is_default_physical_env();
   InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
@@ -95,7 +118,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto, bool is_multi
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
-  Global<ProcessCtx>::Get()->set_is_multi_client(is_multi_client);
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -178,6 +200,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
 }
 
