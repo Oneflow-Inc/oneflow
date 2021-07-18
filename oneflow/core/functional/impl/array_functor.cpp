@@ -306,6 +306,28 @@ class DimScatterAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DimScatterScalarFunctor {
+ public:
+  DimScatterScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_scalar_update")
+                         .Input("input")
+                         .Input("index")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index, const float& src,
+                           const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<float>("src_scalar", src));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -989,6 +1011,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::DimScatterFunctor>("DimScatter");
   m.add_functor<impl::DimScatterAddFunctor>("DimScatterAdd");
+  m.add_functor<impl::DimScatterScalarFunctor>("DimScatterScalar");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
 };
 
