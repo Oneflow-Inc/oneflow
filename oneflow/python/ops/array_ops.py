@@ -2691,9 +2691,9 @@ def dim_scatter_update(
     
     .. code-block:: python
 
-        output[index[i][j][k]][j][k] = input[i][j][k]  # if dim == 0
-        output[i][index[i][j][k]][k] = input[i][j][k]  # if dim == 1
-        output[i][j][index[i][j][k]] = input[i][j][k]  # if dim == 2
+        output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
+        output[i][index[i][j][k]][k] = src[i][j][k]  # if dim == 1
+        output[i][j][index[i][j][k]] = src[i][j][k]  # if dim == 2
 
     input, index and src (if it is a Tensor) should all have the same number of dimensions. 
     It is also required that index.shape(d) <= src.shape(d) for all dimensions d, 

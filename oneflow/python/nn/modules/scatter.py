@@ -22,20 +22,27 @@ from oneflow.python.nn.module import Module
 
 from typing import Optional, List, Tuple
 
+
 class Scatter(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input, dim, index, src, reduce):
-        assert type(src) in [flow.Tensor, float], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
+        assert type(src) in [
+            flow.Tensor,
+            float,
+        ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
+        assert reduce is None, "reduce not implemented yet"
+
         if isinstance(src, flow.Tensor):
             return flow.F.dim_scatter(input, index, src, dim)
         elif isinstance(src, float):
             return flow.F.dim_scatter_scalar(input, index, src, dim)
 
+
 @oneflow_export("scatter")
 @experimental_api
-def scatter_op(input, dim, index, src, reduce:Optional[str]=None):
+def scatter_op(input, dim, index, src, reduce: Optional[str] = None):
     r"""This operator writes the elements specified by `index` along with the axis 
     `dim` from the `src` into the `input`.
 
@@ -70,10 +77,12 @@ def scatter_op(input, dim, index, src, reduce:Optional[str]=None):
 
         >>> input = flow.ones((3,5))
         >>> index = flow.tensor(np.array([[0,1,2],[0,1,4]], ), dtype=flow.int32)
-        >>> src = flow.Tensor(np.random.rand(2,5))
+        >>> src = flow.Tensor(np.array([[0,10,20,30,40],[50,60,70,80,90]]))
         >>> out = flow.scatter(input, 1, index, src)
-        >>> out.shape
-        flow.Size([3, 5])
+        >>> out
+        tensor([[ 0., 10., 20.,  1.,  1.],
+                [50., 60.,  1.,  1., 70.],
+                [ 1.,  1.,  1.,  1.,  1.]], dtype=oneflow.float32)
         >>> out = flow.scatter(input, 1, index, 3.14)
         >>> out
         tensor([[3.14, 3.14, 3.14, 1.  , 1.  ],
@@ -83,6 +92,18 @@ def scatter_op(input, dim, index, src, reduce:Optional[str]=None):
     """
 
     return Scatter()(input, dim, index, src, reduce)
+
+
+@register_tensor_op
+@experimental_api
+def scatter_tensor_op(input, dim, index, src, reduce: Optional[str] = None):
+    r"""
+    In-place version of :func:`oneflow.experimental.scatter`
+
+    """
+
+    return Scatter()(input, dim, index, src, reduce)
+
 
 if __name__ == "__main__":
     import doctest
