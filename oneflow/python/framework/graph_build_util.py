@@ -134,7 +134,7 @@ def build_graph_input_arg(arg, input_idx):
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
     )
-    input_conf.set_in_0("eager_in_0")
+    input_conf.set_in_0("in_0")
     input_conf.set_out_0("out_0")
 
     input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
@@ -155,7 +155,7 @@ def build_graph_state(state_block):
     var_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
     )
-    var_conf.set_in_0("eager_in_0")
+    var_conf.set_in_0("in_0")
     var_conf.set_out_0("out_0")
 
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
