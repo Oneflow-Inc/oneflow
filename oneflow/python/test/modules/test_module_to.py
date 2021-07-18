@@ -87,10 +87,6 @@ def _test_dummy_module_to(test_case):
     test_case.assertEqual(m.dummy_para.grad.device, gpu0_device)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModuleTo(flow.unittest.TestCase):
     def test_module_to(test_case):
         arg_dict = OrderedDict()
