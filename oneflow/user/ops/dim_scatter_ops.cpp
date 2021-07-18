@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_registry.h"
-#include "oneflow/user/kernels/dim_gather_scatter_util.h"
+#include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
 

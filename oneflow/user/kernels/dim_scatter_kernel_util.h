@@ -15,7 +15,15 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
-#include "oneflow/user/kernels/dim_gather_scatter_util.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
+
+#include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/error.pb.h"
 
 namespace oneflow {
