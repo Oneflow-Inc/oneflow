@@ -69,7 +69,7 @@ void JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobje
     scope = initialScope;
   };
   oneflow::LogicalRun(BuildInitialScope);
-  oneflow::InitThreadLocalScopeStack(scope);
+  oneflow::InitThreadLocalScopeStack(scope);  // fixme: bug? Is LogicalRun asynchronous or synchronous?
 }
 
 JNIEXPORT
@@ -119,7 +119,7 @@ void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jo
     scope = initialScope;
   };
   oneflow::LogicalRun(BuildInitialScope);
-  oneflow::ThreadLocalScopeStackPush(scope).GetOrThrow();
+  oneflow::ThreadLocalScopeStackPush(scope).GetOrThrow();  // fixme: bug?
 }
 
 JNIEXPORT
@@ -225,13 +225,10 @@ void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobje
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jbyteArray data, jlongArray shape, jint dtype_code, jstring job_name, jstring op_name) {
-  // copy data
-  signed char *data_arr = (*env).GetByteArrayElements(data, NULL);
-  int data_arr_length = (*env).GetArrayLength(data);
-  signed char *_data = new signed char[data_arr_length];  // Todo: shared_ptr
-  std::copy(data_arr, data_arr + data_arr_length, _data);
-  (*env).ReleaseByteArrayElements(data, data_arr, JNI_ABORT);
+void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject buffer, jlongArray shape, jint dtype_code, jstring job_name, jstring op_name) {
+  // get address and length
+  void *data_arr = (*env).GetDirectBufferAddress(buffer);
+  std::cout << data_arr << std::endl;
 
   // copy shape
   long *shape_arr = (*env).GetLongArrayElements(shape, NULL);
@@ -251,17 +248,18 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
   std::string _op_name = convert_jstring_to_string(env, op_name);
   
   auto job_instance_fun = [=](uint64_t of_blob_ptr) -> void {
+    std::cout << data_arr << std::endl;
+
     using namespace oneflow;
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->CopyShapeFrom(_shape, shape_arr_length);
     if (dtype_code == kFloat) {
-      of_blob->AutoMemCopyFrom((float*) _data, element_number);
+      of_blob->AutoMemCopyFrom((float*) data_arr, element_number);
     }
     if (dtype_code == kInt32) {
-      of_blob->AutoMemCopyFrom((int*) _data, element_number);
+      of_blob->AutoMemCopyFrom((int*) data_arr, element_number);
     }
 
-    delete []_data;
     delete []_shape;
   };
   const std::shared_ptr<oneflow::ForeignJobInstance> job_instance(
