@@ -20,7 +20,7 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/api/java/util/string_util.h"
+#include "oneflow/api/java/util/jni_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -52,7 +52,7 @@ jboolean JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobj
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring env_proto_str) {
-  oneflow::InitEnv(convert_jstring_to_string(env, env_proto_str)).GetOrThrow();
+  oneflow::InitEnv(ConvertToString(env, env_proto_str)).GetOrThrow();
 }
 
 JNIEXPORT
@@ -79,7 +79,7 @@ jboolean JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, 
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj) {
-  // default configuration
+  // default configuration, Todo: configuration
   std::shared_ptr<oneflow::ConfigProto> config_proto = std::make_shared<oneflow::ConfigProto>();
   config_proto->mutable_resource()->set_machine_num(1);
   config_proto->mutable_resource()->set_gpu_device_num(1);
@@ -94,18 +94,18 @@ void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject 
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
-  oneflow::JobBuildAndInferCtx_Open(convert_jstring_to_string(env, job_name)).GetOrThrow();
+  oneflow::JobBuildAndInferCtx_Open(ConvertToString(env, job_name)).GetOrThrow();
 }
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
-  oneflow::CurJobBuildAndInferCtx_SetJobConf(convert_jstring_to_string(env, job_conf_proto)).GetOrThrow();
+  oneflow::CurJobBuildAndInferCtx_SetJobConf(ConvertToString(env, job_conf_proto)).GetOrThrow();
 }
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring jstr) {
   oneflow::JobConfigProto job_conf;
-  std::string job_conf_txt = convert_jstring_to_string(env, jstr);
+  std::string job_conf_txt = ConvertToString(env, jstr);
   oneflow::TxtString2PbMessage(job_conf_txt, &job_conf);
 
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf_cfg = std::make_shared<oneflow::cfg::JobConfigProto>();
@@ -124,9 +124,9 @@ void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jo
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
-  std::string op_conf_proto_str = convert_jstring_to_string(env, op_conf_proto);
-  op_conf_proto_str = subreplace(op_conf_proto_str, "user_input", "input");
-  op_conf_proto_str = subreplace(op_conf_proto_str, "user_output", "output");
+  std::string op_conf_proto_str = ConvertToString(env, op_conf_proto);
+  op_conf_proto_str = Subreplace(op_conf_proto_str, "user_input", "input");
+  op_conf_proto_str = Subreplace(op_conf_proto_str, "user_output", "output");
 
   oneflow::OperatorConf op_conf;
   oneflow::TxtString2PbMessage(op_conf_proto_str, &op_conf);
@@ -203,7 +203,7 @@ class JavaForeignJobInstance : public ForeignJobInstance {
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path) {
-  std::string load_job_name = convert_jstring_to_string(env, load_job);
+  std::string load_job_name = ConvertToString(env, load_job);
   
   int _path_length = (*env).GetDirectBufferCapacity(path);
   int64_t *_shape = new int64_t[1]{ _path_length };  // Todo: is there a better way to allocate memory?
@@ -239,8 +239,8 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
   }
 
   // job_name & op_name
-  std::string _job_name = convert_jstring_to_string(env, job_name);
-  std::string _op_name = convert_jstring_to_string(env, op_name);
+  std::string _job_name = ConvertToString(env, job_name);
+  std::string _op_name = ConvertToString(env, op_name);
   
   auto job_instance_fun = [=](uint64_t of_blob_ptr) -> void {
     using namespace oneflow;
@@ -261,7 +261,7 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr) {
-  std::string inference_job_name = convert_jstring_to_string(env, jstr);
+  std::string inference_job_name = ConvertToString(env, jstr);
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
     new oneflow::JavaForeignJobInstance(inference_job_name, "", "", nullptr, nullptr, nullptr)
   );
@@ -315,8 +315,8 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
     axes_prom.set_value(axes);
   };
 
-  std::string job_name_ = convert_jstring_to_string(env, job_name);
-  std::string op_name_ = convert_jstring_to_string(env, op_name);
+  std::string job_name_ = ConvertToString(env, job_name);
+  std::string op_name_ = ConvertToString(env, op_name);
 
   const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_return_17(
     new oneflow::JavaForeignJobInstance(job_name_, "", op_name_, nullptr, return_17, nullptr)
@@ -367,5 +367,5 @@ void JNICALL Java_org_oneflow_InferenceSession_setShuttingDown(JNIEnv* env, jobj
 JNIEXPORT
 jstring JNICALL Java_org_oneflow_InferenceSession_getInterUserJobInfo(JNIEnv* env, jobject obj) {
   std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
-  return convert_string_to_jstring(env, inter_user_job_info);
+  return ConvertToJString(env, inter_user_job_info);
 }
