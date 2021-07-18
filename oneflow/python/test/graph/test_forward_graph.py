@@ -31,7 +31,7 @@ import oneflow.python.framework.graph_build_util as graph_build_util
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGraph(flow.unittest.TestCase):
+class TestForwardGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
         class CustomModule0(flow.nn.Module):
             def __init__(self):

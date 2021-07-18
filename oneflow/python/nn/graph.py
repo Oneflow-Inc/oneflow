@@ -70,6 +70,10 @@ class Graph(object):
         grad_clipping_conf=None,
         weight_decay_conf=None,
     ):
+        assert name is not None, ("name cannot be None")
+        assert type(name) is str, ("name must be an instance of str")
+        assert optimizer is not None, ("optimizer cannot be None")
+        assert isinstance(optimizer, Optimizer), ("optimizer must be an instance of Optimizer")
         self._optimizers[name] = OptimizerConfig(
             optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
@@ -80,6 +84,10 @@ class Graph(object):
             Graph._child_init_cnt[child_name] = 0
         self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
         Graph._child_init_cnt[child_name] += 1
+    
+    def _complete_graph_config(self):
+        if len(self._optimizers):
+            self.config._train(True)
 
     def _state(self):
         for _, b in self._blocks.items():
@@ -102,6 +110,7 @@ class Graph(object):
         assert type(session) is MultiClientSession
         session.TryInit()
 
+        self._complete_graph_config()
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with input
             lazy_args = []
@@ -161,8 +170,8 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', \
-                 please use add_optimizer(...) instead.".format(
+                "'{}' object are not allowed to set Optimizer attribute named '{}', "
+                "please use add_optimizer(...) instead.".format(
                     type(self).__name__, name
                 )
             )
