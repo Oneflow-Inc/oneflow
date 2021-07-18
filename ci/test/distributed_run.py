@@ -161,7 +161,7 @@ def wait_for_env_proto_and_launch_workers(
                 shell=True,
             )
             run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
-            run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
+            run_docker_cmd += f" python3 -m oneflow.compatible.single_client --start_worker --env_proto={workspace_dir}/env.prototxt"
             print("[docker agent]", run_docker_cmd)
             remote_docker_proc[remote_host] = subprocess.Popen(
                 run_docker_cmd, shell=True

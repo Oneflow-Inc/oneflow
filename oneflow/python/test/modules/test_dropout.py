@@ -89,10 +89,6 @@ def _test_dropout_with_generator(test_case, shape, device):
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestDropout(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()
