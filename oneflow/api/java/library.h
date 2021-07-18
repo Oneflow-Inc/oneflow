@@ -8,6 +8,9 @@
 extern "C" {
 #endif
 
+// Detect Endian
+JNIEXPORT jint          JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject obj);
+
 // init
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initDefaultSession(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobject obj);

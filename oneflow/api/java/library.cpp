@@ -39,6 +39,11 @@
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/vm/stream_type.h"
 
+JNIEXPORT 
+jint JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject obj) {
+  return Endian();
+}
+
 JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_initDefaultSession(JNIEnv* env, jobject obj) {
   int64_t session_id = oneflow::NewSessionId();
@@ -87,9 +92,6 @@ void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject 
   config_proto->mutable_resource()->set_gpu_device_num(1);
   config_proto->set_session_id(oneflow::GetDefaultSessionId().GetOrThrow());
   config_proto->mutable_resource()->set_enable_legacy_model_io(true);
-  // config_proto->mutable_io_conf()->mutable_data_fs_conf()->mutable_localfs_conf();
-  // config_proto->mutable_io_conf()->mutable_snapshot_fs_conf()->mutable_localfs_conf();
-  // config_proto->mutable_io_conf()->set_enable_legacy_model_io(true);
 
   oneflow::InitLazyGlobalSession(config_proto->DebugString());
 }
