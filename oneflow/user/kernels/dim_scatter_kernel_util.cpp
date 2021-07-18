@@ -40,5 +40,9 @@ INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpUpdateFunctor);
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int32_t, BinOpUpdateFunctor>;
 template struct DimScatterFunctor<DeviceType::kCPU, float16, int64_t, BinOpUpdateFunctor>;
 
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCPU, BinOpMulFunctor);
+template struct DimScatterFunctor<DeviceType::kCPU, float16, int32_t, BinOpMulFunctor>;
+template struct DimScatterFunctor<DeviceType::kCPU, float16, int64_t, BinOpMulFunctor>;
+
 }  // namespace user_op
 }  // namespace oneflow

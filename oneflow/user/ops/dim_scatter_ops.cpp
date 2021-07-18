@@ -281,6 +281,7 @@ REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
 REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_OP("dim_scatter_add");
 REGISTER_SCATTER_OP("dim_scatter_update");
+REGISTER_SCATTER_OP("dim_scatter_mul");
 
 REGISTER_SCATTER_SCALAR_OP("dim_scatter_update_scalar");
 REGISTER_SCATTER_SCALAR_OP("dim_scatter_add_scalar");
@@ -288,6 +289,7 @@ REGISTER_SCATTER_SCALAR_OP("dim_scatter_mul_scalar");
 
 REGISTER_SCATTER_GRAD("dim_scatter_add");
 REGISTER_SCATTER_GRAD("dim_scatter_update");
+REGISTER_SCATTER_GRAD("dim_scatter_mul");
 
 REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_update_scalar");
 REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_add_scalar");

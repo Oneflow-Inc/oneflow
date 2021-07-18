@@ -306,6 +306,28 @@ class DimScatterAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DimScatterMulFunctor {
+ public:
+  DimScatterMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_mul")
+                         .Input("input")
+                         .Input("index")
+                         .Input("src")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class DimScatterUpdateScalarFunctor {
  public:
   DimScatterUpdateScalarFunctor() {
@@ -1055,6 +1077,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::DimScatterFunctor>("DimScatter");
   m.add_functor<impl::DimScatterAddFunctor>("DimScatterAdd");
+  m.add_functor<impl::DimScatterMulFunctor>("DimScatterMul");
   m.add_functor<impl::DimScatterUpdateScalarFunctor>("DimScatterUpdateScalar");
   m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
   m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");

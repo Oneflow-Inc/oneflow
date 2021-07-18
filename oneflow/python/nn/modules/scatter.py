@@ -40,6 +40,10 @@ class Scatter(Module):
         ], "reduce must be 'add', 'multiply' or None"
 
         if isinstance(src, flow.Tensor):
+            if reduce == "add":
+                return flow.F.dim_scatter_add(input, index, src, dim)
+            elif reduce == "multiply":
+                return flow.F.dim_scatter_mul(input, index, src, dim)
             return flow.F.dim_scatter(input, index, src, dim)
         elif isinstance(src, float):
             if reduce == "add":
@@ -73,6 +77,7 @@ def scatter_op(input, dim, index, src, reduce: Optional[str] = None):
         dim (int): The axis along which to index
         index (Tensor): The index blob of elements to scatter. 
         src (Tensor or float): The source blob whose elements will be scatterd and updated to output.
+        reduce (string): reduction operation to apply, can be either 'add' or 'multiply'.
 
     Returns:
         Tensor: The scatterd Tensor. 
@@ -92,6 +97,16 @@ def scatter_op(input, dim, index, src, reduce: Optional[str] = None):
         tensor([[ 0., 10., 20.,  2.,  2.],
                 [50., 60.,  2.,  2., 70.],
                 [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
+        >>> out = flow.scatter(input, 1, index, src, reduce="add")
+        >>> out
+        tensor([[ 2., 12., 22.,  2.,  2.],
+                [52., 62.,  2.,  2., 72.],
+                [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
+        >>> out = flow.scatter(input, 1, index, src, reduce="multiply")
+        >>> out
+        tensor([[  0.,  20.,  40.,   2.,   2.],
+                [100., 120.,   2.,   2., 140.],
+                [  2.,   2.,   2.,   2.,   2.]], dtype=oneflow.float32)
         >>> out = flow.scatter(input, 1, index, 3.14)
         >>> out
         tensor([[3.14, 3.14, 3.14, 2.  , 2.  ],
@@ -127,4 +142,4 @@ def scatter_tensor_op(input, dim, index, src, reduce: Optional[str] = None):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)

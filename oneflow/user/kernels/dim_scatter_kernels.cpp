@@ -128,12 +128,14 @@ REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_update_like", BinOpUpdateFunctor);
 REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
+REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_mul", BinOpMulFunctor);
 
 #ifdef WITH_CUDA
 REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_update_like", BinOpUpdateFunctor);
 REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
+REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_mul", BinOpMulFunctor);
 #endif  // WITH_CUDA
 
 }  // namespace user_op

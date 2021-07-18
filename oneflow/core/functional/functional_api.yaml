@@ -702,6 +702,10 @@
   signature: "Tensor DimScatterAdd(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
   bind_python: True
 
+- name: "dim_scatter_mul"
+  signature: "Tensor DimScatterMul(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  bind_python: True
+
 - name: "dim_scatter_scalar"
   signature: "Tensor DimScatterUpdateScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
   bind_python: True
