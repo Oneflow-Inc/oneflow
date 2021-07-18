@@ -416,9 +416,8 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_b
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
-add_dependencies(pip_install of_include_copy)
-
+add_custom_target(oneflow_py ALL)
+add_dependencies(oneflow_py of_include_copy)
 
 if (BUILD_JNI)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
