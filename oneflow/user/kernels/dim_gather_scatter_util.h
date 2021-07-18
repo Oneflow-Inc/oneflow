@@ -63,7 +63,16 @@ struct BinOpAddFunctor {
 
 template<typename T>
 struct BinOpUpdateFunctor {
-  OF_DEVICE_FUNC static void Update(const T* x, T* y) { *y = *x; }
+  OF_DEVICE_FUNC static void apply(const T* x, T* y) { *y = *x; }
+};
+
+template<DeviceType device_type, typename IN_T, typename IDX_T, template<typename T> class Opt>
+struct DimScatterFunctor final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
+                  const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
+                  const IDX_T* index, const IN_T* src, IN_T* output);
 };
 
 // ----- macros for scatter functors -----

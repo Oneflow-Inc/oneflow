@@ -20,11 +20,60 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Add);
-IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Update);
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+__global__ void DoCUDADimScatter(const DimOpIndexNdHelper<IDX_T> src_nd_helper,
+                                 const DimOpIndexNdHelper<IDX_T> idx_nd_helper,
+                                 const DimOpIndexNdHelper<IDX_T> output_nd_helper, const int ndim,
+                                 const int64_t elem_cnt, const int32_t dim,
+                                 const int64_t upper_bound, const IDX_T* index, const IN_T* src,
+                                 IN_T* output) {
+  DoDimScatter<IN_T, IDX_T, Opt>(src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt,
+                                 dim, upper_bound, index, src, output);
+}
 
-INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Add);
-INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Update);
+template<typename IN_T, typename IDX_T, template<typename T> class Opt>
+struct DimScatterFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
+                  const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
+                  const IDX_T* index, const IN_T* src, IN_T* output) {
+    RUN_CUDA_KERNEL((DoCUDADimScatter<IN_T, IDX_T, Opt>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+                    src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
+                    upper_bound, index, src, output);
+  }
+};
+
+template<typename IDX_T, template<typename T> class Opt>
+struct DimScatterFunctor<DeviceType::kGPU, float16, IDX_T, Opt> final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
+                  const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,
+                  const IDX_T* index, const float16* src, float16* output) {
+    RUN_CUDA_KERNEL((DoCUDADimScatter<half, IDX_T, Opt>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+                    src_nd_helper, idx_nd_helper, output_nd_helper, ndim, elem_cnt, dim,
+                    upper_bound, index, reinterpret_cast<const half*>(src),
+                    reinterpret_cast<half*>(output));
+  }
+};
+
+template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int32_t, BinOpAddFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, float, int32_t, BinOpAddFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, double, int32_t, BinOpAddFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int64_t, BinOpAddFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, float, int64_t, BinOpAddFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, double, int64_t, BinOpAddFunctor>;
+
+template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int32_t, BinOpUpdateFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, float, int32_t, BinOpUpdateFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, double, int32_t, BinOpUpdateFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, int32_t, int64_t, BinOpUpdateFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, float, int64_t, BinOpUpdateFunctor>;
+template struct DimScatterFunctor<DeviceType::kGPU, double, int64_t, BinOpUpdateFunctor>;
+
+// IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Update);
+// INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Update);
 
 }  // namespace user_op
 }  // namespace oneflow
