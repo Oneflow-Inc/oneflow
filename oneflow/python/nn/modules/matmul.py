@@ -47,7 +47,7 @@ class MatMul(Module):
 @oneflow_export("matmul")
 @register_tensor_op("matmul")
 @experimental_api
-def matmul_op(a, b):
+def matmul_op(input, other):
     r"""This operator applies matrix multiplication to two Tensor.
 
     Args:
@@ -71,7 +71,7 @@ def matmul_op(a, b):
         flow.Size([2, 5])
 
     """
-    return MatMul()(a, b)
+    return MatMul()(input, other)
 
 
 if __name__ == "__main__":
