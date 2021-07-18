@@ -24,13 +24,7 @@ python3 $src_dir/ci/test/parallel_run.py \
     --chunk=1
 
 export ONEFLOW_TEST_DEVICE_NUM=2
-for f in test_*.py
-do
-    python3 -m oneflow.distributed.launch --nproc_per_node 2 $f
-done
+python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
 
 export ONEFLOW_TEST_DEVICE_NUM=4
-for f in test_*.py
-do
-    python3 -m oneflow.distributed.launch --nproc_per_node 4 $f
-done
+python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest discover ${PWD} --failfast --verbose
