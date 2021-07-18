@@ -72,8 +72,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenBackwardOpConf4Matmul(const std::string& op_type_name,
-                                     const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
+                              user_op::AddOpFn AddOp) {
   const bool transpose_a = op.attr<bool>("transpose_a");
   const bool transpose_b = op.attr<bool>("transpose_b");
   const double alpha = op.attr<double>("alpha");
@@ -137,7 +137,6 @@ Maybe<void> GenBackwardOpConf4Matmul(const std::string& op_type_name,
       HandleGradOp(std::move(grad_b_op), "b");
     }
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
