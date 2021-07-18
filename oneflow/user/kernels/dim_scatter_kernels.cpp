@@ -78,96 +78,62 @@ class DimScatterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(device, dtype, itype)                      \
-  REGISTER_USER_KERNEL("dim_scatter_add_like")                                          \
-      .SetCreateFn<DimScatterKernel<device, dtype, itype, BinOpAddFunctor>>()           \
+#define REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, device, dtype, itype, opt)            \
+  REGISTER_USER_KERNEL(op_type)                                                         \
+      .SetCreateFn<DimScatterKernel<device, dtype, itype, opt>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
                        & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, double, int64_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kCPU, int32_t, int64_t);
+#define REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS(op_type, opt)                           \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float, int32_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, int32_t, int32_t, opt); \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, float, int64_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, int32_t, int64_t, opt);
 
-#ifdef WITH_CUDA
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, float, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, double, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, float, int64_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, double, int64_t);
-REGISTER_DIM_SCATTER_ADD_LIKE_KERNEL(DeviceType::kGPU, int32_t, int64_t);
-#endif  // WITH_CUDA
+#define REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS(op_type, opt)                           \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, float, int32_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, int32_t, int32_t, opt); \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, float, int64_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, int32_t, int64_t, opt);
 
-#define REGISTER_DIM_SCATTER_ADD_KERNEL(device, dtype, itype)                            \
-  REGISTER_USER_KERNEL("dim_scatter_add")                                                \
-      .SetCreateFn<DimScatterKernel<device, dtype, itype, BinOpAddFunctor>>()            \
+#define REGISTER_DIM_SCATTER_KERNEL(op_type, device, dtype, itype, opt)                  \
+  REGISTER_USER_KERNEL(op_type)                                                          \
+      .SetCreateFn<DimScatterKernel<device, dtype, itype, opt>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, double, int64_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kCPU, int32_t, int64_t);
+#define REGISTER_DIM_SCATTER_CPU_KERNELS(op_type, opt)                           \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, float, int32_t, opt);   \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, int32_t, int32_t, opt); \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, float, int64_t, opt);   \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kCPU, int32_t, int64_t, opt);
+
+#define REGISTER_DIM_SCATTER_GPU_KERNELS(op_type, opt)                           \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, float, int32_t, opt);   \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, int32_t, int32_t, opt); \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, float, int64_t, opt);   \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_KERNEL(op_type, DeviceType::kGPU, int32_t, int64_t, opt);
+
+REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
+REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
+REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_update_like", BinOpUpdateFunctor);
+REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
 
 #ifdef WITH_CUDA
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, float, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, double, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, float, int64_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, double, int64_t);
-REGISTER_DIM_SCATTER_ADD_KERNEL(DeviceType::kGPU, int32_t, int64_t);
-#endif  // WITH_CUDA
-
-#define REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(device, dtype, itype)                   \
-  REGISTER_USER_KERNEL("dim_scatter_update_like")                                       \
-      .SetCreateFn<DimScatterKernel<device, dtype, itype, BinOpUpdateFunctor>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("like", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
-
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, double, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kCPU, int32_t, int64_t);
-
-#ifdef WITH_CUDA
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, float, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, double, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, float, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, double, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_LIKE_KERNEL(DeviceType::kGPU, int32_t, int64_t);
-#endif  // WITH_CUDA
-
-#define REGISTER_DIM_SCATTER_UPDATE_KERNEL(device, dtype, itype)                         \
-  REGISTER_USER_KERNEL("dim_scatter_update")                                             \
-      .SetCreateFn<DimScatterKernel<device, dtype, itype, BinOpUpdateFunctor>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
-
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, double, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kCPU, int32_t, int64_t);
-
-#ifdef WITH_CUDA
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, float, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, double, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, int32_t, int32_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, float, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, double, int64_t);
-REGISTER_DIM_SCATTER_UPDATE_KERNEL(DeviceType::kGPU, int32_t, int64_t);
+REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
+REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
+REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_update_like", BinOpUpdateFunctor);
+REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
 #endif  // WITH_CUDA
 
 }  // namespace user_op

@@ -97,4 +97,4 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
