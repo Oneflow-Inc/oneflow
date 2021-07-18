@@ -78,13 +78,13 @@ class ReplicationPad2d : public Pad2d {
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
 REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
 
-struct ConstantPad2dInterpState : public OpExprInterpState {
+struct ConstantPadNdInterpState : public OpExprInterpState {
   bool requires_grad;
   std::vector<int64_t> paddings;
   functional::Scalar padding_value;
 };
 
-class ConstantPad2d : public OpExprGradFunction<ConstantPad2dInterpState> {
+class ConstantPadNd : public OpExprGradFunction<ConstantPadNdInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -93,7 +93,7 @@ class ConstantPad2d : public OpExprGradFunction<ConstantPad2dInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ConstantPad2dInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ConstantPadNdInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -112,7 +112,7 @@ class ConstantPad2d : public OpExprGradFunction<ConstantPad2dInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ConstantPad2dInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ConstantPadNdInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
@@ -127,7 +127,8 @@ class ConstantPad2d : public OpExprGradFunction<ConstantPad2dInterpState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPad2d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
 
 }  // namespace one
 }  // namespace oneflow
