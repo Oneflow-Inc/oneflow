@@ -48,9 +48,13 @@ class Tensor {
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
-  virtual Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
+  virtual Maybe<Symbol<Device>*> mut_device() = 0;
+  virtual int64_t ndim() const = 0;
+  virtual bool is_cuda() const = 0;
   virtual bool is_consistent() const = 0;
+  virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
+  virtual bool is_eager() const { return !is_lazy(); }
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
@@ -78,9 +82,10 @@ class Tensor {
   virtual bool retain_grad() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
-  virtual Maybe<TensorArg> now_grad_arg() const = 0;
+  virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> data() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -106,24 +111,13 @@ class TensorIf : public Tensor {
   virtual ~TensorIf() = default;
 
   // Getters
-  virtual int64_t ndim() const = 0;
-  virtual bool is_cuda() const = 0;
   virtual int64_t nelement() const = 0;
   virtual int64_t dim(int64_t index) const = 0;
 
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
-  // and now_grad_arg is temporary grad to shared data with different FunctionNode
+  // and current_grad is temporary grad to shared data with different FunctionNode
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
-  // used by pybind11 only
-  Maybe<DerivedT> api_acc_grad() const {
-    if (has_autograd_meta()) {
-      const std::shared_ptr<Tensor>& tensor = JUST(acc_grad());
-      return cast_for_api(tensor);
-    } else {
-      return std::shared_ptr<DerivedT>();
-    }
-  }
 
   // Setters for autograd
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
@@ -131,29 +125,9 @@ class TensorIf : public Tensor {
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
 
-  Maybe<Tensor> detach() const override {
-    return std::static_pointer_cast<Tensor>(JUST(api_detach()));
-  }
-
-  // Operators for tensor
-  // used by pybind11 only
-  virtual Maybe<DerivedT> api_detach() const = 0;
-  Maybe<DerivedT> api_clone() const {
-    const std::shared_ptr<Tensor>& tensor = JUST(clone());
-    return cast_for_api(tensor);
-  }
-
  protected:
   TensorIf() = default;
   std::shared_ptr<FunctionNode> grad_fn_node_;
-
- private:
-  Maybe<DerivedT> cast_for_api(const std::shared_ptr<Tensor>& tensor) const {
-    if (!tensor) { return std::shared_ptr<DerivedT>(); }
-    const auto& ptr = std::dynamic_pointer_cast<DerivedT>(tensor);
-    CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
-    return ptr;
-  }
 };
 
 class MirroredTensor final : public TensorIf<MirroredTensor>,
@@ -179,7 +153,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
-  std::shared_ptr<MirroredTensor> data() const;
+  std::shared_ptr<Tensor> data() const override;
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -194,7 +168,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
-  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<TensorArg> current_grad() const override { return impl_->current_grad(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -216,7 +190,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
 
   // Operators for tensor
-  Maybe<MirroredTensor> api_detach() const override;
+  Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -251,6 +225,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
   Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
@@ -264,7 +239,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
-  std::shared_ptr<ConsistentTensor> data() const;
+  std::shared_ptr<Tensor> data() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -286,7 +261,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
-  Maybe<TensorArg> now_grad_arg() const override { return impl_->now_grad_arg(); }
+  Maybe<TensorArg> current_grad() const override { return impl_->current_grad(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -308,7 +283,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Operators for tensor
-  virtual Maybe<ConsistentTensor> api_detach() const override;
+  Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,

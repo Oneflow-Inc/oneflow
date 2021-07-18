@@ -392,13 +392,20 @@ def GetEnvDefaultParallelConf(device_tag):
 
 
 def HasAllMultiClientEnvVars():
-    return (
-        os.getenv("MASTER_ADDR")
-        and os.getenv("MASTER_PORT")
-        and os.getenv("WORLD_SIZE")
-        and os.getenv("RANK")
-        and os.getenv("LOCAL_RANK")
-    )
+    env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
+    has_all_env_vars = all([os.getenv(x) for x in env_var_names])
+    if not has_all_env_vars:
+        has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
+        assert not has_at_least_one_env_var
+    return has_all_env_vars
+
+
+def SetDefaultMultiClientEnvVars():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = str(_FindFreePort())
+    os.environ["WORLD_SIZE"] = "1"
+    os.environ["RANK"] = "0"
+    os.environ["LOCAL_RANK"] = "0"
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
