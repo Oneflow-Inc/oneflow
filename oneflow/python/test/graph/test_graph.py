@@ -189,7 +189,6 @@ class TestGraph(flow.unittest.TestCase):
             def build(self):
                 # check lazy mode in nn.Graph._compile
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-                print("graph proto", self._graph_proto)
 
                 # check session type
                 import oneflow.python.framework.session_context as session_ctx
@@ -217,6 +216,7 @@ class TestGraph(flow.unittest.TestCase):
         g = CustomGraph()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
+        print("graph proto", g._graph_proto)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
     def test_block_scope(test_case):
