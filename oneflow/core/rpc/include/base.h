@@ -82,6 +82,7 @@ class CtrlClient {
   virtual void PushKV(const std::string& k, const std::string& v) = 0;
   virtual void PushKV(const std::string& k, const PbMessage& msg) = 0;
   virtual void PushMasterKV(const std::string& k, const PbMessage& msg) = 0;
+  virtual void PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) = 0;
   template<typename T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
@@ -89,11 +90,13 @@ class CtrlClient {
 
   virtual void ClearKV(const std::string& k) = 0;
   virtual void ClearMasterKV(const std::string& k) = 0;
+  virtual void ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) = 0;
 
   virtual void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) = 0;
   virtual void PullKV(const std::string& k, std::string* v) = 0;
   virtual void PullKV(const std::string& k, PbMessage* msg) = 0;
   virtual void PullMasterKV(const std::string& k, PbMessage* msg) = 0;
+  virtual void PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) = 0;
   template<typename T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
     std::string v_str;

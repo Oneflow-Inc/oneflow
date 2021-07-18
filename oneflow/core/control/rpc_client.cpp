@@ -99,6 +99,13 @@ void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::strin
   call(GetMasterStub());
 }
 
+void RpcClient::PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, std::function<void(std::string*)> VSetter) {
+  ClientCall<CtrlMethod::kPushKV> call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetStubAt(GetStubIndex(k)));
+}
+
 void RpcClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
@@ -111,6 +118,10 @@ void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
+void RpcClient::PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) {
+  PushKV(GetStubIndex, k, [&](std::string* o) { msg.SerializeToString(o); });
+}
+
 void RpcClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
@@ -121,6 +132,12 @@ void RpcClient::ClearMasterKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetMasterStub());
+}
+
+void RpcClient::ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) {
+  ClientCall<CtrlMethod::kClearKV> call;
+  call.mut_request()->set_key(k);
+  call(GetStubAt(GetStubIndex(k)));
 }
 
 void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
@@ -138,6 +155,14 @@ void RpcClient::PullMasterKV(const std::string& k,
   VGetter(call.response().val());
 }
 
+void RpcClient::PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k,
+                             std::function<void(const std::string&)> VGetter) {
+  ClientCall<CtrlMethod::kPullKV> call;
+  call.mut_request()->set_key(k);
+  call(GetStubAt(GetStubIndex(k)));
+  VGetter(call.response().val());
+}
+
 void RpcClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
@@ -148,6 +173,10 @@ void RpcClient::PullKV(const std::string& k, PbMessage* msg) {
 
 void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void RpcClient::PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) {
+  PullKV(GetStubIndex, k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 void RpcClient::PushActEvent(const ActEvent& act_event) {
@@ -209,6 +238,12 @@ CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Ra
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
   int64_t machine_id = (std::hash<std::string>{}(key)) % Global<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
+}
+
+CtrlService::Stub* RpcClient::GetStubAt(int64_t i) {
+	CHECK_GE(i, 0);
+	CHECK_LT(i, stubs_.size());
+	return stubs_[i].get();
 }
 
 }  // namespace oneflow

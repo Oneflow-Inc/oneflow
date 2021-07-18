@@ -86,9 +86,15 @@ void GrpcCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   rpc_client_.PushMasterKV(k, msg);
 }
 
+void GrpcCtrlClient::PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) {
+	rpc_client_->PushKV(GetStubIndex, k, msg);
+}
+
 void GrpcCtrlClient::ClearKV(const std::string& k) { rpc_client_.ClearKV(k); }
 
 void GrpcCtrlClient::ClearMasterKV(const std::string& k) { rpc_client_.ClearMasterKV(k); }
+
+void GrpcCtrlClient::ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) { rpc_client_.ClearKV(GetStubIndex, k); }
 
 void GrpcCtrlClient::PullKV(const std::string& k, std::string* v) { rpc_client_.PullKV(k, v); }
 
@@ -100,6 +106,10 @@ void GrpcCtrlClient::PullKV(const std::string& k, std::function<void(const std::
 
 void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   rpc_client_.PullMasterKV(k, msg);
+}
+
+void GrpcCtrlClient::PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) {
+  rpc_client_.PullKV(GetStubIndex, k, msg);
 }
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
