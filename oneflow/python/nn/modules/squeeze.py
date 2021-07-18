@@ -24,17 +24,12 @@ from typing import Optional, Sequence
 class Squeeze(Module):
     def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
-
-        self._op = (
-            flow.builtin_op("squeeze")
-            .Input("in")
-            .Output("out")
-            .Attr("axes", dim)
-            .Build()
-        )
+        self.dim = dim
 
     def forward(self, x):
-        return self._op(x)[0]
+        if self.dim is None:
+            return x
+        return flow.F.squeeze(x, dim=self.dim)
 
 
 @oneflow_export("squeeze")
@@ -62,13 +57,17 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        >>> out = flow.squeeze(input, dim=[1, 2]).numpy().shape
-        >>> print(out)
-        (1, 3)
+        >>> out = flow.squeeze(input, dim=[1, 2]).shape
+        >>> out
+        flow.Size([1, 3])
 
     """
-    if type(dim) == int:
+    if isinstance(dim, int):
         dim = [dim]
+    elif dim is None:
+        dim = range(input.ndim)
+
+    dim = list(filter(lambda i: input.size(i) == 1, dim))
     return Squeeze(dim=dim)(input)
 
 

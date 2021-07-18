@@ -73,14 +73,22 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 
 TEST(InitSymbolInstructionType, job_desc) {
   InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
   DestroyNumProcessPerNode();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
   InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
   DestroyNumProcessPerNode();
 }

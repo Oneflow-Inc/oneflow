@@ -78,7 +78,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -91,10 +91,11 @@ REGISTER_USER_OP("broadcast_like")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_modifier != nullptr);
+      CHECK_OR_RETURN(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures)
     .SetDataTypeInferFn(InferDataType);

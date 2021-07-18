@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void DeviceTickOp::InitFromOpConf() {
+Maybe<void> DeviceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_device_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -49,7 +50,7 @@ Maybe<void> DeviceTickOp::InferOutBlobDescs(
 
 Maybe<void> DeviceTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

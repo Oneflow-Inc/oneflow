@@ -25,14 +25,6 @@ class Permute(Module):
         super().__init__()
         self.perm = list(*dims)
 
-        self._op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
-
     def forward(self, x):
         assert len(self.perm) == len(x.shape)
         new_perm = []
@@ -43,7 +35,7 @@ class Permute(Module):
                 x.shape
             ), "Invalid dim0 {}, len(shape): {}".format(dim, len(x.shape))
             new_perm.append(dim)
-        return self._op(x, perm=new_perm)[0]
+        return flow.F.transpose(x, perm=new_perm)
 
 
 @register_tensor_op("permute")
@@ -63,9 +55,9 @@ def permute_op(tensor, *dims):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> out = input.permute(1, 0, 2, 3).numpy().shape
-        >>> print(out)
-        (6, 2, 5, 3)
+        >>> out = input.permute(1, 0, 2, 3).shape
+        >>> out
+        flow.Size([6, 2, 5, 3])
 
     """
     return Permute(dims)(tensor)

@@ -22,20 +22,17 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Greater(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_greater")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
-        )
 
     def forward(self, x, y):
+        if x.dtype != flow.float32:
+            x = flow.experimental.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
-        return self._op(x, y)[0]
+        if y.dtype != flow.float32:
+            y = flow.experimental.cast(y, flow.float32)
+        return flow.F.broadcast_greater(x, y)
 
 
 @oneflow_export("gt")
@@ -61,9 +58,9 @@ def greater_op(x, y):
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
-        >>> out = flow.gt(input1, input2).numpy().shape
-        >>> print(out)
-        (2, 6, 5, 3)
+        >>> out = flow.gt(input1, input2).shape
+        >>> out
+        flow.Size([2, 6, 5, 3])
 
     """
     return Greater()(x, y)

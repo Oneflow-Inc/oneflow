@@ -26,15 +26,19 @@ namespace {
 
 constexpr size_t kDefaultBufferSize = 32 * 1024;  // 32KB
 
-size_t GetBufferSize(int64_t session_id) {
-  const auto& io_conf = *Global<const IOConf>::Get(session_id);
-  if (io_conf.has_persistence_buf_byte()) {
-    const int64_t buffer_size = io_conf.persistence_buf_byte();
-    CHECK_GT(buffer_size, 0);
-    return buffer_size;
-  } else {
-    return kDefaultBufferSize;
+size_t GetBufferSize() {
+  const char* buf_size_str = std::getenv("ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES");
+  if (buf_size_str) {
+    int buf_size = atoi(buf_size_str);
+    if (buf_size > 0) {
+      return buf_size;
+    } else {
+      LOG(WARNING) << "invalid env ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES " << buf_size_str
+                   << ", default size " << kDefaultBufferSize << " is set";
+      return kDefaultBufferSize;
+    }
   }
+  return kDefaultBufferSize;
 }
 
 }  // namespace
@@ -61,7 +65,7 @@ PersistentInStream::PersistentInStream(int64_t session_id, fs::FileSystem* fs,
   } else {
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
-  buffer_.resize(GetBufferSize(session_id) + 1);
+  buffer_.resize(GetBufferSize() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';

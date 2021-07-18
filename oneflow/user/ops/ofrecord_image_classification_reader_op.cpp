@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Output("image")
     .Output("label")
     .Attr<std::string>("data_dir")
@@ -35,10 +35,10 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Attr<int32_t>("decode_buffer_size_per_thread", 8)
     .Attr<int32_t>("num_decode_threads_per_machine", 0)
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       if (sbp.has_split_parallel() && parallel_num > 1) {
         CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
@@ -49,8 +49,8 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *image_tensor->mut_shape() = Shape({batch_size});
       *label_tensor->mut_shape() = Shape({batch_size});
@@ -61,17 +61,18 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
-      CHECK(image_modifier != nullptr);
+      CHECK_OR_RETURN(image_modifier != nullptr);
       image_modifier->set_header_infered_before_compute(false);
       user_op::OutputArgModifier* label_modifier = GetOutputArgModifierFn("label", 0);
-      CHECK(label_modifier != nullptr);
+      CHECK_OR_RETURN(label_modifier != nullptr);
       label_modifier->set_header_infered_before_compute(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("image", 0) = DataType::kTensorBuffer;
-      *ctx->Dtype4ArgNameAndIndex("label", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 

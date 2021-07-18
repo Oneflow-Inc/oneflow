@@ -28,7 +28,6 @@ class _DropoutNd(Module):
 
     def __init__(self, p: float = 0.5, inplace: bool = False) -> None:
         super(_DropoutNd, self).__init__()
-        assert inplace is False, "Not support inplace=True yet!"
         if p < 0 or p > 1:
             raise ValueError(
                 "dropout probability has to be between 0 and 1, " "but got {}".format(p)
@@ -83,45 +82,26 @@ class Dropout(_DropoutNd):
         ... )
         >>> x = flow.Tensor(arr)
         >>> y = m(x)
-
-        # tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
-        # [ 0.4299,  0.3626, -0.4892,  0.4141],
-        # [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
+        >>> y #doctest: +ELLIPSIS
+        tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
+                ...
+                [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
 
 
     """
 
-    def __init__(self, p: float = 0.5, inplace: bool = False):
+    def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
         _DropoutNd.__init__(self, p, inplace)
 
-        if self.p == 1.0:
-            scale = 1.0
-        else:
-            scale = float(1.0 / (1.0 - self.p))
-
-        seed = random.randint(-sys.maxsize, sys.maxsize)
-        self._op = (
-            flow.builtin_op("dropout")
-            .Input("in")
-            .Input("mask")
-            .Output("out")
-            .Attr("scale", scale)
-            .Build()
-        )
-        self._mask_op = (
-            flow.builtin_op("random_mask_like")
-            .Input("like")
-            .Output("out")
-            .Attr("rate", self.p)
-            .Attr("seed", seed)
-            .Build()
-        )
+        self.p = p
+        if generator is None:
+            generator = flow.Generator()
+        self.generator = generator
 
     def forward(self, x):
-        if self.p == 0.0:
+        if self.p == 0.0 or not self.training:
             return x
-        mask = self._mask_op(x)[0]
-        return self._op(x, mask)[0]
+        return flow.F.dropout(x, self.p, self.generator)
 
 
 if __name__ == "__main__":

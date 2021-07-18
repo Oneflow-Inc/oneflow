@@ -18,7 +18,6 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
-from typing import Optional, List, Tuple
 import math
 
 
@@ -92,7 +91,7 @@ class Linear(Module):
         >>> m = flow.nn.Linear(20, 30, False)
         >>> input = flow.Tensor(np.random.randn(128, 20))
         >>> output = m(input)
-        >>> print(output.size())
+        >>> output.size()
         flow.Size([128, 30])
 
     """
@@ -100,35 +99,14 @@ class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()
 
+        self.in_features = in_features
+        self.out_features = out_features
         self.use_bias = bias
         self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
         self.bias = None
 
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_features))
-
-        self._matmul_op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", True)
-            .Attr("alpha", 1.0)
-            .Build()
-        )
-
-        self._broadcast_matmul_op = (
-            flow.builtin_op("broadcast_matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", True)
-            .Attr("alpha", 1.0)
-            .Build()
-        )
-
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -143,14 +121,21 @@ class Linear(Module):
         assert len(x.shape) >= 2, "Tensor x's dim should >=2"
 
         if len(x.shape) == 2:
-            res = self._matmul_op(x, self.weight)[0]
+            res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         else:
-            res = self._broadcast_matmul_op(x, self.weight)[0]
+            res = flow.F.broadcast_matmul(
+                x, self.weight, transpose_a=False, transpose_b=True
+            )
 
         if self.use_bias:
             res += self.bias
 
         return res
+
+    def extra_repr(self) -> str:
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
 
 
 if __name__ == "__main__":

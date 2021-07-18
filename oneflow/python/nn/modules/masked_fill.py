@@ -23,26 +23,18 @@ class MaskedFill(Module):
     def __init__(self, value) -> None:
         super().__init__()
         self.value = value
-        self._where_op = (
-            flow.builtin_op("where")
-            .Input("condition")
-            .Input("x")
-            .Input("y")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, input, mask):
         in_shape = tuple(input.shape)
         value_like_x = flow.Tensor(*in_shape, device=input.device)
         value_like_x.fill_(self.value)
-        return self._where_op(mask, value_like_x, input)[0]
+        return flow.F.where(mask, value_like_x, input)
 
 
 @oneflow_export("masked_fill")
 @register_tensor_op("masked_fill")
 @experimental_api
-def masked_fill_op(tensor, mask, value):
+def masked_fill_op(input, mask, value):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
     The shape of :attr:`mask` must be broadcastable with the shape of the underlying tensor.
@@ -80,7 +72,7 @@ def masked_fill_op(tensor, mask, value):
         #  [-1.9009,  8.7654,  8.7654,  8.7654]]], dtype=oneflow.float32)
 
     """
-    return MaskedFill(value)(tensor, mask)
+    return MaskedFill(value)(input, mask)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("eager_nccl_all_reduce")
+REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
@@ -33,7 +33,7 @@ REGISTER_USER_OP("eager_nccl_all_reduce")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 

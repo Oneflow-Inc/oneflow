@@ -25,17 +25,17 @@ REGISTER_USER_OP("tril")
     .Attr<int64_t>("integer_fill_value", 0)
     .Attr<bool>("is_floating_fill_value", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
-      *out->mut_shape() = in->shape();
-      *out->mut_is_dynamic() = in->is_dynamic();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_GE_OR_RETURN(in.shape().NumAxes(), 2);
+      *out->mut_shape() = in.shape();
+      *out->mut_is_dynamic() = in.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out->mut_data_type() = in->data_type();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = in.data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -56,7 +56,7 @@ REGISTER_USER_OP("tril")
     });
 
 REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
+                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("tril")
@@ -67,6 +67,7 @@ REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("fused_scale_tril")
@@ -80,17 +81,17 @@ REGISTER_USER_OP("fused_scale_tril")
     .Attr<int64_t>("integer_scale_value", 1)
     .Attr<bool>("is_floating_scale_value", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
-      *out->mut_shape() = in->shape();
-      *out->mut_is_dynamic() = in->is_dynamic();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_GE_OR_RETURN(in.shape().NumAxes(), 2);
+      *out->mut_shape() = in.shape();
+      *out->mut_is_dynamic() = in.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out->mut_data_type() = in->data_type();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = in.data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -111,7 +112,8 @@ REGISTER_USER_OP("fused_scale_tril")
     });
 
 REGISTER_USER_OP_GRAD("fused_scale_tril")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -126,6 +128,7 @@ REGISTER_USER_OP_GRAD("fused_scale_tril")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

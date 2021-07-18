@@ -42,7 +42,7 @@ void BoxingOp::VirtualGenKernelConf(
   EraseEmptyBnInVec(GetBlobDesc4BnInOp, op_attribute->mutable_output_bns());
 }
 
-void BoxingOp::InitFromOpConf() {
+Maybe<void> BoxingOp::InitFromOpConf() {
   CHECK(op_conf().has_boxing_conf());
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
 
@@ -56,6 +56,7 @@ void BoxingOp::InitFromOpConf() {
   for (int32_t i = 0; i < boxing_conf.out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId BoxingOp::lbi4ibn(const std::string& input_bn) const {
@@ -88,7 +89,7 @@ Maybe<void> BoxingOp::InferBlobDescs(
   }
 
   DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical);
+  JUST(InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical));
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -159,12 +160,12 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
 }
 
 Maybe<void> BoxingOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+  const cfg::SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     CHECK_OR_RETURN(sbp_parallel == JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
   }

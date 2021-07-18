@@ -58,6 +58,7 @@ class GrpcCtrlClient final : public CtrlClient {
   ProcessCtx process_ctx_;
   bool need_heartbeat_thread_stop_;
   std::mutex need_heartbeat_thread_stop_mtx_;
+  std::condition_variable need_heartbeat_thread_stop_cv_;
   std::thread heartbeat_thread_;
   RpcClient rpc_client_;
 };

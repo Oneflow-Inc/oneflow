@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("top_k")
+REGISTER_NO_GRAD_USER_OP("top_k")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("k")
@@ -32,7 +32,7 @@ REGISTER_USER_OP("top_k")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
+      *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

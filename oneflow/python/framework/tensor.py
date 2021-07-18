@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+from oneflow._oneflow_internal.exception import IndexException
+
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
@@ -39,7 +41,7 @@ def register_local_tensor_method(name=None):
             op_name = method.__name__
         else:
             op_name = name
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return decorator
@@ -255,6 +257,32 @@ class Tensor:
         else:
             return None
 
+    @grad.setter
+    @_auto_determine
+    def grad(self, new_grad):
+        def check_grad(grad, new_grad):
+            assert (
+                grad.shape == new_grad.shape
+            ), f"Shape of grads are not equal, {grad.shape} vs {new_grad.shape}"
+            assert (
+                grad.device == new_grad.device
+            ), f"Device of grads are not equal, {grad.device} vs {new_grad.device}"
+            assert (
+                grad.dtype == new_grad.dtype
+            ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
+
+        if self._local_or_consistent_tensor is not None:
+            if new_grad is None:
+                self._local_or_consistent_tensor.set_grad(None)
+            else:
+                if isinstance(new_grad, Tensor):
+                    if not new_grad.is_determined:
+                        new_grad.determine()
+                    new_grad = new_grad._local_or_consistent_tensor
+                new_grad_detach = new_grad.detach()
+                check_grad(self.grad, new_grad_detach)
+                self._local_or_consistent_tensor.set_grad(new_grad_detach)
+
     @property
     def grad_fn(self):
         if self._local_or_consistent_tensor is not None:
@@ -302,6 +330,13 @@ class Tensor:
     def detach(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
+        else:
+            return None
+
+    @_auto_determine
+    def clone(self):
+        if self._local_or_consistent_tensor is not None:
+            return flow.Tensor(self._local_or_consistent_tensor.clone())
         else:
             return None
 
@@ -353,6 +388,20 @@ class Tensor:
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     @register_local_tensor_method()
+    def _transform_ellipsis_type(self, key):
+        d = self.ndim - len(key)  # exclude all Ellipsis type
+        new_key = list()
+        for k in key:
+            if isinstance(k, type(Ellipsis)):
+                new_key.append(slice(None, None, None))
+                while d > 0:
+                    new_key.append(slice(None, None, None))
+                    d -= 1
+            else:
+                new_key.append(k)
+        return tuple(new_key)
+
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -360,6 +409,8 @@ class Tensor:
         def get_canonical_index(index, length, *, start=0):
             if index < 0:
                 index += length
+            if index > length or index < 0:
+                raise IndexError(f"Index should be in [0, {length}), but got {index}")
             return max(min(index, length), start)
 
         def get_slice_if_int(x):
@@ -401,23 +452,19 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __getitem__(self, key):
-        # TODO: support inplace __getitem__
-        start, stop, step, _ = self._get_slice_obj(key)
-        res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
+        try:
+            return flow.F.tensor_getitem(self, key)
+        except IndexException as e:
+            # The stop condition of for in python is IndexError,
+            # so we have to catch IndexException from C++ and throw IndexError
+            raise IndexError(e)
 
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
-        start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
-            scalar = value
-            value = flow.Tensor(*shape)
-            value.fill_(scalar)
-
-        flow.experimental.tmp.logical_slice_assign(
-            self, value, list(zip(start, stop, step))
-        )
+            value = flow.F.constant([1], value, self.dtype)
+        flow.F.tensor_setitem(self, key, value)
         return self
 
     @register_local_tensor_method()
@@ -435,6 +482,14 @@ class Tensor:
     @register_local_tensor_method()
     def __lt__(self, other):
         return self.lt(other)
+
+    @register_local_tensor_method()
+    def __ge__(self, other):
+        return self.ge(other)
+
+    @register_local_tensor_method()
+    def __le__(self, other):
+        return self.le(other)
 
     def __array__(self):
         TODO()
@@ -456,6 +511,10 @@ class Tensor:
     @register_local_tensor_method()
     def __add__(self, other):
         return self.add(other)
+
+    @register_local_tensor_method()
+    def __iadd__(self, other):
+        return self.add_(other)
 
     @register_local_tensor_method()
     def __radd__(self, other):
@@ -480,6 +539,10 @@ class Tensor:
     @register_local_tensor_method()
     def __neg__(self):
         return flow.experimental.neg(self)
+
+    @register_local_tensor_method()
+    def __pow__(self, b):
+        return flow.experimental.pow(self, b)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
@@ -627,6 +690,25 @@ class Tensor:
         internal_tensor.zeros_()
 
     @_auto_determine
+    @register_local_tensor_method()
+    def register_hook(self, hook):
+        assert self.is_leaf, "register_hook only supports leaf tensor for now"
+        assert (
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
+
+        def hook_returning_determined_tensor(grad):
+            new_grad = hook(grad)
+            if isinstance(new_grad, Tensor) and not new_grad.is_determined:
+                new_grad.determine()
+                new_grad = new_grad._local_or_consistent_tensor
+            return new_grad
+
+        self._local_or_consistent_tensor._register_hook(
+            hook_returning_determined_tensor
+        )
+
+    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
@@ -678,7 +760,7 @@ class Tensor:
         if _input_args_is_tuple_or_list(*args):
             numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = args[0]
+            numpy_data = np.ascontiguousarray(args[0])
         numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
@@ -752,7 +834,7 @@ def _default_initializer_for_determining(tensor):
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             shape,
             dtype,
             undetermined_tensor.device,
@@ -775,7 +857,7 @@ def _numpy_initializer_for_determining(tensor):
     if undetermined_tensor.is_consistent:
         raise NotImplementedError()
     else:
-        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.Tensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -797,13 +879,7 @@ def _input_args_is_numpy(*args):
 
 
 def _input_args_is_consistent_or_local(*args):
-    return len(args) == 1 and isinstance(
-        args[0],
-        (
-            oneflow._oneflow_internal.ConsistentTensor,
-            oneflow._oneflow_internal.LocalTensor,
-        ),
-    )
+    return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
 
 def _input_args_is_tensor(*args):
@@ -821,7 +897,7 @@ def _input_args_is_shape(*args):
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
-        setattr(oneflow._oneflow_internal.LocalTensor, op_name, method)
+        setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
 
     return set_tensor_op

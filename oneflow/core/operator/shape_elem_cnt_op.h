@@ -26,7 +26,7 @@ class ShapeElemCntOp final : public Operator {
   ShapeElemCntOp() = default;
   ~ShapeElemCntOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
@@ -37,7 +37,7 @@ class ShapeElemCntOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 };

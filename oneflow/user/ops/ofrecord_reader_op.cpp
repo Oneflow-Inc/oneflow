@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
     .Output("out")
     .Attr<std::string>("data_dir")
     .Attr<int32_t>("data_part_num")
@@ -29,9 +29,9 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
     .Attr<int32_t>("shuffle_buffer_size", 1024)
     .Attr<bool>("shuffle_after_epoch", false)
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       if (sbp.has_split_parallel() && parallel_num > 1) {
         CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
@@ -41,7 +41,7 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *out_tensor->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
@@ -51,13 +51,14 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK(out_modifier != nullptr);
+      CHECK_OR_RETURN(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kOFRecord;
+      *ctx->OutputDType("out", 0) = DataType::kOFRecord;
       return Maybe<void>::Ok();
     });
 

@@ -62,7 +62,8 @@ class CpuConcatVarNdarray : public CpuNdarray<T, NDIMS> {
     size_t var_contiguous_size = 0;
     var_ndarray(var_index).GetMutPtrAndContiguousSize(var_offset, ptr, &var_contiguous_size);
     *size = std::min(var_contiguous_size,
-                     contiguous_lens_[var_index] - var_offset % contiguous_lens_[var_index]);
+                     static_cast<size_t>(contiguous_lens_[var_index]
+                                         - var_offset % contiguous_lens_[var_index]));
   }
 
  private:

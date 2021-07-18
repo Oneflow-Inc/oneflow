@@ -13,18 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+import warnings
+from typing import Optional
+
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.utils import _check_inplace_valid
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
-from typing import Optional
 
 
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
-    assert dim_num >= 2
+    if dim_num == 1:
+        return False, None
     if axis < 0:
         axis += dim_num
     assert axis >= 0
@@ -37,6 +42,66 @@ def _softmax_need_transpose(x, axis):
         permute[axis] = permute[-1]
         permute[-1] = axis
     return need_transpose, permute
+
+
+@oneflow_export("nn.PReLU")
+@experimental_api
+class PReLU(Module):
+    """Applies the element-wise function:
+
+    .. math::
+        PReLU(x) = \max(0,x) + a * \min(0,x)
+
+    Here :math:`a` is a learnable parameter. When called without arguments, `nn.PReLU()` uses a single
+    parameter :math:`a` across all input channels. If called with `nn.PReLU(nChannels)`,
+    a separate :math:`a` is used for each input channel.
+
+
+    .. note::
+        weight decay should not be used when learning :math:`a` for good performance.
+
+    .. note::
+        Channel dim is the 2nd dim of input. When input has dims < 2, then there is
+        no channel dim and the number of channels = 1.
+
+    Args:
+        num_parameters (int): number of :math:`a` to learn.
+            Although it takes an int as input, there is only two values are legitimate:
+            1, or the number of channels at input. Default: 1
+        init (float): the initial value of :math:`a`. Default: 0.25
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    Attr:
+        - weight (Tensor): the learnable weights of shape (:attr:`num_parameters`).
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> m = flow.nn.PReLU()
+        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> print(m(input).numpy())
+        [[[[ 1.  -0.5]
+           [ 3.   4. ]]]]
+
+    """
+
+    def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
+        super().__init__()
+        self.num_parameters = num_parameters
+        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
+
+    def forward(self, x):
+        assert (
+            self.num_parameters == 1 or self.num_parameters == x.shape[1]
+        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
+        return flow.F.prelu(x, self.weight)
 
 
 @oneflow_export("nn.ReLU")
@@ -64,18 +129,23 @@ class ReLU(Module):
         >>> relu = flow.nn.ReLU()
         >>> ndarr = np.asarray([1, -2, 3])
         >>> x = flow.Tensor(ndarr)
-        >>> relu(x).numpy()
-        array([1., 0., 3.], dtype=float32)
+        >>> relu(x)
+        tensor([1., 0., 3.], dtype=oneflow.float32)
 
     """
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            _check_inplace_valid(x)
+        return flow.F.relu(x, self.inplace)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.ReLU6")
@@ -111,26 +181,24 @@ class ReLU6(Module):
         >>> input = flow.Tensor(x)
         >>> relu6 = flow.nn.ReLU6()
 
-        >>> out = relu6(input).numpy()
-        >>> print(out)
-        [0.  0.  0.5]
+        >>> out = relu6(input)
+        >>> out
+        tensor([0. , 0. , 0.5], dtype=oneflow.float32)
 
     """
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", 0.0)
-            .Attr("max_val", 6.0)
-            .Output("out")
-            .Build()
-        )
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("ReLU6 module do not support inplace now")
+        return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Tanh")
@@ -161,19 +229,17 @@ class Tanh(Module):
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
-        >>> out = tanh(input).numpy()
-        >>> print(out)
-        [-0.7615942  0.         0.7615942]
+        >>> out = tanh(input)
+        >>> out
+        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
 
     """
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.tanh(x)
 
 
 @oneflow_export("tanh")
@@ -198,15 +264,16 @@ def tanh_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-1, 0, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        tanh = flow.nn.Tanh()
-        out = tanh(input).numpy()
-
-        # out [-0.7615942  0.         0.7615942]
+        >>> x = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> tanh = flow.nn.Tanh()
+        >>> out = tanh(input)
+        >>> out
+        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
 
     """
     return Tanh()(x)
@@ -246,25 +313,26 @@ class ELU(Module):
         >>> input = flow.Tensor(x)
         >>> elu = flow.nn.ELU()
 
-        >>> out = elu(input).numpy()
-        >>> print(out)
-        [-0.39346933  0.          0.5       ]
+        >>> out = elu(input)
+        >>> out
+        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
 
     """
 
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("elu")
-            .Input("in")
-            .Attr("alpha", alpha)
-            .Output("out")
-            .Build()
-        )
+        self.alpha = alpha
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("ELU module do not support inplace now")
+        return flow.F.elu(x, alpha=self.alpha)
+
+    def extra_repr(self):
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.GELU")
@@ -295,19 +363,17 @@ class GELU(Module):
         >>> input = flow.Tensor(x)
         >>> gelu = flow.nn.GELU()
 
-        >>> out = gelu(input).numpy()
-        >>> print(out)
-        [-0.15426877  0.          0.34573123]
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
 
     """
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("gelu").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.gelu(x)
 
 
 @oneflow_export("gelu")
@@ -339,9 +405,9 @@ def gelu_op(x):
         >>> input = flow.Tensor(x)
         >>> gelu = flow.nn.GELU()
 
-        >>> out = gelu(input).numpy()
-        >>> print(out)
-        [-0.15426877  0.          0.34573123]
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
 
     """
     return GELU()(x)
@@ -364,30 +430,22 @@ class Sigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
-        m = flow.nn.Sigmoid() # or y = flow.sigmoid(x)
-        y = m(x)
-        # [[0.69366997, 0.60735673, 0.52585548],
-        # [0.23947647, 0.33676055, 0.56800622]]
-
+        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> m = flow.nn.Sigmoid()
+        >>> out = m(x)
+        >>> out
+        tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
     """
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sigmoid(x)
 
 
 @oneflow_export("sigmoid")
@@ -408,20 +466,14 @@ def sigmoid_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
-        y = x.sigmoid()
-        # [[0.69366997, 0.60735673, 0.52585548],
-        # [0.23947647, 0.33676055, 0.56800622]]
+        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> out = flow.sigmoid(x)
+        >>> out
+        tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
 
     """
     return Sigmoid()(x)
@@ -459,20 +511,25 @@ class Hardsigmoid(Module):
         >>> input = flow.Tensor(x)
         >>> hardsigmoid = flow.nn.Hardsigmoid()
 
-        >>> out = hardsigmoid(input).numpy()
-        >>> print(out)
-        [0.41666666 0.5        0.5833333 ]
+        >>> out = hardsigmoid(input)
+        >>> out
+        tensor([0.4167, 0.5   , 0.5833], dtype=oneflow.float32)
 
 
     """
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("Hardsigmoid module do not support inplace now")
+        return flow.F.hardsigmoid(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Softmax")
@@ -481,24 +538,19 @@ class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
         self.axis = -1 if dim is None else dim
-        self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = self._transpose_op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
-        res = self._op(x)[0]
+        res = flow.F.softmax(x)
         if need_transpose:
-            res = self._transpose_op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
         return res
+
+    def extra_repr(self):
+        return f"axis={self.axis}"
 
 
 @oneflow_export("softmax")
@@ -534,25 +586,21 @@ def softmax_op(tensor, dim=None):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.Softmax(dim = 2)
-        x = flow.Tensor(
-            np.array(
-                [[[[-0.46716809,  0.40112534,  0.61984003],
-                [-1.31244969, -0.42528763,  1.47953856]]],
-
-                [[[ 1.02978742, -0.49383053,  1.88214159],
-                [ 1.35351622, -1.46251285, -1.40751374]]]]
-            )
-        )
-        y = m(x)
-        # [[[[0.6995764  0.6955959  0.29740235]
-        # [0.3004236  0.30440408 0.7025977 ]]]
-
-        # [[[0.4197673  0.7248568  0.96407217]
-        # [0.58023274 0.27514324 0.03592779]]]]
+        >>> m = flow.nn.Softmax(dim = 2)
+        >>> x = flow.Tensor(
+        ...    np.array(
+        ...        [[[-0.46716809,  0.40112534,  0.61984003],
+        ...        [-1.31244969, -0.42528763,  1.47953856]]]
+        ...    )
+        ... )
+        >>> out = m(x)
+        >>> out
+        tensor([[[0.1575, 0.3754, 0.4671],
+                 [0.0507, 0.123 , 0.8263]]], dtype=oneflow.float32)
     """
     return Softmax(dim)(tensor)
 
@@ -579,19 +627,21 @@ class LogSoftmax(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.LogSoftmax(dim=1)
-        x = flow.Tensor(
-            np.array(
-                [[ 0.4296, -1.1957,  2.5463],
-                [ 1.2552, -1.5747,  0.6923]]
-            )
-        )
-        y = m(x)
-        # [[-2.251349   -3.8766491  -0.13464898]
-        # [-0.48770458 -3.3176045  -1.0506046 ]]
+        >>> m = flow.nn.LogSoftmax(dim=1)
+        >>> x = flow.Tensor(
+        ...    np.array(
+        ...        [[ 0.4296, -1.1957,  2.5463],
+        ...        [ 1.2552, -1.5747,  0.6923]]
+        ...    )
+        ... )
+        >>> out = m(x)
+        >>> out
+        tensor([[-2.2513, -3.8766, -0.1346],
+                [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
     def __init__(
@@ -599,13 +649,6 @@ class LogSoftmax(Module):
     ):
         super().__init__()
         self.dim = dim
-        self._op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -615,18 +658,18 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = self._op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
         x = x.softmax()
         res = x.log()
 
         if need_transpose:
-            res = self._op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
 
         return res
 
     def extra_repr(self):
-        return "dim={dim}".format(dim=self.dim)
+        return f"dim={self.dim}"
 
 
 @oneflow_export("nn.LogSigmoid")
@@ -655,9 +698,9 @@ class LogSigmoid(Module):
         >>> input = flow.Tensor(x)
         >>> logsigmoid = flow.nn.LogSigmoid()
 
-        >>> out = logsigmoid(input).numpy()
-        >>> print(out)
-        [-0.974077   -0.6931472  -0.47407696]
+        >>> out = logsigmoid(input)
+        >>> out
+        tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
     """
 
@@ -705,9 +748,9 @@ class Softplus(Module):
         >>> input = flow.Tensor(x)
         >>> softplus = flow.nn.Softplus()
 
-        >>> out = softplus(input).numpy()
-        >>> print(out)
-        [0.474077  0.6931472 0.974077 ]
+        >>> out = softplus(input)
+        >>> out
+        tensor([0.4741, 0.6931, 0.9741], dtype=oneflow.float32)
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
@@ -723,6 +766,9 @@ class Softplus(Module):
             / self.beta
             * flow.experimental.log(1.0 + flow.experimental.exp(self.beta * x)),
         )
+
+    def extra_repr(self):
+        return f"beta={self.beta}, threshold={self.threshold}"
 
 
 @oneflow_export("nn.Hardswish")
@@ -756,9 +802,9 @@ class Hardswish(Module):
         >>> input = flow.Tensor(x)
         >>> hardswish = flow.nn.Hardswish()
 
-        >>> out = hardswish(input).numpy()
-        >>> print(out)
-        [-0.20833333  0.          0.29166666]
+        >>> out = hardswish(input)
+        >>> out
+        tensor([-0.2083,  0.    ,  0.2917], dtype=oneflow.float32)
 
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
@@ -766,11 +812,16 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("Hardswish module do not support inplace now")
+        return flow.F.hardswish(x)
+
+    def extra_repr(self):
+        inplace_str = "inplace=True" if self.inplace else ""
+        return inplace_str
 
 
 @oneflow_export("nn.Hardtanh")
@@ -816,9 +867,9 @@ class Hardtanh(Module):
         >>> m = flow.nn.Hardtanh()
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [0.2 0.3 1.  1. ]
+        >>> out = m(x)
+        >>> out
+        tensor([0.2, 0.3, 1. , 1. ], dtype=oneflow.float32)
 
     """
 
@@ -841,18 +892,20 @@ class Hardtanh(Module):
                 "keyword argument max_value is deprecated and rename to max_val"
             )
             max_val = max_value
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", min_val)
-            .Attr("max_val", max_val)
-            .Output("out")
-            .Build()
-        )
+
+        self.min_val = min_val
+        self.max_val = max_val
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("Hardtanh module do not support inplace now")
+        return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
+
+    def extra_repr(self):
+        param_str = f"min_val={self.min_val}, max_val={self.max_val}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 
 @oneflow_export("nn.LeakyReLU")
@@ -886,24 +939,94 @@ class LeakyReLU(Module):
         >>> m = flow.nn.LeakyReLU(0.1)
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [0.2 0.3 3.  4. ]
+        >>> out = m(x)
+        >>> out
+        tensor([0.2, 0.3, 3. , 4. ], dtype=oneflow.float32)
     """
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("leaky_relu")
-            .Input("x")
-            .Attr("alpha", negative_slope)
-            .Output("y")
-            .Build()
-        )
+        self.negative_slope = negative_slope
+        self.inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self.inplace:
+            warnings.warn("LeakyReLU module do not support inplace now")
+        return flow.F.leaky_relu(x, alpha=self.negative_slope)
+
+    def extra_repr(self):
+        param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
+@oneflow_export("nn.Mish")
+@experimental_api
+class Mish(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+
+
+@oneflow_export("mish")
+@experimental_api
+def mish_op(x):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    See :mod:`oneflow.experimental.nn.Mish`
+    """
+
+    return Mish()(x)
+
+
+@register_tensor_op("mish")
+@experimental_api
+def mish_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.mish`
+    """
+
+    return Mish()(x)
 
 
 if __name__ == "__main__":

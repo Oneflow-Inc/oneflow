@@ -54,6 +54,7 @@ Resource GetResource() {
 
 }  // namespace
 
+#ifdef RPC_BACKEND_GRPC
 TEST(CtrlServer, new_delete) {
   int port = CtrlUtil().FindAvailablePort();
   if (port == -1) { return; }
@@ -78,6 +79,7 @@ TEST(CtrlServer, new_delete) {
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
 }
+#endif  // RPC_BACKEND_GRPC
 
 }  // namespace oneflow
 

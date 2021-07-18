@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from .optimizer import Optimizer
 
 
+@oneflow_export("optim.lr_scheduler._LRScheduler")
+@experimental_api
 class LrScheduler(object):
     def __init__(self, optimizer, last_step=-1, verbose=False):
         if not isinstance(optimizer, Optimizer):
@@ -24,18 +27,16 @@ class LrScheduler(object):
         self._optimizer = optimizer
 
         if last_step == -1:
-            for group in self._optimizer._param_groups:
-                group.options["initial_lr"] = group.options["lr"]
+            for group in self._optimizer.param_groups:
+                group["initial_lr"] = group["lr"]
         else:
-            for i, group in enumerate(self._optimizer._param_groups):
-                assert "initial_lr" in group.options, (
+            for i, group in enumerate(self._optimizer.param_groups):
+                assert "initial_lr" in group, (
                     "param 'initial_lr' is not specified in "
                     f"param_groups[{i}] when resuming an optimizer"
                 )
 
-        self.base_lrs = [
-            group.options["initial_lr"] for group in self._optimizer._param_groups
-        ]
+        self.base_lrs = [group["initial_lr"] for group in self._optimizer.param_groups]
         self.last_lr = list()
         self.last_step = last_step
 
@@ -80,7 +81,7 @@ class LrScheduler(object):
         self.last_step += 1
         self.last_lr = self.get_lr()
 
-        for i, group in enumerate(self._optimizer._param_groups):
-            group.options["lr"] = self.last_lr[i]
+        for i, group in enumerate(self._optimizer.param_groups):
+            group["lr"] = self.last_lr[i]
             if self.verbose:
                 self.print_lr(i, self.last_lr[i])

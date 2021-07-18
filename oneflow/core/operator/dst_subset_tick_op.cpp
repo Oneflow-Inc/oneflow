@@ -36,7 +36,7 @@ class DstSubsetTickOp final : public Operator {
   DstSubsetTickOp() = default;
   ~DstSubsetTickOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
@@ -45,13 +45,14 @@ class DstSubsetTickOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-void DstSubsetTickOp::InitFromOpConf() {
+Maybe<void> DstSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_dst_subset_tick_conf());
   EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DstSubsetTickOp::InferLogicalOutBlobDescs(
@@ -66,7 +67,7 @@ Maybe<void> DstSubsetTickOp::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> DstSubsetTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DstSubsetTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())

@@ -23,43 +23,12 @@ from typing import Optional
 class Expand(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
-        self._op = flow.builtin_op("expand").Input("in").Output("out").Build()
         self.expand_size = list(*sizes)
 
     def forward(self, x):
-        expand_size = self.expand_size
-        assert len(expand_size) >= len(
-            x.shape
-        ), "The desired expanded dims should not be less than the input dims."
-        # calculate the original stride
-        original_stride = [1]
-        for i in range(len(x.shape) - 2, -1, -1):
-            original_stride.insert(0, original_stride[0] * x.shape[i + 1])
-
-        # calculate the output shape and stride
-        new_size = []
-        new_stride = []
-        diff = len(expand_size) - len(x.shape)
-        for i in range(len(expand_size) - 1, -1, -1):
-            if i >= diff:
-                if expand_size[i] == -1 or expand_size[i] == x.shape[i - diff]:
-                    new_size.insert(0, x.shape[i - diff])
-                    new_stride.insert(0, original_stride[i - diff])
-                else:
-                    assert expand_size[i] >= 1 and x.shape[i - diff] == 1
-                    new_size.insert(0, expand_size[i])
-                    new_stride.insert(0, 0)
-            else:
-                assert expand_size[i] >= 1
-                new_size.insert(0, expand_size[i])
-                if expand_size[i] == 1:
-                    new_stride.insert(0, new_stride[0])
-                else:
-                    new_stride.insert(0, 0)
-
-        return self._op(
-            x, in_shape=list(x.shape), out_shape=new_size, stride=new_stride
-        )[0]
+        if x.dtype == flow.int8:
+            x = flow.experimental.cast(x, flow.int32)
+        return flow.F.expand(x, self.expand_size)
 
 
 @oneflow_export("expand")
@@ -96,7 +65,7 @@ def expand_op(x, *sizes):
         >>> input = flow.Tensor(x)
 
         >>> out = input.expand(1, 3, 2, 2)
-        >>> print(out.shape)
+        >>> out.shape
         flow.Size([1, 3, 2, 2])
 
     """

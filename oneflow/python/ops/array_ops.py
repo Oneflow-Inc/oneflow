@@ -1045,6 +1045,7 @@ def concat(
 
 
 @oneflow_export("gather_nd")
+@stable_api
 def gather_nd(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -1164,6 +1165,7 @@ def gather_nd(
 
 
 @oneflow_export("scatter_nd")
+@stable_api
 def scatter_nd(
     indices: oneflow._oneflow_internal.BlobDesc,
     updates: oneflow._oneflow_internal.BlobDesc,
@@ -1702,6 +1704,7 @@ def sync_dynamic_resize(
 
 
 @oneflow_export("stack")
+@stable_api
 def stack(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc],
     axis: int = 0,

@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from typing import Union
 
+import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-import oneflow._oneflow_internal as oneflow_api
 
 
 class _NormBase(Module):
@@ -37,6 +37,7 @@ class _NormBase(Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
+
         if self.affine:
             self.weight = flow.nn.Parameter(flow.Tensor(num_features))
             self.bias = flow.nn.Parameter(flow.Tensor(num_features))
@@ -90,6 +91,12 @@ class _NormBase(Module):
             error_msgs,
         )
 
+    def extra_repr(self):
+        return (
+            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "track_running_stats={track_running_stats}".format(**self.__dict__)
+        )
+
 
 class _BatchNorm(_NormBase):
     def __init__(
@@ -101,68 +108,37 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self._training_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
-            .Attr("training", True)
-            .Build()
-        )
-        self._testing_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Attr("training", False)
-            .Build()
-        )
 
     def forward(self, x):
         self._check_input_dim(x)
-
         if x.device == flow.device("cpu"):
-            if self.training:
-                reduce_axis = []
-                for dim in range(len(x.shape)):
-                    if dim != 1:
-                        reduce_axis.append(dim)
-                mean = x.mean(dim=reduce_axis, keepdim=False)
-                variance = x.var(dim=reduce_axis, keepdim=False)
+            reduce_axis = []
+            for dim in range(len(x.shape)):
+                if dim != 1:
+                    reduce_axis.append(dim)
+            mean = x.mean(dim=reduce_axis, keepdim=False)
+            variance = x.var(dim=reduce_axis, keepdim=False)
 
+            if self.training and self.track_running_stats:
                 running_mean = (
                     self.momentum * self.running_mean + (1 - self.momentum) * mean
                 )
                 running_var = (
                     self.momentum * self.running_var + (1 - self.momentum) * variance
                 )
-
-                # update training parameters/buffers
+                # update training buffers
                 self.__setattr__("running_mean", flow.Tensor(running_mean))
                 self.__setattr__("running_var", flow.Tensor(running_var))
 
             else:
-                mean = self.running_mean
-                variance = self.running_var
+                mean = mean if self.running_mean is None else self.running_mean
+                variance = variance if self.running_var is None else self.running_var
 
             axis = 1
             params_shape = [x.shape[axis]]
             weight = self.weight
             bias = self.bias
+
             if len(mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
                 nd_params_shape[axis] = params_shape[0]
@@ -191,15 +167,35 @@ class _BatchNorm(_NormBase):
             return affined
 
         else:
-            if self.training:
-                res = self._training_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
+            if self.track_running_stats:
+                return flow.F.normalization(
+                    x,
+                    self.running_mean,
+                    self.running_var,
+                    self.weight,
+                    self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                    momentum=self.momentum,
+                    is_training=self.training,
+                )
             else:
-                res = self._testing_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
-            return res
+                reduce_axis = []
+                for dim in range(len(x.shape)):
+                    if dim != 1:
+                        reduce_axis.append(dim)
+
+                return flow.F.normalization(
+                    x,
+                    x.mean(dim=reduce_axis, keepdim=False),
+                    x.var(dim=reduce_axis, keepdim=False),
+                    self.weight,
+                    self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                    momentum=self.momentum,
+                    is_training=self.training,
+                )
 
 
 @oneflow_export("nn.BatchNorm1d")

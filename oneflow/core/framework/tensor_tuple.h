@@ -28,8 +28,8 @@ class Tensor;
 class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
                           public std::enable_shared_from_this<TensorTuple> {
  public:
-  TensorTuple(const TensorTuple&) = delete;
-  TensorTuple(TensorTuple&) = delete;
+  // TensorTuple(const TensorTuple&) = delete;
+  // TensorTuple(TensorTuple&) = delete;
   TensorTuple() = default;
   TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size);
   TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list);

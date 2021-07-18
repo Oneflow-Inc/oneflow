@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_squeeze(test_case, device):
@@ -36,6 +37,13 @@ def _test_squeeze(test_case, device):
             1e-4,
         )
     )
+
+
+def _test_squeeze_1d_input(test_case, device):
+    np_arr = np.random.rand(10)
+    input = flow.Tensor(np_arr, device=flow.device(device))
+    output = flow.squeeze(input)
+    test_case.assertTrue(np.allclose(output.numpy(), np_arr, 1e-5, 1e-5))
 
 
 def _test_tensor_squeeze(test_case, device):
@@ -76,15 +84,12 @@ def _test_squeeze_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestSqueeze(flow.unittest.TestCase):
     def test_squeeze(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_squeeze,
+            _test_squeeze_1d_input,
             _test_squeeze_int,
             _test_tensor_squeeze,
             _test_squeeze_backward,
@@ -92,6 +97,26 @@ class TestSqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_flow_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_annotations={"dim": int,},
+                extra_generators={"dim": random(0, 6)},
+                device=device,
+            )
+
+    def test_flow_tensor_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_annotations={"dim": int},
+                extra_generators={"dim": random(0, 6)},
+                device=device,
+            )
 
 
 if __name__ == "__main__":

@@ -18,11 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void ScalarOpBase::InitFromOpConf() {
+Maybe<void> ScalarOpBase::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("scalar");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
-  ;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ScalarOpBase::InferOutBlobDescs(
@@ -39,7 +39,7 @@ Maybe<void> ScalarOpBase::InferOutBlobDescs(
 
 Maybe<void> ScalarOpBase::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   const Shape& in_shape = JUST(LogicalBlobDesc4Ibn("in")).shape();
   FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
     SbpSignatureBuilder().Split("in", i).Broadcast("scalar").Split("out", i).Build(

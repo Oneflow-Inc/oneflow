@@ -25,6 +25,8 @@ from oneflow.python.nn.modules.utils import (
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple, Sequence, Union
+import random
+import sys
 import traceback
 
 
@@ -85,11 +87,16 @@ class OfrecordRawDecoder(Module):
         shape: Sequence[int],
         dtype: flow.dtype,
         dim1_varying_length: bool = False,
+        truncate: bool = False,
         auto_zero_padding: bool = False,
         name: Optional[str] = None,
     ):
         super().__init__()
-
+        if auto_zero_padding:
+            print(
+                """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+                """
+            )
         self._op = (
             flow.builtin_op("ofrecord_raw_decoder", name)
             .Input("in")
@@ -98,7 +105,7 @@ class OfrecordRawDecoder(Module):
             .Attr("shape", shape)
             .Attr("data_type", dtype)
             .Attr("dim1_varying_length", dim1_varying_length)
-            .Attr("auto_zero_padding", auto_zero_padding)
+            .Attr("truncate", truncate or auto_zero_padding)
             .Build()
         )
 
@@ -375,13 +382,6 @@ class ImageResize(Module):
                 .Attr("interpolation_type", interpolation_type)
                 .Build()
             )
-            # TODO(Liang Depeng)
-            # scale = flow.tensor_buffer_to_tensor(
-            #     scale, dtype=flow.float32, instance_shape=(2,)
-            # )
-            # new_size = flow.tensor_buffer_to_tensor(
-            #     new_size, dtype=flow.int32, instance_shape=(2,)
-            # )
         else:
             if (
                 not isinstance(target_size, (list, tuple))
@@ -410,8 +410,19 @@ class ImageResize(Module):
             )
 
     def forward(self, input):
-        res = self._op(input)[0]
-        return res
+        res = self._op(input)
+        res_image = res[0]
+        if len(res) == 3:
+            new_size = flow.experimental.tensor_buffer_to_tensor(
+                res[1], dtype=flow.int32, instance_shape=(2,)
+            )
+            scale = flow.experimental.tensor_buffer_to_tensor(
+                res[2], dtype=flow.float32, instance_shape=(2,)
+            )
+        else:
+            new_size = None
+            scale = res[1]
+        return res_image, scale, new_size
 
 
 @oneflow_export("tmp.RawDecoder")
@@ -422,11 +433,22 @@ def raw_decoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ):
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     return OfrecordRawDecoder(
-        blob_name, shape, dtype, dim1_varying_length, auto_zero_padding, name
+        blob_name,
+        shape,
+        dtype,
+        dim1_varying_length,
+        truncate or auto_zero_padding,
+        name,
     ).forward(input_record)
 
 
@@ -454,3 +476,173 @@ def get_ofrecord_handle(
         shuffle_after_epoch,
         name,
     )()
+
+
+@oneflow_export("nn.image.flip")
+@experimental_api
+class ImageFlip(Module):
+    r"""This operator flips the images.
+
+    The flip code corresponds to the different flip mode:
+
+    0 (0x00): Non Flip
+
+    1 (0x01): Horizontal Flip
+
+    16 (0x10): Vertical Flip
+
+    17 (0x11): Both Horizontal and Vertical Flip
+
+    Args:
+        images: The input images.
+        flip_code: The flip code.
+
+    Returns:
+        The result image.
+
+    For example:
+    
+    .. code-block:: python
+        
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
+        >>> arr = np.array([
+        ...    [[[1, 2, 3], [3, 2, 1]],
+        ...     [[2, 3, 4], [4, 3, 2]]],
+        ...    [[[3, 4, 5], [5, 4, 3]],
+        ...     [[4, 5, 6], [6, 5, 4]]]])
+        >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
+        >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
+        >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
+        >>> output[0]
+        array([[[3., 2., 1.],
+                [1., 2., 3.]],
+        <BLANKLINE>
+               [[4., 3., 2.],
+                [2., 3., 4.]]], dtype=float32)
+        >>> output[1]
+        array([[[5., 4., 3.],
+                [3., 4., 5.]],
+        <BLANKLINE>
+               [[6., 5., 4.],
+                [4., 5., 6.]]], dtype=float32)
+    """
+
+    def __init__(self, flip_code):
+        super().__init__()
+        self.flip_code = flip_code
+
+    def forward(self, images):
+        flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
+
+        return flow.F.image_flip(images, flip_codes)
+
+
+@oneflow_export("nn.image.decode")
+@experimental_api
+class ImageDecode(Module):
+    def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_decode")
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("data_type", dtype)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+@oneflow_export("nn.image.normalize")
+@experimental_api
+class ImageNormalize(Module):
+    def __init__(self, std: Sequence[float], mean: Sequence[float]):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_normalize")
+            .Input("in")
+            .Output("out")
+            .Attr("std", std)
+            .Attr("mean", mean)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+@oneflow_export("nn.COCOReader")
+@experimental_api
+class COCOReader(Module):
+    def __init__(
+        self,
+        annotation_file: str,
+        image_dir: str,
+        batch_size: int,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        group_by_aspect_ratio: bool = True,
+        remove_images_without_annotations: bool = True,
+        stride_partition: bool = True,
+    ):
+        super().__init__()
+        if random_seed is None:
+            random_seed = random.randrange(sys.maxsize)
+        self._op = (
+            flow.builtin_op("COCOReader")
+            .Output("image")
+            .Output("image_id")
+            .Output("image_size")
+            .Output("gt_bbox")
+            .Output("gt_label")
+            .Output("gt_segm")
+            .Output("gt_segm_index")
+            .Attr("session_id", flow.current_scope().session_id)
+            .Attr("annotation_file", annotation_file)
+            .Attr("image_dir", image_dir)
+            .Attr("batch_size", batch_size)
+            .Attr("shuffle_after_epoch", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("group_by_ratio", group_by_aspect_ratio)
+            .Attr(
+                "remove_images_without_annotations", remove_images_without_annotations
+            )
+            .Attr("stride_partition", stride_partition)
+            .Build()
+        )
+
+    def forward(self):
+        res = self._op()
+        return res
+
+
+@oneflow_export("nn.image.batch_align")
+@experimental_api
+class ImageBatchAlign(Module):
+    def __init__(self, shape: Sequence[int], dtype: flow.dtype, alignment: int):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("image_batch_align")
+            .Input("in")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("data_type", dtype)
+            .Attr("alignment", alignment)
+            .Attr("dynamic_out", False)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

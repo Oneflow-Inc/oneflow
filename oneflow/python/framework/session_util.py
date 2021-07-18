@@ -220,6 +220,11 @@ class Session(object):
         if self.status_ is SessionStatus.RUNNING:
             self.Close()
 
+        if self.status_ != SessionStatus.CLOSED:
+            oneflow._oneflow_internal.ClearSessionById(self.id)
+
+        self.status_ = SessionStatus.CLOSED
+
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
@@ -230,11 +235,9 @@ class Session(object):
         self.ForceReleaseEagerBlobs()
         oneflow._oneflow_internal.StopLazyGlobalSession()
         oneflow._oneflow_internal.DestroyLazyGlobalSession()
-        self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow._oneflow_internal.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -428,6 +431,9 @@ class Session(object):
         self.cond_var_.notify()
         self.cond_var_.release()
 
+    def __del__(self):
+        self.TryClose()
+
 
 @oneflow_export("find_or_create_module")
 def api_find_or_create_module(
@@ -482,8 +488,12 @@ def api_clear_default_session() -> None:
 
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
-    session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+    is_multi_client = oneflow._oneflow_internal.IsMultiClient()
+    if not is_multi_client:
+        session_ctx.TryCloseDefaultSession()
+        session_ctx.OpenDefaultSession(
+            Session(oneflow._oneflow_internal.NewSessionId())
+        )
 
 
 @oneflow_export("sync_default_session")
@@ -501,33 +511,7 @@ def sync_default_session() -> None:
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        if env_util.default_env_proto.HasField("ctrl_bootstrap_conf"):
-            ctrl_bootstrap_conf = env_util.default_env_proto.ctrl_bootstrap_conf
-            assert ctrl_bootstrap_conf.HasField(
-                "node_size"
-            ) or ctrl_bootstrap_conf.HasField("num_process_per_node")
-            if ctrl_bootstrap_conf.HasField(
-                "node_size"
-            ) and ctrl_bootstrap_conf.HasField("num_process_per_node"):
-                assert (
-                    ctrl_bootstrap_conf.node_size
-                    * ctrl_bootstrap_conf.num_process_per_node.value
-                    == ctrl_bootstrap_conf.world_size
-                )
-            if ctrl_bootstrap_conf.HasField("node_size"):
-                config_proto.resource.machine_num = ctrl_bootstrap_conf.node_size
-            else:
-                assert (
-                    ctrl_bootstrap_conf.world_size
-                    % ctrl_bootstrap_conf.num_process_per_node.value
-                    == 0
-                )
-                config_proto.resource.machine_num = (
-                    ctrl_bootstrap_conf.world_size
-                    // ctrl_bootstrap_conf.num_process_per_node.value
-                )
-        else:
-            config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+        config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
 
 
 def _GetDefaultConfigProto():
@@ -538,13 +522,8 @@ def _GetDefaultConfigProto():
     else:
         config_proto.resource.cpu_device_num = 1
         config_proto.resource.gpu_device_num = 0
-    config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
-    config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
-
-
-session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 
 @oneflow_export("InitEagerGlobalSession")

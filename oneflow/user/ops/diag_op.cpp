@@ -22,9 +22,9 @@ REGISTER_USER_OP("diag")
     .Output("out")
     .Attr<int32_t>("diagonal", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
-      const ShapeView& in_shape = in->shape();
+      const ShapeView& in_shape = in.shape();
       const int32_t in_dim = in_shape.NumAxes();
       CHECK_GE_OR_RETURN(in_dim, 1);
       CHECK_LE_OR_RETURN(in_dim, 2);
@@ -43,7 +43,7 @@ REGISTER_USER_OP("diag")
         CHECK_GT_OR_RETURN(out_dim_vec[0], 0);
       }
 
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       out_desc->set_is_dynamic(false);
       *out_desc->mut_shape() = Shape(out_dim_vec);
       return Maybe<void>::Ok();
@@ -53,7 +53,7 @@ REGISTER_USER_OP("diag")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -63,9 +63,9 @@ REGISTER_USER_OP("diag_grad")
     .Attr<int32_t>("diagonal", 0)
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const Shape& in_shape = in->shape();
-      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      const Shape& in_shape = in.shape();
+      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
       return Maybe<void>::Ok();
     })
@@ -74,7 +74,7 @@ REGISTER_USER_OP("diag_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     });
 

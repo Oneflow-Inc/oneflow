@@ -75,6 +75,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> Clone() const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;
 
   // fields

@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace std {
 
@@ -57,6 +58,24 @@ struct hash<oneflow::ParallelBlobConf> {
 }  // namespace std
 
 namespace oneflow {
+
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
+  return lhs.parallel_type_case() == rhs.parallel_type_case();
+}
+
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
+bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
+  for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
+    if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
+  }
+  return true;
+}
+
+bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  return !(lhs == rhs);
+}
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
@@ -83,8 +102,6 @@ struct ReentrantLockBackEdge {
 std::string cluster_thrd_ids_key(const std::string& plan_name) {
   return plan_name + "_cluster_thrd_ids";
 }
-
-std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
 
 std::string ctrl_regst_desc_info_key(const std::string& plan_name) {
   return plan_name + "_ctrl_regst_desc_info_key";
@@ -172,7 +189,6 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
     Global<CtrlClient>::Get()->PushKV(block7chunk_key(plan_name, pair.first), pair.second);
   }
 
-  Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
                                     plan.ctrl_regst_desc_info());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
@@ -195,9 +211,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  NetTopo net_topo;
-  Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
-  *(plan->mutable_net_topo()) = net_topo;
   CtrlRegstDescInfo ctrl_regst_desc_info;
   Global<CtrlClient>::Get()->PullKV(ctrl_regst_desc_info_key(plan_name), &ctrl_regst_desc_info);
   *(plan->mutable_ctrl_regst_desc_info()) = ctrl_regst_desc_info;
@@ -380,7 +393,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   return Maybe<void>::Ok();
 }
 
-void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
+void MergePlan(Plan* plan, Plan&& other) {
   PbRpf<TaskProto>* dst_tasks = plan->mutable_task();
   PbRpf<TaskProto>* src_tasks = other.mutable_task();
   dst_tasks->Reserve(dst_tasks->size() + src_tasks->size());
@@ -402,17 +415,10 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
   }
 }
 
-void MergeSubPlanWithoutGenNetTopo(Plan* plan, std::vector<Plan>&& sub_plans) {
+void MergeSubPlan(Plan* plan, std::vector<Plan>&& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = std::move(sub_plans.at(0));
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlanWithoutGenNetTopo(plan, std::move(sub_plans.at(i)));
-  }
-}
-
-void MergePlan(Plan* plan, Plan&& other) {
-  MergePlanWithoutGenNetTopo(plan, std::move(other));
-  Compiler().GenNetTopo(plan);
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlan(plan, std::move(sub_plans.at(i))); }
 }
 
 void DumpCtrlRegstInfoToPlan(Plan* plan) {
@@ -484,22 +490,6 @@ void LinkTickTaskProto(Plan* plan, TaskProto* identity_tick, TaskProto* src_tick
   UpdateSoleObnRegstDescId(plan, identity_tick);
 }
 
-void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
-  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
-    auto* regst = &pair.second;
-    CHECK(regst->mem_case().has_host_mem());
-    CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
-    bool used_by_network = false;
-    for (int64_t consumer_task_id : regst->consumer_task_id()) {
-      const auto* consumer_task_proto = TaskProto4TaskId(consumer_task_id);
-      used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
-    }
-    regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
-  }
-}
-
 void LinkMainPlan(Plan* plan, Plan&& main_plan,
                   const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
@@ -539,7 +529,6 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
           plan, identity_tick,
           sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
           sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
-      FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
     }
   }
   {
@@ -1048,7 +1037,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* input_conf = input_op_conf.mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
   }
@@ -1086,7 +1075,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -1099,7 +1088,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     auto* output_conf = output_op_conf.mutable_output_conf();
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
-    InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+    CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -1122,8 +1111,9 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     CHECK(!job_desc.Bool("__is_user_function__"));
     jobs.emplace_back(new Job(*job));
   };
-  if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
-    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+
+  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_legacy_model_io()) {
+    if (Global<ResourceDesc, ForSession>::Get()->resource().enable_model_io_v2()) {
       MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
     } else {
       MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
@@ -1158,7 +1148,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-  MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
+  MergeSubPlan(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
   PlanUtil::SetForceInplaceMemBlock(&plan);

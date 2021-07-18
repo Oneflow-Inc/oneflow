@@ -56,16 +56,17 @@ REGISTER_USER_OP("where")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
       cond_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
+      const DataType& cond_dtype = ctx->InputDType("condition", 0);
       CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
+      const DataType& x_dtype = ctx->InputDType("x", 0);
+      CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
+      *ctx->OutputDType("out", 0) = x_dtype;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetWhereSbpSignatures);

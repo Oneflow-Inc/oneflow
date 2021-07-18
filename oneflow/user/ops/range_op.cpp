@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-REGISTER_USER_OP("range")
+REGISTER_NO_GRAD_USER_OP("range")
     .Output("out")
     .Attr<int64_t>("start")
     .Attr<int64_t>("delta")
@@ -37,7 +37,7 @@ REGISTER_USER_OP("range")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     });
 

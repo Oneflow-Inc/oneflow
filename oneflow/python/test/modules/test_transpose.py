@@ -73,10 +73,6 @@ def _test_transpose_backward_v2(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestTranspose(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()

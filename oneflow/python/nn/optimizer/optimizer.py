@@ -16,8 +16,9 @@ limitations under the License.
 
 import warnings
 from typing import Dict, Callable, Union, Any, Iterator
-from types import GeneratorType
+import collections
 
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 
@@ -28,7 +29,7 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
-        if isinstance(parameters, GeneratorType):
+        if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
             self._options = default_options
         else:  # Dict
@@ -39,6 +40,12 @@ class ParamGroup(object):
                 if key in parameters:
                     self._options[key] = parameters[key]
 
+    def __getitem__(self, key):
+        return self._options[key]
+
+    def __setitem__(self, key, value):
+        self._options[key] = value
+
     @property
     def options(self):
         return self._options
@@ -48,9 +55,11 @@ class ParamGroup(object):
         return self._parameters
 
 
+@oneflow_export("optim.Optimizer")
+@experimental_api
 class Optimizer(object):
     def __init__(self):
-        self._param_groups = list()
+        self.param_groups = list()
         self._default_options = dict()
         self._state = dict()
         self._state["step"] = 0
@@ -72,8 +81,30 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def zero_grad(self, set_to_none: bool = False):
+        r"""Sets the gradients of all optimized torch.Tensor s to zero.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                This will in general have lower memory footprint, and can modestly
+                improve performance. However, it changes certain behaviors.
+        For example:
+            1. When the user tries to access a gradient and perform manual ops on
+            it, a None attribute or a Tensor full of 0s will behave differently.
+
+            2. If the user requests zero_grad(set_to_none=True) followed by a
+            backward pass, grads are guaranteed to be None for params that did not
+            receive a gradient.
+
+            3. Optimizers have a different behavior if the gradient is 0 or None
+            (in one case it does the step with a gradient of 0 and in the other
+            it skips the step altogether).
+
+        Returns:
+            None
+
+        """
         all_grad_is_none = True
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
                     all_grad_is_none = False

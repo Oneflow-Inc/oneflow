@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("generate_random_batch_permutation_indices")
+REGISTER_NO_GRAD_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr<int64_t>("seed")
@@ -41,7 +41,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt32;
+      *ctx->OutputDType("y", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 

@@ -41,10 +41,11 @@ class SyncDynamicResizeOp : public Operator {
   SyncDynamicResizeOp() = default;
   ~SyncDynamicResizeOp() override = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollInputBn("size", false);
     EnrollOutputBn("out")->set_header_infered_before_compute(false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -61,7 +62,7 @@ class SyncDynamicResizeOp : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+      cfg::SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
   }
 

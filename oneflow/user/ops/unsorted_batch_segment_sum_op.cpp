@@ -23,37 +23,38 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     .Output("out")
     .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
-      CHECK_GE_OR_RETURN(segment_ids->shape().NumAxes(), 1);
-      CHECK_GE_OR_RETURN(data->shape().NumAxes(), segment_ids->shape().NumAxes());
-      CHECK_EQ_OR_RETURN(segment_ids->is_dynamic(), data->is_dynamic());
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
+      CHECK_GE_OR_RETURN(segment_ids.shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(data.shape().NumAxes(), segment_ids.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(segment_ids.is_dynamic(), data.is_dynamic());
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       CHECK_GE_OR_RETURN(num_segments, 1);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-      FOR_RANGE(int64_t, i, 0, segment_ids->shape().NumAxes() - 1) {
-        CHECK_EQ_OR_RETURN(segment_ids->shape().At(i), data->shape().At(i));
+      FOR_RANGE(int64_t, i, 0, segment_ids.shape().NumAxes() - 1) {
+        CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i));
       }
 
-      DimVector dim_vec(data->shape().dim_vec());
-      dim_vec.at(segment_ids->shape().NumAxes() - 1) = num_segments;
+      DimVector dim_vec(data.shape().dim_vec());
+      dim_vec.at(segment_ids.shape().NumAxes() - 1) = num_segments;
       *out->mut_shape() = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
-      CHECK_OR_RETURN(IsIndexDataType(segment_ids->data_type()));
-      *out->mut_data_type() = data->data_type();
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_OR_RETURN(IsIndexDataType(segment_ids.data_type()));
+      *out->mut_data_type() = data.data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t segment_ids_num_axes =
@@ -78,7 +79,8 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     });
 
 REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
       if (need_grad_data) {
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
@@ -91,6 +93,7 @@ REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

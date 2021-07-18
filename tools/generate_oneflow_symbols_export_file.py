@@ -6,9 +6,10 @@ import importlib
 import platform
 
 
-project_source_dir = sys.argv[1]
-python_dir = project_source_dir + "/oneflow/python"
+python_dir = sys.argv[1]
 output_filepath = sys.argv[2]
+
+filemode = sys.argv[3]
 
 
 def GetImportPath(filepath):
@@ -44,7 +45,8 @@ for py_script in RecursiveFindPythonFile(python_dir):
 
 python_scripts = "from __future__ import absolute_import\n"
 for filepath in import_filepaths:
-    if "onnx" in filepath and platform.system() == "Darwin":
-        continue
-    python_scripts += "import oneflow.python.%s\n" % GetImportPath(filepath)
+    if filemode != "compatible":
+        python_scripts += "import oneflow.python.%s\n" % GetImportPath(filepath)
+    else:
+        python_scripts += "import oneflow.compatible.%s\n" % GetImportPath(filepath)
 open(output_filepath, "w").write(python_scripts)

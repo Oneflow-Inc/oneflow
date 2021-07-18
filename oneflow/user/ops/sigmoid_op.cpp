@@ -39,7 +39,7 @@ REGISTER_USER_OP("sigmoid")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -67,13 +67,13 @@ REGISTER_USER_OP("sigmoid_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *ctx->Dtype4ArgNameAndIndex("y", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("sigmoid").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) {
+                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper sigmoid_grad_op =
@@ -85,6 +85,7 @@ REGISTER_USER_OP_GRAD("sigmoid").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(sigmoid_grad_op.output("dx", 0), "in", 0);
     AddOp(sigmoid_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

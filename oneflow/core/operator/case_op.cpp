@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void CaseOp::InitFromOpConf() {
+Maybe<void> CaseOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollRepeatedOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -54,7 +55,7 @@ Maybe<void> CaseOp::InferOutBlobDescs(
 
 Maybe<void> CaseOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

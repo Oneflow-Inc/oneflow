@@ -51,10 +51,11 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
   ~ImageDecoderRandomCropResizeOp() override = default;
 
  private:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in", false);
     EnrollOutputBn("out", false);
     EnrollTmpBn("tmp");
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -82,7 +83,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+      cfg::SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split("in", 0)
         .Split("out", 0)
@@ -126,11 +127,11 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
-    FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+    JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
       auto it = bn2parallel_desc.find(bn);
       CHECK_OR_RETURN(it != bn2parallel_desc.end());
       return it->second;
-    });
+    }));
     return Maybe<void>::Ok();
   }
 };

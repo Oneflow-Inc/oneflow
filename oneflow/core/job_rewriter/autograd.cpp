@@ -135,7 +135,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     constant_like_conf->set_float_operand(origin_grad);
   }
   AddOp(constant_like_op);
-  ParallelDistribution broadcast_parallel_distribution;
+  cfg::ParallelDistribution broadcast_parallel_distribution;
   for (int32_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
     broadcast_parallel_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
   }
@@ -365,7 +365,7 @@ Maybe<void> MakeGetterLossOpNode4OpName(
   return Maybe<void>::Ok();
 }
 
-bool AllSplitDistribution(const ParallelDistribution& parallel_distribution) {
+bool AllSplitDistribution(const cfg::ParallelDistribution& parallel_distribution) {
   for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
     if (!parallel_distribution.sbp_parallel(i).has_split_parallel()) { return false; }
   }
@@ -401,11 +401,11 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
   }
 }
 
-void CalcFwBwObaPairs(const OpGraph& op_graph,
-                      const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
-                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
-                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
-                      const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
+Maybe<void> CalcFwBwObaPairs(const OpGraph& op_graph,
+                             const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
+                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
+                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
+                             const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
   HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
   op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
     const auto& op = op_node->op();
@@ -432,7 +432,7 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
   for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
     CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
   }
-  job_builder.ForEachOperator([&](const Operator& op) {
+  JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
     for (const auto& ibn : op.input_bns()) {
       const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
       if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
@@ -457,7 +457,9 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
         *pair->mutable_second() = clone_out_oba_it->second;
       }
     }
-  });
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
 }
 
 void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
@@ -506,15 +508,15 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
 void ForEachAggregatedParamGroup(
     const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     const std::function<void(const ParallelDesc& parallel_desc,
-                             const ParallelDistribution& parallel_distribution,
+                             const cfg::ParallelDistribution& parallel_distribution,
                              const std::vector<LogicalBlobId>& libs)>& Handler) {
   HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
-  HashMap<std::pair<ParallelDesc, ParallelDistribution>, std::vector<LogicalBlobId>> group;
+  HashMap<std::pair<ParallelDesc, cfg::ParallelDistribution>, std::vector<LogicalBlobId>> group;
   for (auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     const ParallelDesc& parallel_desc = model_op_node->parallel_desc();
-    const ParallelDistribution& parallel_distribution =
+    const cfg::ParallelDistribution& parallel_distribution =
         model_op_node->ParallelDistribution4Lbi(lbi);
     group[std::make_pair(parallel_desc, parallel_distribution)].push_back(lbi);
   }
@@ -574,7 +576,7 @@ std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
   return parallel_cast_op.output("out", 0);
 }
 
-bool IsBroadcast(const ParallelDistribution& parallel_distribution,
+bool IsBroadcast(const cfg::ParallelDistribution& parallel_distribution,
                  const ParallelDesc& parallel_desc) {
   if (parallel_desc.parallel_num() == 1) { return true; }
   for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
@@ -595,7 +597,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   std::vector<ParallelConf> param_group_parallel_confs;
   ForEachAggregatedParamGroup(
       op_graph, *lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const ParallelDistribution& parallel_distribution,
+      [&](const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& parallel_distribution,
           const std::vector<LogicalBlobId>& lbis) {
         if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
           all_same_parallel_desc = false;
@@ -845,8 +847,8 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
     }
   }
   OpBlobArgPairs fw_bw_oba_pairs;
-  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
-                   *job_builder, &fw_bw_oba_pairs);
+  JUST(CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi,
+                        out_oba2clone_bw_add_out_lbi, *job_builder, &fw_bw_oba_pairs));
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, identical_sbp_oba_pairs);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
   return Maybe<void>::Ok();
@@ -1105,7 +1107,7 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
   std::vector<ParallelConf> param_group_parallel_confs;
   ForEachAggregatedParamGroup(
       op_graph, lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const ParallelDistribution& parallel_distribution,
+      [&](const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& parallel_distribution,
           const std::vector<LogicalBlobId>& lbis) {
         if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
           all_same_parallel_desc = false;

@@ -22,9 +22,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
-  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("count", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
@@ -37,7 +37,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     *output_shape = Shape::Ones(num_axes);
   } else {
     const ParallelDesc& parallel_desc = ctx->parallel_desc();
-    const ParallelDistribution& in_parallel_distribution =
+    const cfg::ParallelDistribution& in_parallel_distribution =
         ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
     DimVector dim_vec = input_shape.dim_vec();
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
@@ -88,9 +88,9 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
 }
 
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
+  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
   return Maybe<void>::Ok();
 }
 
@@ -101,9 +101,9 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
 
   return Maybe<void>::Ok();
 }
@@ -137,10 +137,10 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
 
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
 
   return Maybe<void>::Ok();
 }
@@ -228,8 +228,9 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_min_device_stage_grad")
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_max_device_stage_grad")
 
-void GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
-                                         const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
+                                                const user_op::UserOpWrapper& op,
+                                                user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op =
@@ -243,13 +244,15 @@ void GenBackwardOpConf4ReduceDeviceStage(const std::string& op_type_name,
     op.BindGradTensorWithOpInput(grad_op.output("in_diff", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)           \
-  REGISTER_USER_OP_GRAD(op_type_name)                                                        \
-      .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) { \
-        return GenBackwardOpConf4ReduceDeviceStage(grad_op_type_name, op, AddOp);            \
-      });
+#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)      \
+  REGISTER_USER_OP_GRAD(op_type_name)                                                   \
+      .SetGenBackwardOpConfFn(                                                          \
+          [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> { \
+            return GenBackwardOpConf4ReduceDeviceStage(grad_op_type_name, op, AddOp);   \
+          });
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_min_device_stage", "reduce_min_device_stage_grad")
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max_device_stage_grad")
 
@@ -264,10 +267,11 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
       .SetDataTypeInferFn(InferReduceGlobalStageDtypeFn)                          \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
-                              const user_op::UserOpConfWrapper&) {                \
+                              const user_op::UserOpConfWrapper&) -> Maybe<void> { \
         user_op::InputArgModifier* device_count_modifier =                        \
             GetInputArgModifierFn("device_count", 0);                             \
         device_count_modifier->set_requires_grad(false);                          \
+        return Maybe<void>::Ok();                                                 \
       })                                                                          \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                  \
         ctx->NewBuilder()                                                         \
@@ -297,8 +301,9 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_max_global_stage_grad")
 
-void GenBackwardOpConf4ReduceGlobalStage(const std::string& op_type_name,
-                                         const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenBackwardOpConf4ReduceGlobalStage(const std::string& op_type_name,
+                                                const user_op::UserOpWrapper& op,
+                                                user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op =
@@ -313,13 +318,15 @@ void GenBackwardOpConf4ReduceGlobalStage(const std::string& op_type_name,
     op.BindGradTensorWithOpInput(grad_op.output("in_diff", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)           \
-  REGISTER_USER_OP_GRAD(op_type_name)                                                        \
-      .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) { \
-        return GenBackwardOpConf4ReduceGlobalStage(grad_op_type_name, op, AddOp);            \
-      });
+#define REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD(op_type_name, grad_op_type_name)      \
+  REGISTER_USER_OP_GRAD(op_type_name)                                                   \
+      .SetGenBackwardOpConfFn(                                                          \
+          [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> { \
+            return GenBackwardOpConf4ReduceGlobalStage(grad_op_type_name, op, AddOp);   \
+          });
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD("reduce_min_global_stage", "reduce_min_global_stage_grad")
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP_GRAD("reduce_max_global_stage", "reduce_max_global_stage_grad")
 

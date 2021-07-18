@@ -27,11 +27,12 @@ Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& G
 
 }  // namespace
 
-void AccTickOp::InitFromOpConf() {
+Maybe<void> AccTickOp::InitFromOpConf() {
   CHECK(op_conf().has_acc_tick_conf());
 
   EnrollInputBn("one", false);
   EnrollOutputBn("acc", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> AccTickOp::InferLogicalOutBlobDescs(
@@ -69,7 +70,7 @@ Maybe<void> AccTickOp::InferOpTimeShape(
 
 Maybe<void> AccTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

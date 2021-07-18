@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void SinkTickOp::InitFromOpConf() {
+Maybe<void> SinkTickOp::InitFromOpConf() {
   CHECK(op_conf().has_sink_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -47,7 +48,7 @@ Maybe<void> SinkTickOp::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SinkTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

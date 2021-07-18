@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("min_max_observer")
+REGISTER_NO_GRAD_USER_OP("min_max_observer")
     .Input("in")
     .Output("scale")
     .Output("zero_point")
@@ -51,10 +51,11 @@ REGISTER_USER_OP("min_max_observer")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
-      CHECK(in != nullptr);
+      CHECK_OR_RETURN(in != nullptr);
       in->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // NOTE(Liang Depeng): input needs to be broadcast in order to accurately calculate the
@@ -75,8 +76,8 @@ REGISTER_USER_OP("min_max_observer")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("scale", 0) = ctx->InputDType("in", 0);
+      *ctx->OutputDType("zero_point", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 

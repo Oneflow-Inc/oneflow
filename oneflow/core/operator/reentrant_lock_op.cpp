@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void ReentrantLockOp::InitFromOpConf() {
+Maybe<void> ReentrantLockOp::InitFromOpConf() {
   EnrollInputBn("start", false);
   if (op_conf().reentrant_lock_conf().has_end()) { EnrollInputBn("end", false); }
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -54,7 +55,7 @@ Maybe<void> ReentrantLockOp::InferOutBlobDescs(
 
 Maybe<void> ReentrantLockOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

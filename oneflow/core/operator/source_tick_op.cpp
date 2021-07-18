@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void SourceTickOp::InitFromOpConf() {
+Maybe<void> SourceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_source_tick_conf());
   CHECK(op_conf().ctrl_in_op_name().empty());
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
@@ -43,7 +44,7 @@ Maybe<void> SourceTickOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SourceTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SourceTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

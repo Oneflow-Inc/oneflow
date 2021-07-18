@@ -157,14 +157,9 @@ def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_numa_aware_cuda_malloc_host, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_numa_aware_cuda_malloc_host(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_numa_aware_cuda_malloc_host = val
+    print(
+        "'enable_numa_aware_cuda_malloc_host' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 @oneflow_export("config.compute_thread_pool_size")
@@ -304,44 +299,10 @@ def enable_debug_mode(val):
     sess.config_proto.resource.enable_debug_mode = val
 
 
-@oneflow_export("config.save_downloaded_file_to_local_fs")
-def api_save_downloaded_file_to_local_fs(val: bool = True) -> None:
-    r"""Whether or not save downloaded file to local file system.
-
-    Args:
-        val (bool, optional): True or False. Defaults to True.
-    """
-    return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def save_downloaded_file_to_local_fs(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.io_conf.save_downloaded_file_to_local_fs = val
-
-
-@oneflow_export("config.persistence_buf_byte")
-def api_persistence_buf_byte(val: int) -> None:
-    r"""Set up buffer size for persistence.
-
-    Args:
-        val (int): e.g. 1024(bytes)
-    """
-    return enable_if.unique([persistence_buf_byte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def persistence_buf_byte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.io_conf.persistence_buf_byte = val
-
-
 @oneflow_export("config.legacy_model_io_enabled")
 def api_legacy_model_io_enabled():
     sess = session_ctx.GetDefaultSession()
-    return sess.config_proto.io_conf.enable_legacy_model_io
+    return sess.config_proto.resource.enable_legacy_model_io
 
 
 @oneflow_export("config.enable_legacy_model_io")
@@ -358,7 +319,7 @@ def api_enable_legacy_model_io(val: bool = True):
 def enable_legacy_model_io(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.enable_legacy_model_io = val
+    sess.config_proto.resource.enable_legacy_model_io = val
 
 
 @oneflow_export("config.enable_model_io_v2")
@@ -375,7 +336,7 @@ def api_enable_model_io_v2(val):
 def enable_model_io_v2(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.io_conf.enable_model_io_v2 = val
+    sess.config_proto.resource.enable_model_io_v2 = val
 
 
 @oneflow_export("config.collect_act_event")

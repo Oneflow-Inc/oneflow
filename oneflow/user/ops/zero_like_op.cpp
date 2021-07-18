@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("zero_like")
+REGISTER_NO_GRAD_USER_OP("zero_like")
     .Input("like")
     .Output("out")
     .SetOutputBufferNum(1)
@@ -26,7 +26,7 @@ REGISTER_USER_OP("zero_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("ssp_variable_proxy")
+REGISTER_NO_GRAD_USER_OP("ssp_variable_proxy")
     .Input("var")
     .Output("ref")
     .Output("value")
@@ -42,15 +42,16 @@ REGISTER_USER_OP("ssp_variable_proxy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("ref", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
-      *ctx->Dtype4ArgNameAndIndex("value", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
+      *ctx->OutputDType("ref", 0) = ctx->InputDType("var", 0);
+      *ctx->OutputDType("value", 0) = ctx->InputDType("var", 0);
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("ref", 0);
-      CHECK(out_modifier != nullptr);
+      CHECK_OR_RETURN(out_modifier != nullptr);
       out_modifier->set_is_mutable(true);
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

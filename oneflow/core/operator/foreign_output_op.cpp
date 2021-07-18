@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void ForeignOutputOp::InitFromOpConf() {
+Maybe<void> ForeignOutputOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_output_conf());
   EnrollInputBn("in");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ForeignOutputOp::InferLogicalOutBlobDescs(
@@ -39,7 +40,7 @@ Maybe<void> ForeignOutputOp::InferOutBlobDescs(
 
 Maybe<void> ForeignOutputOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

@@ -9,11 +9,8 @@ parser.add_argument("--cuda", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
 args = parser.parse_args()
 
-if args.xla:
-    assert args.cuda
-
 local_label = ""
-version = f"0.3.5"
+version = f"0.5.0"
 
 # set version if release of nightly
 assert (
@@ -33,10 +30,10 @@ if args.cuda:
     compute_platform = "".join(args.cuda.split("."))
     assert len(compute_platform) == 3, compute_platform
     compute_platform = "cu" + compute_platform
-    if args.xla:
-        compute_platform += ".xla"
 else:
     compute_platform = "cpu"
+if args.xla:
+    compute_platform += ".xla"
 assert compute_platform
 version += f"+{compute_platform}"
 
