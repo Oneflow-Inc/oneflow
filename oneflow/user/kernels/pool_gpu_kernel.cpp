@@ -81,7 +81,6 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   static std::shared_ptr<GPUPoolOpKernelState> FromKernelComputeContext(
       const int32_t& dim, const std::string& pooling_type, user_op::KernelComputeContext* ctx) {
     if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
-    const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");

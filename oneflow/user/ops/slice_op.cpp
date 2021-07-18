@@ -213,7 +213,7 @@ Maybe<void> GetSliceUpdateOpSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("slice_grad")
@@ -227,6 +227,7 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
