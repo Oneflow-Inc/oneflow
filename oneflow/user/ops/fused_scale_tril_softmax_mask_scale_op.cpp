@@ -43,10 +43,11 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-      CHECK(mask_modifier != nullptr);
+      CHECK_OR_RETURN(mask_modifier != nullptr);
       mask_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
@@ -102,7 +103,8 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
     });
 
 REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_scale")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -118,6 +120,7 @@ REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_scale")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

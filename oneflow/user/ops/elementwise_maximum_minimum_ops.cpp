@@ -69,7 +69,7 @@ Maybe<void> InferDataType(InferContext* ctx) {
 }
 
 user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
-  return [=](user_op::BackwardOpConfContext* ctx) -> void {
+  return [=](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
     const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
     const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
     const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
@@ -95,6 +95,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
         return ctx->GetOp(grad_op_name).output("dy", 0);
       });
     }
+    return Maybe<void>::Ok();
   };
 }
 
