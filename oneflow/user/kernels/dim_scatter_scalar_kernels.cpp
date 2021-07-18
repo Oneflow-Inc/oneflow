@@ -13,17 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/dim_scatter_scalar.h"
+#include "oneflow/user/kernels/dim_scatter_scalar_kernel_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class CpuDimScatterScalarUpdateKernel final : public user_op::OpKernel {
+class DimScatterUpdateScalarKernel final : public user_op::OpKernel {
  public:
-  CpuDimScatterScalarUpdateKernel() = default;
-  ~CpuDimScatterScalarUpdateKernel() = default;
+  DimScatterUpdateScalarKernel() = default;
+  ~DimScatterUpdateScalarKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -62,25 +62,34 @@ class CpuDimScatterScalarUpdateKernel final : public user_op::OpKernel {
 
     int64_t upper_bound = input_tensor->shape().At(dim);
 
-    ScatterScalarUpdateFunctor<IN_T, IDX_T>(idx_nd_helper, output_nd_helper, ndim,
-                                            index_tensor->shape().elem_cnt(), dim, upper_bound,
-                                            index, src_scalar, output);
+    DimScatterUpdateScalarFunctor<device_type, IN_T, IDX_T>()(
+        ctx->device_ctx(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
+        dim, upper_bound, index, src_scalar, output);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SCATTERSCALAR_KERNEL(device, dtype, itype)                          \
+#define REGISTER_SCATTERSCALAR_KERNEL(device, dtype, itype)                              \
   REGISTER_USER_KERNEL("dim_scatter_scalar_update")                                      \
-      .SetCreateFn<CpuDimScatterScalarUpdateKernel<device, dtype, itype>>()              \
+      .SetCreateFn<DimScatterUpdateScalarKernel<device, dtype, itype>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int32_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int64_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int32_t);
-REGISTER_CPU_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int64_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int32_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, float, int64_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int32_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kCPU, double, int64_t);
+
+#ifdef WITH_CUDA
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int32_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float, int64_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int32_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, float16, int64_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int32_t);
+REGISTER_SCATTERSCALAR_KERNEL(DeviceType::kGPU, double, int64_t);
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow

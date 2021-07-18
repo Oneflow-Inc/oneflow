@@ -27,15 +27,31 @@ namespace user_op {
 
 constexpr int kDimGatherMaxDimCount = 8;
 
+#define INSTANTIATE_DIM_SCATTER_UPDATE_SCARLAR_FUNCTORS(device_type)            \
+  template struct DimScatterUpdateScalarFunctor<device_type, int32_t, int32_t>; \
+  template struct DimScatterUpdateScalarFunctor<device_type, float, int32_t>;   \
+  template struct DimScatterUpdateScalarFunctor<device_type, double, int32_t>;  \
+  template struct DimScatterUpdateScalarFunctor<device_type, int32_t, int64_t>; \
+  template struct DimScatterUpdateScalarFunctor<device_type, float, int64_t>;   \
+  template struct DimScatterUpdateScalarFunctor<device_type, double, int64_t>;
+
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+struct DimScatterUpdateScalarFunctor final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
+                  const int64_t elem_cnt, const int32_t dim, int64_t upper_bound,
+                  const IDX_T* index, const IN_T src, IN_T* output);
+};
+
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void ScatterScalarUpdateFunctor(const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
-                                               const DimOpIndexNdHelper<IDX_T>& output_nd_helper,
-                                               const int ndim, const int64_t elem_cnt,
-                                               const int32_t dim, int64_t upper_bound,
-                                               const IDX_T* index, const IN_T src, IN_T* output) {
+OF_DEVICE_FUNC void DoScatterUpdateScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
+                                                 const DimOpIndexNdHelper<IDX_T>& output_nd_helper,
+                                                 const int ndim, const int64_t elem_cnt,
+                                                 const int32_t dim, int64_t upper_bound,
+                                                 const IDX_T* index, const IN_T src, IN_T* output) {
   XPU_1D_KERNEL_LOOP(idx_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
 
