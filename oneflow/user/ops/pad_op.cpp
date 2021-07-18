@@ -29,8 +29,8 @@ REGISTER_USER_OP("pad")
       const Shape& x_shape = ctx->InputShape("x", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ(padding_before.size(), x_shape.NumAxes());
-      CHECK_EQ(padding_after.size(), x_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_before.size(), x_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_after.size(), x_shape.NumAxes());
       DimVector y_dim_vec(x_shape.NumAxes());
       FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
         y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
@@ -68,8 +68,8 @@ REGISTER_USER_OP("pad_grad")
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ(padding_before.size(), dy_shape.NumAxes());
-      CHECK_EQ(padding_after.size(), dy_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_before.size(), dy_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_after.size(), dy_shape.NumAxes());
       DimVector dx_dim_vec(dy_shape.NumAxes());
       FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
         dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];

@@ -67,7 +67,7 @@ REGISTER_USER_OP_GRAD("parallel_cast")
           ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
                                                 "in", 0);
         } else {
-          CHECK(IsValidSbpParallelString(grad_sbp_parallel_str));
+          CHECK_OR_RETURN(IsValidSbpParallelString(grad_sbp_parallel_str));
           const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
           ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
             return builder.OpTypeName("parallel_cast")

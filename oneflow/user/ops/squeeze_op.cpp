@@ -23,8 +23,8 @@ Maybe<void> TransformNegativeAxesToPositive(const std::vector<int32_t>& axes_vec
                                             const int32_t num_axes, AxisVector* fixed_axes_vec) {
   fixed_axes_vec->resize(axes_vec.size());
   FOR_RANGE(size_t, i, 0, fixed_axes_vec->size()) {
-    CHECK_GE(axes_vec[i], -num_axes);
-    CHECK_LT(axes_vec[i], num_axes);
+    CHECK_GE_OR_RETURN(axes_vec[i], -num_axes);
+    CHECK_GE_OR_RETURN(axes_vec[i], num_axes);
     fixed_axes_vec->at(i) = axes_vec[i] >= 0 ? axes_vec[i] : axes_vec[i] + num_axes;
   }
   return Maybe<void>::Ok();
