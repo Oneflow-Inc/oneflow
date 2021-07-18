@@ -135,3 +135,22 @@ class SGD(Optimizer):
 
             self._state["step"] = self._state["step"] + 1
             return loss
+    
+    def add_to_train_config(self, train_conf, var2var_op_name_dict):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            lr = param_group["lr"]
+            beta = param_group["momentum"]
+            scale = param_group["scale"]
+
+            optimizer_conf.set_base_learning_rate(lr)
+            if beta == 0:
+                optimizer_conf.mutable_naive_conf()
+            else:
+                optimizer_conf.mutable_momentum_conf().set_beta(beta)
+
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+                optimizer_conf.add_variable_op_names(var2var_op_name_dict[param])
+

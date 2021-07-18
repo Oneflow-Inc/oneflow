@@ -23,6 +23,10 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 super().__init__()
                 self.para0 = flow.nn.Parameter(flow.Tensor(1, 4))
                 self.para1 = flow.nn.Parameter(flow.Tensor(1, 4))
+                self.para2 = flow.nn.Parameter(flow.Tensor(1, 4))
+                self.para2.requires_grad_(False)
+                self.para3 = flow.nn.Parameter(flow.Tensor(1, 4))
+                self.para4 = flow.nn.Parameter(flow.Tensor(1, 4))
 
             def forward(self, x):
                 return x
@@ -32,10 +36,11 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         momentum = 0.2
         scale = 0.3
         sgd0 = flow.optim.SGD(
-            [{"params": [m.para0], "lr": learning_rate, "momentum": momentum, "scale": scale}]
+            [{"params": [m.para0, m.para1, m.para2], "lr": learning_rate, "momentum": momentum, "scale": scale}]
         )
         sgd1 = flow.optim.SGD(
-            [{"params": [m.para1], "lr": learning_rate, "momentum": momentum, "scale": scale}]
+            [{"params": [m.para3], "lr": learning_rate, "momentum": momentum, "scale": scale},
+             {"params": [m.para4], "lr": learning_rate, "momentum": momentum, "scale": scale}]
         )
 
         class CustomGraph0(flow.nn.Graph):
@@ -52,6 +57,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         g = CustomGraph0()
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        g._preprocess_state()
         g._complete_graph_config()
         print(repr(g))
         print("g.config.proto ", g.config.proto)
