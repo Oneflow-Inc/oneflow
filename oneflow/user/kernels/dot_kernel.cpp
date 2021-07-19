@@ -24,17 +24,12 @@ namespace {
 template<typename T>
 T dot_naive(const int64_t n, const T* x, int64_t incx, const T* y, int64_t incy) {
   T sum = (T)(0);
-
-  if (n == 1) {
-    incx = 1;
-    incy = 1;
-  }
-
+  
   for (int64_t i = 0; i < n; i++) { sum += x[i * incx] * y[i * incy]; }
   return sum;
 }
 
-template<DeviceType device_type, typename T>
+template<typename T>
 class DotCpuKernel final : public user_op::OpKernel {
  public:
   DotCpuKernel() = default;
@@ -51,9 +46,9 @@ class DotCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DOT_CPU_KERNEL(device, dtype)                                            \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotCpuKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                 \
+#define REGISTER_DOT_CPU_KERNEL(device, dtype)                                     \
+  REGISTER_USER_KERNEL("dot").SetCreateFn<DotCpuKernel<dtype>>().SetIsMatchedHob(  \
+      (user_op::HobDeviceTag() == device)                                          \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, float)
