@@ -180,6 +180,14 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
 DstFileDict.save()
 import sys
 
+if sys.platform == "darwin":
+    subprocess.check_call(
+        f"/usr/bin/python3 -m isort . --quiet", shell=True, cwd=args.out_dir
+    )
+else:
+    subprocess.check_call(
+        f"{sys.executable} -m isort . --quiet", shell=True, cwd=args.out_dir
+    )
 subprocess.check_call(
     f"{sys.executable} -m black . --quiet", shell=True, cwd=args.out_dir
 )
