@@ -111,7 +111,7 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
 
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            spatial_size = np.random.randint(0, 6)
+            spatial_size = np.random.randint(1, 6)
             test_module_against_pytorch(
                 test_case,
                 "nn.ConstantPad2d",
@@ -134,7 +134,7 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
 class TestConstantPad3dModule(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            spatial_size = np.random.randint(0, 6)
+            spatial_size = np.random.randint(1, 6)
             test_module_against_pytorch(
                 test_case,
                 "nn.ConstantPad3d",
