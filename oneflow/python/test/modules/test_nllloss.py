@@ -316,6 +316,7 @@ def _test_nllloss_bert_sum(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestNLLLossModule(flow.unittest.TestCase):
     def test_nllloss(test_case):
         arg_dict = OrderedDict()
