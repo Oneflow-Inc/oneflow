@@ -81,7 +81,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-  OF_UNIMPLEMENTED();
+  return Interpret(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
