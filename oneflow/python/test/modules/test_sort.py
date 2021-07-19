@@ -60,6 +60,7 @@ def _test_tensor_sort(test_case, data_shape, axis, descending, data_type, device
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSort(flow.unittest.TestCase):
     def test_sort(test_case):
         arg_dict = OrderedDict()
