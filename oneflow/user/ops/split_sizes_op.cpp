@@ -66,7 +66,7 @@ namespace oneflow {
 
     REGISTER_USER_OP("split_sizes")
     .Input("in")
-    .Output("out")
+    .OutputWithMinimum("out", 1)
     .Attr<int64_t>("axis")
     .Attr<std::vector<int64_t>>("sizes")
     .SetTensorDescInferFn(InferTensorDesc)

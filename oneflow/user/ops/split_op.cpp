@@ -45,8 +45,6 @@ namespace oneflow {
                 printf("after mut\n");
             }
             printf("in inferTensorDesc\n");
-
-
             return Maybe<void>::Ok();
         }
 
@@ -83,7 +81,7 @@ namespace oneflow {
 
     REGISTER_USER_OP("split")
     .Input("in")
-    .Output("out")
+    .OutputWithMinimum("out", 1)
     .Attr<int64_t>("axis")
     .Attr<int64_t>("sections")
     .SetTensorDescInferFn(InferTensorDesc)
