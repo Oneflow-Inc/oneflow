@@ -38,10 +38,7 @@ def _test_softplus_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class Testsoftplus(flow.unittest.TestCase):
     def test_softplus(test_case):
         arg_dict = OrderedDict()

@@ -105,10 +105,7 @@ def _test_ReplicationPad2d(test_case, shape, padding, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-3, 1e-3))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestReplicationPad2dModule(flow.unittest.TestCase):
     def test_ReplicationPad2d(test_case):
         arg_dict = OrderedDict()

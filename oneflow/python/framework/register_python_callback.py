@@ -20,6 +20,3 @@ import oneflow.python.eager.interpreter_callback as interpreter_callback
 import oneflow._oneflow_internal
 
 python_callback.interpreter_callback = interpreter_callback
-oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
-    python_callback.global_python_callback
-)
