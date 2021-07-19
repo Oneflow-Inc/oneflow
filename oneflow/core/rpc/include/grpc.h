@@ -39,17 +39,14 @@ class GrpcCtrlClient final : public CtrlClient {
   void PushKV(const std::string& k, const std::string& v) override;
   void PushKV(const std::string& k, const PbMessage& msg) override;
   void PushMasterKV(const std::string& k, const PbMessage& msg) override;
-  void PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) override;
 
   void ClearKV(const std::string& k) override;
   void ClearMasterKV(const std::string& k) override;
-  void ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) override;
 
   void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) override;
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  void PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) override;
   void PushActEvent(const ActEvent&) override;
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;

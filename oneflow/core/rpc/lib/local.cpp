@@ -98,18 +98,12 @@ void LocalCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void LocalCtrlClient::PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) {
-  PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
-}
-
 void LocalCtrlClient::ClearKV(const std::string& k) {
   std::unique_lock<std::mutex> lck(kv_mtx_);
   kv_.erase(k);
 }
 
 void LocalCtrlClient::ClearMasterKV(const std::string& k) { ClearKV(k); }
-
-void LocalCtrlClient::ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) { ClearKV(k); }
 
 void LocalCtrlClient::PullKV(const std::string& k,
                              std::function<void(const std::string&)> VGetter) {
@@ -135,10 +129,6 @@ void LocalCtrlClient::PullKV(const std::string& k, PbMessage* msg) {
 }
 
 void LocalCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
-  PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
-}
-
-void LocalCtrlClient::PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
@@ -209,15 +199,9 @@ class DryRunCtrlClient : public CtrlClient {
   void PushMasterKV(const std::string& k, const PbMessage& msg) override {
     local_ctrl_client_->PushMasterKV(k, msg);
   }
-  void PushKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, const PbMessage& msg) override {
-    local_ctrl_client_->PushKV(GetStubIndex, k, msg);
-  }
 
   void ClearKV(const std::string& k) override { local_ctrl_client_->ClearKV(k); }
   void ClearMasterKV(const std::string& k) override { local_ctrl_client_->ClearMasterKV(k); }
-  void ClearKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k) override {
-		local_ctrl_client_->ClearKV(GetStubIndex, k);
-  }
 
   void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) override {
     local_ctrl_client_->PullKV(k, VGetter);
@@ -227,9 +211,6 @@ class DryRunCtrlClient : public CtrlClient {
   void PullMasterKV(const std::string& k, PbMessage* msg) override {
     local_ctrl_client_->PullMasterKV(k, msg);
   }
-  void PullKV(const std::function<int64_t(const std::string&)>& GetStubIndex, const std::string& k, PbMessage* msg) override {
-		local_ctrl_client_->PullKV(GetStubIndex, k, msg);
-	}
   void PushActEvent(const ActEvent& ev) override { local_ctrl_client_->PushActEvent(ev); }
   void Clear() override { local_ctrl_client_->Clear(); }
   int32_t IncreaseCount(const std::string& k, int32_t v) override {
