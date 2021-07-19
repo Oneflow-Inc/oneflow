@@ -557,6 +557,7 @@ jobs:
           repository: Oneflow-Inc/models
           path: oneflow-models
       - name: Speed test
+        id: speed
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           docker run \
@@ -564,6 +565,17 @@ jobs:
             -e ONEFLOW_MODEL_DIR=$PWD/oneflow-models \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/test_speed.sh"
+      - name: Post speed stats
+        if: matrix.test_suite == 'cuda_new_interface'
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "Speed stats:\n${{ steps.speed.outputs.stats }}"
+            })
       - name: Single client op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
