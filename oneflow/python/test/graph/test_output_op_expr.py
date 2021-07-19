@@ -90,15 +90,10 @@ class TestFetchOutputTensor(unittest.TestCase):
             test_case.assertTrue(lazy_tensor.is_lazy)
             test_case.assertTrue(lazy_tensor.is_consistent)
 
-            if not lazy_tensor.is_determined:
-                lazy_tensor.determine()
-            lazy_tensor_in_c = lazy_tensor._local_or_consistent_tensor
-
-            eager_tensor = output_op.apply([lazy_tensor_in_c], attrs)[0]
+            eager_tensor = output_op.apply([lazy_tensor], attrs)[0]
             test_case.assertEqual(eager_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(not eager_tensor.is_lazy)
             test_case.assertTrue(eager_tensor.is_consistent)
-            print("output eager tensor: ", eager_tensor)
 
 
 if __name__ == "__main__":
