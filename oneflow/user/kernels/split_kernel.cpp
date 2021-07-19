@@ -69,44 +69,44 @@ namespace oneflow {
             ~SplitKernel() override = default;
 
         private:
-            void InferShape(user_op::KernelInferContext *ctx) const override {
-                const auto dim = ctx->Attr<int64_t>("axis");
-                const auto sections = ctx->Attr<int64_t>("sections");
-                const ShapeView &in_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
-                int64_t total_dim_size = 0;
-//        const int64_t like_num_axes = ctx->ShapeView4ArgNameAndIndex("like", 0).NumAxes();
-                const int64_t in_num_axes = in_shape_view.NumAxes();
-//        CHECK_LE(like_num_axes, in_num_axes);
-//        CHECK_LT(axis, like_num_axes);
-                FOR_RANGE(int32_t, i, 0, ctx->outputs().size())
-                    {
-                        ////            const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
-                        ////            CHECK_EQ(like_shape_view.NumAxes(), like_num_axes);
-                        //            FOR_RANGE(int64_t, j, 0, like_num_axes) {
-                        //                if (j == axis) {
-                        //                total_dim_size += like_shape_view.At(j);
-                        //                    } else {
-                        //                    CHECK_EQ(like_shape_view.At(j), in_shape_view.At(j));
-                        //                }
-                        //            }
-                        if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
-                            auto *mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
-                            CHECK_NOTNULL(mut_shape_view);
-                            DimVector out_i_dim_vec;
-                            in_shape_view.ToDimVector(&out_i_dim_vec);
-                            FOR_RANGE(int64_t, j, 0, in_num_axes)
-                            {
-                                if (dim == j)
-                                    out_i_dim_vec.push_back(sections);
-                                else
-                                    out_i_dim_vec.push_back(in_shape_view.At(j));
-                            }
-                            mut_shape_view->set_shape(Shape(out_i_dim_vec));
-                        }
-                    }
-
-                CHECK_EQ(total_dim_size, in_shape_view.At(dim));
-            }
+//            void InferShape(user_op::KernelInferContext *ctx) const override {
+//                const auto dim = ctx->Attr<int64_t>("axis");
+//                const auto sections = ctx->Attr<int64_t>("sections");
+//                const ShapeView &in_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
+//                int64_t total_dim_size = 0;
+////        const int64_t like_num_axes = ctx->ShapeView4ArgNameAndIndex("like", 0).NumAxes();
+//                const int64_t in_num_axes = in_shape_view.NumAxes();
+////        CHECK_LE(like_num_axes, in_num_axes);
+////        CHECK_LT(axis, like_num_axes);
+//                FOR_RANGE(int32_t, i, 0, ctx->outputs().size())
+//                    {
+//                        ////            const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
+//                        ////            CHECK_EQ(like_shape_view.NumAxes(), like_num_axes);
+//                        //            FOR_RANGE(int64_t, j, 0, like_num_axes) {
+//                        //                if (j == axis) {
+//                        //                total_dim_size += like_shape_view.At(j);
+//                        //                    } else {
+//                        //                    CHECK_EQ(like_shape_view.At(j), in_shape_view.At(j));
+//                        //                }
+//                        //            }
+//                        if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
+//                            auto *mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
+//                            CHECK_NOTNULL(mut_shape_view);
+//                            DimVector out_i_dim_vec;
+//                            in_shape_view.ToDimVector(&out_i_dim_vec);
+//                            FOR_RANGE(int64_t, j, 0, in_num_axes)
+//                            {
+//                                if (dim == j)
+//                                    out_i_dim_vec.push_back(sections);
+//                                else
+//                                    out_i_dim_vec.push_back(in_shape_view.At(j));
+//                            }
+//                            mut_shape_view->set_shape(Shape(out_i_dim_vec));
+//                        }
+//                    }
+//
+//                CHECK_EQ(total_dim_size, in_shape_view.At(dim));
+//            }
 
             void Compute(user_op::KernelComputeContext *ctx) const override {
 //                const auto sizes = ctx->Attr < std::vector < int64_t >> ("sizes");
@@ -153,7 +153,7 @@ namespace oneflow {
                 FOR_RANGE(int64_t, split_idx, 0, num_splits)
                 {
                     user_op::Tensor *out_i = ctx->Tensor4ArgNameAndIndex("out", split_idx);
-                    const int64_t end_idx = split_idx >= min_split_size? start_idx + num_splits_one_extra : start_idx + sections;
+                    const int64_t end_idx = split_idx >= min_split_size? start_idx + num_splits_one_extra - 1 : start_idx + sections - 1;
                     SliceParams params = ConstructSplitParams(in_tensor, out_i, dim, start_idx, end_idx);
                     SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, in_tensor->dptr<T>(),
                                                              out_i->mut_dptr<T>());
