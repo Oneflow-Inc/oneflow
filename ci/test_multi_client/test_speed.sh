@@ -22,8 +22,12 @@ python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet
 python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 2x3x224x224 | check_relative_speed 0.8 | write_to_file_and_print
 python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 1x3x224x224 | check_relative_speed 0.8 | write_to_file_and_print
 
-cat result
+# newline needs to be escaped: https://github.community/t/set-output-truncates-multiline-strings/16852/2
+result=`cat result`
+result="${result//'%'/'%25'}"
+result="${result//$'\n'/'%0A'}"
+result="${result//$'\r'/'%0D'}"
 
-echo "::set-output name=stats::`cat result`"
+echo "::set-output name=stats::$result"
 
 exit $rc
