@@ -12,10 +12,11 @@ extern "C" {
 JNIEXPORT jint          JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject obj);
 
 // init
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initDefaultSession(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring jstr);
-JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobject obj, jstring jstr);
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj);
 

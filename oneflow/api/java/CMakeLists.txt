@@ -7,7 +7,7 @@ else ()
     message (FATAL_ERROR "JNI is not found on your machine")
 endif()
 
-add_library(oneflow SHARED library.h library.cpp tensor.h tensor.cpp)
+add_library(oneflow SHARED library.h library.cpp)
 
 target_include_directories(
     oneflow
