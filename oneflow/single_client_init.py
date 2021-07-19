@@ -51,6 +51,11 @@ from oneflow.compatible.single_client.python.framework import env_util
 
 
 oneflow._oneflow_internal.DestroyEnv()
+import time
+
+time.sleep(1)
+del time
+
 oneflow._oneflow_internal.SetIsMultiClient(False)
 env_util.init_default_physical_env()
 session_context.OpenDefaultSession(
