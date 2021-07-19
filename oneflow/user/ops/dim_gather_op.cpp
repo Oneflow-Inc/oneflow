@@ -59,10 +59,11 @@ REGISTER_USER_OP("dim_gather")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
@@ -131,10 +132,11 @@ REGISTER_USER_OP("dim_scatter_add_like")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
+      CHECK_OR_RETURN(like_arg_modifier != nullptr);
       like_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
@@ -176,27 +178,29 @@ REGISTER_USER_OP("dim_scatter_add_like")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+REGISTER_USER_OP_GRAD("dim_gather")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
-  ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder
-        .OpTypeName(
-            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, input) -> output
-        .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
-        .InputBind("input",
-                   ctx->FwOp().output_grad("output", 0))  // scatter.input <- grad of gather.out
-        .InputBind("like", ctx->FwOp().input("input", 0))
-        .Output("output")
-        .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
-        .Build();
-  });
+      ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder
+            .OpTypeName(
+                "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, input) -> output
+            .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
+            .InputBind("input",
+                       ctx->FwOp().output_grad("output", 0))  // scatter.input <- grad of gather.out
+            .InputBind("like", ctx->FwOp().input("input", 0))
+            .Output("output")
+            .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
+            .Build();
+      });
 
-  ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
-                            [&ctx, &op_grad_name]() -> const std::string& {
-                              return ctx->GetOp(op_grad_name).output("output", 0);
-                            });
-});
+      ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
+                                [&ctx, &op_grad_name]() -> const std::string& {
+                                  return ctx->GetOp(op_grad_name).output("output", 0);
+                                });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace user_op
 

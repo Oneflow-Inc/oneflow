@@ -174,13 +174,29 @@ def test_against_pytorch(
     else:
         pytorch_call = eval(f"torch.{pytorch_callable_name}")
 
+    Spec = namedtuple(
+        "spec",
+        "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+    )
+
     if has_full_args_spec(pytorch_call):
-        spec = inspect.getfullargspec(pytorch_call)
-    else:
-        Spec = namedtuple(
-            "spec",
-            "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+        tmp_spec = inspect.getfullargspec(pytorch_call)
+        new_defaults = tmp_spec.defaults
+        if new_defaults is None:
+            new_defaults = []
+        new_kwonlydefaults = tmp_spec.kwonlydefaults
+        if new_kwonlydefaults is None:
+            new_kwonlydefaults = []
+        spec = Spec(
+            tmp_spec.args,
+            tmp_spec.varargs,
+            tmp_spec.varkw,
+            new_defaults,
+            tmp_spec.kwonlyargs,
+            new_kwonlydefaults,
+            tmp_spec.annotations,
         )
+    else:
         args = list(extra_annotations.keys()) + list(extra_defaults.keys())
         spec = Spec(args, None, None, [], [], {}, {})
 

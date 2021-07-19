@@ -50,7 +50,15 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
 
 Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
                                             const std::shared_ptr<Tensor>& tensor) {
-  // TODO(chengcheng)
+  parallel_distribution->clear_sbp_parallel();
+  if (tensor->is_local()) {
+    // NOTE(chengcheng):
+    //   OneFlow Lazy is always consistent. LocalTensor is a special case of ConsistentTensor which
+    //   placement is only this rank, and SbpParallel is Broadcast.
+    parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+  } else {
+    JUST(tensor->parallel_distribution())->ToProto(parallel_distribution);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -79,9 +87,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
-  if (input_tensor->is_consistent()) {
-    JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
-  }
+  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
@@ -113,17 +119,120 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  // TODO(chengcheng)
-  OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
-                     << " has not been supported in LazyInterpreter::Apply.";
+  // NOTE(chengcheng): inputs[0] is the EagerTensor
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  CHECK_OR_RETURN(input_tensor->is_eager());
+
+  const auto& scope = JUST(GetCurrentScope());
+  int64_t scope_symbol_id = JUST(scope->symbol_id());
+
+  OperatorConf op_conf;
+  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  // NOTE(chengcheng):
+  //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
+  //   for getting input EagerTensor.
+  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
+  var_conf->set_out("out");
+  input_tensor->shape()->ToProto(var_conf->mutable_shape());
+  var_conf->set_data_type(input_tensor->dtype());
+  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
+  //   by EagerTensor.
+  var_conf->mutable_initializer()->mutable_empty_conf();
+  // TODO(chengcheng): GenerateParallelDistributionString by tensor.
+  if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
+  // TODO(chengcheng, xuxiaoyu): Set L1/L2 RegularizerConf by nn.Graph Optimizer
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+
+  const std::string& op_name = op_conf.name();
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
+            << " and the origin op_conf is :" << op_conf.DebugString();
+
+  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
+  const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
+      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+
+  const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
+  const auto& parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
+  const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
+
+  CHECK_OR_RETURN(!outputs->at(0).get());
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  // NOTE(chengcheng): Record variable op output LazyTenosr
+  TensorNameScope::Global()->Record(outputs->at(0), op_name + "/" + obn);
+  // NOTE(chengcheng): Record EagerTensor as variable tensor name
+  TensorNameScope::Global()->Record(input_tensor, op_name + "/" + obn);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  // TODO(chengcheng)
-  OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
-                     << " has not been supported in LazyInterpreter::Apply.";
+  // NOTE(chengcheng): inputs[0] is the LazyTensor
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  CHECK_OR_RETURN(input_tensor->is_lazy());
+  // NOTE(chengcheng): Lazy always consistent.
+  CHECK_OR_RETURN(input_tensor->is_consistent());
+  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
+
+  const auto& scope = JUST(GetCurrentScope());
+  int64_t scope_symbol_id = JUST(scope->symbol_id());
+
+  OperatorConf op_conf;
+  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  // NOTE(chengcheng):
+  //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
+  //   for get nn.Graph output LazyTensor.
+  OutputOpConf* output_conf = op_conf.mutable_output_conf();
+  output_conf->set_in(input_lbn);
+  output_conf->set_out("out");
+  InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
+  input_tensor->shape()->ToProto(blob_conf->mutable_shape());
+  blob_conf->set_data_type(input_tensor->dtype());
+  blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+
+  const std::string& op_name = op_conf.name();
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
+            << " and the origin op_conf is :" << op_conf.DebugString();
+
+  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
+  const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
+      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+
+  const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
+  const auto& parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
+  const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
+
+  CHECK_OR_RETURN(!outputs->at(0).get());
+  // TODO(chengcheng): Build EagerLocalTensor if parllel attr is this rank.
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/false));
   return Maybe<void>::Ok();
 }
 

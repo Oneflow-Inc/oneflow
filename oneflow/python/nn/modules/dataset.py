@@ -87,11 +87,16 @@ class OfrecordRawDecoder(Module):
         shape: Sequence[int],
         dtype: flow.dtype,
         dim1_varying_length: bool = False,
+        truncate: bool = False,
         auto_zero_padding: bool = False,
         name: Optional[str] = None,
     ):
         super().__init__()
-
+        if auto_zero_padding:
+            print(
+                """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+                """
+            )
         self._op = (
             flow.builtin_op("ofrecord_raw_decoder", name)
             .Input("in")
@@ -100,7 +105,7 @@ class OfrecordRawDecoder(Module):
             .Attr("shape", shape)
             .Attr("data_type", dtype)
             .Attr("dim1_varying_length", dim1_varying_length)
-            .Attr("auto_zero_padding", auto_zero_padding)
+            .Attr("truncate", truncate or auto_zero_padding)
             .Build()
         )
 
@@ -377,13 +382,6 @@ class ImageResize(Module):
                 .Attr("interpolation_type", interpolation_type)
                 .Build()
             )
-            # TODO(Liang Depeng)
-            # scale = flow.tensor_buffer_to_tensor(
-            #     scale, dtype=flow.float32, instance_shape=(2,)
-            # )
-            # new_size = flow.tensor_buffer_to_tensor(
-            #     new_size, dtype=flow.int32, instance_shape=(2,)
-            # )
         else:
             if (
                 not isinstance(target_size, (list, tuple))
@@ -412,8 +410,19 @@ class ImageResize(Module):
             )
 
     def forward(self, input):
-        res = self._op(input)[0]
-        return res
+        res = self._op(input)
+        res_image = res[0]
+        if len(res) == 3:
+            new_size = flow.experimental.tensor_buffer_to_tensor(
+                res[1], dtype=flow.int32, instance_shape=(2,)
+            )
+            scale = flow.experimental.tensor_buffer_to_tensor(
+                res[2], dtype=flow.float32, instance_shape=(2,)
+            )
+        else:
+            new_size = None
+            scale = res[1]
+        return res_image, scale, new_size
 
 
 @oneflow_export("tmp.RawDecoder")
@@ -424,11 +433,22 @@ def raw_decoder(
     shape: Sequence[int],
     dtype: flow.dtype,
     dim1_varying_length: bool = False,
+    truncate: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
 ):
+    if auto_zero_padding:
+        print(
+            """WARNING: auto_zero_padding has been deprecated, Please use truncate instead.
+            """
+        )
     return OfrecordRawDecoder(
-        blob_name, shape, dtype, dim1_varying_length, auto_zero_padding, name
+        blob_name,
+        shape,
+        dtype,
+        dim1_varying_length,
+        truncate or auto_zero_padding,
+        name,
     ).forward(input_record)
 
 
