@@ -58,16 +58,6 @@ REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, int64_t)
 
 #ifdef WITH_CUDA
 
-void dot_cuda(DeviceCtx* ctx, const int64_t n, const float* x, int64_t incx, const float* y,
-              int64_t incy, float* out) {
-  NewKernelUtil<DeviceType::kGPU>::OFcuBlasSdot(ctx, n, x, incx, y, incy, out);
-}
-
-void dot_cuda(DeviceCtx* ctx, const int64_t n, const double* x, int64_t incx, const double* y,
-              int64_t incy, double* out) {
-  NewKernelUtil<DeviceType::kGPU>::OFcuBlasDdot(ctx, n, x, incx, y, incy, out);
-}
-
 template<typename T>
 class DotGpuKernel final : public user_op::OpKernel {
  public:
@@ -81,7 +71,7 @@ class DotGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    dot_cuda(ctx->device_ctx(), n, x->dptr<T>(), 1, y->dptr<T>(), 1, out->mut_dptr<T>());
+    NewKernelUtil<DeviceType::kGPU>::OFDot(ctx->device_ctx(), n, x->dptr<T>(), 1, y->dptr<T>(), 1, out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
