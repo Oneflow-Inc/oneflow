@@ -120,6 +120,14 @@ class Upsample(Module):
             align_corners=self.align_corners,
         )
 
+    def extra_repr(self) -> str:
+        if self.scale_factor is not None:
+            info = "scale_factor=" + str(self.scale_factor)
+        else:
+            info = "size=" + str(self.size)
+        info += ", mode=" + self.mode
+        return info
+
 
 @oneflow_export("nn.UpsamplingNearest2d")
 @experimental_api
