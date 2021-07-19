@@ -95,6 +95,7 @@ def compare_with_numpy_adam(
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()

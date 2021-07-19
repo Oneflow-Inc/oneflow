@@ -859,10 +859,7 @@ def _test_adaptive_avgpool3d_dhw_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPool(flow.unittest.TestCase):
     def test_adaptive_avgpool1d(test_case):
         arg_dict = OrderedDict()
