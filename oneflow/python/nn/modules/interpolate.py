@@ -135,7 +135,7 @@ class Interpolate(Module):
         if self.recompute_scale_factor is not None and self.recompute_scale_factor:
             assert scale_factors is not None
             output_size = [
-                int(math.floor(float(input.size(i + 2)) * scale_factors[i]))
+                int(math.floor(float(x.size(i + 2)) * scale_factors[i]))
                 for i in range(dim)
             ]
             scale_factors = None
@@ -162,10 +162,15 @@ class Interpolate(Module):
                 data_format="channels_first",
             )
 
-        # TODO(bbuf) Add adaptive_avg_pool op
+        if len(x.shape) == 3 and self.mode == "area":
+            assert output_size is not None
+            return flow.F.adaptive_avg_pool1d(x, output_size)
 
-        if self.mode == "area":
-            raise NotImplementedError("adaptive_avg_pool1d not impleted now!")
+        if len(x.shape) == 4 and self.mode == "area":
+            return flow.F.adaptive_avg_pool2d(x, output_size)
+
+        if len(x.shape) == 5 and self.mode == "area":
+            return flow.F.adaptive_avg_pool3d(x, output_size)
 
         if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None
