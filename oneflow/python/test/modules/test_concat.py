@@ -120,6 +120,7 @@ def _test_concat_grad_and_no_grad(test_case, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()

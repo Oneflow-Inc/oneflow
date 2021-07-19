@@ -21,6 +21,7 @@ import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
 

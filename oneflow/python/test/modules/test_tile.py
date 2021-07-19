@@ -153,6 +153,7 @@ def _test_tile_same_dim_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTile(flow.unittest.TestCase):
     def test_tile(test_case):
         arg_dict = OrderedDict()
