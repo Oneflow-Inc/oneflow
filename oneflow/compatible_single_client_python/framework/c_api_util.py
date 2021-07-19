@@ -17,19 +17,25 @@ from __future__ import absolute_import
 
 from google.protobuf import text_format
 
-from oneflow.core.common import data_type_pb2 as dtype_util
-from oneflow.core.common import error_pb2 as error_util
-from oneflow.core.job import env_pb2 as env_pb2
-from oneflow.core.job import job_set_pb2 as job_set_pb
-from oneflow.core.job import job_pb2 as job_pb
-from oneflow.core.job import placement_pb2 as placement_pb
-from oneflow.core.job import resource_pb2 as resource_util
-from oneflow.core.operator import op_attribute_pb2 as op_attribute_pb
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.record import record_pb2 as record_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.core.framework.config_def_pb2 import ConfigDef
-from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
+from oneflow.compatible.single_client.core.common import data_type_pb2 as dtype_util
+from oneflow.compatible.single_client.core.common import error_pb2 as error_util
+from oneflow.compatible.single_client.core.job import env_pb2 as env_pb2
+from oneflow.compatible.single_client.core.job import job_set_pb2 as job_set_pb
+from oneflow.compatible.single_client.core.job import job_pb2 as job_pb
+from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
+from oneflow.compatible.single_client.core.job import resource_pb2 as resource_util
+from oneflow.compatible.single_client.core.operator import (
+    op_attribute_pb2 as op_attribute_pb,
+)
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.record import record_pb2 as record_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.core.framework.config_def_pb2 import ConfigDef
+from oneflow.compatible.single_client.core.job.inter_user_job_info_pb2 import (
+    InterUserJobInfo,
+)
 
 # import oneflow.compatible.single_client as flow
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
