@@ -108,6 +108,7 @@ class MaxpoolNdGrad final : public PoolingNdGrad {
   Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
 };
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", MaxpoolNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_2d", MaxpoolNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", MaxpoolNdGrad);
 

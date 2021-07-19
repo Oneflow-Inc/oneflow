@@ -411,6 +411,13 @@
                        Int32List strides, Bool ceil_mode)"
   bind_python: False
 
+- name: "maxpool_1d"
+  signature:
+    "TensorTuple Maxpool1D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
 - name: "maxpool_2d"
   signature:
     "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,

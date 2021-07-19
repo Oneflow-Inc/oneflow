@@ -266,6 +266,13 @@ class MaxPool2DFunctor : public PoolNDFunctor {
   }
 };
 
+class Maxpool1DFunctor : public PoolingNDFunctor {
+ public:
+  Maxpool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("maxpool_1d").Input("x").Output("y").Output("indice").Build());
+  }
+};
+
 class Maxpool2DFunctor : public PoolingNDFunctor {
  public:
   Maxpool2DFunctor() {
@@ -459,6 +466,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");

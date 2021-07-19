@@ -32,6 +32,17 @@ int GetNumBlocks(int64_t elem_cnt) {
 
 template<typename T>
 __launch_bounds__(kBlockSize) __global__
+    void DoCUDAMaxPool1dForward(const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                                int32_t padding_l, int64_t n_batch, int64_t n_channel,
+                                int64_t x_length, int64_t y_length, int32_t kernel_size_l,
+                                int32_t stride_l, int32_t dilation_l) {
+  Maxpool1dForwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, padding_l, n_batch,
+                             n_channel, x_length, y_length, kernel_size_l, stride_l, dilation_l);
+};
+
+template<typename T>
+__launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool2dForward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                 int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_h, int32_t padding_w, int64_t n_batch,
@@ -64,6 +75,17 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T>
 __launch_bounds__(kBlockSize) __global__
+    void DoCUDAMaxPool1dBackward(const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                 const int64_t elem_num, const T* src, T* dest,
+                                 const int64_t* indice_ptr, const int64_t n_batch,
+                                 const int64_t n_channel, const int64_t src_length,
+                                 const int64_t dst_length) {
+  Maxpool1dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
+                              src_length, dst_length);
+};
+
+template<typename T>
+__launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool2dBackward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                  const int64_t elem_num, const T* src, T* dest,
                                  const int64_t* indice_ptr, const int64_t n_batch,
@@ -89,6 +111,26 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kGPU, T> {
+  static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const PoolingParams3D& params_3d) {
+    DoCUDAMaxPool1dForward<T>
+        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
+            index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
+            params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
+            params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2],
+            params_3d.dilation_3d()[2]);
+  }
+
+  static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                                const int64_t elem_num, const T* src, T* dest,
+                                const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
+    DoCUDAMaxPool1dBackward<T>
+        <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
+            index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+            params_3d.num_channel(), params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
+  }
+
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
