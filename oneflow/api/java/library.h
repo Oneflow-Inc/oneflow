@@ -18,7 +18,7 @@ JNIEXPORT jboolean      JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JN
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj);
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj, jstring config_proto);
 
 // compile
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);

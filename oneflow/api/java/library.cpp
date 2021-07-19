@@ -81,8 +81,9 @@ jboolean JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, 
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj) {
-  return InitSession();
+void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj, jstring config_proto) {
+  std::string config_proto_str = ConvertToString(env, config_proto);
+  return InitSession(config_proto_str);
 }
 
 JNIEXPORT

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_API_JAVA_SESSION_SESSION_API_H_
 #define ONEFLOW_API_JAVA_SESSION_SESSION_API_H_
 
+#include <string>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/session/session.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -12,16 +13,8 @@ inline void OpenDefaultSession() {
     oneflow::RegsiterSession(session_id);
 }
 
-inline void InitSession() {
-  // default configuration
-  // reference: oneflow/python/framework/session_util.py
-  std::shared_ptr<oneflow::ConfigProto> config_proto = std::make_shared<oneflow::ConfigProto>();
-  config_proto->mutable_resource()->set_machine_num(oneflow::GetNodeSize().GetOrThrow());
-  config_proto->mutable_resource()->set_gpu_device_num(1);
-  config_proto->mutable_resource()->set_enable_legacy_model_io(true);
-  config_proto->set_session_id(oneflow::GetDefaultSessionId().GetOrThrow());
-
-  oneflow::InitLazyGlobalSession(config_proto->DebugString());
+inline void InitSession(const std::string& config_proto) {
+  oneflow::InitLazyGlobalSession(config_proto);
 }
 
 #endif  // ONEFLOW_API_JAVA_SESSION_SESSION_API_H_
