@@ -145,6 +145,7 @@ def _test_bceloss_impl(test_case, device, reduction):
     test_case.assertTrue(np.allclose(input_none.grad.numpy(), np_grad_none, 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
     def test_bceloss(test_case):
         arg_dict = OrderedDict()

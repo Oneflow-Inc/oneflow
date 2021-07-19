@@ -185,6 +185,7 @@ def _test_chunk_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestChunk(flow.unittest.TestCase):
     def test_chunk(test_case):
         arg_dict = OrderedDict()
