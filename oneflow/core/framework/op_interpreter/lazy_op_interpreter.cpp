@@ -52,6 +52,9 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distr
                                             const std::shared_ptr<Tensor>& tensor) {
   parallel_distribution->clear_sbp_parallel();
   if (tensor->is_local()) {
+    // NOTE(chengcheng):
+    //   OneFlow Lazy is always consistent. LocalTensor is a special case of ConsistentTensor which
+    //   placement is only this rank, and SbpParallel is Broadcast.
     parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
     JUST(tensor->parallel_distribution())->ToProto(parallel_distribution);
