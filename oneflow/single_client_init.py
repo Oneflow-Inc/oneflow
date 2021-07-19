@@ -51,6 +51,12 @@ from oneflow.compatible.single_client.python.framework import env_util
 
 
 oneflow._oneflow_internal.DestroyEnv()
+import time
+
+# sleep to prevent glog raising "File exists"
+time.sleep(1)
+del time
+
 oneflow._oneflow_internal.SetIsMultiClient(False)
 session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
