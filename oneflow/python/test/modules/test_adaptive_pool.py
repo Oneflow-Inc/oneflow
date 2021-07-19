@@ -20,9 +20,10 @@ import numpy as np
 
 import oneflow.experimental as flow
 
-
 from test_util import GenArgList
 
+
+# TODO: auto test
 
 def _test_adaptive_avgpool1d_forward(test_case, device):
     input = flow.Tensor(
