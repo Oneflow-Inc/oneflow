@@ -89,6 +89,7 @@ def _test_dropout_with_generator(test_case, shape, device):
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestDropout(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()

@@ -51,6 +51,7 @@ def _test_addmm_backward(test_case, shape, alpha, beta, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAddmm(flow.unittest.TestCase):
     def test_addmm(test_case):
         arg_dict = OrderedDict()

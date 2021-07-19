@@ -128,6 +128,7 @@ def _test_repeat_same_dim_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
     def test_repeat(test_case):
         arg_dict = OrderedDict()

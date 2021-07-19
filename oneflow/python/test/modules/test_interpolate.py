@@ -368,6 +368,7 @@ def _test_interpolate_trilinear_3d_align_corners(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+@flow.unittest.skip_unless_1n1d()
 class TestUpsample2d(flow.unittest.TestCase):
     def test_upsample2d(test_case):
         arg_dict = OrderedDict()
