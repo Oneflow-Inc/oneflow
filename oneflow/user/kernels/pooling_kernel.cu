@@ -50,7 +50,7 @@ __launch_bounds__(kBlockSize) __global__
                                 int64_t y_height, int64_t y_width, int32_t kernel_size_h,
                                 int32_t kernel_size_w, int32_t stride_h, int32_t stride_w,
                                 int32_t dilation_h, int32_t dilation_w) {
-  Maxpool2dFarwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, padding_h, padding_w,
+  Maxpool2dForwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, padding_h, padding_w,
                              n_batch, n_channel, x_height, x_width, y_height, y_width,
                              kernel_size_h, kernel_size_w, stride_h, stride_w, dilation_h,
                              dilation_w);
@@ -67,7 +67,7 @@ __launch_bounds__(kBlockSize) __global__
                                 int32_t kernel_size_w, int32_t stride_t, int32_t stride_h,
                                 int32_t stride_w, int32_t dilation_t, int32_t dilation_h,
                                 int32_t dilation_w) {
-  Maxpool3dFarwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, padding_t, padding_h,
+  Maxpool3dForwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, padding_t, padding_h,
                              padding_w, n_batch, n_channel, x_time, x_height, x_width, y_time,
                              y_height, y_width, kernel_size_t, kernel_size_h, kernel_size_w,
                              stride_t, stride_h, stride_w, dilation_t, dilation_h, dilation_w);

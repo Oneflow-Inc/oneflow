@@ -63,7 +63,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    Maxpool2dFarwardCompute<T>(
+    Maxpool2dForwardCompute<T>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
@@ -84,7 +84,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
   static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
-    Maxpool3dFarwardCompute<T>(
+    Maxpool3dForwardCompute<T>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),

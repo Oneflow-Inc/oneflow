@@ -179,7 +179,7 @@ OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
 }
 
 template<typename T>
-OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
+OF_DEVICE_FUNC void Maxpool2dForwardCompute(
     const NdIndexOffsetHelper<int64_t, 4> index_helper, int64_t elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
     const int64_t n_channel, const int64_t x_height, const int64_t x_width, const int64_t y_height,
@@ -260,7 +260,7 @@ OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
 }
 
 template<typename T>
-OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
+OF_DEVICE_FUNC void Maxpool3dForwardCompute(
     const NdIndexOffsetHelper<int64_t, 5> index_helper, int64_t elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_t, const int32_t padding_h, const int32_t padding_w,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_time, const int64_t x_height,
