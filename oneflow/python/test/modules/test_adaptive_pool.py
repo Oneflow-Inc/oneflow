@@ -100,21 +100,6 @@ def _test_adaptive_avgpool1d_backward(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAdaptiveAvgPool1d(flow.unittest.TestCase):
-    def test_adaptive_avgpool1d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_adaptive_avgpool1d_forward,
-            _test_adaptive_avgpool1d_backward,
-        ]
-        arg_dict["device"] = [
-            "cpu",
-            "cuda",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-
 def _test_adaptive_avgpool2d_forward(test_case, device):
     input = flow.Tensor(
         np.array(
@@ -283,23 +268,6 @@ def _test_adaptive_avgpool2d_hw_backward(test_case, device):
         ]
     )
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
-class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
-    def test_adaptive_avgpool2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_adaptive_avgpool2d_forward,
-            _test_adaptive_avgpool2d_backward,
-            _test_adaptive_avgpool2d_hw_forward,
-            _test_adaptive_avgpool2d_hw_backward,
-        ]
-        arg_dict["device"] = [
-            "cpu",
-            "cuda",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
 
 
 def _test_adaptive_avgpool3d_forward(test_case, device):
@@ -895,7 +863,35 @@ def _test_adaptive_avgpool3d_dhw_backward(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAdaptiveAvgPool3d(flow.unittest.TestCase):
+class TestAdaptiveAvgPool(flow.unittest.TestCase):
+    def test_adaptive_avgpool1d(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_adaptive_avgpool1d_forward,
+            _test_adaptive_avgpool1d_backward,
+        ]
+        arg_dict["device"] = [
+            "cpu",
+            "cuda",
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_adaptive_avgpool2d(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_adaptive_avgpool2d_forward,
+            _test_adaptive_avgpool2d_backward,
+            _test_adaptive_avgpool2d_hw_forward,
+            _test_adaptive_avgpool2d_hw_backward,
+        ]
+        arg_dict["device"] = [
+            "cpu",
+            "cuda",
+        ]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
     def test_adaptive_avgpool3d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
