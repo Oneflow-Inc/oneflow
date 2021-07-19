@@ -92,7 +92,7 @@ REGISTER_USER_OP("adaptive_avg_pool1d_grad")
     .SetDataTypeInferFn(InferBWDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool1d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto adaptive_avg_pool1d_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(adaptive_avg_pool1d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("adaptive_avg_pool1d_grad")
@@ -161,7 +161,7 @@ REGISTER_USER_OP("adaptive_avg_pool3d_grad")
     .SetDataTypeInferFn(InferBWDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool3d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto adaptive_avg_pool3d_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(adaptive_avg_pool3d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("adaptive_avg_pool3d_grad")
