@@ -108,6 +108,7 @@ def compare_with_numpy_rmsprop(
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestRMSProp(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()

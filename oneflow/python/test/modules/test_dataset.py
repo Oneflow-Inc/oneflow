@@ -23,6 +23,7 @@ import numpy as np
 import oneflow.experimental as flow
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestOFRecordModule(flow.unittest.TestCase):
     def test_record(test_case):
         batch_size = 1
@@ -254,6 +255,7 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
     return poly_array_list, poly_index_array_list
 
 
+@flow.unittest.skip_unless_1n1d()
 @flow.unittest.skip_unless_1n1d()
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
