@@ -61,6 +61,7 @@ def _test_log1p_tensor_function(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestLog1p(flow.unittest.TestCase):
     def test_log1p(test_case):
         arg_dict = OrderedDict()
