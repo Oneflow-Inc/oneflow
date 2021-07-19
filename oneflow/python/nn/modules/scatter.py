@@ -142,4 +142,4 @@ def scatter_tensor_op(input, dim, index, src, reduce: Optional[str] = None):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)

@@ -177,7 +177,7 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
   const TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0);
   const TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0);
   const int64_t ndim = src.shape().NumAxes();
@@ -215,6 +215,7 @@ void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
                             [&ctx, &op_input_grad_name]() -> const std::string& {
                               return ctx->GetOp(op_input_grad_name).output("output", 0);
                             });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -260,7 +261,7 @@ void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
 
 #define REGISTER_SCATTER_SCALAR_GRAD(optypename)                                               \
   REGISTER_USER_OP_GRAD(optypename)                                                            \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                        \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {         \
         const auto op_input_grad_name = ctx->FwOp().op_name() + "_input_grad";                 \
         ctx->DefineOp(op_input_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
           return builder.OpTypeName("dim_scatter_update_scalar")                               \
@@ -275,6 +276,7 @@ void ScatterBackward(user_op::BackwardOpConfContext* ctx) {
                                   [&ctx, &op_input_grad_name]() -> const std::string& {        \
                                     return ctx->GetOp(op_input_grad_name).output("output", 0); \
                                   });                                                          \
+        return Maybe<void>::Ok();                                                              \
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
