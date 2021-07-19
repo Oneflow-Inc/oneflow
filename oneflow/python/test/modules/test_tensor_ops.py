@@ -37,6 +37,7 @@ def _test_long(test_case, shape, device, dtype):
     test_case.assertEqual(input.dtype, flow.int64)
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
     def test_type_as(test_case):
         arg_dict = OrderedDict()

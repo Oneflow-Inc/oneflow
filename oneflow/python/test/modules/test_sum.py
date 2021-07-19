@@ -62,6 +62,7 @@ def _test_sum_impl(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSumModule(flow.unittest.TestCase):
     def test_sum(test_case):
         arg_dict = OrderedDict()

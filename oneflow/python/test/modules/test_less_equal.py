@@ -77,6 +77,7 @@ def _test_less_equal_float_scalar(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestLessEqual(flow.unittest.TestCase):
     def test_less_equal(test_case):
         arg_dict = OrderedDict()
