@@ -28,7 +28,7 @@ namespace oneflow {
 
 namespace {
 
-constexpr int kMaxSendWr = 32;
+constexpr int kMaxSendWr = 4096;
 
 }
 
