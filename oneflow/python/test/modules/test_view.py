@@ -71,10 +71,6 @@ def _test_view_backward(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModule(flow.unittest.TestCase):
     def test_view(test_case):
         arg_dict = OrderedDict()

@@ -18,7 +18,6 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
-from typing import Optional, List, Tuple
 import math
 
 
@@ -100,6 +99,8 @@ class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()
 
+        self.in_features = in_features
+        self.out_features = out_features
         self.use_bias = bias
         self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
         self.bias = None
@@ -130,6 +131,11 @@ class Linear(Module):
             res += self.bias
 
         return res
+
+    def extra_repr(self) -> str:
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
 
 
 if __name__ == "__main__":

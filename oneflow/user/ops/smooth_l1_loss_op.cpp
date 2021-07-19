@@ -83,7 +83,8 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     });
 
 REGISTER_USER_OP_GRAD("smooth_l1_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -97,6 +98,7 @@ REGISTER_USER_OP_GRAD("smooth_l1_loss")
         op.BindGradTensorWithOpInput(grad_op.output("prediction_grad", 0), "prediction", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

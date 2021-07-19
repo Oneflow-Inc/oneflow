@@ -67,10 +67,6 @@ def _test_div_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestDiv(flow.unittest.TestCase):
     def test_div(test_case):
         arg_dict = OrderedDict()

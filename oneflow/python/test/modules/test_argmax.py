@@ -75,10 +75,6 @@ def _test_argmax_dim_equal_none(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestArgmax(flow.unittest.TestCase):
     def test_argmax(test_case):
         arg_dict = OrderedDict()
