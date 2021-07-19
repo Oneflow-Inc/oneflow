@@ -83,7 +83,7 @@ oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
 
 
-def _SyncOnMasterFn(rank):
+def _SyncOnMasterFn():
     import oneflow
 
     def Sync():
@@ -91,7 +91,7 @@ def _SyncOnMasterFn(rank):
             return
         if oneflow.python.framework.distribute.is_multi_client():
             oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif rank == 0:
+        elif oneflow.python.framework.distribute.get_rank() == 0:
             oneflow._oneflow_internal.eager.single_client.Sync()
 
     return Sync
@@ -103,7 +103,7 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
-atexit.register(_SyncOnMasterFn(oneflow.python.framework.distribute.get_rank()))
+atexit.register(_SyncOnMasterFn)
 
 del atexit
 
