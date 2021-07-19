@@ -412,6 +412,7 @@ g_samples = [
 ]
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_AvgPool2d(test_case):
         global g_samples

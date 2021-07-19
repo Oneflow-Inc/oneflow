@@ -66,6 +66,7 @@ def _test_mseloss_impl(test_case, device, shape, reduction):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMSELossModule(flow.unittest.TestCase):
     def test_mseloss(test_case):
         arg_dict = OrderedDict()

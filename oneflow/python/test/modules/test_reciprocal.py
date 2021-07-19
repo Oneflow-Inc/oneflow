@@ -31,6 +31,7 @@ def _test_reciprocal_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestReciprocalModule(flow.unittest.TestCase):
     def test_reciprocal(test_case):
         arg_dict = OrderedDict()
