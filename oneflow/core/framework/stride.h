@@ -23,13 +23,17 @@ limitations under the License.
 namespace oneflow {
 
 class Stride final {
-  OF_DISALLOW_COPY_AND_MOVE(Stride);
+ public:
   Stride() = default;
   explicit Stride(const Shape& shape);
   explicit Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
   explicit Stride(StrideVector&& stride_vec) : stride_vec_(stride_vec) {}
   Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
+  Stride& operator=(const Stride& shape);
   ~Stride() = default;
+
+  bool operator==(const Stride& rhs) const;
+  bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string DebugStr() const;
   std::string ToString() const;

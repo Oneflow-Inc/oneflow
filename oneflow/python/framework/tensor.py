@@ -205,6 +205,14 @@ class Tensor:
         else:
             return self._undetermined_tensor.shape
 
+    def stride(self):
+        assert self.is_determined
+        return self._local_or_consistent_tensor.stride()
+
+    def storage_offset(self):
+        assert self.is_determined
+        return self._local_or_consistent_tensor.storage_offset()
+
     @property
     def device(self):
         if self._local_or_consistent_tensor is not None:

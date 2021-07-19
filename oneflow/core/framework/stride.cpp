@@ -23,11 +23,18 @@ Stride::Stride(const Shape& shape) {
     stride_vec_.resize(shape.NumAxes());
     int64_t stride = 1;
     for (size_t i = shape.NumAxes(); i > 0; --i) {
-      stride_vec_.at(i) = stride;
-      stride += shape.At(i - 1);
+      stride_vec_.at(i - 1) = stride;
+      stride *= shape.At(i - 1);
     }
   }
 }
+
+Stride& Stride::operator=(const Stride& shape) {
+  stride_vec_ = shape.stride_vec_;
+  return *this;
+}
+
+bool Stride::operator==(const Stride& rhs) const { return stride_vec_ == rhs.stride_vec_; }
 
 std::string Stride::ToString() const {
   std::stringstream ss;

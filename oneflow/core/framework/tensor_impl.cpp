@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/framework/device.h"
@@ -164,6 +165,13 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   detached_impl->eager_blob_object_ = eager_blob_object_;
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
+
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device)
+    : TensorMeta(shape, dtype),
+      device_(device),
+      stride_(std::make_shared<const Stride>(*shape)),
+      storage_offset_(0) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
