@@ -74,10 +74,12 @@ class Graph(object):
         grad_clipping_conf=None,
         weight_decay_conf=None,
     ):
-        assert name is not None, ("name cannot be None")
-        assert type(name) is str, ("name must be an instance of str")
-        assert optimizer is not None, ("optimizer cannot be None")
-        assert isinstance(optimizer, Optimizer), ("optimizer must be an instance of Optimizer")
+        assert name is not None, "name cannot be None"
+        assert type(name) is str, "name must be an instance of str"
+        assert optimizer is not None, "optimizer cannot be None"
+        assert isinstance(
+            optimizer, Optimizer
+        ), "optimizer must be an instance of Optimizer"
         self._optimizers[name] = OptimizerConfig(
             name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
@@ -88,7 +90,7 @@ class Graph(object):
             Graph._child_init_cnt[child_name] = 0
         self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
         Graph._child_init_cnt[child_name] += 1
-    
+
     def _state(self):
         for _, b in self._blocks.items():
             pa_gen = b.parameters(recurse=True)
@@ -103,7 +105,9 @@ class Graph(object):
         for state_block in self._state():
             state_list.append(state_block.origin)
             if state_block.type == BlockType.PARAMETER:
-                self._var2var_op_name[state_block.origin] = state_block.name_prefix + state_block.name
+                self._var2var_op_name[state_block.origin] = (
+                    state_block.name_prefix + state_block.name
+                )
 
         self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state_list)
 
@@ -111,10 +115,7 @@ class Graph(object):
         if len(self._optimizers):
             self.config._train(True)
         for name, opt_config in self._optimizers.items():
-            print("n ", name)
-            print("opt ", opt_config.optimizer)
             self.config.add_optimizer_config(opt_config, self._var2var_op_name)
-
 
     def _compile(self, *args):
         assert not self._is_compiled, (
@@ -265,8 +266,10 @@ class GraphConfig(FunctionConfig):
             self.function_desc.job_config_proto.mutable_train_conf()
         else:
             self.function_desc.job_config_proto.mutable_predict_conf()
-    
-    def add_optimizer_config(self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None):
-        optimizer_config.optimizer.add_to_train_config(self.proto.mutable_train_conf(), var2var_op_name)
 
-
+    def add_optimizer_config(
+        self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
+    ):
+        optimizer_config.optimizer.add_to_train_config(
+            self.proto.mutable_train_conf(), var2var_op_name
+        )

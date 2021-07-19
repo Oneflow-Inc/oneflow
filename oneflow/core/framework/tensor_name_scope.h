@@ -29,6 +29,8 @@ class TensorNameScope {
 
   const std::string& Lookup(const std::shared_ptr<Tensor>& tensor) const;
 
+  const std::string& LookupByPtr(const uint64_t& tensor_ptr) const;
+
   void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
 
  private:

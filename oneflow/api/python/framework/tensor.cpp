@@ -257,6 +257,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
+      // Tensor.backward() to lazy add_loss(Tensor)
+      .def("add_as_lazy_loss", [](const Tensor& t) { return t.add_as_lazy_loss().GetOrThrow(); })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)

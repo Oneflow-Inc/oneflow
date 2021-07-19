@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 
 import unittest
 import os
@@ -36,11 +51,30 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         momentum = 0.2
         scale = 0.3
         sgd0 = flow.optim.SGD(
-            [{"params": [m.para0, m.para1, m.para2], "lr": learning_rate, "momentum": momentum, "scale": scale}]
+            [
+                {
+                    "params": [m.para0, m.para1, m.para2],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                }
+            ]
         )
         sgd1 = flow.optim.SGD(
-            [{"params": [m.para3], "lr": learning_rate, "momentum": momentum, "scale": scale},
-             {"params": [m.para4], "lr": learning_rate, "momentum": momentum, "scale": scale}]
+            [
+                {
+                    "params": [m.para3],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                },
+                {
+                    "params": [m.para4],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                },
+            ]
         )
 
         class CustomGraph0(flow.nn.Graph):
@@ -52,17 +86,16 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
             def build(self, x):
                 out = self.m(x)
+                out.backward()
                 return out
 
         g = CustomGraph0()
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        g._preprocess_state()
-        g._complete_graph_config()
+        z = g._compile(x)
         print(repr(g))
-        print("g.config.proto ", g.config.proto)
-        # z = g._compile(x)
-        # print("graph proto", g._graph_proto)
+        print("g.config.proto: \n", g.config.proto)
+        print("graph proto: \n", g._graph_proto)
 
 
 if __name__ == "__main__":

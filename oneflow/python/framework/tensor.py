@@ -19,6 +19,7 @@ from oneflow._oneflow_internal.exception import IndexException
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import numpy as np
 import inspect
 from typing import Union
@@ -385,7 +386,10 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
-        flow.autograd.backward(self, gradient, retain_graph, create_graph)
+        if not lazy_mode.is_enabled():
+            flow.autograd.backward(self, gradient, retain_graph, create_graph)
+        else:
+            self.add_as_lazy_loss()
 
     @register_local_tensor_method()
     def _transform_ellipsis_type(self, key):
