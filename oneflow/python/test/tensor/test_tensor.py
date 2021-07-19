@@ -34,10 +34,6 @@ class TestTensor(flow.unittest.TestCase):
             np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_tensor_property(test_case):
         shape = (2, 3, 4, 5)
         tensor = flow.Tensor(*shape)
@@ -47,10 +43,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor.is_cuda, False)
         test_case.assertTrue(tensor.is_contiguous())
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
