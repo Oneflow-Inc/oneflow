@@ -134,13 +134,15 @@ class Interpolate(Module):
         if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
 
-        if self.recompute_scale_factor is not None and self.recompute_scale_factor:
+        if self.recompute_scale_factor is True:
             assert scale_factors is not None
             output_size = [
                 int(math.floor(float(input.size(i + 2)) * scale_factors[i]))
                 for i in range(dim)
             ]
-            scale_factors = None
+            scale_factors = []
+            for i in range(dim):
+                scale_factors.append(output_size[i] / x.shape[2 + i])
 
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow.F.upsample_nearest_1d(
