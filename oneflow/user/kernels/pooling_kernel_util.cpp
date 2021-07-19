@@ -50,6 +50,7 @@ void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
     int64_t* out_ptr = &(*out).at(i);
+    // refer to operator_util.cpp's `GetWindowedOutputSize` function
     *out_ptr = (in.at(i) + 2 * padding.at(i) - dilation_rate.at(i) * (pool_size.at(i) - 1) - 1
                 + strides.at(i) + (ceil_mode ? strides.at(i) - 1 : 0))
                / strides.at(i);
