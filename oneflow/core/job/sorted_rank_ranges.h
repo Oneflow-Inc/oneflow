@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include "oneflow/core/common/symbol.h"
@@ -45,12 +46,14 @@ class SortedRankRanges final {
   const std::vector<Range>& sorted_rank_ranges() const { return sorted_rank_ranges_; }
   const std::string& rpc_push_pull_key() const { return rpc_push_pull_key_; }
   size_t hash_value() const { return hash_value_; }
+	Maybe<int64_t> GetNextRankInRing(int64_t rank) const;
 
  private:
   SortedRankRanges() = default;
   Maybe<void> Init();
 
   std::vector<Range> sorted_rank_ranges_;
+	std::unordered_map<int64_t, int64_t> rank2next_rank_in_ring_;
   std::string rpc_push_pull_key_;
   size_t hash_value_;
 };

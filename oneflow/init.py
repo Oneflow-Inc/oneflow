@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import oneflow._oneflow_internal
 
+oneflow._oneflow_internal.SetThisThreadUniqueTag("main")
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 
 Size = oneflow._oneflow_internal.Size

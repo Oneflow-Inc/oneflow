@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/sorted_rank_ranges.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -32,6 +33,7 @@ namespace oneflow {
 
 /*static*/ Maybe<SortedRankRanges> SortedRankRanges::New4SoleDevicePerRankParallelDesc(
     const ParallelDesc& parallel_desc) {
+  CHECK_GT_OR_RETURN(parallel_desc.sorted_machine_ids().size(), 0);
   CHECK_EQ_OR_RETURN(parallel_desc.sorted_machine_ids().size(), parallel_desc.parallel_num());
   std::shared_ptr<SortedRankRanges> sorted_rank_ranges(new SortedRankRanges());
   // Initialize sorted_rank_ranges_
@@ -47,6 +49,17 @@ namespace oneflow {
       }
     }
   }
+	// Initialize rank2next_rank_in_ring_
+	{
+		const auto& ranges = sorted_rank_ranges.get()->sorted_rank_ranges_;
+		int64_t last = ranges.at(ranges.size() - 1).end();
+    for (const auto& machine_id_range : ranges) {
+			for (int64_t i = machine_id_range.begin(); i <= machine_id_range.end(); ++i) {
+				CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2next_rank_in_ring_.emplace(last, i).second);
+				last = i;
+			}
+		}
+	}
   // Initialize rpc_push_pull_key_
   {
     int i = 0;
@@ -66,6 +79,10 @@ namespace oneflow {
     }
   }
   return sorted_rank_ranges;
+}
+
+Maybe<int64_t> SortedRankRanges::GetNextRankInRing(int64_t rank) const {
+	return MapAt(rank2next_rank_in_ring_, rank);
 }
 
 }  // namespace oneflow
