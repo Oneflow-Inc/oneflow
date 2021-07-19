@@ -85,3 +85,8 @@ def has_rpc_backend_grpc() -> bool:
 @oneflow_export("sysconfig.has_rpc_backend_local")
 def has_rpc_backend_local() -> bool:
     return oneflow._oneflow_internal.flags.has_rpc_backend_local()
+
+
+@oneflow_export("sysconfig.cmake_build_type")
+def cmake_build_type() -> str:
+    return oneflow._oneflow_internal.flags.cmake_build_type()
