@@ -49,6 +49,11 @@ jint JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject ob
 }
 
 JNIEXPORT
+jint JNICALL Java_org_oneflow_InferenceSession_getNodeSize(JNIEnv* env, jobject obj) {
+  return oneflow::GetNodeSize().GetOrThrow();
+}
+
+JNIEXPORT
 void JNICALL Java_org_oneflow_InferenceSession_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }
@@ -101,11 +106,12 @@ void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferC
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring jstr) {
-  // Todo: configuration
-  std::string job_conf_proto = ConvertToString(env, jstr);
+void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device) {
+  std::string job_conf_proto_ = ConvertToString(env, job_conf_proto);
+  std::string ids_ = ConvertToString(env, ids);
+  std::string device_ = ConvertToString(env, device);
 
-  return SetScopeForCurJob(job_conf_proto);
+  return SetScopeForCurJob(job_conf_proto_, ids_, device_);
 }
 
 JNIEXPORT

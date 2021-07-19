@@ -84,7 +84,9 @@ inline void SetJobConfForCurJobBuildAndInferCtx(const std::string& job_conf_prot
   oneflow::CurJobBuildAndInferCtx_SetJobConf(job_conf_cfg).GetOrThrow();
 }
 
-inline void SetScopeForCurJob(const std::string& job_conf_proto) {
+inline void SetScopeForCurJob(const std::string& job_conf_proto,
+                              const std::string& ids,
+                              const std::string& device) {
   // Todo: user configuration
   oneflow::JobConfigProto job_conf;
   oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);
@@ -93,10 +95,10 @@ inline void SetScopeForCurJob(const std::string& job_conf_proto) {
   job_conf_cfg->InitFromProto(job_conf);
 
   std::shared_ptr<oneflow::Scope> scope;
-  auto BuildInitialScope = [&scope, &job_conf_cfg](oneflow::InstructionsBuilder* builder) mutable -> oneflow::Maybe<void> {
+  auto BuildInitialScope = [&scope, &job_conf_cfg, &ids, &device](oneflow::InstructionsBuilder* builder) mutable -> oneflow::Maybe<void> {
     int session_id = oneflow::GetDefaultSessionId().GetOrThrow();
-    const std::vector<std::string> machine_device_ids({"0:0"});
-    std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf_cfg, "gpu", machine_device_ids, nullptr, false).GetPtrOrThrow();
+    const std::vector<std::string> machine_device_ids({ ids });
+    std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf_cfg, device, machine_device_ids, nullptr, false).GetPtrOrThrow();
     scope = initialScope;
     return oneflow::Maybe<void>::Ok();
   };

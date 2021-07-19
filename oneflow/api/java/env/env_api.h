@@ -20,6 +20,7 @@ inline void InitScopeStack() {
 
   std::shared_ptr<oneflow::Scope> scope;
   auto BuildInitialScope = [&scope, &job_conf](oneflow::InstructionsBuilder* builder) mutable -> oneflow::Maybe<void> {
+    // default configuration
     int session_id = oneflow::GetDefaultSessionId().GetOrThrow();
     const std::vector<std::string> machine_device_ids({"0:0"});
     std::shared_ptr<oneflow::Scope> initialScope = builder->BuildInitialScope(session_id, job_conf, "cpu", machine_device_ids, nullptr, false).GetPtrOrThrow();

@@ -10,6 +10,7 @@ extern "C" {
 
 // Detect Endian
 JNIEXPORT jint          JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject obj);
+JNIEXPORT jint          JNICALL Java_org_oneflow_InferenceSession_getNodeSize(JNIEnv* env, jobject obj);
 
 // init
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client);
@@ -23,7 +24,7 @@ JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_initSession(JN
 // compile
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
-JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring jstr);
+JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_curJobAddOp(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_InferenceSession_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj);
