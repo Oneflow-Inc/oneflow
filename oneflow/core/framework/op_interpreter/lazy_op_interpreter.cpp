@@ -92,11 +92,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  const std::string& op_name = op_conf.name();
-
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
+  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -113,7 +110,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 
   CHECK_OR_RETURN(!outputs->at(0).get());
   (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
-  TensorNameScope::Global()->Record(outputs->at(0), op_name + "/" + obn);
+  TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   return Maybe<void>::Ok();
 }
 
@@ -149,11 +146,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  const std::string& op_name = op_conf.name();
-
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
+  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -171,9 +165,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   CHECK_OR_RETURN(!outputs->at(0).get());
   (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
   // NOTE(chengcheng): Record variable op output LazyTenosr
-  TensorNameScope::Global()->Record(outputs->at(0), op_name + "/" + obn);
+  TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
-  TensorNameScope::Global()->Record(input_tensor, op_name + "/" + obn);
+  TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
   return Maybe<void>::Ok();
 }
 
@@ -211,11 +205,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  const std::string& op_name = op_conf.name();
-
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
+  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -279,11 +270,22 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
   const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
 
-  // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << new_op_name << std::endl
-            << " and the origin op_conf is :" << op_conf->DebugString();
-
+  // NOTE(chengcheng): for UserOp, NOT only reset op_name, but also the output values.
   op_conf->set_name(new_op_name);
+  for (auto& pair : *(op_conf->mutable_user_conf()->mutable_output())) {
+    auto& list_s = pair.second;
+    for (int i = 0; i < list_s.s_size(); ++i) {
+      std::string old_lbn = list_s.s(i);
+      LogicalBlobId old_lbi = GenLogicalBlobId(old_lbn);
+      // NOTE(chengcheng): MUST change the old_lbn to new op name.
+      std::string new_lbn = GenLogicalBlobName(new_op_name, old_lbi.blob_name());
+      list_s.set_s(i, new_lbn);
+    }
+  }
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph add UserOp: " << op_conf->DebugString() << std::endl;
+
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
@@ -303,7 +305,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
       UNIMPLEMENTED();
     }
-    TensorNameScope::Global()->Record(outputs->at(i), op_expr.op_name() + "/" + obn);
+    TensorNameScope::Global()->Record(outputs->at(i), GenLogicalBlobName(new_op_name, obn));
   }
   return Maybe<void>::Ok();
 }
