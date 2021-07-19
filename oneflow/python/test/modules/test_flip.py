@@ -31,7 +31,6 @@ def _test_flip(test_case, device):
         [[[14.0, 15.0], [12.0, 13.0]], [[10.0, 11.0], [8.0, 9.0]]],
         [[[6.0, 7.0], [4.0, 5.0]], [[2.0, 3.0], [0.0, 1.0]]],
     ]
-    print(out.numpy())
     test_case.assertTrue(np.allclose(out.numpy(), np_out, 1e-5, 1e-5))
     out = out.sum()
     out = out.backward()

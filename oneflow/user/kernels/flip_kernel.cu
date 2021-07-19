@@ -30,6 +30,10 @@ struct SIZE_V {
   int32_t val[NDIMS];
 };
 
+struct STRIDE {
+  int32_t val[NDIMS];
+};
+
 struct VIS {
   bool val[NDIMS] = {false};
 };
@@ -37,7 +41,7 @@ struct VIS {
 template<typename T>
 __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
                                const STRIDE_CONTIGUOUS_V stride_contiguous_v, const SIZE_V sizes_v,
-                               const VIS vis, const T* in_dptr, T* out_dptr) {
+                               const VIS vis, STRIDE strides_v, const T* in_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, element) {
     int32_t cur_indices = i;
     int32_t rem = 0;
@@ -46,7 +50,8 @@ __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
       int32_t temp = cur_indices;
       cur_indices = cur_indices / stride_contiguous_v.val[d];
       rem = temp - cur_indices * stride_contiguous_v.val[d];
-      dst_offset += vis.val[d] ? (sizes_v.val[d] - 1 - cur_indices) : cur_indices;
+      dst_offset += vis.val[d] ? (sizes_v.val[d] - 1 - cur_indices) * strides_v.val[d]
+                               : cur_indices * strides_v.val[d];
       cur_indices = rem;
     }
     out_dptr[i] = in_dptr[dst_offset];
@@ -76,6 +81,12 @@ class FlipGpuKernel final : public user_op::OpKernel {
     SIZE_V sizes_v;
     for (int32_t i = 0; i < total_dims; i++) { sizes_v.val[i] = y_tensor->shape().At(i); }
 
+    STRIDE strides_v;
+    strides_v.val[total_dims - 1] = 1;
+    for (int32_t i = total_dims - 2; i >= 0; i--) {
+      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape().At(i);
+    }
+
     STRIDE_CONTIGUOUS_V stride_contiguous_v;
 
     for (int32_t i = total_dims - 1; i >= 0; i--) {
@@ -87,7 +98,7 @@ class FlipGpuKernel final : public user_op::OpKernel {
       }
     }
     RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt, total_dims,
-                    stride_contiguous_v, sizes_v, vis, x_tensor->dptr<T>(),
+                    stride_contiguous_v, sizes_v, vis, strides_v, x_tensor->dptr<T>(),
                     y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -102,7 +113,7 @@ class FlipGrad1DGpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Memcpy<DeviceType::kGPU>(
