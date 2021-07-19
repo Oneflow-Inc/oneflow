@@ -22,6 +22,7 @@ import oneflow.experimental as flow
 
 
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_abs_forward(test_case, device):
@@ -58,10 +59,7 @@ def _test_abs_tensor_function_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAbs(flow.unittest.TestCase):
     def test_cosh(test_case):
         arg_dict = OrderedDict()
@@ -74,6 +72,18 @@ class TestAbs(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_flow_abs_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case, "abs", device=device,
+            )
+
+    def test_flow_tensor_abs_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case, "abs", device=device,
+            )
 
 
 if __name__ == "__main__":

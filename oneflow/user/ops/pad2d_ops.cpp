@@ -83,10 +83,11 @@ REGISTER_USER_OP("reflection_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -130,7 +131,8 @@ REGISTER_USER_OP("reflection_pad2d_grad")
     });
 
 REGISTER_USER_OP_GRAD("reflection_pad2d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -142,6 +144,7 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("replication_pad2d")
@@ -175,10 +178,11 @@ REGISTER_USER_OP("replication_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -222,7 +226,8 @@ REGISTER_USER_OP("replication_pad2d_grad")
     });
 
 REGISTER_USER_OP_GRAD("replication_pad2d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -234,6 +239,7 @@ REGISTER_USER_OP_GRAD("replication_pad2d")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("constant_pad2d")
@@ -269,10 +275,11 @@ REGISTER_USER_OP("constant_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL(x_modifier);
+      CHECK_NOTNULL_OR_RETURN(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -318,7 +325,8 @@ REGISTER_USER_OP("constant_pad2d_grad")
     });
 
 REGISTER_USER_OP_GRAD("constant_pad2d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -332,6 +340,7 @@ REGISTER_USER_OP_GRAD("constant_pad2d")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

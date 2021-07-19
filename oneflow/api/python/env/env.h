@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/base.h"
 
 namespace oneflow {
 
@@ -44,6 +45,19 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
+inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
+
+inline Maybe<bool> IsMultiClient() {
+  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
+  return *IsMultiClientPtr();
+}
+
+inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
+  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
+  *IsMultiClientPtr() = is_multi_client;
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<bool> IsEnvInited() {
   return Global<EnvGlobalObjectsScope>::Get() != nullptr
          && !JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env());
@@ -57,7 +71,11 @@ inline Maybe<void> DestroyDefaultEnv() {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  if (JUST(IsMultiClient())) {
+    OF_ENV_BARRIER();
+  } else {
+    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  }
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
@@ -75,7 +93,7 @@ inline Maybe<void> InitDefaultEnv(const std::string& env_proto_str) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> InitEnv(const std::string& env_proto_str) {
+inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
@@ -85,7 +103,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
+  if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
@@ -94,6 +112,7 @@ inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
+inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 
 }  // namespace oneflow
 

@@ -31,7 +31,7 @@ args = parser.parse_args()
 def StartWorker(env_proto):
     import oneflow._oneflow_internal
 
-    oneflow._oneflow_internal.InitEnv(env_proto)
+    oneflow._oneflow_internal.InitEnv(env_proto, False)
 
 
 def main():
@@ -48,6 +48,7 @@ def main():
 
         print("path:", oneflow.__path__)
         print("version:", oneflow.__version__)
+        print("cmake_build_type:", oneflow.sysconfig.cmake_build_type())
 
 
 if __name__ == "__main__":

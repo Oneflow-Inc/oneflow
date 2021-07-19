@@ -22,7 +22,7 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
-placement = oneflow._oneflow_internal.PlacementSymbol
+placement = oneflow._oneflow_internal.placement
 no_grad = oneflow._oneflow_internal.autograd.no_grad
 
 # define dtype at the begining of oneflow init
@@ -48,9 +48,7 @@ from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
-import oneflow.python.framework.session_util as session_util
 
-del session_util
 
 import oneflow.python.framework.register_python_callback
 
@@ -66,18 +64,33 @@ register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
+from oneflow.python.framework.session_util import Session
+from oneflow.python.framework.multi_client_session import MultiClientSession
 
-env_util.init_default_physical_env()
+
+if not env_util.HasAllMultiClientEnvVars():
+    env_util.SetDefaultMultiClientEnvVars()
+oneflow._oneflow_internal.SetIsMultiClient(True)
+env_util.api_env_init()
+session_ctx.OpenDefaultSession(
+    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+)
+scope_util.InitScopeStack()
+oneflow._oneflow_internal.EnableEagerEnvironment(True)
+
 del env_util
 
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
-def _SyncOnMasterFn(get_rank, sync):
-    def SyncOnMaster():
-        if get_rank() == 0:
-            sync()
+def _SyncOnMasterFn():
+    import oneflow
 
-    return SyncOnMaster
+    if oneflow.python.framework.distribute.is_multi_client():
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+    elif oneflow.python.framework.distribute.get_rank() == 0:
+        oneflow._oneflow_internal.eager.single_client.Sync()
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
@@ -86,30 +99,16 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
-atexit.register(
-    _SyncOnMasterFn(
-        oneflow.python.framework.distribute.get_rank,
-        oneflow._oneflow_internal.eager.single_client.Sync,
-    )
-)
+atexit.register(_SyncOnMasterFn)
+
 del atexit
 
-import sys
-
-__original_exit__ = sys.exit
-
-
-def custom_exit(returncode):
-    if returncode != 0:
-        import oneflow
-
-        oneflow._oneflow_internal.MasterSendAbort()
-    __original_exit__(returncode)
-
-
-sys.exit = custom_exit
-
-del custom_exit
-del sys
 del absolute_import
 del oneflow
+
+import oneflow.python.framework.docstr as docstr
+from oneflow.python.framework.docstr.utils import register_docstr
+
+register_docstr()
+del register_docstr
+del docstr

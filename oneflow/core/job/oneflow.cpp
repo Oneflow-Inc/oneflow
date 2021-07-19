@@ -103,8 +103,6 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
   return plan_name + "_cluster_thrd_ids";
 }
 
-std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
-
 std::string ctrl_regst_desc_info_key(const std::string& plan_name) {
   return plan_name + "_ctrl_regst_desc_info_key";
 }
@@ -191,7 +189,6 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
     Global<CtrlClient>::Get()->PushKV(block7chunk_key(plan_name, pair.first), pair.second);
   }
 
-  Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
   Global<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
                                     plan.ctrl_regst_desc_info());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
@@ -214,9 +211,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  NetTopo net_topo;
-  Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
-  *(plan->mutable_net_topo()) = net_topo;
   CtrlRegstDescInfo ctrl_regst_desc_info;
   Global<CtrlClient>::Get()->PullKV(ctrl_regst_desc_info_key(plan_name), &ctrl_regst_desc_info);
   *(plan->mutable_ctrl_regst_desc_info()) = ctrl_regst_desc_info;
@@ -399,7 +393,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   return Maybe<void>::Ok();
 }
 
-void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
+void MergePlan(Plan* plan, Plan&& other) {
   PbRpf<TaskProto>* dst_tasks = plan->mutable_task();
   PbRpf<TaskProto>* src_tasks = other.mutable_task();
   dst_tasks->Reserve(dst_tasks->size() + src_tasks->size());
@@ -421,17 +415,10 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
   }
 }
 
-void MergeSubPlanWithoutGenNetTopo(Plan* plan, std::vector<Plan>&& sub_plans) {
+void MergeSubPlan(Plan* plan, std::vector<Plan>&& sub_plans) {
   CHECK(!sub_plans.empty());
   *plan = std::move(sub_plans.at(0));
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
-    MergePlanWithoutGenNetTopo(plan, std::move(sub_plans.at(i)));
-  }
-}
-
-void MergePlan(Plan* plan, Plan&& other) {
-  MergePlanWithoutGenNetTopo(plan, std::move(other));
-  Compiler().GenNetTopo(plan);
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlan(plan, std::move(sub_plans.at(i))); }
 }
 
 void DumpCtrlRegstInfoToPlan(Plan* plan) {
@@ -1124,8 +1111,9 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     CHECK(!job_desc.Bool("__is_user_function__"));
     jobs.emplace_back(new Job(*job));
   };
-  if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
-    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+
+  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_legacy_model_io()) {
+    if (Global<ResourceDesc, ForSession>::Get()->resource().enable_model_io_v2()) {
       MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
     } else {
       MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
@@ -1160,7 +1148,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-  MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
+  MergeSubPlan(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
   PlanUtil::SetForceInplaceMemBlock(&plan);

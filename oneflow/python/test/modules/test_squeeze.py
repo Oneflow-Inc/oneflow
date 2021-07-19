@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_squeeze(test_case, device):
@@ -83,10 +84,7 @@ def _test_squeeze_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSqueeze(flow.unittest.TestCase):
     def test_squeeze(test_case):
         arg_dict = OrderedDict()
@@ -100,6 +98,26 @@ class TestSqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_flow_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_annotations={"dim": int,},
+                extra_generators={"dim": random(0, 6)},
+                device=device,
+            )
+
+    def test_flow_tensor_squeeze_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(
+                test_case,
+                "squeeze",
+                extra_annotations={"dim": int},
+                extra_generators={"dim": random(0, 6)},
+                device=device,
+            )
 
 
 if __name__ == "__main__":

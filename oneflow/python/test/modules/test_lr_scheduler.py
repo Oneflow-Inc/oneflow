@@ -21,10 +21,7 @@ import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
 

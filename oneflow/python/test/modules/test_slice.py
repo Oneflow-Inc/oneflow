@@ -82,6 +82,15 @@ def _test_slice_with_int_index(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+def _test_slice_negative_index(test_case, device):
+    np_arr = np.random.randn(4, 5, 6)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    test_case.assertTrue(np.allclose(x[-1].numpy(), np_arr[-1], 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(x[-2].numpy(), np_arr[-2], 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(x[-3].numpy(), np_arr[-3], 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(x[-4].numpy(), np_arr[-4], 1e-4, 1e-4))
+
+
 def _test_slice_ellipsis_type(test_case, device):
     np_arr = np.random.randn(2, 3, 4, 5, 6, 7).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -116,10 +125,7 @@ def _test_slice_backward(test_case, device):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
@@ -129,6 +135,7 @@ class TestSlice(flow.unittest.TestCase):
             _test_slice_3_dim,
             _test_slice_4_dim,
             _test_slice_with_int_index,
+            _test_slice_negative_index,
             _test_slice_ellipsis_type,
             _test_slice_backward,
         ]
@@ -137,10 +144,7 @@ class TestSlice(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
@@ -151,10 +155,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLogicalSliceAssign(flow.unittest.TestCase):
     # this is an in-place operation, so requires_grad should be False(no grad in backward)
     def test_logical_slice_assign(test_case):
@@ -164,6 +165,13 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
         flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
+
+    def test_logical_slice_assign_negative_index(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4))
+        input = flow.Tensor(np_arr)
+        np_arr[-1] = 1
+        input[-1] = 1
+        test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
     def test_logical_slice_assign_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
