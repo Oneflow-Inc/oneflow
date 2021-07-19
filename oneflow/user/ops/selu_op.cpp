@@ -83,6 +83,7 @@ REGISTER_USER_OP_GRAD("selu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
                             [&ctx, &selu_grad_op_name]() -> const std::string& {
                               return ctx->GetOp(selu_grad_op_name).output("dx", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

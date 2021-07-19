@@ -83,6 +83,7 @@ REGISTER_USER_OP_GRAD("softsign").SetBackwardOpConfGenFn([](user_op::BackwardOpC
                             [&ctx, &softsign_grad_op_name]() -> const std::string& {
                               return ctx->GetOp(softsign_grad_op_name).output("dx", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace
