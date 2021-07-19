@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,10 +47,6 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
-struct IbvSendWrSgePair {
-  ibv_send_wr wr;
-  ibv_sge sge;
-};
 
 struct IBVerbsCommNetRMADesc;
 
@@ -71,7 +64,7 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
-  void AddMsgToPenddingList(const ibv_send_wr& wr);
+  void PostSendReadRequestHandle( ibv_send_wr    wr,   ibv_sge    sge,ibv_send_wr * bad_wr );
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
@@ -91,11 +84,11 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
-  std::mutex num_msg_in_send_buf_mutex_;
-  uint32_t num_msg_in_send_buf_;
+  std::mutex num_outstanding_send_wr_mutex_;
+  uint32_t   num_outstanding_send_wr_;
   uint32_t max_send_wr_in_send_buf_;
   std::mutex msg_pendding_list_mutex_;
-  std::queue<IbvSendWrSgePair> msg_pendding_list_;
+  std::queue<std::pair<ibv_send_wr,ibv_sge>> msg_pendding_list_;
   std::mutex use_pendding_list_mutex_;
   bool use_pendding_list_;
 };
