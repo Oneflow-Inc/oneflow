@@ -167,9 +167,11 @@ class Interpolate(Module):
             return flow.F.adaptive_avg_pool1d(x, output_size)
 
         if len(x.shape) == 4 and self.mode == "area":
+            assert output_size is not None
             return flow.F.adaptive_avg_pool2d(x, output_size)
 
         if len(x.shape) == 5 and self.mode == "area":
+            assert output_size is not None
             return flow.F.adaptive_avg_pool3d(x, output_size)
 
         if len(x.shape) == 3 and self.mode == "linear":
