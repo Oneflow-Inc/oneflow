@@ -43,6 +43,7 @@ class Error final {
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
   static Error ValueError(const std::string& error_summary);
+  static Error IndexError();
   static Error JobNameExistError();
   static Error JobNameEmptyError();
   static Error JobNameNotEqualError();
