@@ -33,14 +33,14 @@ def _clip_grad_norm_np(input, max_norm, norm_type):
     if norm_type == float("inf"):
         total_norm = np.max(np.abs(np_grad))
     elif norm_type == 0:
-        total_norm = np.sum(np.stack([np.sum(np_grad!=0)])!=0)
+        total_norm = np.sum(np.stack([np.sum(np_grad != 0)]) != 0)
     else:
         total_norm = np_grad
         for i in range(np_grad.ndim, 0, -1):
-            total_norm = np.linalg.norm(total_norm, norm_type, axis = i-1)
+            total_norm = np.linalg.norm(total_norm, norm_type, axis=i - 1)
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
-        np_grad= np.dot(np_grad, clip_coef)
+        np_grad = np.dot(np_grad, clip_coef)
     return total_norm, np_grad
 
 
@@ -73,7 +73,7 @@ class TestAcosh(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["max_norm"] = [0, 0.5, 1.0]
-        arg_dict["norm_type"] = ['inf', 0.0, 1.0, 2.0, 3.5]
+        arg_dict["norm_type"] = ["inf", 0.0, 1.0, 2.0, 3.5]
         for arg in GenArgList(arg_dict):
             _test_clip_grad_norm_impl(test_case, *arg)
 

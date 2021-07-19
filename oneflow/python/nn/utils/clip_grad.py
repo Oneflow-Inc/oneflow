@@ -29,8 +29,11 @@ _tensor_or_tensors = Union[Tensor, Iterable[Tensor]]
 @oneflow_export("nn.utils.clip_grad_norm_")
 @experimental_api
 def clip_grad_norm_(
-        parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
-        error_if_nonfinite: bool = False) -> Tensor:
+    parameters: _tensor_or_tensors,
+    max_norm: float,
+    norm_type: float = 2.0,
+    error_if_nonfinite: bool = False,
+) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
     concatenated into a single vector.
@@ -87,26 +90,42 @@ def clip_grad_norm_(
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if len(parameters) == 0:
-        return flow.tensor(0.)
+        return flow.tensor(0.0)
     device = parameters[0].grad.device
     if norm_type == float("inf"):
         norms = [p.grad.detach().abs().max().to(device) for p in parameters]
-        total_norm = norms[0] if len(norms) == 1 else flow.max(flow.experimental.stack(norms))
+        total_norm = (
+            norms[0] if len(norms) == 1 else flow.max(flow.experimental.stack(norms))
+        )
     else:
-        total_norm = flow.experimental.linalg.vector_norm(flow.experimental.stack([flow.experimental.linalg.vector_norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
+        total_norm = flow.experimental.linalg.vector_norm(
+            flow.experimental.stack(
+                [
+                    flow.experimental.linalg.vector_norm(p.grad.detach(), norm_type).to(
+                        device
+                    )
+                    for p in parameters
+                ]
+            ),
+            norm_type,
+        )
     if np.isnan(total_norm.numpy()) or np.isinf(total_norm.numpy()):
         if error_if_nonfinite:
             raise RuntimeError(
-                f'The total norm of order {norm_type} for gradients from '
-                '`parameters` is non-finite, so it cannot be clipped. To disable '
-                'this error and scale the gradients by the non-finite norm anyway, '
-                'set `error_if_nonfinite=False`')
+                f"The total norm of order {norm_type} for gradients from "
+                "`parameters` is non-finite, so it cannot be clipped. To disable "
+                "this error and scale the gradients by the non-finite norm anyway, "
+                "set `error_if_nonfinite=False`"
+            )
         else:
-            warnings.warn("Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
-                          "Note that the default behavior will change in a future release to error out "
-                          "if a non-finite total norm is encountered. At that point, setting "
-                          "error_if_nonfinite=false will be required to retain the old behavior.",
-                          FutureWarning, stacklevel=2)
+            warnings.warn(
+                "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
+                "Note that the default behavior will change in a future release to error out "
+                "if a non-finite total norm is encountered. At that point, setting "
+                "error_if_nonfinite=false will be required to retain the old behavior.",
+                FutureWarning,
+                stacklevel=2,
+            )
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
         for p in parameters:
@@ -117,8 +136,11 @@ def clip_grad_norm_(
 @oneflow_export("nn.utils.clip_grad_norm")
 @experimental_api
 def clip_grad_norm(
-        parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
-        error_if_nonfinite: bool = False):
+    parameters: _tensor_or_tensors,
+    max_norm: float,
+    norm_type: float = 2.0,
+    error_if_nonfinite: bool = False,
+):
     r"""Clips gradient norm of an iterable of parameters.
 
     .. warning::
