@@ -20,6 +20,7 @@ from resnet50_model import resnet50
 
 
 @flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_with_batchnorm(test_case):
         batch_size = 32
