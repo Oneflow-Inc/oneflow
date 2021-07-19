@@ -30,6 +30,28 @@ class FlipCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const T* x_ptr = x_tensor->dptr<T>();
+    T* y_ptr = y_tensor->mut_dptr<T>();
+    std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
+    std::unordered_map<int, bool> mp;
+    for (auto x : dims) { mp[x] = true; }
+    const int32_t out_dims = y_tensor->shape().NumAxes();
+    std::vector<int32_t> dim_sum(out_dims + 1);
+    dim_sum[out_dims] = 1;
+    for (int i = out_dims - 1; i >= 0; i--) {
+      dim_sum[i] = dim_sum[i + 1] * y_tensor->shape().At(i);
+    }
+    for (int i = 0; i < out_dims; i++) {
+      int offset = i * dim_sum[i + 1];
+      int dim_len = y_tensor->shape().At(i);
+      for (int j = 0; j < dim_len; j++) {
+        if (mp[i]) {
+          *(y_ptr + offset + (dim_len - j - 1)) = *(x_ptr + offset + j);
+        } else {
+          *(y_ptr + offset + j) = *(x_ptr + offset + j);
+        }
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

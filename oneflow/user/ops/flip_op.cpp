@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("flip")
     .Input("x")
     .Output("y")
-    .Attr<std::vector<float>>("dims")
+    .Attr<std::vector<int32_t>>("dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
@@ -39,7 +39,7 @@ REGISTER_USER_OP("flip")
 REGISTER_USER_OP("flip_grad")
     .Input("dy")
     .Output("dx")
-    .Attr<std::vector<float>>("dims")
+    .Attr<std::vector<int32_t>>("dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
