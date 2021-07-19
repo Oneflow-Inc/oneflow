@@ -109,6 +109,7 @@ def _test_new_ones(test_case, device, shape):
     test_case.assertTrue(np.array_equal(np.ones_like(x.numpy()), x.grad.numpy()))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()
