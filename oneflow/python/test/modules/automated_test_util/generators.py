@@ -311,10 +311,18 @@ class random_tensor(generator):
 @data_generator(bool)
 class random_bool(generator):
     def __init__(self):
-        pass
+        super().__init__([])
 
     def _calc_value(self):
         return random_util.choice([True, False])
+
+
+class random_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(['cuda', 'cpu'])
 
 
 def test_against_pytorch(
@@ -618,6 +626,8 @@ def test_tensor_against_pytorch(
 
 __all__ = [
     "random_tensor",
+    "random_bool",
+    "random_device",
     "random",
     "random_or_nothing",
     "constant",
