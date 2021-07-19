@@ -73,7 +73,7 @@ REGISTER_USER_OP("hardsigmoid_grad")
     });
 
 REGISTER_USER_OP_GRAD("hardsigmoid")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto hardsigmoid_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(hardsigmoid_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("hardsigmoid_grad")
@@ -86,6 +86,7 @@ REGISTER_USER_OP_GRAD("hardsigmoid")
                                 [&ctx, &hardsigmoid_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(hardsigmoid_grad_op_name).output("dx", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace
