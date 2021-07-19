@@ -316,57 +316,25 @@ class MaxPool1d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-<<<<<<< HEAD
-        self.kernel_size = _pair(tuple(kernel_size)[0])
-        self.stride = (
-            _pair(tuple(stride)[0]) if (stride is not None) else _pair(kernel_size)
-        )
-        self.dilation = _GetSequence(dilation, 2, "dilation")
-        self.padding = _pair(tuple(padding)[0])
-        self.return_indices = return_indices
-        self.ceil_mode = ceil_mode
-
-=======
         self.kernel_size = _getint(kernel_size)
         self.stride = _getint(stride) if stride is not None else self.kernel_size
-        data_format = "NCL"  # Only suport "NCL" for now!
+        data_format = "NCL"  # only support "NCL" for now !
         self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
         self.dilation = _getint(dilation)
         self.padding = _getint(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
-        if self.channel_pos == "channels_first":
-            padding = (0, 0, self.padding, 0)
-        else:
-            raise ValueError("error padding param!")
-
-        self.padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(self.channel_pos), 2
-        )
-        self.padding_before = [pad[0] for pad in pads_list]
-        self.padding_after = [pad[1] for pad in pads_list]
->>>>>>> master
-
     def forward(self, x):
         expand_x = x.unsqueeze(dim=-1)
 
         expand_y, expand_indice = flow.F.maxpool_2d(
             expand_x,
-<<<<<<< HEAD
-            padding=self.padding,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            dilation=self.dilation,
-=======
             data_format=self.channel_pos,
-            padding=self.padding_type,
-            padding_before=self.padding_before,
-            padding_after=self.padding_after,
+            padding=[self.padding, 0],
             kernel_size=[self.kernel_size, 1],
             stride=[self.stride, 1],
             dilation=[self.dilation, 1],
->>>>>>> master
             return_indices=True,
             ceil_mode=self.ceil_mode,
         )
@@ -473,7 +441,7 @@ class MaxPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        data_format = "NCHW" # only support "NCHW" for now !
+        data_format = "NCHW"  # only support "NCHW" for now !
         self.channel_pos = (
             "channels_first" if data_format == "NCHW" else "channels_last"
         )
@@ -482,10 +450,11 @@ class MaxPool2d(Module):
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
         self.padding = _pair(padding)
+
     def forward(self, x):
         y, indice = flow.F.maxpool_2d(
-            x, 
-            data_format=self.channel_pos, 
+            x,
+            data_format=self.channel_pos,
             padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -611,7 +580,7 @@ class MaxPool3d(Module):
 
     def forward(self, x):
         y, indice = flow.F.maxpool_3d(
-            x, 
+            x,
             data_format=self.channel_pos,
             padding=self.padding,
             kernel_size=self.kernel_size,

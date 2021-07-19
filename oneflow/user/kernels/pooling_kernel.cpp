@@ -26,6 +26,7 @@ struct PoolingOpKernelState final : public user_op::OpKernelState {
 std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelComputeContext* ctx,
                                                             const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
@@ -33,8 +34,8 @@ std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelCompu
   const bool return_indices = ctx->Attr<bool>("return_indices");
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
-  PoolingParams3D params_3d =
-      PoolingParams3D(dim, x_shape, padding, kernel_size, stride, dilation, return_indices, ceil_mode);
+  PoolingParams3D params_3d = PoolingParams3D(dim, x_shape, data_format, padding, kernel_size,
+                                              stride, dilation, return_indices, ceil_mode);
   std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d));
   return std::move(state);
 }

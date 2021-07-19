@@ -27,6 +27,7 @@ typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::Add
 TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
@@ -43,7 +44,7 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const PoolingParams3D params_3d(dim, *x_shape, padding, kernel_size, stride, 
+    const PoolingParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
                                     dilation, return_indices, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -116,6 +117,7 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
               .Input("indice", op.output("indice", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
+              .Attr("data_format", op.attr<std::string>("data_format"))
               .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
               .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
               .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
@@ -137,6 +139,7 @@ REGISTER_USER_OP("maxpool_2d")
     .Output("y")
     .Output("indice")
     .Attr<std::vector<int32_t>>("padding")
+    .Attr<std::string>("data_format")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -153,6 +156,7 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .Input("dy")
     .Output("dx")
     .Attr<std::vector<int32_t>>("padding")
+    .Attr<std::string>("data_format")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -169,6 +173,7 @@ REGISTER_USER_OP("maxpool_3d")
     .Output("y")
     .Output("indice")
     .Attr<std::vector<int32_t>>("padding")
+    .Attr<std::string>("data_format")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")
@@ -185,6 +190,7 @@ REGISTER_USER_OP("maxpool_3d_grad")
     .Input("dy")
     .Output("dx")
     .Attr<std::vector<int32_t>>("padding")
+    .Attr<std::string>("data_format")
     .Attr<std::vector<int32_t>>("kernel_size")
     .Attr<std::vector<int32_t>>("stride")
     .Attr<std::vector<int32_t>>("dilation")

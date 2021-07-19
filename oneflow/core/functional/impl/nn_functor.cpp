@@ -232,13 +232,13 @@ class PoolingNDFunctor {
   PoolingNDFunctor() = default;
   virtual ~PoolingNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::vector<int32_t>& padding,
+                                const std::string& data_format, const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& kernel_size,
                                 const std::vector<int32_t>& stride,
-                                const std::vector<int32_t>& dilation, 
-                                const bool& return_indices,
+                                const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));

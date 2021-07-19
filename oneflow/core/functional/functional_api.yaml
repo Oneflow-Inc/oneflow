@@ -413,14 +413,14 @@
 
 - name: "maxpool_2d"
   signature:
-    "TensorTuple Maxpool2D(Tensor x, *, Int32List padding,
+    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
 
 - name: "maxpool_3d"
   signature:
-    "TensorTuple Maxpool3D(Tensor x, *, Int32List padding,
+    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
@@ -428,7 +428,7 @@
 - name: "pooling_grad"
   signature:
     "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, 
-                       Int32List padding, Int32List kernel_size,
+                       String data_format, Int32List padding, Int32List kernel_size,
                        Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
   bind_python: False
 

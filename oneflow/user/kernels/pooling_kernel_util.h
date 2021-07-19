@@ -52,13 +52,13 @@ struct DeviceAdd {
 
 class PoolingParams3D {
  public:
-  PoolingParams3D(const int32_t dim, const ShapeView& x_shape, 
-                  const std::vector<int32_t>& padding,
-                  const std::vector<int32_t>& kernel_size, const std::vector<int32_t>& stride,
-                  const std::vector<int32_t>& dilation, const bool return_indices,
-                  const bool ceil_mode);
+  PoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+                  const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
+                  const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
+                  const bool return_indices, const bool ceil_mode);
   ~PoolingParams3D() = default;
 
+  const std::string& data_format() const { return data_format_; }
   const std::vector<int32_t>& padding() const { return padding_; }
   const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
   const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
@@ -77,6 +77,7 @@ class PoolingParams3D {
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
+  std::string data_format_;
   std::vector<int32_t> padding_;
   std::vector<int32_t> pooling_size_3d_;
   std::vector<int32_t> stride_3d_;

@@ -119,14 +119,14 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
     DoCUDAMaxPool3dForward<T>
         <<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
-            params_3d.padding()[1], params_3d.padding()[2],
-            params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(2),
-            params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-            params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
-            params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[0],
-            params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2],
-            params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-            params_3d.dilation_3d()[0], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+            params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
+            params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
+            params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2),
+            params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+            params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
+            params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+            params_3d.stride_3d()[2], params_3d.dilation_3d()[0], params_3d.dilation_3d()[1],
+            params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,

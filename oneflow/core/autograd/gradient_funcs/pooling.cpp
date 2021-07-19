@@ -32,6 +32,7 @@ struct PoolingInterpState : public OpExprInterpState {
   size_t output_index;
   size_t indice_index;
 
+  std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
@@ -72,6 +73,7 @@ Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& i
   ctx->indice_index = ctx->SaveTensorForBackward(outputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
@@ -93,9 +95,8 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingInterpState* ctx, const TensorTupl
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolingNdGrad(
-      input, output, indice, out_grads.at(0), mode_, ndims, ctx->padding,
-      ctx->kernel_size, ctx->stride, ctx->dilation,
-      ctx->return_indices, ctx->ceil_mode));
+      input, output, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+      ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
 }
