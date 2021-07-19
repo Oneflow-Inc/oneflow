@@ -23,7 +23,8 @@ def convert_name_sapce(python_file):
     )
 
 
-with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-    pool.map(convert_name_sapce, single_client_python_files)
-    pool.close()
-    pool.join()
+if __name__ == "__main__":
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        pool.map(convert_name_sapce, single_client_python_files)
+        pool.close()
+        pool.join()
