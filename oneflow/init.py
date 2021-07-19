@@ -84,13 +84,16 @@ del env_util
 
 
 # capture oneflow methods so that they can be still accessed after `del oneflow`
-def _SyncOnMasterFn():
-    import oneflow
+def _SyncOnMasterFn(rank):
+    def Sync():
+        import oneflow
 
-    if oneflow.python.framework.distribute.is_multi_client():
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-    elif oneflow.python.framework.distribute.get_rank() == 0:
-        oneflow._oneflow_internal.eager.single_client.Sync()
+        if oneflow.python.framework.distribute.is_multi_client():
+            oneflow._oneflow_internal.eager.multi_client.Sync()
+        elif rank == 0:
+            oneflow._oneflow_internal.eager.single_client.Sync()
+
+    return Sync
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
@@ -99,7 +102,7 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
-atexit.register(_SyncOnMasterFn)
+atexit.register(_SyncOnMasterFn(oneflow.python.framework.distribute.get_rank()))
 
 del atexit
 
