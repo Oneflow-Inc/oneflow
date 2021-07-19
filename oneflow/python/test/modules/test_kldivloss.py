@@ -89,10 +89,7 @@ def _test_kldivloss_backward(test_case, device, shape, reduction, log_target):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestKLDivLossModule(flow.unittest.TestCase):
     def test_kldivloss(test_case):
         arg_dict = OrderedDict()

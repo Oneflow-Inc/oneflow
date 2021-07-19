@@ -155,10 +155,7 @@ def _test_linear_backward_with_bias(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, x.grad.numpy(), 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLinear(flow.unittest.TestCase):
     def test_linear_forward(test_case):
         arg_dict = OrderedDict()

@@ -60,10 +60,7 @@ def _test_negative_backward(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestNegativeModule(flow.unittest.TestCase):
     def test_negative(test_case):
         arg_dict = OrderedDict()

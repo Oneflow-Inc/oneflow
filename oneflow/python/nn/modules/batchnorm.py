@@ -91,6 +91,12 @@ class _NormBase(Module):
             error_msgs,
         )
 
+    def extra_repr(self):
+        return (
+            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "track_running_stats={track_running_stats}".format(**self.__dict__)
+        )
+
 
 class _BatchNorm(_NormBase):
     def __init__(
