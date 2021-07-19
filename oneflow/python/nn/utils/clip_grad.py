@@ -58,13 +58,26 @@ def clip_grad_norm(
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
-        >>> m = flow.nn.ReLU()
-        >>> out1 = m(x1)
+        >>> m1 = flow.nn.ReLU()
+        >>> out1 = m1(x1)
         >>> out1 = out1.sum()
         >>> out1.backward()
-        >>> total_norm = flow.nn.utils.clip_grad_norm(x1.parameters(), 0.8, 1)
-        >>> total_norm
-        tensor([[0.8 , 0.8, 0.8], [0.8, 0.8, 0.8]] , dtype=oneflow.float32)
+        >>> norm1 = flow.nn.utils.clip_grad_norm(x1, 0.6, 1.0)
+        >>> norm1
+        tensor([6.], dtype=oneflow.float32)
+        >>> x1.grad
+        tensor([[0.1, 0.1, 0.1],
+                [0.1, 0.1, 0.1]], dtype=oneflow.float32)
+        >>> x2 = flow.Tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), device='cuda:0', requires_grad=True)
+        >>> out2 = flow.atan(x2)
+        >>> out2 = out2.sum()
+        >>> out2.backward()
+        >>> norm2 = flow.nn.utils.clip_grad_norm(x2, 0.5)
+        >>> norm2
+        tensor([1.0394], device='cuda:0', dtype=oneflow.float32)
+        >>> x2.grad
+        tensor([[0.0962, 0.0481, 0.0283],
+                [0.0663, 0.481 , 0.0428]], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -80,8 +93,7 @@ def clip_grad_norm(
         norms = [p.grad.detach().abs().max().to(device) for p in parameters]
         total_norm = norms[0] if len(norms) == 1 else flow.max(flow.experimental.stack(norms))
     else:
-        norm_type = int(norm_type)
-        total_norm = flow.experimental.linalg.norm(flow.experimental.stack([flow.experimental.linalg.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
+        total_norm = flow.experimental.linalg.vector_norm(flow.experimental.stack([flow.experimental.linalg.vector_norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
     if np.isnan(total_norm.numpy()) or np.isinf(total_norm.numpy()):
         if error_if_nonfinite:
             raise RuntimeError(
