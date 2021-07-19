@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
-#ifdef WITH_CUDA
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/pad3d_kernels_util.h"
+#include "oneflow/user/kernels/constantpad3d_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -27,10 +26,10 @@ __global__ void DoCUDAConstantPad3d(const IN_T* src, IN_T* dest,
                                     const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                     int64_t elem_num, int64_t n_channel, int64_t y_depth,
                                     int64_t y_height, int64_t y_width, int64_t x_depth,
-                                    int64_t x_height, int64_t x_width, int64_t pad_font,
+                                    int64_t x_height, int64_t x_width, int64_t pad_front,
                                     int64_t pad_left, int64_t pad_top, const IN_T const_value) {
   DoConstantPad3d<IN_T>(src, dest, index_helper, elem_num, n_channel, y_depth, y_height, y_width,
-                        x_depth, x_height, x_width, pad_font, pad_left, pad_top, const_value);
+                        x_depth, x_height, x_width, pad_front, pad_left, pad_top, const_value);
 };
 
 template<typename IN_T>
@@ -38,10 +37,10 @@ __global__ void DoCUDAConstantPad3dGrad(const IN_T* src, IN_T* dest,
                                         const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                         int64_t elem_num, int64_t n_channel, int64_t dy_depth,
                                         int64_t dy_height, int64_t dy_width, int64_t dx_depth,
-                                        int64_t dx_height, int64_t dx_width, int64_t pad_font,
+                                        int64_t dx_height, int64_t dx_width, int64_t pad_front,
                                         int64_t pad_left, int64_t pad_top) {
   DoConstantPad3dGrad<IN_T>(src, dest, index_helper, elem_num, n_channel, dy_depth, dy_height,
-                            dy_width, dx_height, dx_depth, dx_width, pad_font, pad_left, pad_top);
+                            dy_width, dx_height, dx_depth, dx_width, pad_front, pad_left, pad_top);
 };
 
 template<typename IN_T>
@@ -50,12 +49,11 @@ struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
-    // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
     const int64_t c_idx = 1;
     const int64_t d_idx = 2;
     const int64_t h_idx = 3;
     const int64_t w_idx = 4;
-    // padding vector: [left, right, top, bottom, font, back]
+
     DoCUDAConstantPad3d<IN_T><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
                                 ctx->cuda_stream()>>>(
         src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx), y_shape.At(d_idx),
@@ -70,12 +68,10 @@ void ConstantPad3dFunctor<DeviceType::kGPU, float16>::operator()(
     DeviceCtx* ctx, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
     const ShapeView& y_shape, const std::vector<int64_t>& padding, float16 constant_value) {
-  // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
   const int64_t c_idx = 1;
   const int64_t d_idx = 2;
   const int64_t h_idx = 3;
   const int64_t w_idx = 4;
-  // padding vector: [left, right, top, bottom, font, back]
   DoCUDAConstantPad3d<half>
       <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
@@ -89,12 +85,10 @@ struct ConstantPad3dGradFunctor<DeviceType::kGPU, IN_T> final {
   void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
-    // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
     const int64_t c_idx = 1;
     const int64_t d_idx = 2;
     const int64_t h_idx = 3;
     const int64_t w_idx = 4;
-    // padding vector: [left, right, top, bottom, font, back]
     DoCUDAConstantPad3dGrad<IN_T><<<BlocksNum4ThreadsNum(dy_shape.Count(0)),
                                     kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(d_idx),
@@ -109,12 +103,10 @@ void ConstantPad3dGradFunctor<DeviceType::kGPU, float16>::operator()(
     DeviceCtx* ctx, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
     const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
-  // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
   const int64_t c_idx = 1;
   const int64_t d_idx = 2;
   const int64_t h_idx = 3;
   const int64_t w_idx = 4;
-  // padding vector: [left, right, top, bottom, font, back]
   DoCUDAConstantPad3dGrad<half>
       <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
@@ -128,7 +120,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD3D_FUNCTOR,
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD3D_GRAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+
 }  // namespace user_op
 }  // namespace oneflow
-
-#endif  // WITH_CUDA

@@ -353,7 +353,8 @@ REGISTER_USER_OP("constant_pad3d")
       const Shape& x_shape = ctx->InputShape("x", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
       CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
-      // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
+      // only support NCDHW format input tensor for now !
+      // for NCDHW format, index of num,channel,depth,height,width is 0,1,2,3,4
       const int64_t n_idx = 0;
       const int64_t c_idx = 1;
       const int64_t d_idx = 2;

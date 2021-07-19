@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/pad3d_kernels_util.h"
+#include "oneflow/user/kernels/constantpad3d_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -25,12 +25,12 @@ struct ConstantPad3dFunctor<DeviceType::kCPU, IN_T> final {
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
-    // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
+    // for NCDHW format input tensor, index of n, c, d, h, w is 0, 1, 2, 3, 4
     const int64_t c_idx = 1;
     const int64_t d_idx = 2;
     const int64_t h_idx = 3;
     const int64_t w_idx = 4;
-    // padding vector: [left, right, top, bottom, font, back]
+    // padding vector: [left, right, top, bottom, front, back]
     DoConstantPad3d<IN_T>(src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx),
                           y_shape.At(d_idx), y_shape.At(h_idx), y_shape.At(w_idx),
                           x_shape.At(d_idx), x_shape.At(h_idx), x_shape.At(w_idx), padding[4],
@@ -43,12 +43,10 @@ struct ConstantPad3dGradFunctor<DeviceType::kCPU, IN_T> final {
   void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
-    // for NCDHW format input tensor, index of n,c,d,h,w is 0,1,2,3,4
     const int64_t c_idx = 1;
     const int64_t d_idx = 2;
     const int64_t h_idx = 3;
     const int64_t w_idx = 4;
-    // padding vector: [left, right, top, bottom, font, back]
     DoConstantPad3dGrad<IN_T>(src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx),
                               dy_shape.At(d_idx), dy_shape.At(h_idx), dy_shape.At(w_idx),
                               dx_shape.At(d_idx), dx_shape.At(h_idx), dx_shape.At(w_idx),

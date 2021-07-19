@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/pad3d_kernels_util.h"
+#include "oneflow/user/kernels/constantpad3d_kernel_util.h"
 
 namespace oneflow {
 

@@ -64,18 +64,18 @@ OF_DEVICE_FUNC void DoConstantPad3d(const IN_T* src, IN_T* dest,
                                     const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                     int64_t elem_num, int64_t n_channel, int64_t y_depth,
                                     int64_t y_height, int64_t y_width, int64_t x_depth,
-                                    int64_t x_height, int64_t x_width, int64_t pad_font,
+                                    int64_t x_height, int64_t x_width, int64_t pad_front,
                                     int64_t pad_left, int64_t pad_top, IN_T constant_value) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, d, h, w;
     index_helper.OffsetToNdIndex(num, n, c, d, h, w);
 
     const int64_t src_num = n_channel * x_depth * x_height * x_width;
-    if (pad_font <= d && d < pad_font + x_depth && w >= pad_left && w < x_width + pad_left
+    if (pad_front <= d && d < pad_front + x_depth && w >= pad_left && w < x_width + pad_left
         && h >= pad_top && h < x_height + pad_top) {
       const int64_t len_w = w - pad_left;
       const int64_t len_h = h - pad_top;
-      const int64_t len_d = d - pad_font;
+      const int64_t len_d = d - pad_front;
       const int64_t src_index = n * src_num + c * x_depth * x_width * x_height
                                 + len_d * x_height * x_width + len_h * x_width + len_w;
       dest[num] = src[src_index];
@@ -90,16 +90,16 @@ OF_DEVICE_FUNC void DoConstantPad3dGrad(const IN_T* src, IN_T* dest,
                                         const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                         int64_t elem_num, int64_t n_channel, int64_t dy_depth,
                                         int64_t dy_height, int64_t dy_width, int64_t dx_depth,
-                                        int64_t dx_height, int64_t dx_width, int64_t pad_font,
+                                        int64_t dx_height, int64_t dx_width, int64_t pad_front,
                                         int64_t pad_left, int64_t pad_top) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, d, h, w;
     index_helper.OffsetToNdIndex(num, n, c, d, h, w);
 
     const int64_t dest_num = n_channel * dx_depth * dx_height * dx_width;
-    if (pad_font <= d && d < pad_font + dx_depth && w >= pad_left && w < dx_width + pad_left
+    if (pad_front <= d && d < pad_front + dx_depth && w >= pad_left && w < dx_width + pad_left
         && h >= pad_top && h < dx_height + pad_top) {
-      const int64_t len_d = d - pad_font;
+      const int64_t len_d = d - pad_front;
       const int64_t len_w = w - pad_left;
       const int64_t len_h = h - pad_top;
       const int64_t dest_index = n * dest_num + c * dx_depth * dx_width * dx_height
