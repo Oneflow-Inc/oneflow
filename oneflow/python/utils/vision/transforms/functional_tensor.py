@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import flow.functional as F
+import oneflow.F as F
 from oneflow.python.framework.tensor import Tensor
 
 from typing import Optional, Tuple, List
