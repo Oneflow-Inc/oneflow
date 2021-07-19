@@ -63,6 +63,7 @@ def _test_mean_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMean(flow.unittest.TestCase):
     def test_mean(test_case):
         arg_dict = OrderedDict()

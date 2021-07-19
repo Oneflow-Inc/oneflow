@@ -41,6 +41,7 @@ def _test_acosh_impl(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
     def test_acosh(test_case):
         arg_dict = OrderedDict()
