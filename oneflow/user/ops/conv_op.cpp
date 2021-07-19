@@ -159,7 +159,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   }
 }
 
-void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
   std::string data_format = op.attr<std::string>("data_format");
   std::vector<int32_t> kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
@@ -168,8 +168,8 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
   int32_t groups = op.attr<int32_t>("groups");
 
   int32_t ndims = kernel_size.size();
-  CHECK_EQ(ndims, strides.size());
-  CHECK_EQ(ndims, dilation_rate.size());
+  CHECK_EQ_OR_RETURN(ndims, strides.size());
+  CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
 
   if (op.user_op_conf().has_input("bias", 0)) {
     if (op.NeedGenGradTensor4OpInput("bias", 0)) {
@@ -224,6 +224,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
     op.BindGradTensorWithOpInput(data_grad_op.output("dx", 0), "in", 0);
     AddOp(data_grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

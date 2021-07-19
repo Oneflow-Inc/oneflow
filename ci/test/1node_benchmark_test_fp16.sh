@@ -1,7 +1,7 @@
 set -ex
 
 rm -rf /benchmarks
-cp -r oneflow/python/benchmarks /benchmarks
+cp -r oneflow/compatible_single_client_python/benchmarks /benchmarks
 cd /benchmarks
 
 python3 cnn_benchmark/of_cnn_benchmarks.py \

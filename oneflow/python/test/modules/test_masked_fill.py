@@ -14,98 +14,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
 import numpy as np
 
 import oneflow.experimental as flow
-from test_util import GenArgList
+from automated_test_util import *
 
 
-def _test_masked_fill(test_case, device):
-    input_arr = np.array(
-        [
-            [
-                [-0.13169311, 0.97277078, 1.23305363, 1.56752789],
-                [-1.51954275, 1.87629473, -0.53301206, 0.53006478],
-                [-1.38244183, -2.63448052, 1.30845795, -0.67144869],
-            ],
-            [
-                [0.41502161, 0.14452418, 0.38968, -1.76905653],
-                [0.34675095, -0.7050969, -0.7647731, -0.73233418],
-                [-1.90089858, 0.01262963, 0.74693893, 0.57132389],
-            ],
-        ]
-    )
-
-    output = np.array(
-        [
-            [
-                [-0.1316931, 8.7654321, 8.7654321, 8.7654321],
-                [-1.5195428, 8.7654321, -0.5330121, 8.7654321],
-                [-1.3824418, -2.6344805, 8.7654321, -0.6714487],
-            ],
-            [
-                [8.7654321, 8.7654321, 8.7654321, -1.7690565],
-                [8.7654321, -0.7050969, -0.7647731, -0.7323342],
-                [-1.9008986, 8.7654321, 8.7654321, 8.7654321],
-            ],
-        ]
-    )
-
-    fill_value = 8.7654321  # random value e.g. -1e9 3.14
-
-    input = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device))
-    mask = flow.Tensor(
-        (input_arr > 0).astype(np.int8), dtype=flow.int, device=flow.device(device)
-    )
-    of_out = flow.masked_fill(input, mask, value=fill_value)
-    test_case.assertTrue(np.allclose(of_out.numpy(), output))
-
-
-def _test_masked_fill_backward(test_case, device):
-    input_arr = np.array(
-        [
-            [
-                [-0.13169311, 0.97277078, 1.23305363, 1.56752789],
-                [-1.51954275, 1.87629473, -0.53301206, 0.53006478],
-                [-1.38244183, -2.63448052, 1.30845795, -0.67144869],
-            ],
-            [
-                [0.41502161, 0.14452418, 0.38968, -1.76905653],
-                [0.34675095, -0.7050969, -0.7647731, -0.73233418],
-                [-1.90089858, 0.01262963, 0.74693893, 0.57132389],
-            ],
-        ]
-    )
-
-    fill_value = -3.1415  # random value e.g. -1e9 3.14
-
-    x = flow.Tensor(
-        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    mask = flow.Tensor(
-        (input_arr > 0).astype(np.int8), dtype=flow.int, device=flow.device(device)
-    )
-    y = flow.masked_fill(x, mask, value=fill_value)
-    z = y.sum()
-    z.backward()
-    test_case.assertTrue(
-        np.array_equal(x.grad.numpy(), (input_arr < 0).astype(np.float32))
-    )
-
-
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestMaskedFill(flow.unittest.TestCase):
-    def test_masked_fill(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_masked_fill, _test_masked_fill_backward]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    def test_masked_fill_aginst_pytorch(test_case):
+        import numpy as np
+        import torch
+
+        def mask_tensor(shape):
+            def generator(_):
+                rng = np.random.default_rng()
+                np_arr = rng.integers(low=0, high=2, size=shape)
+                return (
+                    flow.Tensor(np_arr, dtype=flow.int8),
+                    torch.tensor(np_arr, dtype=torch.bool),
+                )
+
+            return generator
+
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(
+                test_case,
+                "masked_fill",
+                extra_annotations={"mask": flow.Tensor, "value": float},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=4, dim1=5),
+                    "mask": mask_tensor((4, 5)),
+                    "value": constant(3.14),
+                },
+                device=device,
+            )
+
+            test_tensor_against_pytorch(
+                test_case,
+                "masked_fill",
+                extra_annotations={"mask": flow.Tensor, "value": float},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=4, dim1=5),
+                    "mask": mask_tensor((4, 5)),
+                    "value": constant(3.14),
+                },
+                device=device,
+            )
 
 
 if __name__ == "__main__":
