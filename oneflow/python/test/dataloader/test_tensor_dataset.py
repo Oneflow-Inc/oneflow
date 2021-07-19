@@ -74,7 +74,7 @@ class TestTensorDataset(flow.unittest.TestCase):
                 l.backward()
                 optimizer.step()
             if epoch == num_epochs:
-                test_case.assertLess(l.numpy(), 0.00019)
+                test_case.assertLess(l.numpy(), 0.0002)
 
 
 if __name__ == "__main__":

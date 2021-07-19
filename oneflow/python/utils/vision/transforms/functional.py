@@ -228,7 +228,7 @@ def resize(
     if not isinstance(interpolation, InterpolationMode):
         raise TypeError("Argument interpolation should be a InterpolationMode")
 
-    if not isinstance(img, flow.Tensor):
+    if not isinstance(img, (flow.Tensor, flow._oneflow_internal.Tensor)):
         pil_interpolation = pil_modes_mapping[interpolation]
         return F_pil.resize(img, size=size, interpolation=pil_interpolation)
 
