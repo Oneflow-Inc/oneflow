@@ -59,10 +59,6 @@ class CustomModule(flow.nn.Module):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestGraph(flow.unittest.TestCase):
     def test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)

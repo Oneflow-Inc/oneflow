@@ -123,10 +123,7 @@ def _test_layernorm_backward(test_case, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layernorm(test_case):
         arg_dict = OrderedDict()

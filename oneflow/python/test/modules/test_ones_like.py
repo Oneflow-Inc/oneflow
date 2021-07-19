@@ -44,10 +44,7 @@ def _test_ones_like_int(test_case, shape, device):
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_ones_like(test_case):
         arg_dict = OrderedDict()
