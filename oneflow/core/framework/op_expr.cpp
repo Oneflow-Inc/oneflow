@@ -41,6 +41,9 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
     return name;                                                   \
   }
 
+DEFINE_OPEXPR_OP_TYPE_NAME(FeedInputOpConf, "feed_input");
+DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
+DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
@@ -62,6 +65,9 @@ const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
     return _bool;                                               \
   }
 
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedVariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FetchOutputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
@@ -376,6 +382,48 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                            const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_feed_input_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                               const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_feed_variable_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                              const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_fetch_output_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 template<>

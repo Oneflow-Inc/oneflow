@@ -18,7 +18,7 @@ from typing import Optional
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import _single, _pair, _triple
+from oneflow.python.nn.modules.utils import _getint, _single, _pair, _triple
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSequence
 
@@ -63,7 +63,6 @@ class AvgPool1d(Module):
         padding: _size_1_t = 0,
         ceil_mode: bool = False,
         count_include_pad: Optional[bool] = None,
-        name: Optional[str] = None,
     ):
         # TODO: fix cuDNN bugs in pooling_1d
         raise NotImplementedError
@@ -115,16 +114,16 @@ class AvgPool2d(Module):
         ceil_mode: bool = False,
         count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
-        name: Optional[str] = None,
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride) if (stride is not None) else kernel_size
+        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
 
         assert isinstance(padding, int) or isinstance(
             padding, tuple
         ), "padding can only int int or tuple of 2 ints."
         padding = _pair(padding)
+        self.padding = padding
         padding = [0, 0, *padding]
 
         assert count_include_pad is None, "count_include_pad not supported yet"
@@ -140,7 +139,7 @@ class AvgPool2d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        res = flow.F.avg_pool_2d(
+        return flow.F.avg_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -150,7 +149,12 @@ class AvgPool2d(Module):
             ceil_mode=self.ceil_mode,
             data_format=self._channel_pos,
         )
-        return res
+
+    def extra_repr(self) -> str:
+        return (
+            "kernel_size={kernel_size}, stride={stride}, padding={padding}"
+            ", ceil_mode={ceil_mode}".format(**self.__dict__)
+        )
 
 
 @oneflow_export("nn.AvgPool3d")
@@ -220,14 +224,14 @@ class AvgPool3d(Module):
         divisor_override: Optional[int] = None,
     ):
         super().__init__()
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride) if (stride is not None) else kernel_size
+        kernel_size = _triple(kernel_size)
+        stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
 
         assert padding == (0, 0, 0), "padding>0 not supported yet"
         assert isinstance(padding, int) or isinstance(
             padding, tuple
         ), "padding can only int int or tuple of 3 ints."
-        padding = _pair(padding)
+        padding = _triple(padding)
         padding = [0, 0, *padding]
 
         assert count_include_pad is None, "count_include_pad not supported yet"
@@ -256,8 +260,7 @@ class AvgPool3d(Module):
         )
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return self._op(x)[0]
 
 
 @oneflow_export("nn.MaxPool1d")
@@ -313,20 +316,17 @@ class MaxPool1d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        self.kernel_size = _pair(tuple(kernel_size)[0])
-        self.stride = _pair(tuple(stride)[0]) if (stride is not None) else kernel_size
+        self.kernel_size = _getint(kernel_size)
+        self.stride = _getint(stride) if stride is not None else self.kernel_size
         data_format = "NCL"  # Only suport "NCL" for now!
         self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
-        self.dilation = _GetSequence(dilation, 2, "dilation")
-        padding = _pair(tuple(padding)[0])
+        self.dilation = _getint(dilation)
+        self.padding = _getint(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
-        if len(padding) == 2:
-            if self.channel_pos == "channels_first":
-                padding = (0, 0, padding[0], padding[1])
-            else:
-                raise ValueError("error padding param!")
+        if self.channel_pos == "channels_first":
+            padding = (0, 0, self.padding, 0)
         else:
             raise ValueError("error padding param!")
 
@@ -338,15 +338,16 @@ class MaxPool1d(Module):
 
     def forward(self, x):
         expand_x = x.unsqueeze(dim=-1)
+
         expand_y, expand_indice = flow.F.maxpool_2d(
             expand_x,
             data_format=self.channel_pos,
             padding=self.padding_type,
             padding_before=self.padding_before,
             padding_after=self.padding_after,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            dilation=self.dilation,
+            kernel_size=[self.kernel_size, 1],
+            stride=[self.stride, 1],
+            dilation=[self.dilation, 1],
             return_indices=True,
             ceil_mode=self.ceil_mode,
         )
@@ -357,6 +358,11 @@ class MaxPool1d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}".format(
+            self.kernel_size, self.stride, self.padding
+        )
 
 
 @oneflow_export("nn.MaxPool2d")
@@ -448,7 +454,7 @@ class MaxPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride) if (stride is not None) else kernel_size
+        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         data_format = "NCHW"  # Only suport "NCHW" for now!
         self.channel_pos = (
             "channels_first" if data_format == "NCHW" else "channels_last"
@@ -458,6 +464,7 @@ class MaxPool2d(Module):
         self.ceil_mode = ceil_mode
 
         padding = _pair(padding)
+        self.padding = padding
         if len(padding) == 2:
             if data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
@@ -490,6 +497,11 @@ class MaxPool2d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
 
 
 @oneflow_export("nn.MaxPool3d")
@@ -587,13 +599,14 @@ class MaxPool3d(Module):
     ):
         super().__init__()
         self.kernel_size = _triple(kernel_size)
-        self.stride = _triple(stride) if (stride is not None) else kernel_size
+        self.stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
         data_format = "NCDHW"
         self.channel_pos = (
             "channels_last" if data_format == "NDHWC" else "channels_first"
         )
         self.dilation = _GetSequence(dilation, 3, "dilation")
         padding = _triple(padding)
+        self.padding = padding
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
@@ -629,6 +642,11 @@ class MaxPool3d(Module):
             return y, indice
         else:
             return y
+
+    def extra_repr(self) -> str:
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
 
 
 if __name__ == "__main__":

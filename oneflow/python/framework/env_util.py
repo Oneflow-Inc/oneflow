@@ -80,8 +80,6 @@ def env_init():
             scope_util.InitScopeStack()
         else:
             exit(0)
-    else:
-        scope_util.InitScopeStack()
     return True
 
 
@@ -400,6 +398,14 @@ def HasAllMultiClientEnvVars():
         has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
         assert not has_at_least_one_env_var
     return has_all_env_vars
+
+
+def SetDefaultMultiClientEnvVars():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = str(_FindFreePort())
+    os.environ["WORLD_SIZE"] = "1"
+    os.environ["RANK"] = "0"
+    os.environ["LOCAL_RANK"] = "0"
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
