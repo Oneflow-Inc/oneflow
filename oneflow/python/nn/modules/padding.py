@@ -108,6 +108,9 @@ class ReplicationPad2d(Module):
                 "Padding size should be less than the corresponding input dimension. Please check."
             )
 
+    def extra_repr(self) -> str:
+        return "{}".format(self.padding)
+
 
 @oneflow_export("nn.ReflectionPad2d")
 @experimental_api
@@ -182,6 +185,9 @@ class ReflectionPad2d(Module):
             raise ValueError(
                 "padding size should be less than the corresponding input dimension!"
             )
+
+    def extra_repr(self) -> str:
+        return "{}".format(self.padding)
 
 
 if __name__ == "__main__":

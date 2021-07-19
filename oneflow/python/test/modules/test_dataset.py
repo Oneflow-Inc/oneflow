@@ -23,10 +23,6 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestOFRecordModule(flow.unittest.TestCase):
     def test_record(test_case):
         batch_size = 1
@@ -73,7 +69,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd, gt_np))
 
-        image = resize(image_raw_buffer)
+        image = resize(image_raw_buffer)[0]
 
         resized_image_raw_buffer_nd = image.numpy()[0]
         gt_np = cv2.imread(
@@ -259,10 +255,6 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"

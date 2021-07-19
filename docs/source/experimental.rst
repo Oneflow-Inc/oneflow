@@ -204,10 +204,13 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Hardswish
 .. autofunction:: oneflow.experimental.nn.PReLU
 .. autofunction:: oneflow.experimental.nn.Hardtanh
+.. autofunction:: oneflow.experimental.nn.functional.interpolate
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
 .. autofunction:: oneflow.experimental.linalg.norm
+.. autofunction:: oneflow.experimental.linalg.vector_norm
+.. autofunction:: oneflow.experimental.linalg.matrix_norm
 .. autofunction:: oneflow.experimental.Tensor.norm
 .. autofunction:: oneflow.experimental.floor
 .. autofunction:: oneflow.experimental.Tensor.floor
@@ -236,6 +239,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.diag
 .. autofunction:: oneflow.experimental.Tensor.diag
 .. autofunction:: oneflow.experimental.nn.GroupNorm
+.. autofunction:: oneflow.experimental.gather_nd
+.. autofunction:: oneflow.experimental.scatter_nd
 .. autofunction:: oneflow.experimental.nn.ZeroPad2d
 .. autofunction:: oneflow.experimental.nn.image.flip
 .. autofunction:: oneflow.experimental.tensor_buffer_to_tensor

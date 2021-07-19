@@ -174,13 +174,29 @@ def test_against_pytorch(
     else:
         pytorch_call = eval(f"torch.{pytorch_callable_name}")
 
+    Spec = namedtuple(
+        "spec",
+        "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+    )
+
     if has_full_args_spec(pytorch_call):
-        spec = inspect.getfullargspec(pytorch_call)
-    else:
-        Spec = namedtuple(
-            "spec",
-            "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+        tmp_spec = inspect.getfullargspec(pytorch_call)
+        new_defaults = tmp_spec.defaults
+        if new_defaults is None:
+            new_defaults = []
+        new_kwonlydefaults = tmp_spec.kwonlydefaults
+        if new_kwonlydefaults is None:
+            new_kwonlydefaults = []
+        spec = Spec(
+            tmp_spec.args,
+            tmp_spec.varargs,
+            tmp_spec.varkw,
+            new_defaults,
+            tmp_spec.kwonlyargs,
+            new_kwonlydefaults,
+            tmp_spec.annotations,
         )
+    else:
         args = list(extra_annotations.keys()) + list(extra_defaults.keys())
         spec = Spec(args, None, None, [], [], {}, {})
 
@@ -220,6 +236,10 @@ def test_against_pytorch(
                 if rng.random() < 1 / 3:
                     continue
             flow_data, torch_data = generate(name)
+            if isinstance(torch_data, torch.Tensor):
+                torch_data = torch_data.to(device)
+            if isinstance(flow_data, flow.Tensor):
+                flow_data = flow_data.to(device)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
 
@@ -291,7 +311,7 @@ def test_against_pytorch(
             )
             test_case.assertTrue(
                 is_allclose,
-                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}",
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}",
             )
 
         allclose_or_fail(flow_res, torch_res)
