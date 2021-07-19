@@ -84,7 +84,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
     });
 
 REGISTER_USER_OP_GRAD("unsorted_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
       if (need_grad_data) {
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
@@ -98,6 +99,7 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("unsorted_segment_sum_like")

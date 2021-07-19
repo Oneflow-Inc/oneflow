@@ -416,10 +416,7 @@ def _test_conv1d_compilcate(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestConv1d(flow.unittest.TestCase):
     def test_conv1d(test_case):
         arg_dict = OrderedDict()
