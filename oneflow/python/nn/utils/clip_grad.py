@@ -26,9 +26,9 @@ import numpy as np
 _tensor_or_tensors = Union[Tensor, Iterable[Tensor]]
 
 
-@oneflow_export("nn.utils.clip_grad_norm")
+@oneflow_export("nn.utils.clip_grad_norm_")
 @experimental_api
-def clip_grad_norm(
+def clip_grad_norm_(
         parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
         error_if_nonfinite: bool = False) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
@@ -62,7 +62,7 @@ def clip_grad_norm(
         >>> out1 = m1(x1)
         >>> out1 = out1.sum()
         >>> out1.backward()
-        >>> norm1 = flow.nn.utils.clip_grad_norm(x1, 0.6, 1.0)
+        >>> norm1 = flow.nn.utils.clip_grad_norm_(x1, 0.6, 1.0)
         >>> norm1
         tensor([6.], dtype=oneflow.float32)
         >>> x1.grad
@@ -72,7 +72,7 @@ def clip_grad_norm(
         >>> out2 = flow.atan(x2)
         >>> out2 = out2.sum()
         >>> out2.backward()
-        >>> norm2 = flow.nn.utils.clip_grad_norm(x2, 0.5)
+        >>> norm2 = flow.nn.utils.clip_grad_norm_(x2, 0.5)
         >>> norm2
         tensor([1.0394], device='cuda:0', dtype=oneflow.float32)
         >>> x2.grad
@@ -102,7 +102,7 @@ def clip_grad_norm(
                 'this error and scale the gradients by the non-finite norm anyway, '
                 'set `error_if_nonfinite=False`')
         else:
-            warnings.warn("Non-finite norm encountered in torch.nn.utils.clip_grad_norm_; continuing anyway. "
+            warnings.warn("Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
                           "Note that the default behavior will change in a future release to error out "
                           "if a non-finite total norm is encountered. At that point, setting "
                           "error_if_nonfinite=false will be required to retain the old behavior.",
@@ -112,6 +112,22 @@ def clip_grad_norm(
         for p in parameters:
             p.grad = p.grad.detach().mul(clip_coef.to(p.grad.device))
     return total_norm
+
+
+@oneflow_export("nn.utils.clip_grad_norm")
+@experimental_api
+def clip_grad_norm(
+        parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
+        error_if_nonfinite: bool = False):
+    r"""Clips gradient norm of an iterable of parameters.
+
+    .. warning::
+            This method is now deprecated in favor of
+            :func:`oneflow.experimental.nn.utils.clip_grad_norm_`
+
+    """
+
+    return clip_grad_norm_(parameters, max_norm, norm_type, error_if_nonfinite)
 
 
 if __name__ == "__main__":
