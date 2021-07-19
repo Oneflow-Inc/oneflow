@@ -132,6 +132,7 @@ def handle_export(node=None, export_d=None, imports=None):
             )
 
 
+# step 1: extract all exports
 for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
     if "python/test" in dirpath:
         print("[skip]", dirpath)
@@ -178,6 +179,11 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
                             ),
                             seg=f"{src_seg}\n",
                         )
+# step 2: merge files under python/ into generated files
+# step 3: rename all
+# step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
+
+# step 5: save file and sort imports and format
 DstFileDict.save()
 import sys
 
