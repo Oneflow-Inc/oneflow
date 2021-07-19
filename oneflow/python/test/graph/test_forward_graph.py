@@ -68,7 +68,8 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         print(repr(g))
         z = g._compile(x)
-        print("graph proto", g._graph_proto)
+        print("type(z): ", type(z))
+        print("graph proto: ", g._graph_proto)
 
 
 if __name__ == "__main__":

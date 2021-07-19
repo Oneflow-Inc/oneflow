@@ -27,6 +27,7 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.session_context as session_context
 import oneflow._oneflow_internal
+from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.python.framework.tensor import Tensor
 
 
@@ -169,3 +170,23 @@ def build_graph_state(state_block):
 
     lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
     return lazy_tensor
+
+def build_graph_output(out, out_idx):
+    assert isinstance(out, InternalTensor)
+    assert out.is_lazy
+    assert out.is_consistent
+
+    op_name = "output_" + str(out_idx)
+    output_conf = (
+        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
+    )
+    output_conf.set_in_0("in_0")
+    output_conf.set_out_0("out_0")
+
+    output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
+        op_name, output_conf, ["in_0"], ["out_0"]
+    )
+    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+
+    eager_out = output_op.apply([out], attrs)[0]
+    return eager_out
