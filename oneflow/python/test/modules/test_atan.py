@@ -64,6 +64,7 @@ def _test_arctan(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
     def test_atan(test_case):
         arg_dict = OrderedDict()

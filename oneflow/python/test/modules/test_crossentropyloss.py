@@ -96,6 +96,7 @@ g_test_samples = [
 ]
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_CrossEntropyLoss(test_case):
         global g_test_samples

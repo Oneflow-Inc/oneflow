@@ -109,6 +109,7 @@ def _test_reflection_pad2d(test_case, shape, padding, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestReflectionPad2dModule(flow.unittest.TestCase):
     def test_reflection_pad2d(test_case):
         arg_dict = OrderedDict()

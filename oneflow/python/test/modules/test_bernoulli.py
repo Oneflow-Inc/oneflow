@@ -40,6 +40,7 @@ def _test_bernoulli_with_generator(test_case, shape):
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestBernoulli(flow.unittest.TestCase):
     def test_bernoulli(test_case):
         arg_dict = OrderedDict()
