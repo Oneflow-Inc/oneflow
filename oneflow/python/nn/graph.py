@@ -128,8 +128,10 @@ class Graph(object):
                     outputs = (outputs,)
             eager_outputs = []
             for out in outputs:
-                eager_outputs.append(graph_build_util.build_graph_output(out, len(eager_outputs)))
-            
+                eager_outputs.append(
+                    graph_build_util.build_graph_output(out, len(eager_outputs))
+                )
+
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:

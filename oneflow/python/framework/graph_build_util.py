@@ -171,6 +171,7 @@ def build_graph_state(state_block):
     lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
     return lazy_tensor
 
+
 def build_graph_output(out, out_idx):
     assert isinstance(out, InternalTensor)
     assert out.is_lazy
