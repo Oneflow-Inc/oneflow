@@ -95,16 +95,6 @@ def env_init(is_multi_client):
     return True
 
 
-def init_default_physical_env():
-    default_physical_env_proto = _DefaultEnvProto()
-    log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
-    if log_dir:
-        default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
-    default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto, False)
-    c_api_util.InitDefaultEnv(default_physical_env_proto)
-
-
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
     r"""Get current resources, such as:machine nums, cpu/gpu device nums,
