@@ -102,7 +102,6 @@ if(NOT llvm_monorepo_POPULATED)
       )
   include_directories(${LLVM_INCLUDE_DIRS})
   include_directories(${MLIR_INCLUDE_DIRS})
-  set(LLVM_EXTERNAL_LIT=${llvm_monorepo_BINARY_DIR}/bin/llvm-lit)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
