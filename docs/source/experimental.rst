@@ -177,9 +177,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.AvgPool1d
 .. autofunction:: oneflow.experimental.nn.AvgPool2d
 .. autofunction:: oneflow.experimental.nn.AvgPool3d
-.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool1dGrad
-.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool2dGrad
-.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool3dGrad
+.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool1d
+.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool2d
+.. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool3d
 .. autofunction:: oneflow.experimental.adaptive_avg_pool1d
 .. autofunction:: oneflow.experimental.adaptive_avg_pool2d
 .. autofunction:: oneflow.experimental.adaptive_avg_pool3d
