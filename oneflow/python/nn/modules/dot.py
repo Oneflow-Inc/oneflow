@@ -42,7 +42,6 @@ def dot(input, other):
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
         >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
         tensor(7)
         

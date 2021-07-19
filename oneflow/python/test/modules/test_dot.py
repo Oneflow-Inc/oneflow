@@ -32,7 +32,6 @@ def _test_dot(test_case, device, dtype):
     y = flow.tensor(np_y, device=flow.device(device))
 
     out = flow.dot(x, y)
-
     test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
 
 
@@ -43,7 +42,7 @@ def _test_dot(test_case, device, dtype):
 class TestDot(flow.unittest.TestCase):
     def test_cpu_dot(test_case):
         arg_dict = OrderedDict()
-        arg_dict["dtype"] = [np.int32, np.int64, np.float32, np.double]
+        arg_dict["dtype"] = [np.float32, np.double]
         for arg in GenArgList(arg_dict):
             _test_dot(test_case, "cpu", *arg)
 

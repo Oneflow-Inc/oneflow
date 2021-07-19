@@ -21,48 +21,32 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-T dot_naive(const int64_t n, const T* x, int64_t incx, const T* y, int64_t incy) {
-  T sum = (T)(0);
-  
-  for (int64_t i = 0; i < n; i++) { sum += x[i * incx] * y[i * incy]; }
-  return sum;
-}
-
-template<typename T>
-class DotCpuKernel final : public user_op::OpKernel {
- public:
-  DotCpuKernel() = default;
-  ~DotCpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* out_ptr = out_tensor->mut_dptr<T>();
-    *out_ptr = dot_naive<T>(x->shape().elem_cnt(), x->dptr<T>(), 1, y->dptr<T>(), 1);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+template<DeviceType device_type, typename T>
+struct DotCalculation {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
+                  int64_t incy, T* out);
 };
 
-#define REGISTER_DOT_CPU_KERNEL(device, dtype)                                     \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotCpuKernel<dtype>>().SetIsMatchedHob(  \
-      (user_op::HobDeviceTag() == device)                                          \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, float)
-REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, double)
-REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_DOT_CPU_KERNEL(DeviceType::kCPU, int64_t)
-
-#ifdef WITH_CUDA
-
 template<typename T>
-class DotGpuKernel final : public user_op::OpKernel {
+struct DotCalculation<DeviceType::kCPU, T> {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
+                  int64_t incy, T* out) {
+    *out = cblas_dot<T>(n, x, 1, y, 1);
+  }
+};
+template<typename T>
+struct DotCalculation<DeviceType::kGPU, T> {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
+                  int64_t incy, T* out) {
+    NewKernelUtil<DeviceType::kGPU>::OFDot(ctx, n, x, 1, y, 1, out);
+  }
+};
+
+template<DeviceType device_type, typename T>
+class DotKernel final : public user_op::OpKernel {
  public:
-  DotGpuKernel() = default;
-  ~DotGpuKernel() = default;
+  DotKernel() = default;
+  ~DotKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -71,22 +55,23 @@ class DotGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    NewKernelUtil<DeviceType::kGPU>::OFDot(ctx->device_ctx(), n, x->dptr<T>(), 1, y->dptr<T>(), 1, out->mut_dptr<T>());
+    DotCalculation<device_type, T>::dot(ctx->device_ctx(), n, x->dptr<T>(), 1, y->dptr<T>(), 1,
+                                        out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#endif
-
-#ifdef WITH_CUDA
-#define REGISTER_DOT_GPU_KERNEL(device, dtype)                                    \
-  REGISTER_USER_KERNEL("dot").SetCreateFn<DotGpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                         \
+#define REGISTER_DOT_KERNEL(device, dtype)                                             \
+  REGISTER_USER_KERNEL("dot").SetCreateFn<DotKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == device)                                              \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_DOT_GPU_KERNEL(DeviceType::kGPU, float)
-REGISTER_DOT_GPU_KERNEL(DeviceType::kGPU, double)
+REGISTER_DOT_KERNEL(DeviceType::kCPU, float)
+REGISTER_DOT_KERNEL(DeviceType::kCPU, double)
 
+#ifdef WITH_CUDA
+REGISTER_DOT_KERNEL(DeviceType::kGPU, float)
+REGISTER_DOT_KERNEL(DeviceType::kGPU, double)
 #endif
 
 }  // namespace
