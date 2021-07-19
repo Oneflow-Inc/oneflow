@@ -46,10 +46,6 @@ def _roundup(x, n):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestImageBatchAlign(flow.unittest.TestCase):
     def test_image_batch_align(test_case):
         image_files = [
