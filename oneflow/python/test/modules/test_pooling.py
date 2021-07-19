@@ -252,6 +252,18 @@ def _test_maxpool1d_impl(test_case, device):
     test_case.assertTrue(np.allclose(of_output.numpy(), output, 1e-4, 1e-4))
 
 
+def _test_maxpool1d_zero_padding(test_case, device):
+    arr = np.arange(1000).reshape(4, 5, 50).astype(np.float)
+    input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
+    m1 = flow.nn.MaxPool1d(kernel_size=3, stride=3, padding=0)
+    of_out = m1(input)
+
+    m2 = MaxPoolNumpy(2, kernel_size=(3, 1), stride=(3, 1), padding=(0, 0))
+    np_out = m2(arr.reshape(4, 5, 50, 1))
+    np_out = np.squeeze(np_out, axis=3)
+    test_case.assertTrue(np.allclose(np_out, of_out.numpy(), 1e-4, 1e-4))
+
+
 def _test_maxpool2d(test_case, device):
     dim = 2
 
@@ -587,7 +599,7 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
-    m = flow.nn.MaxPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
+    m = flow.nn.MaxPool3d(kernel_size=kernel_size, padding=padding)
     m.to(flow.device(device))
     x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
     output = m(x)
@@ -600,16 +612,10 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestPooling(flow.unittest.TestCase):
     def test_maxpool1d(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_maxpool1d_impl,
-        ]
+        arg_dict["test_fun"] = [_test_maxpool1d_impl, _test_maxpool1d_zero_padding]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

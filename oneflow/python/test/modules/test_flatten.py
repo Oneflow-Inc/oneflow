@@ -58,10 +58,6 @@ def _test_flatten_backward(test_case, device):
     test_case.assertTrue(np.array_equal(np.ones(shape=(2, 3, 4, 5)), x.grad.numpy()))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestFlattenModule(flow.unittest.TestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()

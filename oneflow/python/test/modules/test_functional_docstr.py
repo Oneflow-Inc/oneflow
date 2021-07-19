@@ -52,10 +52,6 @@ def _run_functional_doctest(
             runner.run(test)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()

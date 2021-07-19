@@ -36,7 +36,7 @@ class Throw final {
 #define CHECK_OR_THROW(expr)                                                                      \
   if (!(expr))                                                                                    \
   Throw(oneflow::Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error() \
-      << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+      << " Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
 #define CHECK_EQ_OR_THROW(lhs, rhs) \
   CHECK_OR_THROW((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
