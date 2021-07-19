@@ -88,8 +88,6 @@ void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
   for (int64_t dim : dim_vec_) { out_stream << std::to_string(dim) << ' '; }
 }
 
-Maybe<Shape> SliceShape(const Shape& shape, int64_t start, int64_t end);
-
 std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
 }  // namespace oneflow
