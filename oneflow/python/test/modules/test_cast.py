@@ -50,10 +50,6 @@ def _test_cast_backward(test_case, device, shape):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape=shape)))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestCast(flow.unittest.TestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()

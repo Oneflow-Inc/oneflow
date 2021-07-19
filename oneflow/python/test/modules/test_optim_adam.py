@@ -95,10 +95,6 @@ def compare_with_numpy_adam(
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
