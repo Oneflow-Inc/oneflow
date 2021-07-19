@@ -83,11 +83,12 @@ oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
 
 
-# capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(rank):
-    def Sync():
-        import oneflow
+    import oneflow
 
+    def Sync():
+        if not oneflow._oneflow_internal.IsEnvInited():
+            return
         if oneflow.python.framework.distribute.is_multi_client():
             oneflow._oneflow_internal.eager.multi_client.Sync()
         elif rank == 0:

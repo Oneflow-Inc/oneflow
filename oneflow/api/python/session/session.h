@@ -126,7 +126,7 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> DestroyMultiClientSessionContext() {
+inline Maybe<void> TryDestroyMultiClientSessionContext() {
   // Global<T>::Delete is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   if (Global<MultiClientSessionContext>::Get() != nullptr) {

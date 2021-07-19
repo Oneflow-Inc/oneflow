@@ -16,16 +16,11 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
 
 ONEFLOW_API_PYBIND11_MODULE("eager.single_client", m) {
   using namespace oneflow;
   namespace py = pybind11;
   m.def(
-      "Sync",
-      []() {
-        if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return; }
-        vm::SingleClientSync().GetOrThrow();
-      },
+      "Sync", []() { vm::SingleClientSync().GetOrThrow(); },
       py::call_guard<py::gil_scoped_release>());
 }
