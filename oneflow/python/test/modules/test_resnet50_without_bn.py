@@ -23,10 +23,7 @@ from resnet50_model import resnet50, FakeBN
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_without_batchnorm(test_case):
         batch_size = 32

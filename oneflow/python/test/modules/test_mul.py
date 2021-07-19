@@ -98,10 +98,7 @@ def _test_mul_impl(test_case, device):
     test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
         arg_dict = OrderedDict()

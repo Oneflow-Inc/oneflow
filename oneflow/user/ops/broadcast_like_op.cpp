@@ -101,7 +101,7 @@ REGISTER_USER_OP("broadcast_like")
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
       ctx->DefineOp(x_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("reduce_sum_like")
@@ -116,6 +116,7 @@ REGISTER_USER_OP_GRAD("broadcast_like")
                                 [&ctx, &x_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(x_grad_op_name).output("y", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

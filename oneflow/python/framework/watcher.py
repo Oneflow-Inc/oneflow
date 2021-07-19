@@ -56,4 +56,3 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
 
 # static lifetime
 _global_watcher = _Watcher()
-oneflow._oneflow_internal.RegisterWatcherOnlyOnce(_global_watcher)

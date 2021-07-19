@@ -80,10 +80,7 @@ def _test_autograd_grad(test_case, shape, device):
     # TODO(wyg): create_graph
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAutograd(flow.unittest.TestCase):
     def test_autograd_interface(test_case):
         arg_dict = OrderedDict()
