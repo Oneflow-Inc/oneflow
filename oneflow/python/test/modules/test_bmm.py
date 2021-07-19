@@ -85,10 +85,6 @@ def _test_bmm_backward(test_case, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModule(flow.unittest.TestCase):
     def test_bmm(test_case):
         arg_dict = OrderedDict()
