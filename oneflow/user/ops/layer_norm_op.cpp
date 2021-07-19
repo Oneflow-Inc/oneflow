@@ -140,7 +140,7 @@ REGISTER_USER_OP("layer_norm_grad")
       user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
       CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
       const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
-      CHECK_GT(begin_norm_axis, 0);
+      CHECK_GT_OR_RETURN(begin_norm_axis, 0);
       const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
       CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
       CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);

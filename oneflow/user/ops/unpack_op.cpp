@@ -26,9 +26,9 @@ REGISTER_USER_OP("unpack")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
       const Shape& in_shape = in_desc.shape();
-      CHECK_GT(in_shape.NumAxes(), 0);
+      CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0);
       const auto unpack_num = ctx->Attr<int32_t>("unpack_num");
-      CHECK_EQ(in_shape.At(0) % unpack_num, 0);
+      CHECK_EQ_OR_RETURN(in_shape.At(0) % unpack_num, 0);
       user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_shape() = in_desc.shape();
       out_desc->mut_shape()->Set(0, in_shape.At(0) / unpack_num);

@@ -88,6 +88,7 @@ def compare_with_numpy_adamw(
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAdamW(flow.unittest.TestCase):
     def test_adamw(test_case):
         arg_dict = OrderedDict()
