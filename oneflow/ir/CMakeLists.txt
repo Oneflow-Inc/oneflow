@@ -40,6 +40,8 @@ if(NOT llvm_monorepo_POPULATED)
   set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
 
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
+    -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+    -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
     -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
     -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
     -DLLVM_ENABLE_EH=ON # turn this on to make it compatible with half (the library)
