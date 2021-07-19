@@ -184,26 +184,52 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
-  const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
-  int64_t symbol_id = JUST(scope->symbol_id());
-  op_conf->set_scope_symbol_id(symbol_id);
-  if (!op_conf->has_device_tag()) {
-    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
-  }
+  // TODO(chengcheng): Handle special UserOp such as:
+  //     1. [Source UserOp] : OFRecordReader, CoinFlip
+  //     2. [Change Placement/ParallelDesc UserOp] : to/to_consistent/parallel_cast
+  //     3. [Multi-Inputs & Different ParallelDesc for each input UserOp] : like there are 2 inputs,
+  //             one from CPU and the other from GPU.
+  //     ..., etc.
+
+  const auto& scope = JUST(GetCurrentScope());
+  int64_t old_scope_symbol_id = JUST(scope->symbol_id());
+  // TODO(chengcheng): New parallel desc scope from all inputs tensors.
+  op_conf->set_scope_symbol_id(old_scope_symbol_id);
+
+  // NOTE(chengcheng):
+  //   Normal UserOp inputs size >= 1 for infer parallel_desc.
+  //   if inputs size == 1, need handle in SourceUserOp impl.
+  CHECK_GE_OR_RETURN(inputs.size(), 1);
+  const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
+  op_conf->set_device_tag(device_tag);
   for (int i = 0; i < inputs.size(); ++i) {
+    const auto& input_tensor = inputs.at(i);
+    CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor));
     const std::string& ibn = op_expr.indexed_ibns().at(i);
-    const std::string& tensor_name = TensorNameScope::Global()->Lookup(inputs[i]);
-    ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, tensor_name);
-    // TODO(chengcheng): check inputs tensor placement equal, and create parallel scope? or set in
-    // python.
+    const std::string& lbn = TensorNameScope::Global()->Lookup(inputs[i]);
+    if (lbn.empty()) {
+      CHECK_OR_RETURN(input_tensor->is_eager());  // NOTE(chengcheng): lazy_tensor MUST has lbn.
+
+      // TODO(chengcheng):
+      //     this is free EagerTensor which NOT captured by nn.Graph (inputs/params).
+      //     Need Create a VariableOpConf for this inputs tensor, and Record name for itself.
+      UNIMPLEMENTED();
+    }
+    CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
+    ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
   }
-  const auto& session = JUST(GetDefaultSession());
-  bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());
-  const auto& op_attribute =
-      JUST(OpInterpUtil::AddOpAndInferOpAttribute(*op_conf, is_mirrored_strategy_enabled));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
+
+  // temp debug log
+  std::cout << "cclog: Lazy nn.Graph AddOpName: " << new_op_name << std::endl
+            << " and the origin op_conf is :" << op_conf->DebugString();
+
+  op_conf->set_name(new_op_name);
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -213,13 +239,13 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
-    const auto& parallel_attr = JUST(
-        compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
-    const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, obn));
+    const auto& parallel_attr =
+        JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
+    const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
     if (!(outputs->at(i).get())) {
       (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
     } else {
-      // TODO(hjchen2) Reset shape, dtype and so on.
+      // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
       UNIMPLEMENTED();
     }
     TensorNameScope::Global()->Record(outputs->at(i), op_expr.op_name() + "/" + obn);
