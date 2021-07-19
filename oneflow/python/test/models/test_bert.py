@@ -198,11 +198,11 @@ def PretrainJob():
 
 func_config = flow.FunctionConfig()
 func_config.default_logical_view(flow.scope.consistent_view())
-func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
+# func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_1n1c(test_case):
+def test_1n1c():
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     pretrain_job = flow.global_function(type="train", function_config=func_config)(
@@ -213,6 +213,20 @@ def test_1n1c(test_case):
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
+test_1n1c()
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_1n2c():
+    flow.config.gpu_device_num(2)
+    pretrain_job = flow.global_function(type="train", function_config=func_config)(
+        PretrainJob
+    )
+    check_point = flow.train.CheckPoint()
+    check_point.load(FLAGS.model_load_dir)
+    of_loss = [pretrain_job().get().mean() for _ in range(10)]
+    print(of_loss)
+
+# test_1n2c()
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):

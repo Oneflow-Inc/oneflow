@@ -29,7 +29,7 @@ namespace oneflow {
       });
 
 REGISTER_SQUEEZE_KERNEL(kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_SQUEEZE_KERNEL(kGPU)
 #endif
 

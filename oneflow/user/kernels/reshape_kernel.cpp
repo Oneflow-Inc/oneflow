@@ -29,7 +29,7 @@ namespace oneflow {
       });
 
 REGISTER_RESHAPE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_RESHAPE_KERNEL(DeviceType::kGPU)
 #endif
 

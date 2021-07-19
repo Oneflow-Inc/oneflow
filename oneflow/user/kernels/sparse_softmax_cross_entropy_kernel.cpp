@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
 #include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/rocm/softmax_rocm.h"
 
 namespace oneflow {
 namespace user_op {
@@ -107,12 +108,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  ("sparse_softmax_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsKernel),
                                  ("sparse_softmax_cross_entropy_ms"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                //  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 
 template<DeviceType device_type, typename T, typename K>
@@ -206,24 +208,91 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
                                  ("sparse_softmax_cross_entropy_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyGradKernel),
                                  ("sparse_softmax_cross_entropy_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                //  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsGradKernel),
                                  ("sparse_softmax_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsGradKernel),
                                  ("sparse_softmax_cross_entropy_ms_grad"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                //  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
+
+#if defined(WITH_ROCM)
+
+namespace {
+
+template<typename T>
+void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
+  using ComputeType = typename rocm::softmax::DefaultComputeType<T>::type;
+  rocm::softmax::DirectLoad<T, ComputeType> load(in, col);
+  rocm::softmax::DirectStore<ComputeType, T> store(prob, col);
+  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+      ctx->rocm_stream(), load, store, row, col);
+}
+
+template<>
+void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
+                 float16* prob) {
+  rocm::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
+  rocm::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
+  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->rocm_stream(), load,
+                                                                         store, row, col);
+}
+
+}  // namespace
+
+template<typename T, typename K>
+class SparseGpuSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
+ public:
+  SparseGpuSoftmaxCrossEntropyKernel() = default;
+  ~SparseGpuSoftmaxCrossEntropyKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
+    const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
+    user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t num_instances = label->shape().elem_cnt();
+    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t lower_bound = 0;
+    const int64_t depth = ctx->Attr<int64_t>("depth");
+    ComputeProb(ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(),
+                prob->mut_dptr<T>());
+    SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K>::ComputeEntropy(
+        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prob->dptr<T>(),
+        label->dptr<K>(), out->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_GPU_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL(dtype_pair, ltype_pair)                 \
+  REGISTER_USER_KERNEL("sparse_softmax_cross_entropy")                                       \
+      .SetCreateFn<SparseGpuSoftmaxCrossEntropyKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
+                                                   OF_PP_PAIR_FIRST(ltype_pair)>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                         \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GPU_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
+                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                //  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#endif
+
 }  // namespace user_op
 }  // namespace oneflow

@@ -444,8 +444,8 @@ class AdamUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#ifdef WITH_CUDA
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
+// REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA

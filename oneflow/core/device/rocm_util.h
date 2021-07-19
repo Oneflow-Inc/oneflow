@@ -8,6 +8,7 @@
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
 #include <miopen/miopen.h>
+#include <rccl.h>
 
 namespace oneflow {
 
@@ -26,6 +27,11 @@ namespace oneflow {
        _of_cudnn_check_status != miopenStatusSuccess;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << miopenGetErrorString(_of_cudnn_check_status) \
              << " (" << _of_cudnn_check_status << ") "
+
+#define OF_NCCL_CHECK(condition)                                                                \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
+             << " (" << _of_nccl_check_status << ") "
 
 template<typename T>
 void RocmCheck(T error);
