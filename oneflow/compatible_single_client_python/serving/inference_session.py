@@ -34,28 +34,28 @@ from oneflow._oneflow_internal.oneflow.core.job import sbp_parallel as sbp_paral
 from oneflow.core.job import job_conf_pb2 as job_conf_proto
 from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_proto
 from oneflow.core.serving import saved_model_pb2 as saved_model_pb
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_ctx,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_util as session_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     placement_util as placement_util,
 )
-from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.framework import (
     runtime_mode as runtime_mode,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     job_instance as job_instance_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     input_blob_def as input_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import dtype as dtype_util
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 def _is_int(val):

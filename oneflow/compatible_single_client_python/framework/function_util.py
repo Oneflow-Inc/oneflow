@@ -22,30 +22,30 @@ import inspect
 import traceback
 from typing import Any, Callable, Optional, Union
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )
-from oneflow.compatible_single_client_python.framework.function_desc import FunctionDesc
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     distribute_context as distribute_ctx,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible_single_client_python.framework import typing_util as oft_util
-from oneflow.compatible_single_client_python.framework import runtime_mode as rt_mode
-from oneflow.compatible_single_client_python.lib.core import pb_util as pb_util
-from oneflow.compatible_single_client_python.framework.function_desc import FunctionDesc
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.lib.core import pb_util as pb_util
+from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
 import oneflow._oneflow_internal
 import traceback

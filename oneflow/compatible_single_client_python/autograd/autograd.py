@@ -16,9 +16,9 @@ limitations under the License.
 
 from typing import Union, Sequence, Tuple
 
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
-from oneflow.compatible_single_client_python.framework.tensor_tuple_util import (
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.framework.tensor_tuple_util import (
     convert_to_tensor_tuple,
 )
 from oneflow._oneflow_internal import TensorTuple

@@ -15,7 +15,7 @@ limitations under the License.
 """
 import inspect
 
-from oneflow.compatible_single_client_python.lib.core import traceinfo as traceinfo
+from oneflow.compatible.single_client.python.lib.core import traceinfo as traceinfo
 
 
 def condition(hob_expr):

@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from oneflow.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("regularizers.l1_l2")
