@@ -40,15 +40,17 @@ class Flip(Module):
 @experimental_api
 def floor_op(input, dims):
 
-    r"""Reverse the order of a n-D tensor along given axis in dims.
+    r"""
+    
+    Reverse the order of a n-D tensor along given axis in dims.
 
     .. note::
-        `torch.flip` makes a copy of :attr:`input`'s data. This is different from NumPy's `np.flip`,
+        `flow.flip` makes a copy of :attr:`input`'s data. This is different from NumPy's `np.flip`,
         which returns a view in constant time. Since copying a tensor's data is more work than viewing that data,
-        `torch.flip` is expected to be slower than `np.flip`.
+        `flow.flip` is expected to be slower than `np.flip`.
 
     Args:
-        {input}
+        input (Tensor): the input tensor
         dims (a list or tuple): axis to flip on
         
     For example:
@@ -58,13 +60,22 @@ def floor_op(input, dims):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         
+        >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> out = flow.flip(input, [0, 1])
+        >>> out
+        tensor([[[6., 7.],
+                 [4., 5.]],
+        <BLANKLINE>
+                [[2., 3.],
+                 [0., 1.]]], dtype=oneflow.float32)
 
     """
 
     return Flip(dims)(input)
 
 
-@register_tensor_op("floor")
+@register_tensor_op("flip")
 @experimental_api
 def floor_op_tensor(input, dims):
     r"""

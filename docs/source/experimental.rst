@@ -191,6 +191,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze
 .. autofunction:: oneflow.experimental.Tensor.squeeze
+.. autofunction:: oneflow.experimental.flip
+.. autofunction:: oneflow.experimental.Tensor.flip
 .. autofunction:: oneflow.experimental.transpose
 .. autofunction:: oneflow.experimental.Tensor.transpose
 .. autofunction:: oneflow.experimental.unsqueeze
