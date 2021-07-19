@@ -26,8 +26,8 @@ REGISTER_USER_OP("dot")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      CHECK_OR_RETURN(x.shape() == y.shape());
-      CHECK_OR_RETURN(x.shape().NumAxes() == 1);
+      CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
+      CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
       *ctx->OutputShape("out", 0) = Shape({1});
       return Maybe<void>::Ok();
     })
@@ -43,7 +43,7 @@ REGISTER_USER_OP("dot")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      CHECK_OR_RETURN(x.data_type() == y.data_type());
+      CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The input tensor type is different";
       *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
