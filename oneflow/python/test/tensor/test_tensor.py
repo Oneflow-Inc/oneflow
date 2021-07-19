@@ -49,6 +49,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor.storage_offset(), 0)
         test_case.assertEqual(tensor.stride(), (60, 20, 5, 1))
         test_case.assertEqual(tensor.is_cuda, False)
+        test_case.assertTrue(tensor.is_contiguous())
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
