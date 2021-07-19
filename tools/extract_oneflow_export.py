@@ -10,15 +10,16 @@ parser.add_argument(
     "--src_dir", type=str, default="oneflow/python",
 )
 parser.add_argument(
-    "--out_dir", type=str, default=".cache/extract_from_oneflow_export/oneflow",
+    "--out_dir", type=str, default="python",
 )
 parser.add_argument("--verbose", "-v", action="store_true")
 args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
 assert args.out_dir != "/"
+out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
 subprocess.check_call(f"rm -rf {args.out_dir}", shell=True)
-subprocess.check_call(f"mkdir -p {args.out_dir}", shell=True)
+subprocess.check_call(f"mkdir -p out_oneflow_dir", shell=True)
 
 
 def get_dst_path_(export: str = None):
@@ -32,7 +33,7 @@ def get_dst_path_(export: str = None):
 
 def get_dst_path(export: str = None):
     path = get_dst_path_(export=export)
-    return os.path.join(args.out_dir, path)
+    return os.path.join(out_oneflow_dir, path)
 
 
 def get_rel_import(exportN: str = None, export0: str = None):
@@ -173,7 +174,7 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
 
                         append_seg(
                             path=os.path.join(
-                                args.out_dir, dirpath_without_root, src_file
+                                out_oneflow_dir, dirpath_without_root, src_file
                             ),
                             seg=f"{src_seg}\n",
                         )
@@ -184,12 +185,8 @@ extra_arg = ""
 if args.verbose == False:
     extra_arg += "--quiet"
 subprocess.check_call(
-    f"{sys.executable} -m isort . {extra_arg}",
-    shell=True,
-    cwd=os.path.join(args.out_dir, ".."),
+    f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
 )
 subprocess.check_call(
-    f"{sys.executable} -m black . {extra_arg}",
-    shell=True,
-    cwd=os.path.join(args.out_dir, ".."),
+    f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
 )
