@@ -16,9 +16,9 @@ class Split(Module):
             for item in size_or_sections:
                 assert isinstance(item, int)
                 self.split_count += item
-            self.sizes = size_or_sections
+            self._op = flow.builtin_op("split_sizes").Input("in").Output("out").Attr("axis", dim).Attr("sizes",
+                                                                                                       size_or_sections).Build()
         else:
-            self.sections = size_or_sections
             self._op = flow.builtin_op("split").Input("in").Output("out").Attr("axis", dim).Attr("sections",
                                                                                                  size_or_sections).Build()
         self.dim = dim

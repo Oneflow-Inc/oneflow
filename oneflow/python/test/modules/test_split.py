@@ -21,13 +21,19 @@ from collections import OrderedDict
 import random
 
 
-def _test_split(test_case, device):
+def _test_split_sections(test_case, device):
     x = np.random.rand(4,2,3,4)
     x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     out_np = np.split(x, 2)
     out_of = flow.split(x_tensor, 2).numpy()
     test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
+def _test_split_sizes(test_case, device):
+    x = np.random.rand(4,2,3,4)
+    x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    out_np = np.split(x, [1, 3])
+    out_of = flow.split(x_tensor, [1, 3]).numpy()
+    test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -38,7 +44,8 @@ class TestStack(flow.unittest.TestCase):
     def test_stack(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_split,
+            # _test_split,
+            _test_split_sizes
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

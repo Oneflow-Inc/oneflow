@@ -40,7 +40,7 @@ namespace oneflow {
             }
             return params;
         }
-
+    }  // namespace
 
 
         template<DeviceType device_type, typename T>
@@ -79,7 +79,7 @@ namespace oneflow {
             bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
         };
 
-    }  // namespace
+
 
 #define REGISTER_SPLIT_KERNEL(device, dtype)          \
   REGISTER_USER_KERNEL("split")                       \
