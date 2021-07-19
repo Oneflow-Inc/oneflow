@@ -73,7 +73,6 @@ IBVerbsQP::~IBVerbsQP() {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
   }
-  while (msg_pendding_list_.empty() == false) { msg_pendding_list_.pop(); }
   for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
 }
 
