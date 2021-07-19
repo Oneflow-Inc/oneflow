@@ -12,6 +12,7 @@ parser.add_argument(
 parser.add_argument(
     "--out_dir", type=str, default=".cache/extract_from_oneflow_export/oneflow",
 )
+parser.add_argument("--verbose", "-v", action="store_true")
 args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
@@ -31,7 +32,6 @@ def get_dst_path_(export: str = None):
 
 def get_dst_path(export: str = None):
     path = get_dst_path_(export=export)
-    print("[export]", path)
     return os.path.join(args.out_dir, path)
 
 
@@ -180,14 +180,16 @@ for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
 DstFileDict.save()
 import sys
 
-if sys.platform == "darwin":
-    subprocess.check_call(
-        f"/usr/bin/python3 -m isort . --quiet", shell=True, cwd=args.out_dir
-    )
-else:
-    subprocess.check_call(
-        f"{sys.executable} -m isort . --quiet", shell=True, cwd=args.out_dir
-    )
+extra_arg = ""
+if args.verbose == False:
+    extra_arg += "--quiet"
 subprocess.check_call(
-    f"{sys.executable} -m black . --quiet", shell=True, cwd=args.out_dir
+    f"{sys.executable} -m isort . {extra_arg}",
+    shell=True,
+    cwd=os.path.join(args.out_dir, ".."),
+)
+subprocess.check_call(
+    f"{sys.executable} -m black . {extra_arg}",
+    shell=True,
+    cwd=os.path.join(args.out_dir, ".."),
 )
