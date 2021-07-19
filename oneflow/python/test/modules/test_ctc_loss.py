@@ -301,6 +301,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestCTCLoss1n1d(flow.unittest.TestCase):
     def test_ctc_loss(test_case):
         for arg in gen_arg_list():

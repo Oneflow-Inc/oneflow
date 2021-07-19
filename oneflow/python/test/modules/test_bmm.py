@@ -85,6 +85,7 @@ def _test_bmm_backward(test_case, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_bmm(test_case):
         arg_dict = OrderedDict()
