@@ -53,6 +53,7 @@ from oneflow.compatible.single_client.python.framework import env_util
 oneflow._oneflow_internal.DestroyEnv()
 import time
 
+# sleep to prevent glog raising "File exists"
 time.sleep(1)
 del time
 
