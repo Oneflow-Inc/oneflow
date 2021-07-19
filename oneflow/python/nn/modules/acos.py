@@ -29,7 +29,7 @@ class Acos(Module):
 
 @oneflow_export("acos")
 @register_tensor_op("acos")
-@experimental_api
+
 def acos_op(tensor):
     r"""
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
@@ -44,9 +44,9 @@ def acos_op(tensor):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> arr = np.array([0.5, 0.6, 0.7])
         >>> input = flow.Tensor(arr, dtype=flow.float32)

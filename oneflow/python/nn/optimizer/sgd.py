@@ -25,7 +25,7 @@ from .optimizer import Optimizer, ParamGroup
 
 
 @oneflow_export("optim.SGD")
-@experimental_api
+
 class SGD(Optimizer):
     r"""Implements SGD algorithm.
 

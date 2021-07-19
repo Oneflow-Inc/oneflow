@@ -30,7 +30,7 @@ class Diag(Module):
 
 
 @oneflow_export("diag")
-@experimental_api
+
 def diag_op(input, diagonal=0):
     r"""
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
@@ -48,9 +48,9 @@ def diag_op(input, diagonal=0):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> arr = np.array(
         ...     [
@@ -69,7 +69,7 @@ def diag_op(input, diagonal=0):
 
 
 @register_tensor_op("diag")
-@experimental_api
+
 def diag_op_tensor(input, diagonal=0):
     r"""
     diag() -> Tensor

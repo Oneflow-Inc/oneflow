@@ -51,7 +51,7 @@ class Argsort(Module):
 
 @oneflow_export("argsort")
 @register_tensor_op("argsort")
-@experimental_api
+
 def argsort_op(input, dim: int = -1, descending: bool = False):
     """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
 
@@ -68,8 +68,8 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([[10, 2, 9, 3, 7],
         ...               [1, 9, 4, 3, 2]]).astype("float32")

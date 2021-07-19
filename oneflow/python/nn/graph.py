@@ -32,7 +32,7 @@ from oneflow.python.framework.function_util import FunctionConfig
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
-@experimental_api
+
 class Graph(object):
     _child_init_cnt = dict()
 
@@ -189,7 +189,7 @@ class BlockType:
 
 
 @oneflow_export("nn.graph.Block")
-@experimental_api
+
 class Block(object):
     def __init__(
         self,
@@ -342,7 +342,7 @@ class Block(object):
 
 
 @oneflow_export("nn.graph.GraphConfig")
-@experimental_api
+
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
@@ -368,7 +368,7 @@ class GraphConfig(FunctionConfig):
 
 
 @oneflow_export("nn.graph.BlockConfig")
-@experimental_api
+
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
@@ -397,7 +397,7 @@ class BlockConfig(object):
 
 
 @oneflow_export("nn.graph.OptimizerConfig")
-@experimental_api
+
 class OptimizerConfig(object):
     def __init__(
         self,

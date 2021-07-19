@@ -52,7 +52,7 @@ class Cat(Module):
 
 
 @oneflow_export("cat")
-@experimental_api
+
 def concat_op(inputs, dim=0):
     r"""Concatenate two or more `Tensor` s at specified axis.
 
@@ -69,8 +69,8 @@ def concat_op(inputs, dim=0):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> import numpy as np
 
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

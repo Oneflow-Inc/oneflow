@@ -33,7 +33,7 @@ class MaskedFill(Module):
 
 @oneflow_export("masked_fill")
 @register_tensor_op("masked_fill")
-@experimental_api
+
 def masked_fill_op(tensor, mask, value):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
@@ -47,9 +47,9 @@ def masked_fill_op(tensor, mask, value):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> in_arr = np.array(
         ...     [[[-0.13169311,  0.97277078,  1.23305363,  1.56752789],
         ...     [-1.51954275,  1.87629473, -0.53301206,  0.53006478],

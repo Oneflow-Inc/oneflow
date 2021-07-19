@@ -42,7 +42,7 @@ def _softmax_need_transpose(x, axis):
 
 
 @oneflow_export("nn.PReLU")
-@experimental_api
+
 class PReLU(Module):
     """Applies the element-wise function:
 
@@ -78,8 +78,8 @@ class PReLU(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.PReLU()
         >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
@@ -102,7 +102,7 @@ class PReLU(Module):
 
 
 @oneflow_export("nn.ReLU")
-@experimental_api
+
 class ReLU(Module):
     r"""Applies the rectified linear unit function element-wise:
 
@@ -120,9 +120,9 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> relu = flow.nn.ReLU()
         >>> ndarr = np.asarray([1, -2, 3])
         >>> x = flow.Tensor(ndarr)
@@ -142,7 +142,7 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.ReLU6")
-@experimental_api
+
 class ReLU6(Module):
     r"""Applies the element-wise function:
 
@@ -167,8 +167,8 @@ class ReLU6(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -188,7 +188,7 @@ class ReLU6(Module):
 
 
 @oneflow_export("nn.Tanh")
-@experimental_api
+
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
@@ -209,8 +209,8 @@ class Tanh(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -230,7 +230,7 @@ class Tanh(Module):
 
 @oneflow_export("tanh")
 @register_tensor_op("tanh")
-@experimental_api
+
 def tanh_op(x):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
@@ -251,8 +251,8 @@ def tanh_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -266,7 +266,7 @@ def tanh_op(x):
 
 
 @oneflow_export("nn.ELU")
-@experimental_api
+
 class ELU(Module):
     r"""Applies the element-wise function:
 
@@ -292,8 +292,8 @@ class ELU(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -314,7 +314,7 @@ class ELU(Module):
 
 
 @oneflow_export("nn.GELU")
-@experimental_api
+
 class GELU(Module):
     r"""Gelu activation operator.
 
@@ -334,8 +334,8 @@ class GELU(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -356,7 +356,7 @@ class GELU(Module):
 
 @oneflow_export("gelu")
 @register_tensor_op("gelu")
-@experimental_api
+
 def gelu_op(x):
     r"""Gelu activation operator.
 
@@ -376,8 +376,8 @@ def gelu_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -392,7 +392,7 @@ def gelu_op(x):
 
 
 @oneflow_export("nn.Sigmoid")
-@experimental_api
+
 class Sigmoid(Module):
     r"""Applies the element-wise function:
 
@@ -409,8 +409,8 @@ class Sigmoid(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> m = flow.nn.Sigmoid()
@@ -428,7 +428,7 @@ class Sigmoid(Module):
 
 @oneflow_export("sigmoid")
 @register_tensor_op("sigmoid")
-@experimental_api
+
 def sigmoid_op(x):
     r"""Applies the element-wise function:
 
@@ -445,8 +445,8 @@ def sigmoid_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> out = flow.sigmoid(x)
@@ -458,7 +458,7 @@ def sigmoid_op(x):
 
 
 @oneflow_export("nn.Hardsigmoid")
-@experimental_api
+
 class Hardsigmoid(Module):
     r"""Applies the element-wise function:
 
@@ -482,8 +482,8 @@ class Hardsigmoid(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -504,7 +504,7 @@ class Hardsigmoid(Module):
 
 
 @oneflow_export("nn.Softmax")
-@experimental_api
+
 class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
@@ -523,7 +523,7 @@ class Softmax(Module):
 
 @oneflow_export("softmax")
 @register_tensor_op("softmax")
-@experimental_api
+
 def softmax_op(tensor, dim=None):
     r"""Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
@@ -555,8 +555,8 @@ def softmax_op(tensor, dim=None):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.Softmax(dim = 2)
         >>> x = flow.Tensor(
@@ -574,7 +574,7 @@ def softmax_op(tensor, dim=None):
 
 
 @oneflow_export("nn.LogSoftmax")
-@experimental_api
+
 class LogSoftmax(Module):
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
     input Tensor.
@@ -596,8 +596,8 @@ class LogSoftmax(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.LogSoftmax(dim=1)
         >>> x = flow.Tensor(
@@ -641,7 +641,7 @@ class LogSoftmax(Module):
 
 
 @oneflow_export("nn.LogSigmoid")
-@experimental_api
+
 class LogSigmoid(Module):
     r"""Applies the element-wise function:
 
@@ -659,8 +659,8 @@ class LogSigmoid(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -682,7 +682,7 @@ class LogSigmoid(Module):
 
 
 @oneflow_export("nn.Softplus")
-@experimental_api
+
 class Softplus(Module):
     r"""Applies the element-wise function:
 
@@ -709,8 +709,8 @@ class Softplus(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -737,7 +737,7 @@ class Softplus(Module):
 
 
 @oneflow_export("nn.Hardswish")
-@experimental_api
+
 class Hardswish(Module):
     r"""Applies the hardswish function, element-wise, as described in the paper:
     `Searching for MobileNetV3`_.
@@ -760,8 +760,8 @@ class Hardswish(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -783,7 +783,7 @@ class Hardswish(Module):
 
 
 @oneflow_export("nn.Hardtanh")
-@experimental_api
+
 class Hardtanh(Module):
     r"""
     Applies the HardTanh function element-wise
@@ -819,8 +819,8 @@ class Hardtanh(Module):
 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.Hardtanh()
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
@@ -859,7 +859,7 @@ class Hardtanh(Module):
 
 
 @oneflow_export("nn.LeakyReLU")
-@experimental_api
+
 class LeakyReLU(Module):
     r"""Applies the element-wise function:
 
@@ -883,8 +883,8 @@ class LeakyReLU(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.LeakyReLU(0.1)
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
@@ -903,7 +903,7 @@ class LeakyReLU(Module):
 
 
 @oneflow_export("nn.Mish")
-@experimental_api
+
 class Mish(Module):
     r"""Applies the element-wise function:
 
@@ -923,8 +923,8 @@ class Mish(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
@@ -944,7 +944,7 @@ class Mish(Module):
 
 
 @oneflow_export("mish")
-@experimental_api
+
 def mish_op(x):
     r"""Applies the element-wise function:
 
@@ -961,7 +961,7 @@ def mish_op(x):
 
 
 @register_tensor_op("mish")
-@experimental_api
+
 def mish_op_tensor(x):
     r"""
     mish() -> Tensor

@@ -30,7 +30,7 @@ class Cast(Module):
 
 @oneflow_export("cast")
 @register_tensor_op("cast")
-@experimental_api
+
 def cast_op(x, dtype):
     r"""The operation takes input tensor `x` and casts it to the output with `dtype`
 
@@ -45,9 +45,9 @@ def cast_op(x, dtype):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
         >>> input = flow.Tensor(np_arr, dtype=flow.float32)

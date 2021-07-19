@@ -35,7 +35,7 @@ class Slice(Module):
 
 
 @oneflow_export("slice")
-@experimental_api
+
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
@@ -50,8 +50,8 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
         >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
@@ -79,7 +79,7 @@ class SliceUpdate(Module):
 
 
 @oneflow_export("slice_update")
-@experimental_api
+
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
@@ -93,8 +93,8 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
@@ -125,7 +125,7 @@ class LogicalSliceAssign(Module):
 
 # NOTE: conflict with existing userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign
 @oneflow_export("tmp.logical_slice_assign")
-@experimental_api
+
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 
@@ -139,8 +139,8 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))

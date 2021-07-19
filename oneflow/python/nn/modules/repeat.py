@@ -63,7 +63,7 @@ class Repeat(Module):
 
 @oneflow_export("repeat")
 @register_tensor_op("repeat")
-@experimental_api
+
 def repeat_op(x, sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
@@ -78,9 +78,9 @@ def repeat_op(x, sizes):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],

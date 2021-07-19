@@ -60,8 +60,8 @@ def to_op(input, *args, **kwargs):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         >>> input = flow.Tensor(arr)

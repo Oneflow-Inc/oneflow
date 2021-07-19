@@ -40,7 +40,7 @@ class Tile(Module):
 
 @oneflow_export("tile")
 @register_tensor_op("tile")
-@experimental_api
+
 def tile_op(x, reps):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -69,9 +69,9 @@ def tile_op(x, reps):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = np.array([1, 2]).astype(np.int32)
         >>> input = flow.Tensor(x, dtype=flow.int32)

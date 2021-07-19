@@ -21,7 +21,7 @@ from .lr_scheduler import LrScheduler
 
 
 @oneflow_export("optim.lr_scheduler.LambdaLR")
-@experimental_api
+
 class LambdaLR(LrScheduler):
     r"""
     Sets the learning rate of each parameter group to the initial lr times a given function.

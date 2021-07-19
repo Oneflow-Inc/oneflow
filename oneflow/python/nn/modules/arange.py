@@ -58,7 +58,7 @@ class Arange(Module):
 
 
 @oneflow_export("arange")
-@experimental_api
+
 def arange_op(
     start: int = 0,
     end: int = None,
@@ -89,8 +89,8 @@ def arange_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> y = flow.arange(0, 5)
         >>> y

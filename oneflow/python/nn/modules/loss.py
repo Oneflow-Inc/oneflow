@@ -23,7 +23,7 @@ from oneflow.python.nn.modules.constant import _ConstantBase
 
 
 @oneflow_export("nn.L1Loss")
-@experimental_api
+
 class L1Loss(Module):
     r"""This operator computes the L1 Loss between each element in `input` and `target`.
 
@@ -59,9 +59,9 @@ class L1Loss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
         >>> target = flow.Tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
@@ -109,7 +109,7 @@ class L1Loss(Module):
 
 
 @oneflow_export("nn.CrossEntropyLoss")
-@experimental_api
+
 class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
@@ -145,9 +145,9 @@ class CrossEntropyLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor(
         ...    [[-0.1664078, -1.7256707, -0.14690138],
@@ -231,7 +231,7 @@ class CrossEntropyLoss(Module):
 
 
 @oneflow_export("nn.BCELoss")
-@experimental_api
+
 class BCELoss(Module):
     r"""This operator computes the binary cross entropy loss.
 
@@ -269,9 +269,9 @@ class BCELoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor(np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32))
         >>> target = flow.Tensor(np.array([[0, 1, 0], [1, 0, 1]]).astype(np.float32))
@@ -337,7 +337,7 @@ class BCELoss(Module):
 
 
 @oneflow_export("nn.NLLLoss")
-@experimental_api
+
 class NLLLoss(Module):
     r""" The negative log likelihood loss. It is useful to train a classification
     problem with `C` classes.
@@ -389,8 +389,8 @@ class NLLLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> import numpy as np
 
         >>> input = flow.Tensor(
@@ -484,7 +484,7 @@ class NLLLoss(Module):
 
 
 @oneflow_export("nn.KLDivLoss")
-@experimental_api
+
 class KLDivLoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -553,9 +553,9 @@ class KLDivLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
         >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
@@ -610,7 +610,7 @@ class KLDivLoss(Module):
 
 
 @oneflow_export("nn.MSELoss")
-@experimental_api
+
 class MSELoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -657,9 +657,9 @@ class MSELoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor(
         ... [[-0.02557137, 0.03101675, 1.37493674],
@@ -708,7 +708,7 @@ class MSELoss(Module):
 
 
 @oneflow_export("nn.MarginRankingLoss")
-@experimental_api
+
 class MarginRankingLoss(Module):
     r"""Creates a criterion that measures the loss given
     inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
@@ -739,8 +739,8 @@ class MarginRankingLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> import numpy as np
 
         >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
@@ -799,7 +799,7 @@ class MarginRankingLoss(Module):
 
 
 @oneflow_export("nn.CTCLoss")
-@experimental_api
+
 class CTCLoss(Module):
     r"""The Connectionist Temporal Classification loss.
     The interface is consistent with PyTorch.
@@ -863,8 +863,8 @@ class CTCLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> import numpy as np
         >>> log_probs = np.array(
         ...             [
@@ -966,7 +966,7 @@ class CTCLoss(Module):
 
 
 @oneflow_export("nn.BCEWithLogitsLoss")
-@experimental_api
+
 class BCEWithLogitsLoss(Module):
     r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
@@ -1010,8 +1010,8 @@ class BCEWithLogitsLoss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> import oneflow.typing as tp
 
         >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
@@ -1107,7 +1107,7 @@ class BCEWithLogitsLoss(Module):
 
 
 @oneflow_export("nn.SmoothL1Loss")
-@experimental_api
+
 class SmoothL1Loss(Module):
     r"""Creates a criterion that uses a squared term if the absolute
     element-wise error falls below beta and an L1 term otherwise.
@@ -1185,9 +1185,9 @@ class SmoothL1Loss(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = flow.Tensor(np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32), dtype=flow.float32)
         >>> y = flow.Tensor(np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32), dtype=flow.float32)

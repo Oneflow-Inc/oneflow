@@ -32,7 +32,7 @@ class Atan2(Module):
 
 
 @oneflow_export("atan2")
-@experimental_api
+
 def atan2_op(input, other):
     r"""Element-wise arctangent of input{i}/other{i}
     with consideration of the quadrant. Returns a new tensor with the signed
@@ -49,7 +49,7 @@ def atan2_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
 
         >>> x1 = flow.Tensor(np.array([1,2,3]))
@@ -59,7 +59,7 @@ def atan2_op(input, other):
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
         >>> y3 = flow.Tensor(np.array([0,1,0]))
 
-        >>> flow.enable_eager_execution()
+        
         >>> flow.atan2(x1,y1).numpy()
         array([0.32175055, 0.7853982 , 1.2490457 ], dtype=float32)
         >>> flow.atan2(x2,y2).numpy()
@@ -72,7 +72,7 @@ def atan2_op(input, other):
 
 
 @register_tensor_op("atan2")
-@experimental_api
+
 def atan2_op_tensor(input, other):
     r"""
 

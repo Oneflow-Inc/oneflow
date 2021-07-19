@@ -56,7 +56,7 @@ class ParamGroup(object):
 
 
 @oneflow_export("optim.Optimizer")
-@experimental_api
+
 class Optimizer(object):
     def __init__(self):
         self.param_groups = list()

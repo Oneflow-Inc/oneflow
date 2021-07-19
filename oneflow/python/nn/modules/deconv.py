@@ -77,7 +77,7 @@ class ConvUtil(object):
 
 
 @oneflow_export("nn.ConvTranspose2d")
-@experimental_api
+
 class ConvTranspose2d(Module):
     r"""
     
@@ -128,9 +128,9 @@ class ConvTranspose2d(Module):
     Examples::
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
+        
 
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding

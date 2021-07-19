@@ -64,7 +64,7 @@ class Ones(_ConstantBase):
 
 
 @oneflow_export("ones")
-@experimental_api
+
 def ones_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -86,8 +86,8 @@ def ones_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> y = flow.ones(5)
         >>> y
@@ -103,7 +103,7 @@ class Zeros(_ConstantBase):
 
 
 @oneflow_export("zeros")
-@experimental_api
+
 def zeros_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -125,8 +125,8 @@ def zeros_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> y = flow.zeros(5)
         >>> y
@@ -145,7 +145,7 @@ class ZerosLike(Module):
 
 
 @oneflow_export("zeros_like")
-@experimental_api
+
 def zeros_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 0, with the same size as input.
@@ -178,7 +178,7 @@ class OnesLike(Module):
 
 
 @oneflow_export("ones_like")
-@experimental_api
+
 def ones_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 1, with the same size as input.
@@ -254,7 +254,7 @@ class NewOnes(Module):
 
 
 @register_tensor_op("new_ones")
-@experimental_api
+
 def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     r"""
     
@@ -271,8 +271,8 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
         >>> y = x.new_ones((2, 2))

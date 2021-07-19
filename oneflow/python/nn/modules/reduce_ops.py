@@ -52,7 +52,7 @@ class Sum(Module):
 
 @oneflow_export("sum")
 @register_tensor_op("sum")
-@experimental_api
+
 def _sum(input, dim=None, keepdim=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
@@ -60,8 +60,8 @@ def _sum(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.sum(input)
         tensor([21.], dtype=oneflow.float32)
@@ -93,7 +93,7 @@ class Mean(Module):
 
 @oneflow_export("mean")
 @register_tensor_op("mean")
-@experimental_api
+
 def _mean(input, dim=None, keepdim=False):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
@@ -101,8 +101,8 @@ def _mean(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.mean(input)
         tensor([3.5], dtype=oneflow.float32)
@@ -135,7 +135,7 @@ class Min(Module):
 
 @oneflow_export("min")
 @register_tensor_op("min")
-@experimental_api
+
 def _min(input, dim=None, keepdim=False):
     r"""Computes the minimum value of all elements in the input tensor.
     
@@ -143,8 +143,8 @@ def _min(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor([1.], dtype=oneflow.float32)
@@ -177,7 +177,7 @@ class Max(Module):
 
 @oneflow_export("max")
 @register_tensor_op("max")
-@experimental_api
+
 def _max(input, dim=None, keepdim=False):
     r"""Computes the maximum value of all elements in the input tensor.
     
@@ -185,8 +185,8 @@ def _max(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor([6.], dtype=oneflow.float32)

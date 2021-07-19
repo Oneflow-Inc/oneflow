@@ -29,7 +29,7 @@ class Tan(Module):
 
 
 @oneflow_export("tan")
-@experimental_api
+
 def tan_op(input):
     r"""Returns  the tan value of the elements of :attr:`input`.
 
@@ -43,9 +43,9 @@ def tan_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.tan(input)
@@ -58,7 +58,7 @@ def tan_op(input):
 
 
 @register_tensor_op("tan")
-@experimental_api
+
 def tan_op_tensor(input):
     r"""
     tan() -> Tensor

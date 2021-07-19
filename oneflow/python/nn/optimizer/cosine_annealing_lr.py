@@ -21,7 +21,7 @@ from .lr_scheduler import LrScheduler
 
 
 @oneflow_export("optim.lr_scheduler.CosineAnnealingLR")
-@experimental_api
+
 class CosineAnnealingLR(LrScheduler):
     r"""This operator creates a Cosine decayed learning rate scheduler.
 

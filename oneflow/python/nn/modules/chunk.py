@@ -87,7 +87,7 @@ class Chunk(Module):
 
 @oneflow_export("chunk")
 @register_tensor_op("chunk")
-@experimental_api
+
 def chunk_op(input, chunks, dim):
     r"""Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
@@ -103,9 +103,9 @@ def chunk_op(input, chunks, dim):
 
     .. code-block:: python
     
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
        
         >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
         >>> input = flow.Tensor(np_arr)

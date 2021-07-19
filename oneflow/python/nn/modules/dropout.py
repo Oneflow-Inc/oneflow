@@ -40,7 +40,7 @@ class _DropoutNd(Module):
 
 
 @oneflow_export("nn.Dropout")
-@experimental_api
+
 class Dropout(_DropoutNd):
     r"""During training, randomly zeroes some of the elements of the input
     tensor with probability :attr:`p` using samples from a Bernoulli
@@ -69,8 +69,8 @@ class Dropout(_DropoutNd):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.Dropout(p=0)
         >>> arr = np.array(

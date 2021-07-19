@@ -19,7 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
 @oneflow_export("nn.AdaptiveAvgPool2d")
-@experimental_api
+
 class AdaptiveAvgPool2d(Module):
     r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
@@ -37,9 +37,9 @@ class AdaptiveAvgPool2d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
+        
 
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))

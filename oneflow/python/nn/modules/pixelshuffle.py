@@ -21,7 +21,7 @@ from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.PixelShuffle")
-@experimental_api
+
 class PixelShufflev2(Module):
     r"""
     Part of the documentation is referenced from:
@@ -69,9 +69,9 @@ class PixelShufflev2(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> m = flow.nn.PixelShuffle(upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))

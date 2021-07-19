@@ -61,7 +61,7 @@ class MaskedSelect(Module):
 
 
 @oneflow_export("masked_select")
-@experimental_api
+
 def masked_select_op(x, mask):
     r"""
 
@@ -77,9 +77,9 @@ def masked_select_op(x, mask):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = flow.Tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
         >>> mask = x.gt(0.05)
@@ -91,7 +91,7 @@ def masked_select_op(x, mask):
 
 
 @register_tensor_op("masked_select")
-@experimental_api
+
 def tensor_masked_select_op(x, mask):
     r"""
 

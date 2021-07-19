@@ -36,7 +36,7 @@ class Greater(Module):
 
 
 @oneflow_export("gt")
-@experimental_api
+
 def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
@@ -52,8 +52,8 @@ def greater_op(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
@@ -67,7 +67,7 @@ def greater_op(x, y):
 
 
 @register_tensor_op("gt")
-@experimental_api
+
 def greater_op_tensor(x, y):
     r"""
 

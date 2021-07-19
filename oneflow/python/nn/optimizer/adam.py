@@ -25,7 +25,7 @@ from oneflow.python.nn.optimizer.optimizer import Optimizer, ParamGroup
 
 
 @oneflow_export("optim.Adam")
-@experimental_api
+
 class Adam(Optimizer):
     r"""Implements Adam algorithm.
 

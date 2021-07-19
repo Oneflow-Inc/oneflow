@@ -24,7 +24,7 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSeq
 
 
 @oneflow_export("nn.AvgPool1d")
-@experimental_api
+
 class AvgPool1d(Module):
     r"""Applies a 1D average pooling over an input signal composed of several input planes.
 
@@ -69,7 +69,7 @@ class AvgPool1d(Module):
 
 
 @oneflow_export("nn.AvgPool2d")
-@experimental_api
+
 class AvgPool2d(Module):
     r"""Performs the 2d-average pooling on the input.
 
@@ -151,7 +151,7 @@ class AvgPool2d(Module):
 
 
 @oneflow_export("nn.AvgPool3d")
-@experimental_api
+
 class AvgPool3d(Module):
     r"""Applies a 3D average pooling over an input signal composed of several input planes.
 
@@ -195,9 +195,9 @@ class AvgPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
@@ -257,7 +257,7 @@ class AvgPool3d(Module):
 
 
 @oneflow_export("nn.MaxPool1d")
-@experimental_api
+
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
@@ -358,7 +358,7 @@ class MaxPool1d(Module):
 
 
 @oneflow_export("nn.MaxPool2d")
-@experimental_api
+
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
@@ -412,9 +412,9 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> kernel_size, stride, padding = (3, 4), (1, 1), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
@@ -491,7 +491,7 @@ class MaxPool2d(Module):
 
 
 @oneflow_export("nn.MaxPool3d")
-@experimental_api
+
 class MaxPool3d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
@@ -552,9 +552,9 @@ class MaxPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> kernel_size, stride, padding = (3, 3, 4), (1, 1, 1), (1, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)

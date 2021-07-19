@@ -65,7 +65,7 @@ class Expand(Module):
 
 @oneflow_export("expand")
 @register_tensor_op("expand")
-@experimental_api
+
 def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.
 
@@ -86,9 +86,9 @@ def expand_op(x, *sizes):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],

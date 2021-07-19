@@ -33,7 +33,7 @@ class Floor(Module):
 
 
 @oneflow_export("floor")
-@experimental_api
+
 def floor_op(x):
 
     r"""
@@ -49,9 +49,9 @@ def floor_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
         >>> output = flow.floor(input)
         >>> output.shape
@@ -73,7 +73,7 @@ def floor_op(x):
 
 
 @register_tensor_op("floor")
-@experimental_api
+
 def floor_op_tensor(input):
     r"""
     See :func:`oneflow.experimental.floor`

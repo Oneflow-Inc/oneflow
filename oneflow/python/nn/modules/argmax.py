@@ -55,7 +55,7 @@ class Argmax(Module):
 
 @oneflow_export("argmax")
 @register_tensor_op("argmax")
-@experimental_api
+
 def argmax_op(input, dim: int = None, keepdim: bool = False):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
@@ -72,8 +72,8 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = np.array([[1, 3, 8, 7, 2],
         ...            [1, 9, 4, 3, 2]], dtype=np.float32)

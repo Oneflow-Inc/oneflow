@@ -23,7 +23,7 @@ import math
 
 
 @oneflow_export("nn.Identity")
-@experimental_api
+
 class Identity(Module):
     """A placeholder identity operator that is argument-insensitive.
 
@@ -55,7 +55,7 @@ class Identity(Module):
 
 
 @oneflow_export("nn.Linear")
-@experimental_api
+
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
@@ -85,8 +85,8 @@ class Linear(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
 
         >>> m = flow.nn.Linear(20, 30, False)

@@ -36,7 +36,7 @@ class Unsqueeze(Module):
 
 @oneflow_export("unsqueeze")
 @register_tensor_op("unsqueeze")
-@experimental_api
+
 def unsqueeze_op(input, dim):
     r"""Returns a new tensor with a dimension of size one inserted at the
     specified position.
@@ -56,8 +56,8 @@ def unsqueeze_op(input, dim):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        
 
         >>> x = flow.Tensor(np.random.rand(2, 3, 4))
         >>> y = x.unsqueeze(2)

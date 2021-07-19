@@ -28,6 +28,6 @@ class BroadCastLike(Module):
 
 
 @oneflow_export("broadcast_like")
-@experimental_api
+
 def broadcast_like_op(x, like_tensor, broadcast_axes: None):
     return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)

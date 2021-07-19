@@ -19,7 +19,7 @@ from .lr_scheduler import LrScheduler
 
 
 @oneflow_export("optim.lr_scheduler.StepLR")
-@experimental_api
+
 class StepLR(LrScheduler):
     r"""
     Decays the learning rate of each parameter group by gamma every step_size steps.

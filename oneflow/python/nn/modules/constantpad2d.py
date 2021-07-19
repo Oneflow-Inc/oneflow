@@ -23,7 +23,7 @@ from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.ConstantPad2d")
-@experimental_api
+
 class ConstantPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -48,9 +48,9 @@ class ConstantPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))

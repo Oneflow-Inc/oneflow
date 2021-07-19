@@ -129,7 +129,7 @@ class Norm(Module):
 
 
 @oneflow_export("linalg.norm")
-@experimental_api
+
 def norm_op(input, ord=None, dim=None, keepdim=False):
     r"""linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
 
@@ -183,10 +183,10 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> from oneflow.experimental import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
@@ -250,7 +250,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
 
 @register_tensor_op("norm")
-@experimental_api
+
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
     See :func:`oneflow.experimental.linalg.norm.`

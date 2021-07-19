@@ -30,7 +30,7 @@ class Abs(Module):
 
 @oneflow_export("abs")
 @register_tensor_op("abs")
-@experimental_api
+
 def abs_op(x):
     r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
@@ -41,9 +41,9 @@ def abs_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)

@@ -44,7 +44,7 @@ class Ne(Module):
 
 @oneflow_export("ne", "not_equal")
 @register_tensor_op("ne")
-@experimental_api
+
 def ne_op(input, other):
     r"""
     Computes element-wise not equality.
@@ -62,9 +62,9 @@ def ne_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+        
 
         >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
         >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)

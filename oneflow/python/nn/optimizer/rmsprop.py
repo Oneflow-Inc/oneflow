@@ -25,7 +25,7 @@ from oneflow.python.nn.optimizer.optimizer import ParamGroup, Optimizer
 
 
 @oneflow_export("optim.RMSprop")
-@experimental_api
+
 class RMSprop(Optimizer):
     r"""Implements RMSprop algorithm.
 
