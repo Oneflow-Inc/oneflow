@@ -38,10 +38,7 @@ def _test_permute_impl(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestPermute(flow.unittest.TestCase):
     def test_permute(test_case):
         arg_dict = OrderedDict()

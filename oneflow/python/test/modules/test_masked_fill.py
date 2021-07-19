@@ -21,10 +21,7 @@ import oneflow.experimental as flow
 from automated_test_util import *
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
     def test_masked_fill_aginst_pytorch(test_case):
         import numpy as np

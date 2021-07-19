@@ -68,7 +68,7 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   bool need_grad = false;
   const int32_t in_size = op.input_size("in");
   FOR_RANGE(int32_t, i, 0, in_size) {
@@ -90,6 +90,7 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     }
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
