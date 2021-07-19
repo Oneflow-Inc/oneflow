@@ -26,9 +26,9 @@ REGISTER_USER_OP("unpack")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
       const Shape& in_shape = in_desc.shape();
-      CHECK_GT(in_shape.NumAxes(), 0);
+      CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0);
       const auto unpack_num = ctx->Attr<int32_t>("unpack_num");
-      CHECK_EQ(in_shape.At(0) % unpack_num, 0);
+      CHECK_EQ_OR_RETURN(in_shape.At(0) % unpack_num, 0);
       user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_shape() = in_desc.shape();
       out_desc->mut_shape()->Set(0, in_shape.At(0) / unpack_num);
@@ -64,7 +64,8 @@ REGISTER_USER_OP("unpack")
           return Maybe<void>::Ok();
         });
 
-REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
+                                                           -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("pack")
@@ -76,6 +77,7 @@ REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpCon
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("out", 0);
   });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace
