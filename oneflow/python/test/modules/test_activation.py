@@ -53,10 +53,7 @@ def _test_relu_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestReLUModule(flow.unittest.TestCase):
     def test_relu(test_case):
         arg_dict = OrderedDict()
@@ -95,10 +92,7 @@ def _test_relu6_impl(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestReLU6Module(flow.unittest.TestCase):
     def test_relu6(test_case):
         arg_dict = OrderedDict()
@@ -149,10 +143,7 @@ def _test_tanh_function_impl(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestTanh(flow.unittest.TestCase):
     def test_tanh(test_case):
         arg_dict = OrderedDict()
@@ -202,10 +193,7 @@ def _test_elu_function_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestELUModule(flow.unittest.TestCase):
     def test_elu(test_case):
         arg_dict = OrderedDict()
@@ -246,10 +234,7 @@ def _test_gelu_impl(test_case, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):
     def test_gelu(test_case):
         arg_dict = OrderedDict()
@@ -322,10 +307,7 @@ def _test_sigmoid_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSigmoid(flow.unittest.TestCase):
     def test_sigmoid(test_case):
         arg_dict = OrderedDict()
@@ -429,10 +411,7 @@ def _test_softmax_backward_1_dim(test_case, device):
     test_case.assertTrue(np.allclose(a.grad.numpy(), a_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
     def test_softmax(test_case):
         arg_dict = OrderedDict()
@@ -467,10 +446,7 @@ def _test_hardsigmoid_impl(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_hardsigmoid(test_case):
         arg_dict = OrderedDict()
@@ -613,10 +589,7 @@ def _test_logsoftmax_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLogSoftmax(flow.unittest.TestCase):
     def test_log_softmax(test_case):
         arg_dict = OrderedDict()
@@ -650,10 +623,7 @@ def _test_logsigmoid(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLogSigmoidModule(flow.unittest.TestCase):
     def test_logsigmoid(test_case):
         arg_dict = OrderedDict()
@@ -710,10 +680,7 @@ def _test_softplus_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus(test_case):
         arg_dict = OrderedDict()
@@ -755,10 +722,7 @@ def _test_hardswish_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestHardswishModule(flow.unittest.TestCase):
     def test_hardswish(test_case):
         arg_dict = OrderedDict()
@@ -798,10 +762,7 @@ def _test_hardtanh_impl(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestHardtanhModule(flow.unittest.TestCase):
     def test_hardtanh(test_case):
         arg_dict = OrderedDict()
@@ -827,10 +788,7 @@ def _test_leakyrelu_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
     def test_leaky_relu(test_case):
         arg_dict = OrderedDict()
@@ -872,10 +830,7 @@ def _test_mish_backward(test_case, shape, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMishModule(flow.unittest.TestCase):
     def test_mish(test_case):
         arg_dict = OrderedDict()

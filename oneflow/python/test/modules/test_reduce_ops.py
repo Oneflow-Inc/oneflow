@@ -67,10 +67,7 @@ def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMinModule(flow.unittest.TestCase):
     def test_min(test_case):
         arg_dict = OrderedDict()
@@ -134,10 +131,7 @@ def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
     def test_max(test_case):
         arg_dict = OrderedDict()

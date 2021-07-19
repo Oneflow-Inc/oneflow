@@ -186,6 +186,7 @@ class Conv1d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
         self.padding = _single(padding)
@@ -256,6 +257,23 @@ class Conv1d(Module):
                 groups=self.groups,
             )
         return res
+
+    def extra_repr(self):
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
+        return s.format(**self.__dict__)
 
 
 @oneflow_export("nn.Conv2d")
@@ -394,6 +412,7 @@ class Conv2d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
         self.padding = _pair(padding)
@@ -465,6 +484,23 @@ class Conv2d(Module):
                 groups=self.groups,
             )
         return res
+
+    def extra_repr(self):
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
+        return s.format(**self.__dict__)
 
 
 @oneflow_export("nn.Conv3d")

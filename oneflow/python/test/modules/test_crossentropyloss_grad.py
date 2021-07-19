@@ -212,10 +212,7 @@ def _test_CrossEntropyLoss_mean_with_random_input_with_ignore_index(test_case, d
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModuleGrad(flow.unittest.TestCase):
     def test_crossentropyloss_grad(test_case):
         arg_dict = OrderedDict()
