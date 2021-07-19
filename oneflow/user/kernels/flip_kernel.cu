@@ -35,10 +35,10 @@ struct VIS {
 };
 
 template<typename T>
-void FlipCpuForward(const int32_t element, const int64_t total_dims,
-                    const STRIDE_CONTIGUOUS_V stride_contiguous_v, const SIZE_V sizes_v,
-                    const VIS vis, const T* in_dptr, T* out_dptr) {
-  for (int i = 0; i < element; i++) {
+__global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
+                               const STRIDE_CONTIGUOUS_V stride_contiguous_v, const SIZE_V sizes_v,
+                               const VIS vis, const T* in_dptr, T* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(i, element) {
     int32_t cur_indices = i;
     int32_t rem = 0;
     int32_t dst_offset = 0;
@@ -56,10 +56,10 @@ void FlipCpuForward(const int32_t element, const int64_t total_dims,
 }  // namespace
 
 template<typename T>
-class FlipCpuKernel final : public user_op::OpKernel {
+class FlipGpuKernel final : public user_op::OpKernel {
  public:
-  FlipCpuKernel() = default;
-  ~FlipCpuKernel() = default;
+  FlipGpuKernel() = default;
+  ~FlipGpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -86,18 +86,18 @@ class FlipCpuKernel final : public user_op::OpKernel {
             std::max<int32_t>(x_tensor->shape().At(i + 1), 1) * stride_contiguous_v.val[i + 1];
       }
     }
-
-    FlipCpuForward(elem_cnt, total_dims, stride_contiguous_v, sizes_v, vis, x_tensor->dptr<T>(),
-                   y_tensor->mut_dptr<T>());
+    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt, total_dims,
+                    stride_contiguous_v, sizes_v, vis, x_tensor->dptr<T>(),
+                    y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class FlipGrad1DCpuKernel final : public user_op::OpKernel {
+class FlipGrad1DGpuKernel final : public user_op::OpKernel {
  public:
-  FlipGrad1DCpuKernel() = default;
-  ~FlipGrad1DCpuKernel() = default;
+  FlipGrad1DGpuKernel() = default;
+  ~FlipGrad1DGpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -105,23 +105,24 @@ class FlipGrad1DCpuKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    memcpy((void*)dx_tensor->mut_dptr<T>(), (void*)dy_tensor->dptr<T>(),
-           dy_tensor->shape().elem_cnt() * sizeof(T));
+    Memcpy<DeviceType::kGPU>(
+        ctx->device_ctx(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
+        dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FLIP_CPU_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("flip").SetCreateFn<FlipCpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                            \
+#define REGISTER_FLIP_GPU_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("flip").SetCreateFn<FlipGpuKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "gpu")                                            \
       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));               \
   REGISTER_USER_KERNEL("flip_grad")                                                 \
-      .SetCreateFn<FlipGrad1DCpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
+      .SetCreateFn<FlipGrad1DGpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                           \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_FLIP_CPU_KERNEL(float)
-REGISTER_FLIP_CPU_KERNEL(double)
-REGISTER_FLIP_CPU_KERNEL(int)
+REGISTER_FLIP_GPU_KERNEL(float)
+REGISTER_FLIP_GPU_KERNEL(double)
+REGISTER_FLIP_GPU_KERNEL(int)
 
 }  // namespace oneflow
