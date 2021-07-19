@@ -248,4 +248,3 @@ Experimental features
 .. autofunction:: oneflow.experimental.bernoulli
 .. autofunction:: oneflow.experimental.in_top_k
 .. autofunction:: oneflow.experimental.Tensor.in_top_k
-.. autofunction:: oneflow.experimental.dot
