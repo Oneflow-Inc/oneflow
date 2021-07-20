@@ -196,3 +196,8 @@ subprocess.check_call(
 subprocess.check_call(
     f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
 )
+
+# QA:
+# 1. _oneflow_internal.so: link or build in-place?
+# 2. do we need make install? run make install to install it to python directory?
+# 3. do we need to merge source in python directory. it is confusing if we already have a top level python directory.
