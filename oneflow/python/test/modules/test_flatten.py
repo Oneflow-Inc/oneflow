@@ -59,28 +59,24 @@ def _test_flatten_backward(test_case, device):
 
 
 class TestFlattenModule(flow.unittest.TestCase):
-    # def test_cast(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
-    @autotest()
+    # Our flatten produces a new tensor if flatten is effectively a no-op,
+    # while pytorch's flatten returns the input tensor itself,
+    # leading to the inconsistency on the leaf-ness of x and thus the existence of x's grad
+    @autotest(auto_backward=False)
     def test_against_pytorch(test_case):
-        channels = random(1, 6)
-        m = torch.nn.Conv2d(channels, random(1, 6), random(1, 6), 
-                stride=random(1, 3) | nothing(),
-                padding=random(1, 3) | nothing(),
-                dilation=random(1, 3) | nothing(), 
-                groups=random(1, 3) | nothing(),
-                bias=random_bool() | nothing(),
-                padding_mode=constant('zeros') | nothing()
-                )
-        m.train(random_bool())
+        m = torch.nn.Flatten(start_dim=random(1, 6) | nothing(),
+                end_dim=random(1, 6) | nothing())
+        m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)).to(device)
+        x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
 

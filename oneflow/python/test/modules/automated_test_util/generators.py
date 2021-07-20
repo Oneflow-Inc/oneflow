@@ -201,7 +201,7 @@ class nothing(generator):
 
 
 class random(generator):
-    def __init__(self, low, high):
+    def __init__(self, low=1, high=6):
         self.low = pack(low)
         self.high = pack(high)
         super().__init__([self.low, self.high])
@@ -246,6 +246,8 @@ class random(generator):
             val = int(rng.integers(low, high))
         elif annotation == float:
             val = float(rng.random() * (high - low) + low)
+        elif annotation == bool:
+            val = random_util.choice([True, False])
         else:
             raise NotImplementedError(
                 f"Not implemented annotation {annotation} in random"
@@ -254,7 +256,6 @@ class random(generator):
 
     def _calc_value(self):
         return self._generate(self.annotation)
-        return 1
 
 
 def random_or_nothing(low, high):
@@ -309,12 +310,8 @@ class random_tensor(generator):
 
 
 @data_generator(bool)
-class random_bool(generator):
-    def __init__(self):
-        super().__init__([])
-
-    def _calc_value(self):
-        return random_util.choice([True, False])
+def random_bool():
+    return random().to(bool)
 
 
 class random_device(generator):

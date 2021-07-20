@@ -187,12 +187,13 @@ def check_equality(dual_object: DualObject):
 def check_tensor_equality(torch_tensor, flow_tensor):
     # TODO: check dtype
     if torch_tensor.grad is not None:
+        assert flow_tensor.grad is not None, "OneFlow tensor doesn't have grad while PyTorch tensor has one"
         if not np.allclose(torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()):
             return False
     return np.allclose(torch_tensor.detach().cpu().numpy(), flow_tensor.numpy())
 
 
-def autotest(n=20):
+def autotest(n=20, auto_backward=True):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
     def deco(f):
         @functools.wraps(f)
@@ -212,8 +213,9 @@ def autotest(n=20):
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
                     for x in res:
-                        if isinstance(x.pytorch, torch_original.Tensor):
-                            x.sum().backward()
+                        if auto_backward:
+                            if isinstance(x.pytorch, torch_original.Tensor):
+                                x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     # x.state_dict().values() returns dual object with inconsistent values
