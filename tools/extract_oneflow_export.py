@@ -85,7 +85,7 @@ class DstFile:
                     imports.append(import_seg)
                 else:
                     seg = ast.get_source_segment(txt, node)
-                    append_seg(seg)
+                    self.append_seg(seg)
 
 
 class DstFileDict:
@@ -239,9 +239,10 @@ if __name__ == "__main__":
                     path=dst, node=node,
                 )
     # step 2: merge files under python/ into generated files
-    # DstFileDict.merge(
-    #     from_path="oneflow/init.py", to_path=os.path.join(out_oneflow_dir, "__init__.py"),
-    # )
+    DstFileDict.merge(
+        from_path="oneflow/init.py",
+        to_path=os.path.join(out_oneflow_dir, "__init__.py"),
+    )
     # step 3: rename all
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
 
