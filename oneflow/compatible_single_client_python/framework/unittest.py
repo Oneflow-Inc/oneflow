@@ -27,7 +27,7 @@ from tempfile import NamedTemporaryFile
 from google.protobuf import text_format as pbtxt
 from oneflow.compatible import single_client as flow
 from oneflow.compatible_single_client_python.framework import env_util as env_util
-from oneflow.core.job.env_pb2 import EnvProto
+from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 import subprocess

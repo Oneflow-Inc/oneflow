@@ -23,8 +23,10 @@ from tempfile import NamedTemporaryFile
 
 from google.protobuf import text_format as pbtxt
 from oneflow.compatible_single_client_python.framework import env_util as env_util
-from oneflow.core.job.env_pb2 import EnvProto
-from oneflow.core.control.ctrl_bootstrap_pb2 import BootstrapConf
+from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
+from oneflow.compatible.single_client.core.control.ctrl_bootstrap_pb2 import (
+    BootstrapConf,
+)
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 import subprocess
 
