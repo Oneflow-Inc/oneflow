@@ -4,6 +4,7 @@ import argparse
 import ast
 from posixpath import relpath
 import subprocess
+import multiprocessing
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -149,6 +150,12 @@ def handle_export(node=None, export_d=None, imports=None):
             )
 
 
+def parse_from_file(path):
+    with open(path, "r") as f:
+        txt = f.read()
+        return (path, txt, ast.parse(txt))
+
+
 if __name__ == "__main__":
 
     # step 1: extract all exports
@@ -161,45 +168,45 @@ if __name__ == "__main__":
             for src_file in filenames:
                 if src_file.endswith(".py"):
                     files_to_extract.append(os.path.join(dirpath, src_file))
-    for src_file in files_to_extract:
+    pool = multiprocessing.Pool()
+
+    results = pool.map(parse_from_file, files_to_extract)
+    pool.close()
+    pool.join()
+    for (src_file, txt, module) in results:
         print(src_file)
-        with open(src_file, "r") as f:
-            txt = f.read()
-            module = ast.parse(txt)
+        is_exported = False
+        # print(ast.dump(parsed))
+        imports = []
+        for node in module.body:
+            if isinstance(node, (ast.ImportFrom, ast.Import)):
+                import_seg = ast.get_source_segment(txt, node)
+                imports.append(import_seg)
+        for node in module.body:
             is_exported = False
-            # print(ast.dump(parsed))
-            imports = []
-            for node in module.body:
-                if isinstance(node, (ast.ImportFrom, ast.Import)):
-                    import_seg = ast.get_source_segment(txt, node)
-                    imports.append(import_seg)
-            for node in module.body:
-                is_exported = False
-                if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                    for d in node.decorator_list:
-                        if is_export_decorator(d):
-                            is_exported = True
-                            handle_export(node=node, export_d=d, imports=imports)
-                if is_exported == False:
-                    src_seg = ast.get_source_segment(txt, node)
-                    dirpath_without_root = dirpath.split("/")[1::]
-                    dirpath_without_root = "/".join(dirpath_without_root)
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                for d in node.decorator_list:
+                    if is_export_decorator(d):
+                        is_exported = True
+                        handle_export(node=node, export_d=d, imports=imports)
+            if is_exported == False:
+                src_seg = ast.get_source_segment(txt, node)
+                dirpath_without_root = dirpath.split("/")[1::]
+                dirpath_without_root = "/".join(dirpath_without_root)
 
-                    def append_seg(path=None, seg=None):
-                        path = os.path.join(path)
-                        dir_path = os.path.dirname(path)
-                        if dir_path:
-                            subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
-                        with open(path, "a") as dst_f:
-                            dst_f.write(seg)
-                            dst_f.write("\n")
+                def append_seg(path=None, seg=None):
+                    path = os.path.join(path)
+                    dir_path = os.path.dirname(path)
+                    if dir_path:
+                        subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
+                    with open(path, "a") as dst_f:
+                        dst_f.write(seg)
+                        dst_f.write("\n")
 
-                    append_seg(
-                        path=os.path.join(
-                            out_oneflow_dir, dirpath_without_root, src_file
-                        ),
-                        seg=f"{src_seg}\n",
-                    )
+                append_seg(
+                    path=os.path.join(out_oneflow_dir, dirpath_without_root, src_file),
+                    seg=f"{src_seg}\n",
+                )
     # step 2: merge files under python/ into generated files
     # DstFileDict.merge(
     #     from_path="oneflow/init.py", to_path=os.path.join(out_oneflow_dir, "__init__.py"),
