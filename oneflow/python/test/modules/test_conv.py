@@ -1830,20 +1830,26 @@ class TestConv2d(flow.unittest.TestCase):
     @autotest()
     def test_against_pytorch(test_case):
         channels = random(1, 6)
-        m = torch.nn.Conv2d(channels, random(1, 6), random(1, 6), 
-                stride=random(1, 3) | nothing(),
-                padding=random(1, 3) | nothing(),
-                dilation=random(1, 3) | nothing(), 
-                groups=random(1, 3) | nothing(),
-                bias=random() | nothing(),
-                padding_mode=constant('zeros') | nothing()
-                )
+        m = torch.nn.Conv2d(
+            channels,
+            random(1, 6),
+            random(1, 6),
+            stride=random(1, 3) | nothing(),
+            padding=random(1, 3) | nothing(),
+            dilation=random(1, 3) | nothing(),
+            groups=random(1, 3) | nothing(),
+            bias=random() | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)).to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)
+        ).to(device)
         y = m(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
