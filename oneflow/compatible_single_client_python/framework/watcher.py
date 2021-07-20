@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import traceback
 
-from oneflow.core.record import record_pb2 as record_util
+from oneflow.compatible.single_client.core.record import record_pb2 as record_util
 from oneflow.compatible_single_client_python.framework import (
     local_blob as local_blob_util,
 )
