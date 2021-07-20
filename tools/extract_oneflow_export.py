@@ -67,6 +67,9 @@ class DstFile:
     def append_seg(self, seg):
         self.segs.append(seg)
 
+    def prepend_seg(self, seg):
+        self.segs.insert(0, seg)
+
     def append_import(self, seg):
         self.imports.add(seg)
 
@@ -75,7 +78,7 @@ class DstFile:
         imports.sort()
         return "\n".join(imports + self.segs)
 
-    def merge_file(self, path=None, append=True):
+    def merge_file(self, path=None):
         with open(path, "r") as f:
             txt = f.read()
             module = ast.parse(txt)
@@ -85,7 +88,7 @@ class DstFile:
                     imports.append(import_seg)
                 else:
                     seg = ast.get_source_segment(txt, node)
-                    self.append_seg(seg)
+                    self.prepend_seg(seg)
 
 
 class DstFileDict:
