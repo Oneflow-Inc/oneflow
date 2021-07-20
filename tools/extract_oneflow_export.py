@@ -20,7 +20,7 @@ assert args.out_dir != "~"
 assert args.out_dir != "/"
 out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
 subprocess.check_call(f"rm -rf {args.out_dir}", shell=True)
-subprocess.check_call(f"mkdir -p out_oneflow_dir", shell=True)
+subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
 
 
 def get_dst_path_(export: str = None):
@@ -259,7 +259,7 @@ if __name__ == "__main__":
     if args.verbose == False:
         extra_arg += "--quiet"
     subprocess.check_call(
-        f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports .",
+        f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports **/*",
         shell=True,
         cwd=args.out_dir,
     )
