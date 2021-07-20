@@ -43,6 +43,14 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
   return vec;
 }
 
+void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
+                            int32_t padding, bool ceil_mode, int32_t dilation_rate,
+                            int64_t* output_ptr) {
+  *output_ptr = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
+                 + (ceil_mode ? stride - 1 : 0))
+                / stride;
+}
+
 void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
                       const std::vector<int32_t>& strides, const std::vector<int32_t>& padding,
                       const bool ceil_mode, std::vector<int32_t> dilation_rate, DimVector* out) {
@@ -50,10 +58,8 @@ void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
     int64_t* out_ptr = &(*out).at(i);
-    // refer to operator_util.cpp's `GetWindowedOutputSize` function
-    *out_ptr = (in.at(i) + 2 * padding.at(i) - dilation_rate.at(i) * (pool_size.at(i) - 1) - 1
-                + strides.at(i) + (ceil_mode ? strides.at(i) - 1 : 0))
-               / strides.at(i);
+    GetWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), ceil_mode,
+                           dilation_rate.at(i), out_ptr);
   }
 }
 
