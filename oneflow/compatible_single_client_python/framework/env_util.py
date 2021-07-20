@@ -19,8 +19,10 @@ import socket
 import os
 from contextlib import closing
 
-from oneflow.core.control import ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
-from oneflow.core.job import env_pb2 as env_pb
+from oneflow.compatible.single_client.core.control import (
+    ctrl_bootstrap_pb2 as ctrl_bootstrap_pb,
+)
+from oneflow.compatible.single_client.core.job import env_pb2 as env_pb
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import (
     placement_context as placement_ctx,
@@ -29,7 +31,7 @@ from oneflow.compatible_single_client_python.framework import (
     session_context as session_ctx,
 )
 from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.core.job import resource_pb2 as resource_util
+from oneflow.compatible.single_client.core.job import resource_pb2 as resource_util
 from oneflow.compatible_single_client_python.framework import hob as hob
 from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
 from oneflow.compatible_single_client_python.oneflow_export import (
@@ -91,16 +93,6 @@ def env_init(is_multi_client):
         else:
             exit(0)
     return True
-
-
-def init_default_physical_env():
-    default_physical_env_proto = _DefaultEnvProto()
-    log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
-    if log_dir:
-        default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
-    default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto, False)
-    c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
 @oneflow_export("env.current_resource", "current_resource")

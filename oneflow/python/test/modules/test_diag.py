@@ -132,6 +132,7 @@ def _test_diag_other_dim_non_square_backward(test_case, diagonal, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestDiag(flow.unittest.TestCase):
     def test_diag_forward(test_case):
         arg_dict = OrderedDict()

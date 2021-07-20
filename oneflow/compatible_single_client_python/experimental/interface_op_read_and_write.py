@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.compatible import single_client as flow
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible_single_client_python.lib.core import async_util as async_util
 from oneflow.compatible_single_client_python.framework import (
     input_blob_def as input_blob_def_util,

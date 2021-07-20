@@ -317,6 +317,7 @@ def _test_batch_matmul_backward(test_case, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_matmul(test_case):
         arg_dict = OrderedDict()

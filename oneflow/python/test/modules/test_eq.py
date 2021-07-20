@@ -82,6 +82,7 @@ def _test_tensor_eq_operator_float(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
     def test_eq(test_case):
         arg_dict = OrderedDict()

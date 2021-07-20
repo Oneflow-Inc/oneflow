@@ -151,6 +151,7 @@ def _test_marginrankingloss_grad(test_case, shape, margin, device):
     test_case.assertTrue(np.allclose(input2.grad.numpy(), np_out_grad2, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMarginRankingLossModule(flow.unittest.TestCase):
     def test_margin_ranking_loss(test_case):
         arg_dict = OrderedDict()
