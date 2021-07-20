@@ -153,28 +153,34 @@ def handle_export(node=None, export_d=None, imports=None):
 def parse_from_file(path):
     with open(path, "r") as f:
         txt = f.read()
+        print("[parse]", path)
         return (path, txt, ast.parse(txt))
+
+
+def get_srcs():
+    files_to_extract = []
+    for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
+        if "python/test" in dirpath or "__pycache__" in dirpath:
+            print("[skip]", dirpath)
+            continue
+        else:
+            for src_file in filenames:
+                if src_file.endswith(".py") and "__pycache__" not in src_file:
+                    files_to_extract.append(os.path.join(dirpath, src_file))
+    return files_to_extract
 
 
 if __name__ == "__main__":
 
     # step 1: extract all exports
-    files_to_extract = []
-    for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
-        if "python/test" in dirpath:
-            print("[skip]", dirpath)
-            continue
-        else:
-            for src_file in filenames:
-                if src_file.endswith(".py"):
-                    files_to_extract.append(os.path.join(dirpath, src_file))
+    files_to_extract = get_srcs()
+
     pool = multiprocessing.Pool()
 
     results = pool.map(parse_from_file, files_to_extract)
     pool.close()
     pool.join()
     for (src_file, txt, module) in results:
-        print(src_file)
         is_exported = False
         # print(ast.dump(parsed))
         imports = []
@@ -191,6 +197,7 @@ if __name__ == "__main__":
                         handle_export(node=node, export_d=d, imports=imports)
             if is_exported == False:
                 src_seg = ast.get_source_segment(txt, node)
+                dirpath = os.path.dirname(src_file)
                 dirpath_without_root = dirpath.split("/")[1::]
                 dirpath_without_root = "/".join(dirpath_without_root)
 
@@ -203,9 +210,9 @@ if __name__ == "__main__":
                         dst_f.write(seg)
                         dst_f.write("\n")
 
+                dst = os.path.join(out_oneflow_dir, dirpath_without_root, src_file)
                 append_seg(
-                    path=os.path.join(out_oneflow_dir, dirpath_without_root, src_file),
-                    seg=f"{src_seg}\n",
+                    path=dst, seg=f"{src_seg}\n",
                 )
     # step 2: merge files under python/ into generated files
     # DstFileDict.merge(
