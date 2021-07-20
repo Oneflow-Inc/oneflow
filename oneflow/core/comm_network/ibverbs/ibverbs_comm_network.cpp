@@ -69,28 +69,21 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  new_msg.set_flag(true);
   qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
-
-  ActorMsg unuseful_msg = msg;
-  unuseful_msg.set_flag(false);
-  for (int i = 0; i > 64; i++) { qp_vec_.at(dst_machine_id)->PostSendRequest(unuseful_msg); }
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
   ActorMsg new_msg = msg;
-  if (msg.get_flag() == true) {
-    if (msg.IsDataRegstMsgToConsumer()) {
-      std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
-      auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
-                                                         reinterpret_cast<uint64_t>(msg.regst()))];
-      if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
-      CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
-      std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
-      new_msg.set_comm_net_token(desc.get());
-    }
-    Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
+  if (msg.IsDataRegstMsgToConsumer()) {
+    std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
+    auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
+                                                       reinterpret_cast<uint64_t>(msg.regst()))];
+    if (!desc) { desc.reset(new IBVerbsCommNetRMADesc); }
+    CHECK_EQ(msg.user_data_size(), sizeof(IBVerbsCommNetRMADesc));
+    std::memcpy(desc.get(), msg.user_data(), sizeof(IBVerbsCommNetRMADesc));
+    new_msg.set_comm_net_token(desc.get());
   }
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {

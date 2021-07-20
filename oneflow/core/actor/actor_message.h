@@ -13,6 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
@@ -72,9 +84,6 @@ class ActorMsg final {
   void Deserialize(StreamT& in_stream) {
     in_stream.Read(this, sizeof(ActorMsg));
   }
-  // set flag
-  void set_flag(bool flag) { flag_ = flag; }
-  bool get_flag() const { return flag_; }
 
  private:
   struct RegstWrapper {
@@ -94,7 +103,6 @@ class ActorMsg final {
     int64_t eord_regst_desc_id_;
   };
   uint8_t user_data_size_;
-  bool flag_;
   unsigned char user_data_[kActorMsgUserDataMaxSize];
 };
 
