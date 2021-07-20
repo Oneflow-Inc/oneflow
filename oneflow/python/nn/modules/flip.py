@@ -32,7 +32,9 @@ class Flip(Module):
 
     def forward(self, x):
         input_len = len(x.shape)
-        assert len(self.dims) <= input_len, f"len of dims must less than len of input tensor"
+        assert (
+            len(self.dims) <= input_len
+        ), f"len of dims must less than len of input tensor"
         new_dims = []
         for i in self.dims:
             if i < 0:
