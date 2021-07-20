@@ -40,7 +40,7 @@ namespace oneflow {
   // Initialize sorted_rank_ranges_ and size_
   {
     std::vector<Range>* machine_id_ranges = &sorted_rank_ranges.get()->sorted_rank_ranges_;
-		size_ = parallel_desc.sorted_machine_ids().size();
+    sorted_rank_ranges.get()->size_ = parallel_desc.sorted_machine_ids().size();
     for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
       if (!machine_id_ranges->empty() && machine_id_ranges->back().end() + 1 == machine_id) {
         // Range* last = const_cast<Range*>(&machine_id_ranges->at(machine_id_ranges->size() - 1));
@@ -51,18 +51,18 @@ namespace oneflow {
       }
     }
   }
-	// Initialize rank2next_rank_in_ring_ and rank2prev_rank_in_ring_
-	{
-		const auto& ranges = sorted_rank_ranges.get()->sorted_rank_ranges_;
-		int64_t last = ranges.at(ranges.size() - 1).end();
+  // Initialize rank2next_rank_in_ring_ and rank2prev_rank_in_ring_
+  {
+    const auto& ranges = sorted_rank_ranges.get()->sorted_rank_ranges_;
+    int64_t last = ranges.at(ranges.size() - 1).end();
     for (const auto& machine_id_range : ranges) {
-			for (int64_t i = machine_id_range.begin(); i <= machine_id_range.end(); ++i) {
-				CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2next_rank_in_ring_.emplace(last, i).second);
-				CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2prev_rank_in_ring_.emplace(i, last).second);
-				last = i;
-			}
-		}
-	}
+      for (int64_t i = machine_id_range.begin(); i <= machine_id_range.end(); ++i) {
+        CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2next_rank_in_ring_.emplace(last, i).second);
+        CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2prev_rank_in_ring_.emplace(i, last).second);
+        last = i;
+      }
+    }
+  }
   // Initialize hash_value_
   {
     sorted_rank_ranges.get()->hash_value_ = 0;
@@ -75,32 +75,30 @@ namespace oneflow {
 }
 
 Maybe<int64_t> SortedRankRanges::GetNextRankInRing(int64_t rank) const {
-	return MapAt(rank2next_rank_in_ring_, rank);
+  return MapAt(rank2next_rank_in_ring_, rank);
 }
 
 Maybe<int64_t> SortedRankRanges::GetNextRankInRing() const {
-	return GetNextRankInRing(GlobalProcessCtx::Rank());
+  return GetNextRankInRing(GlobalProcessCtx::Rank());
 }
 
 Maybe<int64_t> SortedRankRanges::GetPrevRankInRing(int64_t rank) const {
-	return MapAt(rank2pre_rank_in_ring_, rank);
+  return MapAt(rank2prev_rank_in_ring_, rank);
 }
 
 Maybe<int64_t> SortedRankRanges::GetPrevRankInRing() const {
-	return GetPrevRankInRing(GlobalProcessCtx::Rank());
+  return GetPrevRankInRing(GlobalProcessCtx::Rank());
 }
 
 bool SortedRankRanges::ContainingCurrentRank() const {
-	return rank2next_rank_in_ring_.count(GlobalProcessCtx::Rank()) > 0;
+  return rank2next_rank_in_ring_.count(GlobalProcessCtx::Rank()) > 0;
 }
 
 Maybe<void> SortedRankRanges::ForEachRank(const std::function<Maybe<void>(int64_t)>& DoEach) const {
-	for (const auto& range : sorted_rank_ranges_) {
-		for (int64_t i = range.begin(); i <= range.end(); ++i) {
-			JUST(DoEach(i));
-		}
-	}
-	return Maybe<void>::Ok();
+  for (const auto& range : sorted_rank_ranges_) {
+    for (int64_t i = range.begin(); i <= range.end(); ++i) { JUST(DoEach(i)); }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

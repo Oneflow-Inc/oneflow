@@ -196,9 +196,9 @@ struct PlacementSymbolExportUtil {
 };
 
 Maybe<void> CheckPlacementConsistency(Symbol<ParallelDesc> parallel_desc, int64_t seconds) {
-	const auto& ctx = JUST(CheckRpcToken(parallel_desc));
-	JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
-	return Maybe<void>::Ok();
+  const auto& ctx = JUST(CheckRpcToken(parallel_desc));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -246,12 +246,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                return device_type;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
-			.def("check_consistency", [](Symbol<ParallelDesc> parallel_desc) {
-				return CheckPlacementConsistency(parallel_desc, 60 * 5).GetOrThrow();
-			})
-			.def("check_consistency", [](Symbol<ParallelDesc> parallel_desc, int64_t seconds) {
-				return CheckPlacementConsistency(parallel_desc, seconds).GetOrThrow();
-			})
+      .def("autoincremental_rpc_token",
+           [](Symbol<ParallelDesc> parallel_desc) -> int64_t {
+             return static_cast<uint64_t>(GetAutoIncrementalRpcToken(parallel_desc).GetOrThrow());
+           })
+      .def("check_consistency",
+           [](Symbol<ParallelDesc> parallel_desc) {
+             return CheckPlacementConsistency(parallel_desc, 60 * 5).GetOrThrow();
+           })
+      .def("check_consistency",
+           [](Symbol<ParallelDesc> parallel_desc, int64_t seconds) {
+             return CheckPlacementConsistency(parallel_desc, seconds).GetOrThrow();
+           })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
       .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);

@@ -64,6 +64,8 @@ class TensorImpl {
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
@@ -154,24 +156,24 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-	const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
 
-	Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
-		CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
-		rpc_token_ = rpc_token;
-		return Maybe<void>::Ok();
-	}
+  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
+    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
+    rpc_token_ = rpc_token;
+    return Maybe<void>::Ok();
+  }
 
  protected:
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(),
-				rpc_token_(Error::ValueError("invalid rpc token")) {}
+        rpc_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
   Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
-	Maybe<RpcToken> rpc_token_;
+  Maybe<RpcToken> rpc_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -221,6 +223,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
+  Maybe<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
+  Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }

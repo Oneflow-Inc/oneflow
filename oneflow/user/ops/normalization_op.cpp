@@ -146,7 +146,7 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
-      CHECK(reserve_space_infer_fn);
+      CHECK_OR_RETURN(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();
@@ -178,7 +178,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     JUST(SetParamDataType("mean"));
     JUST(SetParamDataType("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
-      CHECK(reserve_space_infer_fn);
+      CHECK_OR_RETURN(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();

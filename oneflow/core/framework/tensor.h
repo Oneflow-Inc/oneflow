@@ -46,7 +46,7 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
-	virtual Maybe<RpcToken> rpc_token() const = 0;
+  virtual Maybe<RpcToken> rpc_token() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
@@ -66,6 +66,8 @@ class Tensor {
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
@@ -143,7 +145,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-	Maybe<RpcToken> rpc_token() const override { OF_UNIMPLEMENTED(); }
+  Maybe<RpcToken> rpc_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
   }
@@ -168,6 +170,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
+  Maybe<const Stride> stride() const override { return impl_->stride(); }
+  Maybe<int64_t> storage_offset() const override { return impl_->storage_offset(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }
@@ -223,7 +227,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-	Maybe<RpcToken> rpc_token() const override { return impl_->rpc_token(); }
+  Maybe<RpcToken> rpc_token() const override { return impl_->rpc_token(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();
   }

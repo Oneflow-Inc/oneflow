@@ -31,6 +31,7 @@ def _test_argwhere(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestArgwhere(flow.unittest.TestCase):
     def test_argwhere(test_case):
         arg_dict = OrderedDict()

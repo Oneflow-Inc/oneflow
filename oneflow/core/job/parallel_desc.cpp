@@ -111,7 +111,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
                                                        GlobalProcessCtx::NumOfProcessPerNode()));
     }
   }
-  containning_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
+  containing_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
   ClearUp();
   JUST(SanityCheck());
   return Maybe<void>::Ok();

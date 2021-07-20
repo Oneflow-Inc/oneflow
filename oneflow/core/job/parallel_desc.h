@@ -56,7 +56,7 @@ class ParallelDesc final {
 
   // Getters
   const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
-  bool containning_current_rank() const { return containning_current_rank_; }
+  bool containing_current_rank() const { return containing_current_rank_; }
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return parallel_conf_.device_tag(); }
   std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
@@ -131,7 +131,7 @@ class ParallelDesc final {
   // constructor argument
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
   // cached result of ContainingMachineId(GlobalProcessCtx::Rank()) for performace optimization.
-  bool containning_current_rank_;
+  bool containing_current_rank_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

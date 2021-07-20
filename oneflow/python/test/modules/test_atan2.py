@@ -102,6 +102,7 @@ def _test_atan2_backward(test_case, device):
     test_y_grad()
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
     def test_atan2_forward(test_case):
         arg_dict = OrderedDict()

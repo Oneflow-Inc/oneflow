@@ -95,6 +95,7 @@ def _test_smoothl1loss_impl(test_case, device, shape, data_type, reduction, beta
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSmoothL1LossModule(flow.unittest.TestCase):
     def test_smoothl1loss(test_case):
         arg_dict = OrderedDict()

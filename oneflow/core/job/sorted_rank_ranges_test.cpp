@@ -33,7 +33,7 @@ void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 
 }  // namespace
 
-TEST(ParallelDesc, push_pull_key_4_ranks_simple) {
+TEST(ParallelDesc, two_rank) {
   InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
@@ -42,11 +42,19 @@ TEST(ParallelDesc, push_pull_key_4_ranks_simple) {
   ParallelDesc parallel_desc(parallel_conf);
   const auto& sorted_rank_ranges =
       CHECK_JUST(SortedRankRanges::New4SoleDevicePerRankParallelDesc(SymbolOf(parallel_desc)));
-  ASSERT_EQ(sorted_rank_ranges->rpc_push_pull_key(), "0-1");
+  int64_t rank = 0;
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(0));
+  ASSERT_EQ(rank, 1);
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(1));
+  ASSERT_EQ(rank, 0);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(0));
+  ASSERT_EQ(rank, 1);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(1));
+  ASSERT_EQ(rank, 0);
   DestroyNumProcessPerNode();
 }
 
-TEST(ParallelDesc, push_pull_key_4_ranks) {
+TEST(ParallelDesc, nonconsecutive_rank) {
   InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
@@ -57,7 +65,25 @@ TEST(ParallelDesc, push_pull_key_4_ranks) {
   ParallelDesc parallel_desc(parallel_conf);
   const auto& sorted_rank_ranges =
       CHECK_JUST(SortedRankRanges::New4SoleDevicePerRankParallelDesc(SymbolOf(parallel_desc)));
-  ASSERT_EQ(sorted_rank_ranges->rpc_push_pull_key(), "0-1,3-4");
+  int64_t rank = 0;
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(0));
+  ASSERT_EQ(rank, 1);
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(1));
+  ASSERT_EQ(rank, 3);
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(3));
+  ASSERT_EQ(rank, 4);
+  rank = CHECK_JUST(sorted_rank_ranges->GetNextRankInRing(4));
+  ASSERT_EQ(rank, 0);
+  bool is_ok = TRY(sorted_rank_ranges->GetNextRankInRing(2)).IsOk();
+  ASSERT_FALSE(is_ok);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(1));
+  ASSERT_EQ(rank, 0);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(3));
+  ASSERT_EQ(rank, 1);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(4));
+  ASSERT_EQ(rank, 3);
+  rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(0));
+  ASSERT_EQ(rank, 4);
   DestroyNumProcessPerNode();
 }
 
