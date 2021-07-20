@@ -44,69 +44,69 @@
 
 
 JNIEXPORT 
-jint JNICALL Java_org_oneflow_InferenceSession_getEndian(JNIEnv* env, jobject obj) {
+jint JNICALL Java_org_oneflow_OneFlow_getEndian(JNIEnv* env, jobject obj) {
   return Endian();
 }
 
 JNIEXPORT
-jint JNICALL Java_org_oneflow_InferenceSession_getNodeSize(JNIEnv* env, jobject obj) {
+jint JNICALL Java_org_oneflow_OneFlow_getNodeSize(JNIEnv* env, jobject obj) {
   return oneflow::GetNodeSize().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client) {
+void JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_initDefaultSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_initDefaultSession(JNIEnv* env, jobject obj) {
   return OpenDefaultSession();
 }
 
 JNIEXPORT
-jboolean JNICALL Java_org_oneflow_InferenceSession_isEnvInited(JNIEnv* env, jobject obj) {
+jboolean JNICALL Java_org_oneflow_OneFlow_isEnvInited(JNIEnv* env, jobject obj) {
   return oneflow::IsEnvInited().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_initEnv(JNIEnv* env, jobject obj, jstring env_proto_jstr) {
+void JNICALL Java_org_oneflow_OneFlow_initEnv(JNIEnv* env, jobject obj, jstring env_proto_jstr) {
   std::string env_proto_str = ConvertToString(env, env_proto_jstr);
 
-  return InitEnv(env_proto_str, false);
+  return oneflow::InitEnv(env_proto_str, false).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_initScopeStack(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_initScopeStack(JNIEnv* env, jobject obj) {
   return InitScopeStack();
 }
 
 JNIEXPORT
-jboolean JNICALL Java_org_oneflow_InferenceSession_isSessionInited(JNIEnv* env, jobject obj) {
+jboolean JNICALL Java_org_oneflow_OneFlow_isSessionInited(JNIEnv* env, jobject obj) {
   return oneflow::IsSessionInited().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_initSession(JNIEnv* env, jobject obj, jstring config_proto) {
+void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring config_proto) {
   std::string config_proto_str = ConvertToString(env, config_proto);
   return InitSession(config_proto_str);
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
+void JNICALL Java_org_oneflow_OneFlow_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
   std::string job_name_ = ConvertToString(env, job_name);
 
   return oneflow::JobBuildAndInferCtx_Open(job_name_).GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
+void JNICALL Java_org_oneflow_OneFlow_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
   std::string job_conf_proto_ = ConvertToString(env, job_conf_proto);
 
   return SetJobConfForCurJobBuildAndInferCtx(job_conf_proto_);
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device) {
+void JNICALL Java_org_oneflow_OneFlow_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device) {
   std::string job_conf_proto_ = ConvertToString(env, job_conf_proto);
   std::string ids_ = ConvertToString(env, ids);
   std::string device_ = ConvertToString(env, device);
@@ -115,7 +115,7 @@ void JNICALL Java_org_oneflow_InferenceSession_setScopeForCurJob(JNIEnv* env, jo
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
+void JNICALL Java_org_oneflow_OneFlow_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
   std::string op_conf_proto_ = ConvertToString(env, op_conf_proto);
   op_conf_proto_ = Subreplace(op_conf_proto_, "user_input", "input");
   op_conf_proto_ = Subreplace(op_conf_proto_, "user_output", "output");
@@ -124,32 +124,32 @@ void JNICALL Java_org_oneflow_InferenceSession_curJobAddOp(JNIEnv* env, jobject 
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   return oneflow::CurJobBuildAndInferCtx_Complete().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   return oneflow::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_unsetScopeForCurJob(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_unsetScopeForCurJob(JNIEnv* env, jobject obj) {
   return oneflow::ThreadLocalScopeStackPop().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   return oneflow::JobBuildAndInferCtx_Close().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_startLazyGlobalSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_startLazyGlobalSession(JNIEnv* env, jobject obj) {
   return oneflow::StartLazyGlobalSession().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path) {
+void JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path) {
   std::string load_job_name = ConvertToString(env, load_job);
   int64_t path_length = (*env).GetDirectBufferCapacity(path);
   void *path_address = (*env).GetDirectBufferAddress(path);
@@ -158,7 +158,7 @@ void JNICALL Java_org_oneflow_InferenceSession_loadCheckpoint(JNIEnv* env, jobje
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name) {
+void JNICALL Java_org_oneflow_OneFlow_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name) {
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
   void *data_address = (*env).GetDirectBufferAddress(data);
@@ -169,14 +169,14 @@ void JNICALL Java_org_oneflow_InferenceSession_runSinglePushJob(JNIEnv* env, job
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr) {
+void JNICALL Java_org_oneflow_OneFlow_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr) {
   std::string inference_job_name = ConvertToString(env, jstr);
 
   return RunJob(inference_job_name);
 }
 
 JNIEXPORT
-jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {  
+jobject JNICALL Java_org_oneflow_OneFlow_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {  
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
 
@@ -189,6 +189,7 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
   (*env).SetLongArrayRegion(shapeArray, 0, pull_tensor->axes_, pull_tensor->shape_);
 
   // call nativeNewTensor
+  // Todo: Exception handle
   jclass tensorClass = (*env).FindClass("org/oneflow/Tensor");
   jmethodID mid = (*env).GetStaticMethodID(tensorClass, "nativeNewTensor", "([B[JI)Lorg/oneflow/Tensor;");
   jobject tensor = (*env).CallStaticObjectMethod(tensorClass, mid, array, shapeArray, pull_tensor->dtype_);
@@ -197,27 +198,27 @@ jobject JNICALL Java_org_oneflow_InferenceSession_runPullJob(JNIEnv* env, jobjec
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_stopLazyGlobalSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_stopLazyGlobalSession(JNIEnv* env, jobject obj) {
   return oneflow::StopLazyGlobalSession().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_destroyLazyGlobalSession(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_destroyLazyGlobalSession(JNIEnv* env, jobject obj) {
   return oneflow::DestroyLazyGlobalSession().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_destroyEnv(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_destroyEnv(JNIEnv* env, jobject obj) {
   return oneflow::DestroyEnv().GetOrThrow();
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_InferenceSession_setShuttingDown(JNIEnv* env, jobject obj) {
+void JNICALL Java_org_oneflow_OneFlow_setShuttingDown(JNIEnv* env, jobject obj) {
   return oneflow::SetShuttingDown();
 }
 
 JNIEXPORT
-jstring JNICALL Java_org_oneflow_InferenceSession_getInterUserJobInfo(JNIEnv* env, jobject obj) {
+jstring JNICALL Java_org_oneflow_OneFlow_getInterUserJobInfo(JNIEnv* env, jobject obj) {
   std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
   return ConvertToJString(env, inter_user_job_info);
 }

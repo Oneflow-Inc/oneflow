@@ -9,9 +9,6 @@
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/scope.h"
 
-inline void InitEnv(const std::string& env_proto_str, bool is_multi_client) {
-    oneflow::InitEnv(env_proto_str, is_multi_client).GetOrThrow();
-}
 
 inline void InitScopeStack() {
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf = std::make_shared<oneflow::cfg::JobConfigProto>();
