@@ -47,6 +47,44 @@ REGISTER_USER_OP("dot")
       *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP("dot_grad")
+    .Input("x")
+    .Input("y")
+    .Input("dout")
+    .Output("dx")
+    .Output("dy")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+      const user_op::TensorDesc& dout = ctx->InputTensorDesc("dout", 0);
+      CHECK_OR_RETURN(dout.shape() == Shape({1}));
+      CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
+      CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+      *ctx->OutputShape("dy", 0) = ctx->InputShape("y", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), 0)
+          .Split(user_op::OpArg("y", 0), 0)
+          .Broadcast(user_op::OpArg("dout", 0))
+          .Split(user_op::OpArg("dx", 0), 0)
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+      const user_op::TensorDesc& dout = ctx->InputTensorDesc("dout", 0);
+      // CHECK_OR_RETURN((x.data_type() == y.data_type()) & (dout.data_type() == y.data_type())) << "The input tensor type is different";
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+      *ctx->OutputDType("dy", 0) = ctx->InputDType("y", 0);
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace
 
 }  // namespace oneflow
