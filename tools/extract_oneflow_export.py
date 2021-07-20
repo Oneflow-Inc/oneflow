@@ -145,7 +145,7 @@ def get_decorator_segs(node=None):
     return segs
 
 
-def handle_export(node=None, export_d=None, imports=None):
+def handle_export(node=None, export_d=None, imports=None, txt=None):
     f_src_seg = ast.get_source_segment(txt, node)
     assert len(export_d.args) > 0, str(ast.dump(export_d))
     for (i, a) in enumerate(export_d.args):
@@ -218,7 +218,7 @@ if __name__ == "__main__":
                 for d in node.decorator_list:
                     if is_export_decorator(d):
                         is_exported = True
-                        handle_export(node=node, export_d=d, imports=imports)
+                        handle_export(node=node, export_d=d, imports=imports, txt=txt)
             if is_exported == False:
                 dirpath = os.path.dirname(src_file)
                 dirpath_without_root = dirpath.split("/")[1::]
