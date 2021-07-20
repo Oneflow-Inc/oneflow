@@ -1,15 +1,19 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include <infiniband/verbs.h>
 #include <memory>
@@ -28,7 +32,7 @@ namespace oneflow {
 
 namespace {
 
-constexpr int kMaxSendWr = 4096;
+constexpr int kMaxSendWr = 32;
 
 }
 
@@ -62,9 +66,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
-  max_send_wr_in_send_buf_ = std::min(device_attr.max_qp_wr, kMaxSendWr) - 2;
-  use_pendding_list_ = false;
-  CHECK(msg_pendding_list_.empty());
+  max_outstanding_send_wr_ = std::min(device_attr.max_qp_wr, kMaxSendWr) - 2;
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -157,8 +159,8 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
     ibv_send_wr* bad_wr = nullptr;
-    PostSendReadRequestHandle(wr,sge,bad_wr);
-}
+    PostSendReadRequestHandle(wr, sge, bad_wr);
+  }
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
@@ -179,35 +181,30 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr.send_flags = 0;
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
-  ibv_send_wr* bad_wr = nullptr;  
-  PostSendReadRequestHandle(wr,sge,bad_wr);
+  ibv_send_wr* bad_wr = nullptr;
+  PostSendReadRequestHandle(wr, sge, bad_wr);
 }
 
-void IBVerbsQP::PostSendReadRequestHandle( ibv_send_wr   wr,  ibv_sge sge,ibv_send_wr * bad_wr ) {
+void IBVerbsQP::PostSendReadRequestHandle(ibv_send_wr wr, ibv_sge sge, ibv_send_wr* bad_wr) {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
   std::unique_lock<std::mutex> use_pendding_list_lck(use_pendding_list_mutex_);
   std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
-  if (num_outstanding_send_wr_ < max_send_wr_in_send_buf_ && use_pendding_list_ == false) {
+  if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     num_outstanding_send_wr_++;
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   } else {
-    std::pair<ibv_send_wr,ibv_sge> ibv_send_wr_sge = std::make_pair(wr,sge);
+    std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::make_pair(wr, sge);
     msg_pendding_list_.push(ibv_send_wr_sge);
-    if(!use_pendding_list_) {
-      use_pendding_list_= true;
+    if (msg_pendding_list_.empty() == false
+        && num_outstanding_send_wr_ < max_outstanding_send_wr_) {
+      std::pair<ibv_send_wr, ibv_sge> new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
+      msg_pendding_list_.pop();
+      ibv_send_wr new_wr = new_ibv_send_wr_sge.first;
+      new_wr.sg_list = &new_ibv_send_wr_sge.second;
+      ibv_send_wr* new_bad_wr = nullptr;
+      num_outstanding_send_wr_++;
+      CHECK_EQ(ibv_post_send(qp_, &new_wr, &new_bad_wr), 0);
     }
-    if (msg_pendding_list_.empty() == false &&   num_outstanding_send_wr_ < max_send_wr_in_send_buf_) {
-        std::pair<ibv_send_wr,ibv_sge> new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
-        msg_pendding_list_.pop();
-        ibv_send_wr new_wr = new_ibv_send_wr_sge.first;
-        new_wr.sg_list = &new_ibv_send_wr_sge.second;
-        ibv_send_wr* new_bad_wr = nullptr;
-        num_outstanding_send_wr_++;
-        CHECK_EQ(ibv_post_send(qp_, &new_wr, &new_bad_wr), 0);
-    }
-    if (msg_pendding_list_.empty() == true && num_outstanding_send_wr_  < max_send_wr_in_send_buf_) {
-      use_pendding_list_ = false;
-  }
   }
 }
 
@@ -238,24 +235,20 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   DeleteWorkRequestId(wr_id);
 }
 
-
 void IBVerbsQP::ReadSendDoneHandle() {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
   std::unique_lock<std::mutex> use_pendding_list_mutex_lck(use_pendding_list_mutex_);
   if (num_outstanding_send_wr_ > 0) { num_outstanding_send_wr_--; }
-  if (num_outstanding_send_wr_ < max_send_wr_in_send_buf_ && use_pendding_list_) {
+  if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
     if (msg_pendding_list_.empty() == false) {
-      std::pair<ibv_send_wr,ibv_sge> ibv_send_wr_sge = std::move(msg_pendding_list_.front());
+      std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(msg_pendding_list_.front());
       ibv_send_wr wr = ibv_send_wr_sge.first;
       wr.sg_list = &ibv_send_wr_sge.second;
       msg_pendding_list_.pop();
       ibv_send_wr* bad_wr = nullptr;
       num_outstanding_send_wr_++;
       CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
-      if (msg_pendding_list_.empty() == true && num_outstanding_send_wr_ < max_send_wr_in_send_buf_) {
-        use_pendding_list_ = false;
-      }
     }
   }
 }

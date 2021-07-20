@@ -72,6 +72,9 @@ class ActorMsg final {
   void Deserialize(StreamT& in_stream) {
     in_stream.Read(this, sizeof(ActorMsg));
   }
+  // set flag
+  void set_flag(bool flag) { flag_ = flag; }
+  bool get_flag() const { return flag_; }
 
  private:
   struct RegstWrapper {
@@ -91,6 +94,7 @@ class ActorMsg final {
     int64_t eord_regst_desc_id_;
   };
   uint8_t user_data_size_;
+  bool flag_;
   unsigned char user_data_[kActorMsgUserDataMaxSize];
 };
 
