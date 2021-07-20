@@ -176,13 +176,13 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && *this->device() == *other.device();
+         && *this->device() == *other.device() && this->stride() == other.stride();
 }
 
 size_t MirroredTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Device>()(*device());
+         ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride());
 }
 
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {

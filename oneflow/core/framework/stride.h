@@ -29,13 +29,12 @@ class Stride final {
   explicit Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
   explicit Stride(StrideVector&& stride_vec) : stride_vec_(stride_vec) {}
   Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
-  Stride& operator=(const Stride& shape);
+  Stride& operator=(const Stride& stride);
   ~Stride() = default;
 
   bool operator==(const Stride& rhs) const;
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
-  std::string DebugStr() const;
   std::string ToString() const;
 
   // Getters and Setters
@@ -49,5 +48,18 @@ class Stride final {
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::Stride> {
+  size_t operator()(const oneflow::Stride& stride) const {
+    size_t ret = 0;
+    FOR_RANGE(int, i, 0, stride.NumAxes()) { ret ^= std::hash<int64_t>()(stride.At(i)); }
+    return ret;
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_STRIDE_H_

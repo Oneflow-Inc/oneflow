@@ -29,8 +29,8 @@ Stride::Stride(const Shape& shape) {
   }
 }
 
-Stride& Stride::operator=(const Stride& shape) {
-  stride_vec_ = shape.stride_vec_;
+Stride& Stride::operator=(const Stride& stride) {
+  stride_vec_ = stride.stride_vec_;
   return *this;
 }
 
@@ -47,7 +47,5 @@ std::string Stride::ToString() const {
   ss << ")";
   return ss.str();
 }
-
-std::string Stride::DebugStr() const { return ToString(); }
 
 }  // namespace oneflow
