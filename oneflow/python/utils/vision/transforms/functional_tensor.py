@@ -121,7 +121,9 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
     # Define align_corners to avoid warnings
     align_corners = False if interpolation in ["bilinear", "bicubic"] else None
 
-    img = flow.F.interpolate(img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners)
+    img = flow.F.interpolate(
+        img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners
+    )
 
     if interpolation == "bicubic" and out_dtype == flow.uint8:
         img = img.clamp(min=0, max=255)

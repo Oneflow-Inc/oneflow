@@ -19,6 +19,7 @@ import os
 import warnings
 from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
 
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow as flow
 
 
@@ -115,6 +116,7 @@ class _InfiniteConstantSampler(Sampler):
             yield None
 
 
+@oneflow_export("utils.data.DataLoader")
 class DataLoader(Generic[T_co]):
     r"""
     Data loader. Combines a dataset and a sampler, and provides an iterable over

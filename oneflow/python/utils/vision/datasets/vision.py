@@ -21,6 +21,7 @@ import oneflow.python.utils.data as data
 # reference: https://github.com/pytorch/vision/commit/d1f1a5445dcbbd0d733dc38a32d9ae153337daae
 string_classes = (str, bytes)
 
+
 class VisionDataset(data.Dataset):
     _repr_indent = 4
 

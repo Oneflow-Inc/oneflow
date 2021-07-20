@@ -23,7 +23,7 @@ static methods.
 import oneflow as flow
 import re
 import collections
-import oneflow.python.utils as utils
+
 
 string_classes = (str, bytes)
 

@@ -20,6 +20,7 @@ import oneflow as flow
 
 T_co = TypeVar("T_co", covariant=True)
 
+
 class Sampler(Generic[T_co]):
     r"""Base class for all Samplers.
 

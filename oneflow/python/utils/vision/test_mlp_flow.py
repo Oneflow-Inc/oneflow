@@ -71,6 +71,7 @@ def get_fashion_mnist_labels(labels):
 
 num_inputs, num_outputs, num_hiddens = 784, 10, 256
 
+
 class FlattenLayer(nn.Module):
     def __init__(self):
         super(FlattenLayer, self).__init__()
@@ -79,13 +80,13 @@ class FlattenLayer(nn.Module):
         res = x.reshape(shape=[x.shape[0], -1])
         return res
 
+
 net = nn.Sequential(
     FlattenLayer(),
     nn.Linear(num_inputs, num_hiddens),
     nn.ReLU(),
     nn.Linear(num_hiddens, num_outputs),
 )
-
 
 
 device = flow.device("cuda")
@@ -130,13 +131,7 @@ def evaluate_accuracy(data_iter, net, device=None):
 
 
 def train(
-    net,
-    train_iter,
-    test_iter,
-    loss,
-    num_epochs,
-    batch_size,
-    optimizer=None,
+    net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer=None,
 ):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0

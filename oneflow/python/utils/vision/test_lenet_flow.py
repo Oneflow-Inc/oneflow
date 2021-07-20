@@ -28,6 +28,7 @@ import oneflow.experimental.optim as optim
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
 flow.enable_eager_execution()
 
+
 class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
@@ -90,6 +91,7 @@ train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=No
 loss = nn.CrossEntropyLoss()
 loss.to(device)
 
+
 def evaluate_accuracy(data_iter, net, device=None):
     if device is None and isinstance(net, nn.Module):
         device = list(net.parameters())[0].device
@@ -102,9 +104,7 @@ def evaluate_accuracy(data_iter, net, device=None):
             y = y.to(device=device)
             if isinstance(net, nn.Module):
                 net.eval()  #  evaluating mode
-                acc_sum += (
-                    (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
-                )
+                acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
                 net.train()  # turn to training mode
             else:
                 if "is_training" in net.__code__.co_varnames:

@@ -15,9 +15,7 @@ limitations under the License.
 """
 from typing import Any, List, Sequence
 
-from PIL import (
-    Image,
-)
+from PIL import Image
 
 try:
     import accimage

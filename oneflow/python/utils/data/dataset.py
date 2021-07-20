@@ -30,9 +30,10 @@ from typing import (
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
-default_generator = flow.Generator()
+default_generator = flow._oneflow_internal.default_generator("auto")
 
 # Taken from python 3.5 docs
 def _accumulate(iterable, fn=lambda x, y: x + y):
@@ -54,6 +55,7 @@ T_co = TypeVar("T_co", covariant=True)
 T = TypeVar("T")
 
 
+@oneflow_export("utils.data.Dataset")
 class Dataset(Generic[T_co]):
     r"""An abstract class representing a :class:`Dataset`.
 
@@ -77,6 +79,7 @@ class Dataset(Generic[T_co]):
         return ConcatDataset([self, other])
 
 
+@oneflow_export("utils.data.IterableDataset")
 class IterableDataset(Dataset[T_co]):
     r"""An iterable Dataset.
 
@@ -187,6 +190,7 @@ class IterableDataset(Dataset[T_co]):
         IterableDataset.reduce_ex_hook = hook_fn
 
 
+@oneflow_export("utils.data.TensorDataset")
 class TensorDataset(Dataset[Tuple[Tensor, ...]]):
     r"""Dataset wrapping tensors.
 
@@ -210,6 +214,7 @@ class TensorDataset(Dataset[Tuple[Tensor, ...]]):
         return self.tensors[0].size(0)
 
 
+@oneflow_export("utils.data.ConcatDataset")
 class ConcatDataset(Dataset[T_co]):
     r"""Dataset as a concatenation of multiple datasets.
 
@@ -259,6 +264,7 @@ class ConcatDataset(Dataset[T_co]):
         return self.datasets[dataset_idx][sample_idx]
 
 
+@oneflow_export("utils.data.ChainDataset")
 class ChainDataset(IterableDataset):
     r"""Dataset for chainning multiple :class:`IterableDataset` s.
 
@@ -293,6 +299,7 @@ class ChainDataset(IterableDataset):
         return total
 
 
+@oneflow_export("utils.data.Subset")
 class Subset(Dataset[T_co]):
     r"""
     Subset of a dataset at specified indices.
@@ -315,10 +322,11 @@ class Subset(Dataset[T_co]):
         return len(self.indices)
 
 
+@oneflow_export("utils.data.random_split")
 def random_split(
     dataset: Dataset[T],
     lengths: Sequence[int],
-    generator: Optional[flow.Generator] = default_generator,
+    generator: Optional[object] = default_generator,
 ) -> List[Subset[T]]:
     r"""
     Randomly split a dataset into non-overlapping new datasets of given lengths.
