@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import collections
 import re
 
-from oneflow.core.job import placement_pb2 as placement_pb
+from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import op_util as op_util
 from oneflow.compatible_single_client_python.framework import (

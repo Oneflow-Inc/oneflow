@@ -33,10 +33,16 @@ from oneflow.compatible_single_client_python.framework import (
 from oneflow.compatible_single_client_python.experimental import (
     name_scope as name_scope,
 )
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
-from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
+from oneflow.compatible.single_client.core.job import (
+    regularizer_conf_pb2 as regularizer_conf_util,
+)
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible_single_client_python.framework import hob as hob
 from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
 from oneflow.compatible_single_client_python.eager import gradient_util as gradient_util
