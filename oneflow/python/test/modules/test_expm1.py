@@ -38,10 +38,7 @@ def _test_expm1_impl(test_case, device, shape):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestExpm1Module(flow.unittest.TestCase):
     def test_expm1(test_case):
         arg_dict = OrderedDict()

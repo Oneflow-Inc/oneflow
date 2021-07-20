@@ -42,8 +42,8 @@ inline void InitMultiClientSessionContext(const std::string& config_proto_str) {
   return oneflow::InitMultiClientSessionContext(config_proto_str).GetOrThrow();
 }
 
-inline void DestroyMultiClientSessionContext() {
-  return oneflow::DestroyMultiClientSessionContext().GetOrThrow();
+inline void TryDestroyMultiClientSessionContext() {
+  return oneflow::TryDestroyMultiClientSessionContext().GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_SESSION_SESSION_API_H_
