@@ -321,6 +321,9 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 #if defined(WITH_CUDA)
       cudaMemset(y_tensor->mut_dptr(), 0,
                  y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
+#elif defined(WITH_ROCM)
+      hipMemset(y_tensor->mut_dptr(), 0,
+                 y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
 #else
       UNIMPLEMENTED();
 #endif
