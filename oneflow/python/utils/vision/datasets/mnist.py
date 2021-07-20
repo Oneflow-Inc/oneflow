@@ -22,11 +22,14 @@ import codecs
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.error import URLError
 
-import oneflow.experimental as flow
+import oneflow as flow
 from .vision import VisionDataset
 from .utils import download_and_extract_archive, check_integrity
+from oneflow.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
+@oneflow_export("utils.vision.datasets.MNIST")
 class MNIST(VisionDataset):
     """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
     Args:
@@ -217,6 +220,7 @@ class MNIST(VisionDataset):
         return "Split: {}".format("Train" if self.train is True else "Test")
 
 
+@oneflow_export("utils.vision.datasets.FashionMNIST")
 class FashionMNIST(MNIST):
     """`Fashion-MNIST <https://github.com/zalandoresearch/fashion-mnist>`_ Dataset.
     Args:
@@ -271,7 +275,7 @@ def get_int(b: bytes) -> int:
     return int(codecs.encode(b, "hex"), 16)
 
 
-def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> flow.Tensor:
+def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> Tensor:
     """Read a SN3 file in "Pascal Vincent" format (Lush file 'libidx/idx-io.lsh').
        Argument may be a filename, compressed filename, or file object.
     """
@@ -288,10 +292,10 @@ def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> flow.Tensor
     s = [get_int(data[4 * (i + 1) : 4 * (i + 2)]) for i in range(nd)]
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
     assert parsed.shape[0] == np.prod(s) or not strict
-    return flow.tensor(parsed.astype(m[2]), dtype=m[0]).reshape(shape=s)
+    return Tensor(parsed.astype(m[2]), dtype=m[0]).reshape(shape=s)
 
 
-def read_label_file(path: str) -> flow.Tensor:
+def read_label_file(path: str) -> Tensor:
     x = read_sn3_pascalvincent_tensor(path, strict=False)
     assert x.dtype == flow.uint8
     assert x.ndimension() == 1
@@ -299,7 +303,7 @@ def read_label_file(path: str) -> flow.Tensor:
     return x
 
 
-def read_image_file(path: str) -> flow.Tensor:
+def read_image_file(path: str) -> Tensor:
     x = read_sn3_pascalvincent_tensor(path, strict=False)
     assert x.dtype == flow.uint8
     assert x.ndimension() == 3

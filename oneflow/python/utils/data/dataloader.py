@@ -15,8 +15,8 @@ limitations under the License.
 """
 import sys
 import traceback
-import os
 import warnings
+
 from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
 
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export

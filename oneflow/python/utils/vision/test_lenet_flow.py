@@ -18,9 +18,6 @@ import time
 
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-
-import oneflow.python.utils.data as data
-import oneflow.python.utils.vision.datasets as datasets
 import oneflow.python.utils.vision.transforms as transforms
 import oneflow.experimental.optim as optim
 
@@ -69,18 +66,18 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-m
     trans.append(transforms.ToTensor())
     transform = transforms.Compose(trans)
 
-    mnist_train = datasets.FashionMNIST(
+    mnist_train = flow.utils.vision.datasets.FashionMNIST(
         root=root, train=True, transform=transform, download=True
     )
-    mnist_test = datasets.FashionMNIST(
+    mnist_test = flow.utils.vision.datasets.FashionMNIST(
         root=root, train=False, transform=transform, download=True
     )
     num_workers = 0
 
-    train_iter = data.DataLoader(
+    train_iter = flow.utils.data.DataLoader(
         mnist_train, batch_size, shuffle=True, num_workers=num_workers
     )
-    test_iter = data.DataLoader(
+    test_iter = flow.utils.data.DataLoader(
         mnist_test, batch_size, shuffle=False, num_workers=num_workers
     )
     return train_iter, test_iter

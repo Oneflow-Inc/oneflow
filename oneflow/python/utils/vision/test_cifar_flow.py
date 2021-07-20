@@ -15,11 +15,7 @@ limitations under the License.
 """
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-
-import transforms as transforms
-import datasets as datasets
-import oneflow.python.utils.data as data
-
+import oneflow.python.utils.vision.transforms as transforms
 import oneflow.experimental.optim as optim
 
 
@@ -32,17 +28,17 @@ transform = transforms.Compose(
 batch_size = 4
 data_dir = "./data/cifar10"
 
-trainset = datasets.CIFAR10(
+trainset = flow.utils.vision.datasets.CIFAR10(
     root=data_dir, train=True, download=True, transform=transform
 )
-trainloader = data.DataLoader(
+trainloader = flow.utils.data.DataLoader(
     trainset, batch_size=batch_size, shuffle=False, num_workers=0
 )
 
-testset = datasets.CIFAR10(
+testset = flow.utils.vision.datasets.CIFAR10(
     root=data_dir, train=False, download=True, transform=transform
 )
-testloader = data.DataLoader(
+testloader = flow.utils.data.DataLoader(
     testset, batch_size=batch_size, shuffle=False, num_workers=0
 )
 

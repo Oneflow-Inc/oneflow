@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import Any, Callable, Optional, Type, Union
+
 from oneflow.python.utils.data import IterDataPipe
 
 

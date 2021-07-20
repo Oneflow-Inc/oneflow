@@ -22,8 +22,10 @@ from typing import Any, Callable, Optional, Tuple
 
 from .vision import VisionDataset
 from .utils import check_integrity, download_and_extract_archive
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
+@oneflow_export("utils.vision.datasets.CIFAR10")
 class CIFAR10(VisionDataset):
     """`CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
     Args:
@@ -166,6 +168,7 @@ class CIFAR10(VisionDataset):
         return "Split: {}".format("Train" if self.train is True else "Test")
 
 
+@oneflow_export("utils.vision.datasets.CIFAR100")
 class CIFAR100(CIFAR10):
     """`CIFAR100 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
     This is a subclass of the `CIFAR10` Dataset.

@@ -19,11 +19,14 @@ from collections.abc import Sequence
 from . import functional as F
 from .functional import InterpolationMode, _interpolation_modes_from_int
 
-import oneflow.experimental as flow
-from oneflow.experimental import Tensor
+
+from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
-class Normalize(flow.nn.Module):
+@oneflow_export("utils.vision.transforms.Normalize")
+class Normalize(Module):
     """Normalize a tensor image with mean and standard deviation.
     This transform does not support PIL Image.
     Given mean: ``(mean[1],...,mean[n])`` and std: ``(std[1],..,std[n])`` for ``n``
@@ -59,6 +62,7 @@ class Normalize(flow.nn.Module):
         )
 
 
+@oneflow_export("utils.vision.transforms.Compose")
 class Compose:
     """Composes several transforms together.
     Please, see the note below.
@@ -96,6 +100,7 @@ class Compose:
         return format_string
 
 
+@oneflow_export("utils.vision.transforms.ToTensor")
 class ToTensor:
     """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
     Converts a PIL Image or numpy.ndarray (H x W x C) in the range
@@ -122,7 +127,8 @@ class ToTensor:
         return self.__class__.__name__ + "()"
 
 
-class Resize(flow.nn.Module):
+@oneflow_export("utils.vision.transforms.Resize")
+class Resize(Module):
     """Resize the input image to the given size.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
