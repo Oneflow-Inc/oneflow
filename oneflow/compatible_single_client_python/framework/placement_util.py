@@ -15,19 +15,19 @@ limitations under the License.
 """
 from __future__ import absolute_import
 import re
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 from oneflow.compatible import single_client as flow
 import traceback
 import oneflow._oneflow_internal

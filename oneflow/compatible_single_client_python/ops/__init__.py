@@ -19,25 +19,25 @@ import re
 
 from oneflow.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_context,
 )
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     input_blob_def as input_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import (
     blob_register as blob_register_util,
 )
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg

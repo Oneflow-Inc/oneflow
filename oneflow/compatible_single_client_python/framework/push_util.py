@@ -16,21 +16,21 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     input_blob_def as input_blob_def,
 )
-from oneflow.compatible_single_client_python.framework import dtype as dtype_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import (
     python_callback as python_callback,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     balanced_splitter as balanced_splitter,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
 from oneflow.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util

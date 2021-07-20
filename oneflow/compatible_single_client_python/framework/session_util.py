@@ -18,43 +18,43 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job import job_set_pb2 as job_set_util
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import compiler as compiler
-from oneflow.compatible_single_client_python.framework import config_util as config_util
-from oneflow.compatible_single_client_python.framework import env_util as env_util
-from oneflow.compatible_single_client_python.framework import typing_util as oft_util
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import compiler as compiler
+from oneflow.compatible.single_client.python.framework import config_util as config_util
+from oneflow.compatible.single_client.python.framework import env_util as env_util
+from oneflow.compatible.single_client.python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.framework import (
     job_instance as job_instance_util,
 )
-from oneflow.compatible_single_client_python.framework import push_util as push_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import push_util as push_util
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
-from oneflow.compatible_single_client_python.eager import op_executor as op_executor
-from oneflow.compatible_single_client_python.experimental import (
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from oneflow.compatible.single_client.python.experimental import (
     interface_op_read_and_write,
 )
 from oneflow.core.job.job_set_pb2 import ConfigProto
-from oneflow.compatible_single_client_python.framework.function_desc import FunctionDesc
-from oneflow.compatible_single_client_python.framework import module as module_util
-from oneflow.compatible_single_client_python.framework.pull_util import (
+from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.python.framework import module as module_util
+from oneflow.compatible.single_client.python.framework.pull_util import (
     LazyFutureRemoteBlobs,
     EagerFutureRemoteBlobs,
 )
-from oneflow.compatible_single_client_python.framework.session_context import (
+from oneflow.compatible.single_client.python.framework.session_context import (
     SessionStatus,
 )
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )
-from oneflow.compatible_single_client_python.framework.function_desc import FunctionDesc
-from oneflow.compatible_single_client_python.framework.check_point import (
+from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.python.framework.check_point import (
     SnapshotManager,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     check_point_v2 as check_point_v2,
 )
 from contextlib import contextmanager

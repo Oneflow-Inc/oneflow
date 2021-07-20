@@ -15,14 +15,14 @@ limitations under the License.
 """
 import math
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.modules.utils import _pair
-from oneflow.compatible_single_client_python.nn.common_types import _size_2_t
-from oneflow.compatible_single_client_python.nn import init
+from oneflow.compatible.single_client.python.nn.modules.utils import _pair
+from oneflow.compatible.single_client.python.nn.common_types import _size_2_t
+from oneflow.compatible.single_client.python.nn import init
 
 
 def slice(x, begin, size):

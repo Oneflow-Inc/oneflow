@@ -28,7 +28,7 @@ from oneflow.core.summary import summary_pb2 as summary_pb2
 from oneflow.core.summary import event_pb2 as event_pb2
 from oneflow.core.summary import tensor_pb2 as tensor_pb2
 from oneflow.core.summary import projector_pb2 as projector_pb2
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 from oneflow.compatible import single_client as flow

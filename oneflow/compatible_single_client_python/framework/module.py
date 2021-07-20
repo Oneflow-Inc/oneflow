@@ -15,8 +15,8 @@ limitations under the License.
 """
 
 from __future__ import absolute_import
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
-from oneflow.compatible_single_client_python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 
 
 @oneflow_export("deprecated.nn.Module")

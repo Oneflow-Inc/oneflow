@@ -33,7 +33,7 @@ from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 
 # import oneflow.compatible.single_client as flow
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 
