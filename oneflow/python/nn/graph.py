@@ -113,6 +113,8 @@ class Graph(object):
     def _complete_graph_config(self):
         if len(self._optimizers):
             self.config._train(True)
+        # TODO(xuxiaoyu): save variable name and it's l2 if optimizer has weight decay
+        # which means to used as l2. 
         for name, opt_config in self._optimizers.items():
             self.config.add_optimizer_config(opt_config, self._var2var_op_name)
 
@@ -198,6 +200,8 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
+        # TODO(xuxiaoyu): Add dict of Parameter id to Parameter Block, for using id
+        # to query Parameter Block.
         self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
@@ -268,6 +272,6 @@ class GraphConfig(FunctionConfig):
     def add_optimizer_config(
         self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
     ):
-        optimizer_config.optimizer.add_to_train_config(
+        optimizer_config.optimizer.add_to_graph_train_config(
             self.proto.mutable_train_conf(), var2var_op_name
         )

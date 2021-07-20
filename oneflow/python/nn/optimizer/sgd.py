@@ -136,7 +136,7 @@ class SGD(Optimizer):
             self._state["step"] = self._state["step"] + 1
             return loss
 
-    def add_to_train_config(self, train_conf, var2var_op_name_dict):
+    def add_to_graph_train_config(self, train_conf, var2var_op_name_dict):
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
             lr = param_group["lr"]
