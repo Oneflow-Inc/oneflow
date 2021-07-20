@@ -227,6 +227,35 @@ class PoolNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PoolingNDFunctor {
+ public:
+  PoolingNDFunctor() = default;
+  virtual ~PoolingNDFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::string& data_format, const std::string& padding,
+                                const std::vector<int32_t>& padding_before,
+                                const std::vector<int32_t>& padding_after,
+                                const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& stride,
+                                const std::vector<int32_t>& dilation, const bool& return_indices,
+                                const bool& ceil_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
+    JUST(attrs.SetAttr<bool>("return_indices", return_indices));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AvgPool2DFunctor : public PoolNDFunctor {
  public:
   AvgPool2DFunctor() {
@@ -238,6 +267,20 @@ class MaxPool2DFunctor : public PoolNDFunctor {
  public:
   MaxPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
+  }
+};
+
+class Maxpool2DFunctor : public PoolingNDFunctor {
+ public:
+  Maxpool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+  }
+};
+
+class Maxpool3DFunctor : public PoolingNDFunctor {
+ public:
+  Maxpool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("maxpool_3d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
@@ -332,6 +375,7 @@ class NormalizationFunctor {
 class PadFunctor {
  public:
   PadFunctor() {
+    constant_pad_3d_ = CHECK_JUST(one::OpBuilder("constant_pad3d").Input("x").Output("y").Build());
     constant_pad_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
     reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
     replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
@@ -353,7 +397,14 @@ class PadFunctor {
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
-      return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+      switch (x->shape()->NumAxes()) {
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_, {x}, attrs);
+        default:
+          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << x->shape()->NumAxes()
+                                      << "d-tensor is not support yet! ";
+      }
+
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {
@@ -366,6 +417,7 @@ class PadFunctor {
 
  private:
   std::shared_ptr<OpExpr> constant_pad_;
+  std::shared_ptr<OpExpr> constant_pad_3d_;
   std::shared_ptr<OpExpr> reflect_pad_;
   std::shared_ptr<OpExpr> replicate_pad_;
 };
@@ -420,6 +472,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
+  m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");

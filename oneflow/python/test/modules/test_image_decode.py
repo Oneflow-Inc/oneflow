@@ -22,10 +22,6 @@ import oneflow.experimental as flow
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestImageDecode(flow.unittest.TestCase):
     def test_image_decode(test_case):
         images = [

@@ -41,10 +41,11 @@ class SyncDynamicResizeOp : public Operator {
   SyncDynamicResizeOp() = default;
   ~SyncDynamicResizeOp() override = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollInputBn("size", false);
     EnrollOutputBn("out")->set_header_infered_before_compute(false);
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(

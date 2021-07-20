@@ -36,40 +36,40 @@ Maybe<void> GetSbpSignature(SbpContext* ctx) {
 }
 
 Maybe<void> InferTensorDesc(InferContext* ctx) {
-  const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  const TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
 
-  CHECK_EQ_OR_RETURN(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes())
+  CHECK_EQ_OR_RETURN(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes())
       << "Shape of tensor x and y should be same";
 
-  FOR_RANGE(int64_t, i, 0, tensor_x->shape().NumAxes()) {
-    CHECK_EQ_OR_RETURN(tensor_x->shape().At(i), tensor_y->shape().At(i));
+  FOR_RANGE(int64_t, i, 0, tensor_x.shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(tensor_x.shape().At(i), tensor_y.shape().At(i));
   }
 
   TensorDesc* tensor_dx = ctx->OutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->OutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x->shape(); }
+  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x.shape(); }
 
-  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y->shape(); }
+  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y.shape(); }
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(InferContext* ctx) {
-  const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
+  const TensorDesc& tensor_dz = ctx->InputTensorDesc("dz", 0);
   TensorDesc* tensor_dx = ctx->OutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->OutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz->data_type(); }
+  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz.data_type(); }
 
-  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz->data_type(); }
+  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz.data_type(); }
 
   return Maybe<void>::Ok();
 }
 
 user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
-  return [=](user_op::BackwardOpConfContext* ctx) -> void {
+  return [=](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
     const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
     const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
     const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
@@ -95,6 +95,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
         return ctx->GetOp(grad_op_name).output("dy", 0);
       });
     }
+    return Maybe<void>::Ok();
   };
 }
 

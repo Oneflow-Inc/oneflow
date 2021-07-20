@@ -28,6 +28,16 @@ def _ntuple(n):
     return parse
 
 
+def _getint():
+    def parse(x):
+        if isinstance(x, container_abcs.Iterable):
+            return int(x[0])
+        return int(x)
+
+    return parse
+
+
+_getint = _getint()
 _single = _ntuple(1)
 _pair = _ntuple(2)
 _triple = _ntuple(3)
@@ -75,3 +85,10 @@ def _check_axis(axis, shape):
             axis[i] = axis[i] + ndim
 
     return axis
+
+
+def _check_inplace_valid(x):
+    if x.is_leaf and x.requires_grad:
+        raise RuntimeError(
+            "a leaf Tensor that requires grad is being used in an in-place operation"
+        )
