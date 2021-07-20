@@ -60,29 +60,29 @@ namespace oneflow {
                 const auto chunks = ctx->Attr<int64_t>("chunks");
                 CHECK_GE(chunks, 0);
                 const int64_t dim_size = in_tensor->shape().Count(dim);
-                int64_t sections = 0;
+                int64_t sections, min_split_size, num_splits_one_extra, num_splits;
                 if(dim_size < chunks)
                 {
-                    const int64_t min_split_size = dim_size;
-                    const int64_t num_splits_one_extra = 0;
-                    const int64_t num_splits = dim_size;
+                    min_split_size = dim_size;
+                    num_splits_one_extra = 0;
+                    num_splits = dim_size;
                     sections = 1;
                 }
                 else
                 {
-                    int64_t num_splits_one_extra = dim_size % chunks;
+                    num_splits_one_extra = dim_size % chunks;
                     if(num_splits_one_extra)
                     {
                         sections = dim_size / chunks + 1;//+1 equals math.ceil()
-                        const int64_t min_split_size = dim_size / sections;
+                        min_split_size = dim_size / sections;
                         num_splits_one_extra = dim_size % min_split_size;
                     }
                     else
                     {
-                        const int64_t min_split_size = chunks;
+                        min_split_size = chunks;
                         sections = dim_size / chunks;
                     }
-                    const int64_t num_splits = min_split_size + (num_splits_one_extra > 0 ? 1 : 0);
+                    num_splits = min_split_size + (num_splits_one_extra > 0 ? 1 : 0);
                 }
 
                 int64_t start_idx = 0;
