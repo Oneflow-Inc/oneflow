@@ -16,7 +16,9 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.compatible import single_client as flow
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import id_util as id_util
 from oneflow.compatible_single_client_python.framework import (

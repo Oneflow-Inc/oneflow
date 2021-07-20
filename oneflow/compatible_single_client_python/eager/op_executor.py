@@ -15,10 +15,16 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.core.operator import op_node_signature_pb2 as op_node_signature_pb
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.operator import interface_blob_conf_pb2 as inter_face_blob_conf_util
+from oneflow.compatible.single_client.core.operator import (
+    op_node_signature_pb2 as op_node_signature_pb,
+)
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.operator import (
+    interface_blob_conf_pb2 as inter_face_blob_conf_util,
+)
 from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
 from oneflow.compatible_single_client_python.eager import (
     blob_register as blob_register_util,
