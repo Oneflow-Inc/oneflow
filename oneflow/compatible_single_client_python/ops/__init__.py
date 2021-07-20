@@ -17,8 +17,10 @@ from __future__ import absolute_import
 
 import re
 
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import (
     compile_context as compile_context,
