@@ -21,7 +21,6 @@ functions defined in global environment (py2 can't serialize static methods).
 Therefore, for code tidiness we put these functions into different files in this
 folder.
 """
-
 import sys
 import atexit
 

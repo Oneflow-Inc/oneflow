@@ -19,29 +19,6 @@ import oneflow.python.utils.vision.transforms as transforms
 import oneflow.experimental.optim as optim
 
 
-flow.enable_eager_execution()
-
-transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-)
-
-batch_size = 4
-data_dir = "./data/cifar10"
-
-trainset = flow.utils.vision.datasets.CIFAR10(
-    root=data_dir, train=True, download=True, transform=transform
-)
-trainloader = flow.utils.data.DataLoader(
-    trainset, batch_size=batch_size, shuffle=False, num_workers=0
-)
-
-testset = flow.utils.vision.datasets.CIFAR10(
-    root=data_dir, train=False, download=True, transform=transform
-)
-testloader = flow.utils.data.DataLoader(
-    testset, batch_size=batch_size, shuffle=False, num_workers=0
-)
-
 classes = (
     "plane",
     "car",
@@ -76,36 +53,60 @@ class Net(nn.Module):
         return x
 
 
-device = flow.device("cuda")
-net = Net()
-net.to(device)
+def test():
+    device = flow.device("cuda")
+    net = Net()
+    net.to(device)
 
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-criterion = nn.CrossEntropyLoss()
-criterion.to(device)
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    criterion = nn.CrossEntropyLoss()
+    criterion.to(device)
 
-for epoch in range(2):  # loop over the dataset multiple times
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    )
 
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
-        inputs = inputs.to(dtype=flow.float32, device=device)
-        labels = labels.to(dtype=flow.int64, device=device)
+    batch_size = 4
+    data_dir = "./data/cifar10"
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+    trainset = flow.utils.vision.datasets.CIFAR10(
+        root=data_dir, train=True, download=True, transform=transform
+    )
+    trainloader = flow.utils.data.DataLoader(
+        trainset, batch_size=batch_size, shuffle=False, num_workers=0
+    )
 
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    testset = flow.utils.vision.datasets.CIFAR10(
+        root=data_dir, train=False, download=True, transform=transform
+    )
+    testloader = flow.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False, num_workers=0
+    )
 
-        # print statistics
-        running_loss += loss.numpy()
-        if i % 2000 == 1999:  # print every 2000 mini-batches
-            print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
+    for epoch in range(2):  # loop over the dataset multiple times
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+            inputs = inputs.to(dtype=flow.float32, device=device)
+            labels = labels.to(dtype=flow.int64, device=device)
 
-print("Finished Training")
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            # print statistics
+            running_loss += loss.numpy()
+            if i % 2000 == 1999:  # print every 2000 mini-batches
+                print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+
+    print("Finished Training")
+
+if __name__ == "__main__":
+    test()

@@ -35,10 +35,6 @@ class ScpDataset(Data.Dataset):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestNumpyDataset(flow.unittest.TestCase):
     def test_numpy_dataset(test_case):
         dataset = ScpDataset()

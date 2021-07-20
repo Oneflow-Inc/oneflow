@@ -20,8 +20,6 @@ import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
 import oneflow.python.utils.vision.transforms as transforms
 
-flow.enable_eager_execution()
-
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
 def load_data_fashion_mnist(batch_size, resize=None, root="./data/fashion-mnist"):
@@ -66,9 +64,6 @@ def get_fashion_mnist_labels(labels):
     return [text_labels[int(i)] for i in labels]
 
 
-num_inputs, num_outputs, num_hiddens = 784, 10, 256
-
-
 class FlattenLayer(nn.Module):
     def __init__(self):
         super(FlattenLayer, self).__init__()
@@ -76,28 +71,6 @@ class FlattenLayer(nn.Module):
     def forward(self, x):  # x shape: (batch, *, *, ...)
         res = x.reshape(shape=[x.shape[0], -1])
         return res
-
-
-net = nn.Sequential(
-    FlattenLayer(),
-    nn.Linear(num_inputs, num_hiddens),
-    nn.ReLU(),
-    nn.Linear(num_hiddens, num_outputs),
-)
-
-
-device = flow.device("cuda")
-net.to(device)
-
-
-batch_size = 256
-train_iter, test_iter = load_data_fashion_mnist(batch_size)
-loss = nn.CrossEntropyLoss()
-loss.to(device)
-
-optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
-
-num_epochs = 10
 
 
 def evaluate_accuracy(data_iter, net, device=None):
@@ -161,4 +134,26 @@ def train(
         )
 
 
-train(net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer)
+if __name__ == "__main__":
+
+    num_inputs, num_outputs, num_hiddens = 784, 10, 256
+    net = nn.Sequential(
+        FlattenLayer(),
+        nn.Linear(num_inputs, num_hiddens),
+        nn.ReLU(),
+        nn.Linear(num_hiddens, num_outputs),
+    )
+
+    device = flow.device("cuda")
+    net.to(device)
+
+    batch_size = 256
+    train_iter, test_iter = load_data_fashion_mnist(batch_size)
+    loss = nn.CrossEntropyLoss()
+    loss.to(device)
+
+    optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
+
+    num_epochs = 10
+
+    train(net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer)

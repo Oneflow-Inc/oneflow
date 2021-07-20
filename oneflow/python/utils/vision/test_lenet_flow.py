@@ -23,9 +23,6 @@ import oneflow.experimental.optim as optim
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
-flow.enable_eager_execution()
-
-
 class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
@@ -51,10 +48,6 @@ class LeNet(nn.Module):
         output = self.fc(feature)
         return output
 
-
-device = flow.device("cuda")
-net = LeNet()
-net.to(device)
 
 
 def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-mnist"):
@@ -82,11 +75,6 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-m
     )
     return train_iter, test_iter
 
-
-batch_size = 256
-train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
-loss = nn.CrossEntropyLoss()
-loss.to(device)
 
 
 def evaluate_accuracy(data_iter, net, device=None):
@@ -150,6 +138,17 @@ def train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_e
         )
 
 
-lr, num_epochs = 0.01, 10
-optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
-train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs)
+if __name__ == "__main__":
+
+    device = flow.device("cuda")
+    net = LeNet()
+    net.to(device)
+
+    batch_size = 256
+    train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
+    loss = nn.CrossEntropyLoss()
+    loss.to(device)
+    
+    lr, num_epochs = 0.01, 10
+    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
+    train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs)
