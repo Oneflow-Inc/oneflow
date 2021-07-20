@@ -23,10 +23,7 @@ from resnet50_model import resnet50, FakeBN
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_without_batchnorm(test_case):
         batch_size = 32
@@ -188,7 +185,7 @@ class TestResNet50(flow.unittest.TestCase):
             val_record = record_reader()
             label = record_label_decoder(val_record)
             image_raw_buffer = record_image_decoder(val_record)
-            image = resize(image_raw_buffer)
+            image = resize(image_raw_buffer)[0]
             image = crop_mirror_normal(image)
             image = image.to("cuda")
             label = label.to("cuda")

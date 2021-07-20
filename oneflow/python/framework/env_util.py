@@ -83,16 +83,6 @@ def env_init():
     return True
 
 
-def init_default_physical_env():
-    default_physical_env_proto = _DefaultEnvProto()
-    log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
-    if log_dir:
-        default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
-    default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto, False)
-    c_api_util.InitDefaultEnv(default_physical_env_proto)
-
-
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
     r"""Get current resources, such as:machine nums, cpu/gpu device nums,
@@ -398,6 +388,14 @@ def HasAllMultiClientEnvVars():
         has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
         assert not has_at_least_one_env_var
     return has_all_env_vars
+
+
+def SetDefaultMultiClientEnvVars():
+    os.environ["MASTER_ADDR"] = "127.0.0.1"
+    os.environ["MASTER_PORT"] = str(_FindFreePort())
+    os.environ["WORLD_SIZE"] = "1"
+    os.environ["RANK"] = "0"
+    os.environ["LOCAL_RANK"] = "0"
 
 
 def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
