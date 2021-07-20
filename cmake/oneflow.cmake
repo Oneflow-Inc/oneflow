@@ -290,51 +290,15 @@ endif()
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/__main__.py" "${of_pyscript_dir}/oneflow/__main__.py"
-    COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
-    COMMAND rm -rf ${of_pyscript_dir}/oneflow/compatible
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/single_client_init.py" "${of_pyscript_dir}/oneflow/compatible/single_client/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/compatible/__init__.py"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${PROJECT_SOURCE_DIR}/oneflow/single_client_main.py" "${of_pyscript_dir}/oneflow/compatible/single_client/__main__.py"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/compatible_single_client_python" "${of_pyscript_dir}/oneflow/compatible/single_client/python"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/distributed"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python/distributed/launch.py" "${of_pyscript_dir}/oneflow/distributed/launch.py"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/F"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/F/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/compatible/single_client/F"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/compatible/single_client/F/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/experimental/F"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/experimental/F/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/compatible/single_client/experimental/F"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/compatible/single_client/experimental/F/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/compatible/single_client/python_gen"
-    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/compatible/single_client/python_gen/__init__.py"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}
-    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
-        "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py" "python"
-    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
-        "${of_pyscript_dir}/oneflow/compatible" "${of_pyscript_dir}/oneflow/compatible/single_client/python_gen/__export_symbols__.py" "compatible")
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${PROJECT_SOURCE_DIR}/python/oneflow/core"
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}/python
+)
 
 # source this file to add oneflow in PYTHONPATH
 file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH")
 
 add_dependencies(of_pyscript_copy of_protoobj)
-add_custom_target(generate_api ALL
-  COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
-  COMMAND export PYTHONPATH=${of_pyscript_dir}:$ENV{PYTHONPATH} && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
-add_dependencies(generate_api of_pyscript_copy)
-add_dependencies(generate_api oneflow_internal)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
@@ -374,7 +338,7 @@ endif()
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
-add_dependencies(of_include_copy generate_api)
+add_dependencies(of_include_copy oneflow_internal)
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
