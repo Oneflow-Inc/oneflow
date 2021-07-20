@@ -337,17 +337,10 @@ class TestModule(flow.unittest.TestCase):
 
     def test_flow_matmul_with_random_data(test_case):
         k = random(1, 6)
-        test_flow_against_pytorch(
-            test_case,
-            "matmul",
-            extra_annotations={"other": torch.Tensor},
-            extra_generators={
-                "input": random_tensor(ndim=2, dim1=k),
-                "other": random_tensor(ndim=2, dim0=k),
-            },
-            # the following generator fails the test. We do not support 2d and 1d tensor matmul (while PyTorch supports it)
-            # extra_generators={"input": random_tensor(ndim=2, dim1=k), "other": random_tensor(ndim=2, dim0=k) | random_tensor(ndim=1, dim0=k),},
-        )
+        x = random_pytorch_tensor(ndim=2, dim1=k)
+        y = random_pytorch_tensor(ndim=2, dim0=k)
+        z = flow.matmul(x, y)
+        return z
 
 
 if __name__ == "__main__":
