@@ -22,9 +22,13 @@ from typing import Any, Optional, Sequence, Union
 import numpy as np
 
 from oneflow.compatible import single_client as flow
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.operator import interface_blob_conf_pb2 as inter_face_blob_conf_util
-from oneflow.core.job import sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.operator import (
+    interface_blob_conf_pb2 as inter_face_blob_conf_util,
+)
+from oneflow.compatible.single_client.core.job import (
+    sbp_parallel_pb2 as sbp_parallel_pb,
+)
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import (
     compile_context as compile_context,

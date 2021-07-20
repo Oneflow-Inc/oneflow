@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.core.operator.op_conf_pb2 import OperatorConf
+from oneflow.compatible.single_client.core.operator.op_conf_pb2 import OperatorConf
 import oneflow._oneflow_internal
 
 

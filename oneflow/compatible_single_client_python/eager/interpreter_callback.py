@@ -17,9 +17,11 @@ from __future__ import absolute_import
 
 from oneflow.compatible_single_client_python.eager import gradient_util as gradient_util
 from oneflow.compatible_single_client_python.eager import op_executor as op_executor
-from oneflow.core.operator import op_attribute_pb2 as op_attribute_pb
-from oneflow.core.job import scope_pb2 as scope_pb
-from oneflow.core.job import placement_pb2 as placement_pb
+from oneflow.compatible.single_client.core.operator import (
+    op_attribute_pb2 as op_attribute_pb,
+)
+from oneflow.compatible.single_client.core.job import scope_pb2 as scope_pb
+from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
 from google.protobuf import text_format
 from oneflow.compatible_single_client_python.framework import scope_util as scope_util
 from oneflow.compatible_single_client_python.eager import (

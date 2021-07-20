@@ -58,16 +58,7 @@ inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<bool> IsEnvInited() {
-  return Global<EnvGlobalObjectsScope>::Get() != nullptr
-         && !JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env());
-}
-
-inline Maybe<void> DestroyDefaultEnv() {
-  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  Global<EnvGlobalObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
+inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
@@ -80,24 +71,10 @@ inline Maybe<void> DestroyEnv() {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> InitDefaultEnv(const std::string& env_proto_str) {
-  EnvProto env_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
-      << "failed to parse env_proto" << env_proto_str;
-  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
-  JUST(DestroyDefaultEnv());
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior

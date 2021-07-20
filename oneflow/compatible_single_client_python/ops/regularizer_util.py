@@ -15,8 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.job import (
+    regularizer_conf_pb2 as regularizer_conf_util,
+)
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 
 

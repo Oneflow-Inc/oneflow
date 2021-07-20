@@ -51,13 +51,8 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
-  if (!default_physical_env) {
-    FLAGS_log_dir = LogDir(logging_conf.log_dir());
-  } else {
-    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
-    FLAGS_log_dir = LogDir(default_env_log_path);
-  }
+void InitLogging(const CppLoggingConf& logging_conf) {
+  FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
@@ -111,8 +106,7 @@ void ClearAllSymbolAndIdCache() {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  is_default_physical_env_ = env_proto.is_default_physical_env();
-  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
+  InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
