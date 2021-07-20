@@ -24,17 +24,21 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope() {
+    Global<ProcessCtx>::New();
+    auto* ctx = Global<ProcessCtx>::Get();
+    ctx->mutable_ctrl_addr()->Add();
+    ctx->set_rank(0);
+    ctx->set_node_size(1);
+  }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+};
 
 }  // namespace
 
 TEST(ParallelDesc, two_rank) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope{};
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
@@ -51,11 +55,10 @@ TEST(ParallelDesc, two_rank) {
   ASSERT_EQ(rank, 1);
   rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(1));
   ASSERT_EQ(rank, 0);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, nonconsecutive_rank) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope{};
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
@@ -84,7 +87,6 @@ TEST(ParallelDesc, nonconsecutive_rank) {
   ASSERT_EQ(rank, 3);
   rank = CHECK_JUST(sorted_rank_ranges->GetPrevRankInRing(0));
   ASSERT_EQ(rank, 4);
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
