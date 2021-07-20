@@ -84,6 +84,7 @@ def _test_scatter_nd_backward(test_case, device):
     test_case.assertTrue(np.array_equal(of_update.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestScatter_nd(flow.unittest.TestCase):
     def test_scatter_nd(test_case):
         arg_dict = OrderedDict()

@@ -66,6 +66,7 @@ def _test_tensor_erf_impl(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestErfModule(flow.unittest.TestCase):
     def test_erf(test_case):
         arg_dict = OrderedDict()

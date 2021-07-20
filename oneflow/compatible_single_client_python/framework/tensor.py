@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 from oneflow.compatible_single_client_python.framework import (
     remote_blob as remote_blob_util,
