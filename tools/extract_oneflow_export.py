@@ -140,12 +140,6 @@ def handle_export(node=None, export_d=None, imports=None):
     assert len(export_d.args) > 0, str(ast.dump(export_d))
     for (i, a) in enumerate(export_d.args):
         if i == 0:
-            for d in node.decorator_list:
-                if is_export_decorator(d) == False:
-                    d_src_seg = ast.get_source_segment(txt, d)
-                    DstFileDict.append_seg(
-                        path=get_dst_path(export=a.value), seg=f"@{d_src_seg}",
-                    )
             for seg in get_decorator_segs(node):
                 DstFileDict.append_seg(
                     path=get_dst_path(export=a.value), seg=f"{seg}\n",
