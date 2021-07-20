@@ -16,8 +16,8 @@ limitations under the License.
 import math
 
 from oneflow.compatible import single_client as flow
-from oneflow.core.common import data_type_pb2 as data_type_util
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.common import data_type_pb2 as data_type_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 
 
 class BertBackbone(object):
