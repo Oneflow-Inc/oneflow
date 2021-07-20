@@ -2,7 +2,7 @@
 import os
 import argparse
 import ast
-from posixpath import relpath
+from posixpath import basename, relpath
 import subprocess
 import multiprocessing
 
@@ -217,7 +217,8 @@ if __name__ == "__main__":
                         dst_f.write(seg)
                         dst_f.write("\n")
 
-                dst = os.path.join(out_oneflow_dir, dirpath_without_root, src_file)
+                basename = os.path.basename(src_file)
+                dst = os.path.join(out_oneflow_dir, dirpath_without_root, basename)
                 append_seg(
                     path=dst, seg=f"{src_seg}\n",
                 )
