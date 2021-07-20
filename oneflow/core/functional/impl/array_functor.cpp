@@ -440,7 +440,7 @@ class FlipFunctor {
  public:
   FlipFunctor() { op_ = CHECK_JUST(one::OpBuilder("flip").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int32_t> &dims) const {
+                           const std::vector<int32_t>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -456,7 +456,7 @@ class FlipGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("flip_grad").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::vector<int32_t> &dims) const {
+                           const std::vector<int32_t>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
