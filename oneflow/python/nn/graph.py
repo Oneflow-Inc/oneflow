@@ -22,7 +22,6 @@ import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow._oneflow_internal import Tensor as InternalTensor
-from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.multi_client_session import MultiClientSession
 from oneflow.python.nn.graph_block import Block
@@ -115,7 +114,7 @@ class Graph(object):
             for state_block in self._state():
                 state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
 
-            # Deal with module
+            # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
 
             # Deal with outputs
@@ -131,7 +130,6 @@ class Graph(object):
                 eager_outputs.append(
                     graph_build_util.build_graph_output(out, len(eager_outputs))
                 )
-
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:

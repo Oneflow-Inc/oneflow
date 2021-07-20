@@ -23,7 +23,6 @@ import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.python.framework.attr_util as attr_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_util as placement_util
-import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.session_context as session_context
 import oneflow._oneflow_internal
@@ -130,7 +129,7 @@ def scope_to_proto(scope):
 
 
 def build_graph_input_arg(arg, input_idx):
-    assert isinstance(arg, Tensor)
+    assert isinstance(arg, (Tensor, InternalTensor))
     op_name = "input_" + str(input_idx)
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
@@ -143,9 +142,12 @@ def build_graph_input_arg(arg, input_idx):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    if not arg.is_determined:
-        arg.determine()
-    tensor_in_c = arg._local_or_consistent_tensor
+    if isinstance(arg, Tensor):
+        if not arg.is_determined:
+            arg.determine()
+        tensor_in_c = arg._local_or_consistent_tensor
+    else:
+        tensor_in_c = arg
 
     lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
     return lazy_arg
