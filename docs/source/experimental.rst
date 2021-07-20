@@ -250,5 +250,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.bernoulli
 .. autofunction:: oneflow.experimental.in_top_k
 .. autofunction:: oneflow.experimental.Tensor.in_top_k
-.. autofunction:: oneflow.experimental.nn.utils.clip_grad_norm
 .. autofunction:: oneflow.experimental.nn.utils.clip_grad_norm_

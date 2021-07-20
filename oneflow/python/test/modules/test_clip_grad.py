@@ -63,10 +63,7 @@ def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
     def test_acosh(test_case):
         arg_dict = OrderedDict()

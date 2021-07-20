@@ -14,14 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import warnings
+from typing import Union, Iterable
+
+import numpy as np
 import oneflow as flow
+
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
-import warnings
-from typing import Union, Iterable
-import numpy as np
+
 
 _tensor_or_tensors = Union[Tensor, Iterable[Tensor]]
 
@@ -131,25 +134,6 @@ def clip_grad_norm_(
         for p in parameters:
             p.grad = p.grad.detach().mul(clip_coef.to(p.grad.device))
     return total_norm
-
-
-@oneflow_export("nn.utils.clip_grad_norm")
-@experimental_api
-def clip_grad_norm(
-    parameters: _tensor_or_tensors,
-    max_norm: float,
-    norm_type: float = 2.0,
-    error_if_nonfinite: bool = False,
-):
-    r"""Clips gradient norm of an iterable of parameters.
-
-    .. warning::
-            This method is now deprecated in favor of
-            :func:`oneflow.experimental.nn.utils.clip_grad_norm_`
-
-    """
-
-    return clip_grad_norm_(parameters, max_norm, norm_type, error_if_nonfinite)
 
 
 if __name__ == "__main__":
