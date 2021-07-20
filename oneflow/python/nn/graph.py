@@ -114,7 +114,7 @@ class Graph(object):
         if len(self._optimizers):
             self.config._train(True)
         # TODO(xuxiaoyu): save variable name and it's l2 if optimizer has weight decay
-        # which means to used as l2. 
+        # which means to used as l2.
         for name, opt_config in self._optimizers.items():
             self.config.add_optimizer_config(opt_config, self._var2var_op_name)
 

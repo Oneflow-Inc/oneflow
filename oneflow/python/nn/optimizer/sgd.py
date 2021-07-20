@@ -141,7 +141,14 @@ class SGD(Optimizer):
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
             lr = param_group["lr"]
             beta = param_group["momentum"]
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             scale = param_group["scale"]
+            if scale != 1.0:
+                print(
+                    "nn.Graph only support one scale factor, the effective scale factor is ",
+                    scale,
+                )
+                train_conf.set_loss_scale_factor(scale)
 
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
