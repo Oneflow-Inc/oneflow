@@ -74,6 +74,18 @@ class DstFile:
         imports.sort()
         return "\n".join(imports + self.segs)
 
+    def merge_file(self, path=None, append=True):
+        with open(path, "r") as f:
+            txt = f.read()
+            module = ast.parse(txt)
+            for node in module.body:
+                if isinstance(node, (ast.ImportFrom, ast.Import)):
+                    import_seg = ast.get_source_segment(txt, node)
+                    imports.append(import_seg)
+                else:
+                    seg = ast.get_source_segment(txt, node)
+                    append_seg(seg)
+
 
 class DstFileDict:
     state = {}
@@ -107,6 +119,11 @@ class DstFileDict:
                 dst_f.write(str(f))
                 dst_f.write("\n")
 
+    @classmethod
+    def merge(cls, from_path=None, to_path=None):
+        assert to_path in cls.state
+        cls.state[to_path].merge_file(path=from_path)
+
 
 def handle_export(node=None, export_d=None, imports=None):
     f_src_seg = ast.get_source_segment(txt, node)
@@ -132,78 +149,85 @@ def handle_export(node=None, export_d=None, imports=None):
             )
 
 
-# step 1: extract all exports
-for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
-    if "python/test" in dirpath:
-        print("[skip]", dirpath)
-        continue
-    for src_file in filenames:
-        if src_file.endswith(".py"):
-            print("[exract]", os.path.join(dirpath, src_file))
-            with open(os.path.join(dirpath, src_file), "r") as f:
-                txt = f.read()
-                module = ast.parse(txt)
-                is_exported = False
-                # print(ast.dump(parsed))
-                imports = []
-                for node in module.body:
-                    if isinstance(node, (ast.ImportFrom, ast.Import)):
-                        import_seg = ast.get_source_segment(txt, node)
-                        imports.append(import_seg)
-                for node in module.body:
+if __name__ == "__main__":
+
+    # step 1: extract all exports
+    for (dirpath, dirnames, filenames) in os.walk(args.src_dir):
+        if "python/test" in dirpath:
+            print("[skip]", dirpath)
+            continue
+        for src_file in filenames:
+            if src_file.endswith(".py"):
+                print("[exract]", os.path.join(dirpath, src_file))
+                with open(os.path.join(dirpath, src_file), "r") as f:
+                    txt = f.read()
+                    module = ast.parse(txt)
                     is_exported = False
-                    if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                        for d in node.decorator_list:
-                            if is_export_decorator(d):
-                                is_exported = True
-                                handle_export(node=node, export_d=d, imports=imports)
-                    if is_exported == False:
-                        src_seg = ast.get_source_segment(txt, node)
-                        dirpath_without_root = dirpath.split("/")[1::]
-                        dirpath_without_root = "/".join(dirpath_without_root)
+                    # print(ast.dump(parsed))
+                    imports = []
+                    for node in module.body:
+                        if isinstance(node, (ast.ImportFrom, ast.Import)):
+                            import_seg = ast.get_source_segment(txt, node)
+                            imports.append(import_seg)
+                    for node in module.body:
+                        is_exported = False
+                        if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                            for d in node.decorator_list:
+                                if is_export_decorator(d):
+                                    is_exported = True
+                                    handle_export(
+                                        node=node, export_d=d, imports=imports
+                                    )
+                        if is_exported == False:
+                            src_seg = ast.get_source_segment(txt, node)
+                            dirpath_without_root = dirpath.split("/")[1::]
+                            dirpath_without_root = "/".join(dirpath_without_root)
 
-                        def append_seg(path=None, seg=None):
-                            path = os.path.join(path)
-                            dir_path = os.path.dirname(path)
-                            if dir_path:
-                                subprocess.check_call(
-                                    f"mkdir -p {dir_path}", shell=True
-                                )
-                            with open(path, "a") as dst_f:
-                                dst_f.write(seg)
-                                dst_f.write("\n")
+                            def append_seg(path=None, seg=None):
+                                path = os.path.join(path)
+                                dir_path = os.path.dirname(path)
+                                if dir_path:
+                                    subprocess.check_call(
+                                        f"mkdir -p {dir_path}", shell=True
+                                    )
+                                with open(path, "a") as dst_f:
+                                    dst_f.write(seg)
+                                    dst_f.write("\n")
 
-                        append_seg(
-                            path=os.path.join(
-                                out_oneflow_dir, dirpath_without_root, src_file
-                            ),
-                            seg=f"{src_seg}\n",
-                        )
-# step 2: merge files under python/ into generated files
-# step 3: rename all
-# step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
+                            append_seg(
+                                path=os.path.join(
+                                    out_oneflow_dir, dirpath_without_root, src_file
+                                ),
+                                seg=f"{src_seg}\n",
+                            )
+    # step 2: merge files under python/ into generated files
+    # DstFileDict.merge(
+    #     from_path="oneflow/init.py", to_path=os.path.join(out_oneflow_dir, "__init__.py"),
+    # )
+    # step 3: rename all
+    # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
 
-# step 5: save file and sort imports and format
-DstFileDict.save()
-import sys
+    # step 5: save file and sort imports and format
+    DstFileDict.save()
+    import sys
 
-extra_arg = ""
-if args.verbose == False:
-    extra_arg += "--quiet"
-subprocess.check_call(
-    f"{sys.executable} -m autoflake --in-place --remove-unused-variables .",
-    shell=True,
-    cwd=args.out_dir,
-)
-subprocess.check_call(
-    f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
-)
-subprocess.check_call(
-    f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
-)
-subprocess.check_call(
-    f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
-)
+    extra_arg = ""
+    if args.verbose == False:
+        extra_arg += "--quiet"
+    subprocess.check_call(
+        f"{sys.executable} -m autoflake --in-place --remove-unused-variables .",
+        shell=True,
+        cwd=args.out_dir,
+    )
+    subprocess.check_call(
+        f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+    )
+    subprocess.check_call(
+        f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+    )
+    subprocess.check_call(
+        f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
+    )
 
 # QA:
 # 1. _oneflow_internal.so: link or build in-place?
