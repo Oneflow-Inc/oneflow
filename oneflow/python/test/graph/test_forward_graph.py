@@ -16,8 +16,6 @@ limitations under the License.
 import unittest
 import os
 
-import numpy as np
-
 # To enable MultiClient
 os.environ["MASTER_ADDR"] = "127.0.0.1"
 os.environ["MASTER_PORT"] = "12139"
@@ -27,48 +25,66 @@ os.environ["LOCAL_RANK"] = "0"
 
 import oneflow
 import oneflow.experimental as flow
-import oneflow.python.framework.graph_build_util as graph_build_util
+
+
+class SubModule(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = flow.nn.Parameter(flow.Tensor(6, 6))
+        self.relu = flow.nn.ReLU()
+
+    def forward(self, x, y):
+        x = oneflow.F.matmul(x, self.weight)
+        x = self.relu(x)
+        y = self.relu(y)
+        return x, y
+
+
+class CustomModule(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer = SubModule()
+        self.register_buffer(
+            "dummy_buff", flow.Tensor(6, 8),
+        )
+
+    def forward(self, x, y):
+        x, y = self.layer(x, y)
+        x = oneflow.F.flatten(x, 1)
+        x = oneflow.F.matmul(x, self.dummy_buff)
+        return x, y
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestForwardGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
-        class CustomModule0(flow.nn.Module):
-            def __init__(self):
+        class CustomGraph(flow.nn.Graph):
+            def __init__(self, module):
                 super().__init__()
-                self.conv1 = flow.nn.Conv2d(1, 1, 5)
-                self.relu = flow.nn.ReLU()
-                self.register_buffer(
-                    "dummy_buff", flow.Tensor(1, 4),
-                )
-                self.register_parameter(
-                    "dummy_para", flow.nn.Parameter(flow.Tensor(1, 4)),
-                )
+                self.m = module
 
-            def forward(self, x):
-                self.dummy_para
-                self.dummy_buff
-                # x = self.conv1(x)
-                # x = self.relu(x)
-                return x
-
-        m = CustomModule0()
-
-        class CustomGraph0(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.m = m
-
-            def build(self, x):
-                out = self.m(x)
+            def build(self, x, y):
+                out = self.m(x, y)
                 return out
 
-        g = CustomGraph0()
-        x = flow.Tensor(1, 1, 10, 10)
+        m = CustomModule()
+        m.to("cuda")
+        g = CustomGraph(m)
+
+        x = flow.Tensor(6, 6)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        x = x.to("cuda")
+
+        y = flow.Tensor(10, 10)
+        flow.nn.init.uniform_(y, a=-1.0, b=1.0)
+        y = y.to("cuda")
+
         print(repr(g))
-        z = g._compile(x)
-        print("type(z): ", type(z))
+        z, a = g._compile(x, y)
+        test_case.assertEqual(z.shape, (6, 8))
+        test_case.assertEqual(z.is_lazy, False)
+        test_case.assertEqual(a.shape, (10, 10))
+        test_case.assertEqual(a.is_lazy, False)
         print("graph proto: ", g._graph_proto)
 
 

@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import uuid
 from typing import Callable, Optional, Union
 
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import (
     session_context as session_ctx,
@@ -38,7 +38,9 @@ from oneflow.compatible_single_client_python.framework import typing as oft
 from oneflow.compatible_single_client_python.framework import typing_util as oft_util
 from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
 from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
+from oneflow.compatible.single_client.core.job.lbi_diff_watcher_info_pb2 import (
+    LbiAndDiffWatcherUuidPair,
+)
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 from oneflow.compatible_single_client_python import eager as eager_util
 from oneflow.compatible import single_client as flow
