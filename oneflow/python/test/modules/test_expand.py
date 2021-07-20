@@ -184,10 +184,7 @@ def _test_expand_backward(test_case, device):
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_expand(test_case):
         arg_dict = OrderedDict()

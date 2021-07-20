@@ -27,6 +27,7 @@ jobs:
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       max-parallel: 3
