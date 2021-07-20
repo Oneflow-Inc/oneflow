@@ -30,7 +30,7 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   for (int64_t i = dim - 1; i >= 0; --i) {
     if (shape.At(i) == 0) { return true; }
     if (contig_if_nonempty) {
-      if (shape.At(i) != 1 && stride.At(i) != expected_stride) { contig_if_nonempty = false; }
+      if (stride.At(i) != expected_stride) { contig_if_nonempty = false; }
       expected_stride *= shape.At(i);
     }
   }
