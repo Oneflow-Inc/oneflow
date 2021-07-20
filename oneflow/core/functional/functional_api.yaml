@@ -475,6 +475,14 @@
   signature: "Tensor Copy(Tensor x, *, String device_type, Int64 device_id)"
   bind_python: True
 
+- name: "flip"
+  signature: "Tensor Flip(Tensor x, *, Int32List dims)"
+  bind_python: True
+
+- name: "flip_grad"
+  signature: "Tensor FlipGrad(Tensor dy, *, Int32List dims)"
+  bind_python: False
+
 - name: "upsample"
   signature:
     "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
