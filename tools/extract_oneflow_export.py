@@ -126,6 +126,15 @@ class DstFileDict:
         cls.state[to_path].merge_file(path=from_path)
 
 
+def get_decorator_segs(node=None):
+    segs = []
+    for d in node.decorator_list:
+        if is_export_decorator(d) == False:
+            d_src_seg = ast.get_source_segment(txt, d)
+            segs.append(f"@{d_src_seg}")
+    return segs
+
+
 def handle_export(node=None, export_d=None, imports=None):
     f_src_seg = ast.get_source_segment(txt, node)
     assert len(export_d.args) > 0, str(ast.dump(export_d))
@@ -137,9 +146,13 @@ def handle_export(node=None, export_d=None, imports=None):
                     DstFileDict.append_seg(
                         path=get_dst_path(export=a.value), seg=f"@{d_src_seg}",
                     )
-                    DstFileDict.append_imports(
-                        path=get_dst_path(export=a.value), imports=imports,
-                    )
+            for seg in get_decorator_segs(node):
+                DstFileDict.append_seg(
+                    path=get_dst_path(export=a.value), seg=f"{seg}\n",
+                )
+            DstFileDict.append_imports(
+                path=get_dst_path(export=a.value), imports=imports,
+            )
             DstFileDict.append_seg(
                 path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
             )
@@ -203,24 +216,27 @@ if __name__ == "__main__":
                         is_exported = True
                         handle_export(node=node, export_d=d, imports=imports)
             if is_exported == False:
-                src_seg = ast.get_source_segment(txt, node)
                 dirpath = os.path.dirname(src_file)
                 dirpath_without_root = dirpath.split("/")[1::]
                 dirpath_without_root = "/".join(dirpath_without_root)
 
-                def append_seg(path=None, seg=None):
+                def append_seg(path=None, node=None):
                     path = os.path.join(path)
                     dir_path = os.path.dirname(path)
                     if dir_path:
                         subprocess.check_call(f"mkdir -p {dir_path}", shell=True)
                     with open(path, "a") as dst_f:
-                        dst_f.write(seg)
+                        seg = []
+                        if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                            seg += get_decorator_segs(node)
+                        seg += [ast.get_source_segment(txt, node)]
+                        dst_f.write("\n".join(seg))
                         dst_f.write("\n")
 
                 basename = os.path.basename(src_file)
                 dst = os.path.join(out_oneflow_dir, dirpath_without_root, basename)
                 append_seg(
-                    path=dst, seg=f"{src_seg}\n",
+                    path=dst, node=node,
                 )
     # step 2: merge files under python/ into generated files
     # DstFileDict.merge(
