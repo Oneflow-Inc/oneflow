@@ -34,6 +34,15 @@ class TestTensor(flow.unittest.TestCase):
             np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
+    def test_tensor_property(test_case):
+        shape = (2, 3, 4, 5)
+        tensor = flow.Tensor(*shape)
+        tensor.determine()
+        test_case.assertEqual(tensor.storage_offset(), 0)
+        test_case.assertEqual(tensor.stride(), (60, 20, 5, 1))
+        test_case.assertEqual(tensor.is_cuda, False)
+        test_case.assertTrue(tensor.is_contiguous())
+
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
