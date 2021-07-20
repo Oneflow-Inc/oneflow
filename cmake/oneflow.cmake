@@ -272,11 +272,13 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
+set(of_pyscript_dir "${PROJECT_SOURCE_DIR}/python")
+
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/python/oneflow")
+set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${of_pyscript_dir}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
@@ -288,11 +290,10 @@ if (WITH_XLA)
   list(APPEND gen_pip_args --xla)
 endif()
 
-set(of_pyscript_dir "${PROJECT_SOURCE_DIR}/python")
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${PROJECT_SOURCE_DIR}/python/oneflow/core"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}/python
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${of_pyscript_dir}
 )
 
 # source this file to add oneflow in PYTHONPATH
