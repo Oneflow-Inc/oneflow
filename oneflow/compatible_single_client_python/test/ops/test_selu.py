@@ -23,7 +23,7 @@ from typing import Dict
 import os
 
 
-def _compare_silu_with_np(input_shape, device_type, machine_ids, device_counts):
+def _compare_selu_with_np(input_shape, device_type, machine_ids, device_counts):
     input_1 = np.random.random(size=input_shape).astype(np.float32)
 
     assert device_type in ["cpu", "gpu"]
@@ -37,23 +37,18 @@ def _compare_silu_with_np(input_shape, device_type, machine_ids, device_counts):
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
-    def np_silu(input):
-        def np_sigmoid(sigmoid_input):
-            return 1 / (1 + np.exp(-sigmoid_input))
+    scale = 1.0507009873554804934193349852946
+    alpha = 1.6732632423543772848170429916717
 
-        return input * np_sigmoid(input)
+    def np_selu(x):
+        return np.where(x < 0, scale * alpha * (np.exp(x) - 1), scale * x)
 
-    np_out_silu = np_silu(input_1)
+    def _np_selu_grad(x):
+        return np.where(x < 0, scale * alpha * np.exp(x), scale)
 
-    def np_diff(x):
-        def np_sigmoid(sigmoid_input):
-            return 1 / (1 + np.exp(-sigmoid_input))
+    np_out_selu = np_selu(input_1)
 
-        _sig = np_sigmoid(x)
-
-        return _sig * (1 + x * (1 - _sig))
-
-    _np_grad = np_diff(input_1)
+    _np_grad = _np_selu_grad(input_1)
 
     def assert_prediction_grad(blob: tp.Numpy):
         assert np.allclose(blob, _np_grad)
@@ -61,7 +56,7 @@ def _compare_silu_with_np(input_shape, device_type, machine_ids, device_counts):
     @flow.global_function(
         type="train", function_config=func_config,
     )
-    def oneflow_silu(
+    def oneflow_selu(
         of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
@@ -75,18 +70,18 @@ def _compare_silu_with_np(input_shape, device_type, machine_ids, device_counts):
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        of_silu_out = flow.nn.silu(x_var)
+        of_selu_out = flow.nn.selu(x_var)
 
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(of_silu_out)
+            ).minimize(of_selu_out)
 
-        return of_silu_out
+        return of_selu_out
 
-    of_out_silu = oneflow_silu(input_1)
+    of_out_selu = oneflow_selu(input_1)
 
-    assert np.allclose(of_out_silu, np_out_silu)
+    assert np.allclose(of_out_selu, np_out_selu)
 
 
 def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
@@ -100,32 +95,32 @@ def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testsilu1n1d(flow.unittest.TestCase):
-    def test_silu_cpu(test_case):
+class Testselu1n1d(flow.unittest.TestCase):
+    def test_selu_cpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 6), device_type="cpu", machine_ids="0:0", device_counts=1
         )
         for arg in GenArgList(arg_dict):
-            _compare_silu_with_np(*arg)
+            _compare_selu_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_silu_gpu(test_case):
+    def test_selu_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            _compare_silu_with_np(*arg)
+            _compare_selu_with_np(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
-class Teststack1n2d(flow.unittest.TestCase):
+class Testselu1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_silu_gpu_1n2d(test_case):
+    def test_selu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 8, 8, 4), device_type="gpu", machine_ids="0:0-1", device_counts=2,
         )
         for arg in GenArgList(arg_dict):
-            _compare_silu_with_np(*arg)
+            _compare_selu_with_np(*arg)
 
 
 if __name__ == "__main__":
