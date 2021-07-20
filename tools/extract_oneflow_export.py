@@ -215,6 +215,7 @@ if __name__ == "__main__":
         for node in module.body:
             is_exported = False
             if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                # TODO: append import inside functions and classes
                 for d in node.decorator_list:
                     if is_export_decorator(d):
                         is_exported = True
