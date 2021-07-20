@@ -27,6 +27,7 @@ class ParallelDistribution;
 
 class Shape;
 class Device;
+class Stride;
 class ParallelDesc;
 
 namespace one {
@@ -63,19 +64,25 @@ class TensorMeta : public user_op::TensorDesc {
 class MirroredTensorMeta : public TensorMeta {
  public:
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     Symbol<Device> device)
-      : TensorMeta(shape, dtype), device_(device) {}
+                     Symbol<Device> device);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
+  const Stride& stride() const { return *stride_; }
+  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
+  int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
+  void set_stride(const std::shared_ptr<const Stride>& stride) { stride_ = stride; }
+  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
   size_t CalcHashValue() const;
 
  private:
   Symbol<Device> device_;
+  std::shared_ptr<const Stride> stride_;
+  int64_t storage_offset_;
 };
 
 class ConsistentTensorMeta : public TensorMeta {

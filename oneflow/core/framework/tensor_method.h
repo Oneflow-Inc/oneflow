@@ -13,23 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
 
-#include "oneflow/core/profiler/profiler.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
 
-namespace py = pybind11;
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
+namespace one {
 
-ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
-  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
+class Tensor;
 
-  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
-  m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
-
-  m.def("ProfilerStop", []() { profiler::ProfilerStop(); });
-}
-
+}  // namespace one
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
