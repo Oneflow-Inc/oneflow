@@ -16,8 +16,8 @@ limitations under the License.
 from __future__ import absolute_import
 
 import threading
-from oneflow.core.job.job_set_pb2 import ConfigProto
-from oneflow.core.job import job_set_pb2 as job_set_util
+from oneflow.compatible.single_client.core.job.job_set_pb2 import ConfigProto
+from oneflow.compatible.single_client.core.job import job_set_pb2 as job_set_util
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import compiler as compiler
 from oneflow.compatible_single_client_python.framework import config_util as config_util
@@ -36,7 +36,7 @@ from oneflow.compatible_single_client_python.eager import op_executor as op_exec
 from oneflow.compatible_single_client_python.experimental import (
     interface_op_read_and_write,
 )
-from oneflow.core.job.job_set_pb2 import ConfigProto
+from oneflow.compatible.single_client.core.job.job_set_pb2 import ConfigProto
 from oneflow.compatible_single_client_python.framework.function_desc import FunctionDesc
 from oneflow.compatible_single_client_python.framework import module as module_util
 from oneflow.compatible_single_client_python.framework.pull_util import (
