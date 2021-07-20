@@ -19,22 +19,22 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible_single_client_python.framework import blob_trait as blob_trait
-from oneflow.compatible_single_client_python.framework.dtype import (
+from oneflow.compatible.single_client.python.framework import blob_trait as blob_trait
+from oneflow.compatible.single_client.python.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.eager import (
     eager_blob_util as eager_blob_util,
 )
-from oneflow.compatible_single_client_python.eager import gradient_util as gradient_util
-from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal

@@ -15,13 +15,13 @@ limitations under the License.
 """
 import oneflow
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.nn import init
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.nn import init
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
 from typing import Tuple, Union
 
 _shape_t = Union[int, Tuple[int], oneflow._oneflow_internal.Size]
