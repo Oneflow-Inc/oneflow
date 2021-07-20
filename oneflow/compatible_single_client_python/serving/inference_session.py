@@ -31,9 +31,13 @@ from oneflow._oneflow_internal.oneflow.core.operator import (
 from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
 from oneflow._oneflow_internal.oneflow.core.common import data_type as dtype_proto_cfg
 from oneflow._oneflow_internal.oneflow.core.job import sbp_parallel as sbp_parallel_cfg
-from oneflow.core.job import job_conf_pb2 as job_conf_proto
-from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_proto
-from oneflow.core.serving import saved_model_pb2 as saved_model_pb
+from oneflow.compatible.single_client.core.job import job_conf_pb2 as job_conf_proto
+from oneflow.compatible.single_client.core.operator import (
+    interface_blob_conf_pb2 as interface_blob_conf_proto,
+)
+from oneflow.compatible.single_client.core.serving import (
+    saved_model_pb2 as saved_model_pb,
+)
 from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
 from oneflow.compatible_single_client_python.framework import (
     compile_context as compile_ctx,
