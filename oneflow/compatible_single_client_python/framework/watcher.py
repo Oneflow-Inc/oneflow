@@ -18,17 +18,17 @@ from __future__ import absolute_import
 import traceback
 
 from oneflow.compatible.single_client.core.record import record_pb2 as record_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     local_blob as local_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import ofblob as ofblob
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import ofblob as ofblob
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.framework import typing_util as oft_util
 import oneflow._oneflow_internal
 from google.protobuf import text_format
 
