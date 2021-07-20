@@ -22,6 +22,7 @@ from absl import flags
 from pretrain import PreTrain
 import unittest
 import os
+import atexit
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
@@ -43,7 +44,16 @@ flags.DEFINE_integer("vocab_size", 30522, "")
 flags.DEFINE_float("attention_probs_dropout_prob", 0.0, "")
 flags.DEFINE_float("hidden_dropout_prob", 0.0, "")
 flags.DEFINE_integer("hidden_size_per_head", 64, "")
+flags.DEFINE_string(
+    "nodes_list", "10.10.120.201,10.10.120.202", "nodes list seperated by comma"
+)
+flags.DEFINE_integer("ctrl_port", "9523", "control port")
 FLAGS(sys.argv)
+
+def Init():
+    flow.env.machine(FLAGS.nodes_list.split(","))
+    flow.env.ctrl_port(FLAGS.ctrl_port)
+    # flow.config.enable_debug_mode(True)
 
 
 def _blob_conf(name, shape, dtype=flow.int32):
@@ -226,7 +236,7 @@ def test_1n2c():
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
-test_1n2c()
+# test_1n2c()
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):
@@ -239,6 +249,20 @@ def test_1n4c(test_case):
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_2n2c():
+    flow.config.gpu_device_num(1)
+    pretrain_job = flow.global_function(type="train", function_config=func_config)(
+        PretrainJob
+    )
+    check_point = flow.train.CheckPoint()
+    check_point.load(FLAGS.model_load_dir)
+    of_loss = [pretrain_job().get().mean() for _ in range(10)]
+    print(of_loss)
+
+Init()
+test_2n2c()
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.num_nodes_required(2)
