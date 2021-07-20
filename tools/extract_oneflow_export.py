@@ -170,6 +170,13 @@ def get_srcs():
     return files_to_extract
 
 
+def add_init_py():
+    for (dirpath, dirnames, filenames) in os.walk(args.out_dir):
+        init_py = os.path.join(dirpath, "__init__.py")
+        if os.path.exists(init_py) == False:
+            subprocess.check_call(f"touch {init_py}", shell=True)
+
+
 if __name__ == "__main__":
 
     # step 1: extract all exports
@@ -223,6 +230,7 @@ if __name__ == "__main__":
 
     # step 5: save file and sort imports and format
     DstFileDict.save()
+    add_init_py()
     import sys
 
     extra_arg = ""
