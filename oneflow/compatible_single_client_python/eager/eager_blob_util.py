@@ -15,14 +15,14 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.framework.dtype import (
+from oneflow.compatible.single_client.python.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible_single_client_python.framework import blob_trait as blob_trait
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import blob_trait as blob_trait
+from oneflow.compatible.single_client.python.framework import (
     python_callback as python_callback,
 )
-from oneflow.compatible_single_client_python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.python.lib.core import async_util as async_util
 import oneflow._oneflow_internal
 
 
