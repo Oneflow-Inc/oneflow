@@ -237,9 +237,6 @@ if __name__ == "__main__":
         f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
     )
     subprocess.check_call(
-        f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
-    )
-    subprocess.check_call(
         f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
     )
 
