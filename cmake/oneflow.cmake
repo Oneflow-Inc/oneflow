@@ -298,10 +298,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/compatible
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/oneflow/compatible_single_client_python" "${of_pyscript_dir}/oneflow/compatible/single_client/python"
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/single_client_init.py" "${of_pyscript_dir}/oneflow/compatible/single_client/__init__.py"
-    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/conver_single_client_name_space.py" "${of_pyscript_dir}/oneflow/compatible"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/compatible_single_client_python" "${of_pyscript_dir}/oneflow/compatible/single_client/python"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/compatible/__init__.py"
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/single_client_main.py" "${of_pyscript_dir}/oneflow/compatible/single_client/__main__.py"

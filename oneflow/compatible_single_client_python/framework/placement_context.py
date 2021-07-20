@@ -19,9 +19,9 @@ import collections
 import re
 
 from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import op_util as op_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import op_util as op_util
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
 from oneflow.compatible import single_client as flow
