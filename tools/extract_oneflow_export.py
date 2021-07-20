@@ -67,8 +67,9 @@ class DstFile:
     def append_seg(self, seg):
         self.segs.append(seg)
 
-    def prepend_seg(self, seg):
-        self.segs.insert(0, seg)
+    def prepend_segs(self, segs):
+        assert isinstance(segs, list)
+        self.segs = segs + self.segs
 
     def append_import(self, seg):
         self.imports.add(seg)
@@ -82,13 +83,19 @@ class DstFile:
         with open(path, "r") as f:
             txt = f.read()
             module = ast.parse(txt)
+            segs = []
             for node in module.body:
                 if isinstance(node, (ast.ImportFrom, ast.Import)):
                     import_seg = ast.get_source_segment(txt, node)
                     imports.append(import_seg)
                 else:
                     seg = ast.get_source_segment(txt, node)
-                    self.prepend_seg(seg)
+                    if (
+                        "Copyright 2020 The OneFlow Authors. All rights reserved."
+                        not in seg
+                    ):
+                        segs.append(seg)
+            self.prepend_segs(segs)
 
 
 class DstFileDict:
