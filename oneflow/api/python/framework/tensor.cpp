@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
+#include "oneflow/api/python/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
@@ -37,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace py = pybind11;
 
@@ -289,6 +291,11 @@ Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
   return outputs->at(0);
 }
 
+Maybe<Tensor> ConvertTensorDevice(const std::shared_ptr<Tensor>& tensor,
+                                  const std::string& device_type, int64_t device_id) {
+  return functional::Copy(tensor, device_type, device_id);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -367,9 +374,25 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
             }
           })
-      .def("to_local", [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
-        return CastConsistentToLocal(tensor).GetPtrOrThrow();
-      });
+      .def("to_local",
+           [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
+             return CastConsistentToLocal(tensor).GetPtrOrThrow();
+           })
+      .def("to",
+           [](const std::shared_ptr<Tensor>& tensor,
+              const std::string& type_and_id) -> std::shared_ptr<Tensor> {
+             std::string type;
+             int device_id = -1;
+             ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
+             if (device_id == -1) { device_id = 0; }
+             return ConvertTensorDevice(tensor, type, device_id).GetPtrOrThrow();
+           })
+      .def(
+          "to",
+          [](const std::shared_ptr<Tensor>& tensor,
+             Symbol<Device> device) -> std::shared_ptr<Tensor> {
+            return ConvertTensorDevice(tensor, device->type(), device->device_id()).GetPtrOrThrow();
+          });
 }
 
 }  // namespace one
