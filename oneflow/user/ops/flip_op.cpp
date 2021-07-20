@@ -23,6 +23,9 @@ REGISTER_USER_OP("flip")
     .Attr<std::vector<int32_t>>("dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const int input_dims = x_desc->shape().NumAxes();
+      const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
+      for (auto x : dims) { CHECK_OR_RETURN(x < input_dims) << "dims parameter is illegal."; }
       user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_shape() = x_desc->shape();
       return Maybe<void>::Ok();
