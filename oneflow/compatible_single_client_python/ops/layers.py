@@ -18,9 +18,13 @@ from typing import Callable, Optional, Union, Tuple, Sequence
 from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
 
 from oneflow.compatible import single_client as flow
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
-from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
+from oneflow.compatible.single_client.core.job import (
+    regularizer_conf_pb2 as regularizer_conf_util,
+)
 from oneflow.compatible_single_client_python.framework import (
     distribute as distribute_util,
 )
