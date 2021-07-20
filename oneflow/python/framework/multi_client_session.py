@@ -53,7 +53,7 @@ class MultiClientSession(object):
 
     def TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            oneflow._oneflow_internal.DestroyMultiClientSessionContext()
+            oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
 
         self.status_ = self.Status.CLOSED

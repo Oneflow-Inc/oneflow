@@ -48,6 +48,13 @@ def TryCloseDefaultSession():
     del _sess_id2sess[default_sess_id]
 
 
+def TryCloseAllSession():
+    global _sess_id2sess
+    for sess_id in _sess_id2sess.keys():
+        _sess_id2sess[sess_id].TryClose()
+    _sess_id2sess.clear()
+
+
 def try_init_default_session(func):
     @functools.wraps(func)
     def Func(*args, **kwargs):
