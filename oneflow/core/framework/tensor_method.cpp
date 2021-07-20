@@ -28,8 +28,10 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   int64_t expected_stride = 1;
   bool contig_if_nonempty = true;
   for (int64_t i = dim - 1; i >= 0; --i) {
+    // Contiguous by default when any dim is equal to zero
+    // https://stackoverflow.com/questions/31681324/identify-contiguous-segments-of-a-non-contiguous-numpy-array
     if (shape.At(i) == 0) { return true; }
-    if (contig_if_nonempty) {
+    if (contig_if_nonempty && shape.At(i) != 1) {
       if (stride.At(i) != expected_stride) { contig_if_nonempty = false; }
       expected_stride *= shape.At(i);
     }
