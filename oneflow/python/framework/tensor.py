@@ -841,10 +841,9 @@ class UndeterminedTensor:
                 ), "sbp must be sbp obj or list of sbp obj, please get sbp obj via oneflow.broadcast/oneflow.partial_sum/oneflow.split(axis=x)"
             parallel_distribution = list(sbp)
         return _convert_tensor_to_consistent(self, parallel_distribution, placement)
-    
+
     def to(self, device):
         return oneflow._oneflow_internal.F.copy(self, device)
-        
 
 
 # used in Tensor.to_consistent func
