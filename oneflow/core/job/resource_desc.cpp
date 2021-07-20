@@ -20,6 +20,10 @@ limitations under the License.
 #include <nccl.h>
 #endif
 
+#ifdef WITH_ROCM
+#include <rccl.h>
+#endif
+
 namespace oneflow {
 
 ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_node)
@@ -76,7 +80,7 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 }
 
 bool ResourceDesc::nccl_use_compute_stream() const {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
   return resource_.nccl_use_compute_stream();
 #else
   return false;

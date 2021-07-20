@@ -122,15 +122,15 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-    void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    size_t size = blob->AlignedByteSizeOfBlobBody();
-    hipError_t cuda_error = hipHostRegister(dptr, size, hipHostRegisterDefault);
-    if (cuda_error == hipErrorHostMemoryAlreadyRegistered) {
-      hipGetLastError();
-      return;
-    }
-    OF_ROCM_CHECK(cuda_error);
+    // void* dptr = blob->mut_dptr();
+    // CHECK_NOTNULL(dptr);
+    // size_t size = blob->AlignedByteSizeOfBlobBody();
+    // hipError_t cuda_error = hipHostRegister(dptr, size, hipHostRegisterDefault);
+    // if (cuda_error == hipErrorHostMemoryAlreadyRegistered) {
+    //   hipGetLastError();
+    //   return;
+    // }
+    // OF_ROCM_CHECK(cuda_error);
   }
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
@@ -152,13 +152,13 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    hipError_t cuda_error = hipHostUnregister(dptr);
-    if (cuda_error == hipErrorHostMemoryNotRegistered) {
-      hipGetLastError();
-      return;
-    }
-    OF_ROCM_CHECK(cuda_error);
+    // CHECK_NOTNULL(dptr);
+    // hipError_t cuda_error = hipHostUnregister(dptr);
+    // if (cuda_error == hipErrorHostMemoryNotRegistered) {
+    //   hipGetLastError();
+    //   return;
+    // }
+    // OF_ROCM_CHECK(cuda_error);
   }
 };
 COMMAND(

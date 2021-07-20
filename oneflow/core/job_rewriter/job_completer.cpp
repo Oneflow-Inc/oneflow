@@ -117,7 +117,7 @@ void JobCompleter::Complete(Job* job) const {
 #endif  // OF_WITH_XRT
   }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);

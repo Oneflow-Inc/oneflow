@@ -25,8 +25,13 @@ limitations under the License.
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cuda_stream_index.h"
+
 #ifdef WITH_CUDA
 #include <nccl.h>
+#endif
+
+#ifdef WITH_ROCM
+#include <rccl.h>
 #endif
 
 namespace oneflow {

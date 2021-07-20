@@ -88,6 +88,7 @@ REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDe
 
 #ifdef WITH_ROCM
 #include <hip/hip_runtime.h>
+#include <rccl.h>
 
 namespace {
 std::string GetRocmVersionString(int version) {
@@ -104,6 +105,20 @@ void GpuDumpVersionInfo() {
       LOG(INFO) << "ROCM runtime version: " << GetRocmVersionString(rocm_runtime_version);
     } else {
       LOG(ERROR) << "Failed to get cuda runtime version: " << hipGetErrorString(err);
+    }
+  }
+
+  {
+    int nccl_version;
+    ncclResult_t result = ncclGetVersion(&nccl_version);
+    if (result == ncclSuccess) {
+      int nccl_version_major = nccl_version / 1000;
+      int nccl_version_minor = (nccl_version % 1000) / 100;
+      int nccl_version_patch = (nccl_version % 100);
+      LOG(INFO) << "NCCL version: " << nccl_version_major << "." << nccl_version_minor << "."
+                << nccl_version_patch;
+    } else {
+      LOG(ERROR) << "Failed to get NCCL version: " << ncclGetErrorString(result);
     }
   }
 }

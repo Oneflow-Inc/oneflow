@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 #include "oneflow/core/device/cuda_stream_index.h"
 #endif
 
@@ -95,7 +95,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   const auto GetBoxingGpuThrdId = [](int64_t machine_id, int64_t dev_id,
                                      CudaWorkType work_type) -> int64_t {
     int64_t thrd_id = -1;
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
     DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
                        static_cast<DeviceId::device_index_t>(dev_id)};
     auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -129,7 +129,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     if (pd.device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id);
     } else if (pd.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
       int64_t dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
       thrd_id = GetBoxingGpuThrdId(machine_id, dev_id, CudaWorkType::kCopyH2D);
 #else
@@ -150,7 +150,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     if (src_node->device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
       thrd_id =
           GetBoxingGpuThrdId(src_node->machine_id(), src_node->GpuPhyId(), CudaWorkType::kCopyD2H);
 #else
@@ -274,7 +274,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           if (in_pd.device_type() == DeviceType::kCPU) {
             local_concat_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
           } else if (in_pd.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
             TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
             local_concat_thrd_id =
                 GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyD2H);
@@ -336,7 +336,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
               if (in_pd.device_type() == DeviceType::kCPU) {
                 local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
               } else if (in_pd.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
                 TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
                 local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(),
                                                        CudaWorkType::kCopyD2H);
@@ -383,7 +383,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         if (in_pd.device_type() == DeviceType::kCPU) {
           local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
         } else if (in_pd.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
           TaskNode* node = in_nodes.at(in_ids_on_machine.front());
           local_add_thrd_id =
               GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyH2D);

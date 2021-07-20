@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 namespace oneflow {
 
@@ -90,7 +90,12 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
 ncclComm_t EagerNcclCommMgr::GetCommForDevice(
     const std::set<std::pair<int64_t, int64_t>>& device_set) {
   int dev;
+
+#if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
+#elif defined(WITH_ROCM)
+  OF_ROCM_CHECK(hipGetDevice(&dev));
+#endif
   {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = device_set2device_id2comm_.find(device_set);
@@ -113,7 +118,11 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
 ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamId(
     const std::set<std::pair<int64_t, int64_t>>& device_set, const int32_t stream_id) {
   int dev;
+#if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
+#elif defined(WITH_ROCM)
+  OF_ROCM_CHECK(hipGetDevice(&dev));
+#endif
 
   std::vector<std::pair<int64_t, int64_t>> device_vec(device_set.cbegin(), device_set.cend());
   std::sort(device_vec.begin(), device_vec.end(), CompareDeviceSetPair);

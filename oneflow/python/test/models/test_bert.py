@@ -213,7 +213,7 @@ def test_1n1c():
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
-test_1n1c()
+# test_1n1c()
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n2c():
@@ -226,7 +226,7 @@ def test_1n2c():
     of_loss = [pretrain_job().get().mean() for _ in range(10)]
     print(of_loss)
 
-# test_1n2c()
+test_1n2c()
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n4c(test_case):

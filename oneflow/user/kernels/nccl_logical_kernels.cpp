@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
 
 namespace oneflow {
 
@@ -80,9 +80,15 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
+#if defined(WITH_ROCM)
+    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                nccl_comm->comm(), ctx->device_ctx()->rocm_stream()));
+#else
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
                                 nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+#endif
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -106,9 +112,15 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+#if defined(WITH_ROCM)
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    nccl_comm->comm(), ctx->device_ctx()->rocm_stream()));
+#else
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
                                     GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
                                     nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+#endif
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -132,9 +144,15 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+#if defined(WITH_ROCM)
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
+                                ctx->device_ctx()->rocm_stream()));
+#else
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
                                 ctx->device_ctx()->cuda_stream()));
+#endif
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -172,9 +190,15 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 
     // NOTE(chengcheng): Do AllGather
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+#if defined(WITH_ROCM)
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
+                                ctx->device_ctx()->rocm_stream()));
+#else
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
                                 ctx->device_ctx()->cuda_stream()));
+#endif
 
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
@@ -288,14 +312,25 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
       const int64_t chunk_size = elem_per_chunk * dtype_size;
       for (int64_t j = 0; j < num_ranks; ++j) {
-        OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
-                                   reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                               elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
-                               ctx->device_ctx()->cuda_stream()));
-        OF_NCCL_CHECK(ncclRecv(
-            reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
-            ctx->device_ctx()->cuda_stream()));
+#if defined(WITH_ROCM)
+    OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
+                                reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
+                            elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
+                            ctx->device_ctx()->rocm_stream()));
+    OF_NCCL_CHECK(ncclRecv(
+        reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
+        elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
+        ctx->device_ctx()->rocm_stream()));
+#else
+    OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
+                                reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
+                            elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
+                            ctx->device_ctx()->cuda_stream()));
+    OF_NCCL_CHECK(ncclRecv(
+        reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
+        elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
+        ctx->device_ctx()->cuda_stream()));
+#endif
       }
       OF_NCCL_CHECK(ncclGroupEnd());
     }

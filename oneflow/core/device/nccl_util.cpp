@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 void NcclCheck(ncclResult_t error) { CHECK_EQ(error, ncclSuccess) << ncclGetErrorString(error); }
 
