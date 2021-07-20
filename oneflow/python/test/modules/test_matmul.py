@@ -335,6 +335,7 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
     def test_flow_matmul_with_random_data(test_case):
         k = random(1, 6)
         x = random_pytorch_tensor(ndim=2, dim1=k)

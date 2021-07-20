@@ -193,7 +193,7 @@ def check_tensor_equality(torch_tensor, flow_tensor):
     return np.allclose(torch_tensor.detach().cpu().numpy(), flow_tensor.numpy())
 
 
-def autotest(n=20, auto_backward=True):
+def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
     def deco(f):
         @functools.wraps(f)
