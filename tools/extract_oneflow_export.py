@@ -184,7 +184,7 @@ def get_srcs():
 
 
 def add_init_py():
-    for (dirpath, dirnames, filenames) in os.walk(args.out_dir):
+    for (dirpath, dirnames, filenames) in os.walk(out_oneflow_dir):
         init_py = os.path.join(dirpath, "__init__.py")
         if os.path.exists(init_py) == False:
             subprocess.check_call(f"touch {init_py}", shell=True)
