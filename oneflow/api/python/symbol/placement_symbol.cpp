@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/framework/placement_rpc_util.h"
 
 namespace py = pybind11;
 
@@ -193,6 +194,13 @@ struct PlacementSymbolExportUtil {
     return placement_str;
   }
 };
+
+Maybe<void> CheckPlacementConsistency(Symbol<ParallelDesc> parallel_desc, int64_t seconds) {
+	const auto& ctx = JUST(CheckRpcToken(parallel_desc));
+	JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+	return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -238,6 +246,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                return device_type;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
+			.def("check_consistency", [](Symbol<ParallelDesc> parallel_desc) {
+				return CheckPlacementConsistency(parallel_desc, 60 * 5).GetOrThrow();
+			})
+			.def("check_consistency", [](Symbol<ParallelDesc> parallel_desc, int64_t seconds) {
+				return CheckPlacementConsistency(parallel_desc, seconds).GetOrThrow();
+			})
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
       .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);

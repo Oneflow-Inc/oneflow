@@ -201,6 +201,13 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
+	const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
+	JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+	JUST(ctx->Check());
+	return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -257,6 +264,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
+			.def("check_meta_consistency", [](const one::Tensor& tensor) {
+				return CheckPlacementConsistency(tensor, 60 * 5).GetOrThrow();
+			})
+			.def("check_meta_consistency", [](const one::Tensor& tensor, int64_t seconds) {
+				return CheckPlacementConsistency(tensor, seconds).GetOrThrow();
+			})
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)

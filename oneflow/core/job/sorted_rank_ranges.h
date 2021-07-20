@@ -44,9 +44,15 @@ class SortedRankRanges final {
   bool operator!=(const SortedRankRanges& that) const { return !(*this == that); }
 
   const std::vector<Range>& sorted_rank_ranges() const { return sorted_rank_ranges_; }
-  const std::string& rpc_push_pull_key() const { return rpc_push_pull_key_; }
+	size_t size() const { return size_; }
   size_t hash_value() const { return hash_value_; }
 	Maybe<int64_t> GetNextRankInRing(int64_t rank) const;
+	Maybe<int64_t> GetNextRankInRing() const;
+	Maybe<int64_t> GetPrevRankInRing(int64_t rank) const;
+	Maybe<int64_t> GetPrevRankInRing() const;
+	bool ContainingCurrentRank() const;
+
+	Maybe<void> ForEachRank(const std::function<Maybe<void>(int64_t)>&) const;
 
  private:
   SortedRankRanges() = default;
@@ -54,7 +60,8 @@ class SortedRankRanges final {
 
   std::vector<Range> sorted_rank_ranges_;
 	std::unordered_map<int64_t, int64_t> rank2next_rank_in_ring_;
-  std::string rpc_push_pull_key_;
+	std::unordered_map<int64_t, int64_t> rank2prev_rank_in_ring_;
+	size_t size_;
   size_t hash_value_;
 };
 

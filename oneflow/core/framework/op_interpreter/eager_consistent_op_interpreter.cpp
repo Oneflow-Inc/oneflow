@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/placement_rpc_util.h"
 #include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -41,8 +43,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& result =
       JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   const auto& output_tensor_metas = result->output_tensor_metas();
-  const auto& parallel_desc =
-      JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name())).shared_from_symbol();
+  const auto& parallel_desc = JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name()));
   int64_t parallel_id = -1;
   const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
   using TensorImpl = EagerConsistentTensorImpl;
@@ -51,6 +52,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
         JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
+		const auto& rpc_token = JUST(GetAutoIncrementalRpcToken(parallel_desc));
+		JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
@@ -72,7 +75,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, parallel_desc, instr_type_name);
+                                      ctx, parallel_desc.shared_from_symbol(), instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
@@ -80,7 +83,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-  OF_UNIMPLEMENTED();
+	JUST(Interpret(op_expr, inputs, outputs, ctx));
+	return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
