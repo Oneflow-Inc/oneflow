@@ -36,6 +36,15 @@ namespace functional {
 
 namespace detail {
 
+struct PyObjectPtrDeleter {
+  inline void operator()(PyObject* obj) {
+    if (obj) { Py_DECREF(obj); }
+    obj = NULL;
+  }
+};
+
+using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
+
 #define ARITHMETIC_TYPE_SEQ      \
   OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t) \
@@ -134,6 +143,8 @@ template<typename T>
 
 Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
 const char* PyStringAsString(PyObject* object);
+
+Maybe<Tensor> CastToIndexingTensor(PyObject* object);
 
 Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object);
 

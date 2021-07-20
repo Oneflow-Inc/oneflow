@@ -164,6 +164,18 @@ class ConcatFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class StackFunctor {
+ public:
+  StackFunctor() = default;
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    TensorTuple expand_inputs(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), dim));
+    }
+    return Concat(expand_inputs, dim, inputs.size());
+  }
+};
+
 class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
@@ -837,7 +849,7 @@ class TensorGetItemFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
-    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
@@ -861,15 +873,16 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(functional::Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
+      result = JUST(Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
     } else {
-      result = JUST(functional::Slice(x, start, end, step));
+      result = JUST(Slice(x, start, end, step));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      result = JUST(functional::Reshape(result, shape));
+      result = JUST(Reshape(result, shape));
     }
+    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     return result;
   }
 };
@@ -881,7 +894,7 @@ class TensorSetItemFunctor {
                          const std::shared_ptr<one::Tensor>& value) const {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
-    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
@@ -906,9 +919,9 @@ class TensorSetItemFunctor {
       if (value_shape->NumAxes() > target_shape.NumAxes()) {
         int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
         const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-        value_tensor = JUST(functional::Reshape(value, *shape));
+        value_tensor = JUST(Reshape(value, *shape));
       }
-      value_tensor = JUST(functional::Expand(value_tensor, target_shape));
+      value_tensor = JUST(Expand(value_tensor, target_shape));
     }
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
@@ -922,7 +935,7 @@ class TensorSetItemFunctor {
     }
     Shape slice_shape(slice_dims);
     if (slice_shape != *(value_tensor->shape())) {
-      value_tensor = JUST(functional::Reshape(value_tensor, slice_shape));
+      value_tensor = JUST(Reshape(value_tensor, slice_shape));
     }
     JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
     return Maybe<void>::Ok();
@@ -940,6 +953,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
+  m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");

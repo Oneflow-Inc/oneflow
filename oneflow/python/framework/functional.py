@@ -23,9 +23,12 @@ def RecursveDetermine(arg):
             arg.determine()
         return arg._local_or_consistent_tensor
     elif isinstance(arg, list) or isinstance(arg, tuple):
+        is_tuple = isinstance(arg, tuple)
         arg = list(arg)
         for i in range(len(arg)):
             arg[i] = RecursveDetermine(arg[i])
+        if is_tuple:
+            arg = tuple(arg)
         return arg
     elif isinstance(arg, dict):
         for k, v in arg.items():

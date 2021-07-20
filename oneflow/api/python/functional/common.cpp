@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -53,6 +54,54 @@ const char* PyStringAsString(PyObject* object) {
   return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
 }
 
+Maybe<DataType> InferScalarType(PyObject* object) {
+  if (PyLong_Check(object)) {
+    return DataType::kInt64;
+  } else if (PyBool_Check(object)) {
+    return DataType::kUInt8;
+  } else if (PySequence_Check(object)) {
+    int64_t length = PySequence_Length(object);
+    CHECK_GT_OR_RETURN(length, 0) << "Failed to get sequence index length.";
+    DataType scalar_type = DataType::kInvalidDataType;
+    for (int64_t i = 0; i < length; ++i) {
+      PyObjectPtr item(PySequence_GetItem(object, i));
+      const auto& item_scalar_type = JUST(InferScalarType(item.get()));
+      if (scalar_type != DataType::kInvalidDataType) {
+        CHECK_EQ_OR_RETURN(scalar_type, item_scalar_type)
+            << "Different scalar types are not allowed.";
+      } else {
+        scalar_type = item_scalar_type;
+      }
+    }
+    return scalar_type;
+  }
+  UNIMPLEMENTED_THEN_RETURN() << "Could not infer scalar type of " << Py_TYPE(object)->tp_name;
+}
+
+Maybe<Tensor> CastToIndexingTensor(PyObject* object) {
+  // TODO(hjchen2): Support lazy.
+  DataType dtype = JUST(InferScalarType(object));
+  DimVector sizes;
+  PyObject* seq = object;
+  PyObjectPtr handle;
+  while (PySequence_Check(seq)) {
+    int64_t length = PySequence_Length(seq);
+    CHECK_GT_OR_RETURN(length, 0) << "Failed to get sequence index length.";
+    sizes.push_back(length);
+    CHECK_LE_OR_RETURN(sizes.size(), /*MAX_DIMS=*/128)
+        << "Too many dimensions " << Py_TYPE(seq)->tp_name;
+    if (length == 0) break;
+    handle = PyObjectPtr(PySequence_GetItem(seq, 0));
+    seq = handle.get();
+  }
+  Shape shape(sizes);
+  const auto& tensor = JUST(functional::Constant(shape, 0, dtype));
+  CHECK_OR_RETURN(JUST(tensor->has_eager_blob_object()))
+      << "Only converting to eager tensor is valid, please check whether the op is running in "
+         "eager mode or not.";
+  return tensor;
+}
+
 Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object) {
   if (object == Py_Ellipsis) {
     return std::make_shared<detail::IndexItem>(detail::EllipsisIndex{});
@@ -66,8 +115,10 @@ Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object) {
     return std::make_shared<detail::IndexItem>(object == Py_True);
   } else if (object == Py_None) {
     return std::make_shared<detail::IndexItem>(detail::NoneIndex{});
+  } else if (PySequence_Check(object)) {
+    return std::make_shared<detail::IndexItem>(JUST(detail::CastToIndexingTensor(object)));
   }
-  UNIMPLEMENTED_THEN_RETURN() << "Invalid index " << PyStringAsString(PyObject_Repr(object));
+  UNIMPLEMENTED_THEN_RETURN() << "Invalid index of " << Py_TYPE(object)->tp_name;
 }
 
 }  // namespace detail
