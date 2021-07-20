@@ -15,9 +15,11 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.core.common import data_type_pb2 as data_type_util
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.common import data_type_pb2 as data_type_util
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible_single_client_python.framework import (
     compile_context as compile_context,
 )
