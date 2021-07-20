@@ -339,7 +339,7 @@ class TestModule(flow.unittest.TestCase):
         k = random(1, 6)
         x = random_pytorch_tensor(ndim=2, dim1=k)
         y = random_pytorch_tensor(ndim=2, dim0=k)
-        z = flow.matmul(x, y)
+        z = torch.matmul(x, y)
         return z
 
 
