@@ -245,7 +245,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   // NOTE(chengcheng):
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
-  //   if inputs size == 1, need handle in SourceUserOp impl.
+  //   if inputs size == 0, need handle in SourceUserOp impl.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
   op_conf->set_device_tag(device_tag);
