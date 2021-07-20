@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
+from typing import Optional, Union
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
@@ -23,66 +23,85 @@ from oneflow.python.nn.module import Module
 from oneflow.python.ops.array_ops import check_slice_tup_list
 
 
+# class Chunk(Module):
+#     def __init__(self) -> None:
+#         super().__init__()
+#
+#     def forward(self, input, chunks, dim):
+#         if dim is not None:
+#             assert input.shape[dim] > 0, "chunk expects at least a 1-dimensional tensor"
+#
+#             assert chunks > 0, "chunk expects `chunks` to be greater than 0"
+#
+#             channel = input.dim()
+#             dim_size = input.shape[dim]
+#             chunk_size = (
+#                 dim_size / chunks
+#                 if dim_size % chunks == 0
+#                 else (int)(dim_size / chunks)
+#             )
+#             last_chunk_size = (
+#                 dim_size / chunks
+#                 if dim_size % chunks == 0
+#                 else dim_size - (chunk_size * (chunks - 1))
+#             )
+#
+#             chunk_dim_dict = {}
+#             tup_ndim = []
+#             splits = []
+#
+#             for chunk in range(0, chunks):
+#                 if dim_size % chunks == 0:
+#                     start = chunk * chunk_size
+#                     stop = (chunk + 1) * chunk_size
+#                 else:
+#                     start = (
+#                         chunk * chunk_size
+#                         if chunk < chunks - 1
+#                         else chunk_size * (chunks - 1)
+#                     )
+#                     stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
+#                 step = 1
+#                 chunk_dim_dict.setdefault(dim, []).append(
+#                     [int(start), int(stop), int(step)]
+#                 )
+#
+#             for k, v in chunk_dim_dict.items():
+#                 for v_chunk in v:
+#                     tup_list = []
+#                     for i in range(0, channel):
+#                         if i != dim:
+#                             tup_list.append([None, None, None])
+#                         else:
+#                             tup_list.append(v_chunk)
+#                     start_tup, stop_tup, step_tup = check_slice_tup_list(
+#                         tup_list, input.shape
+#                     )
+#                     splits.append(
+#                         flow.F.slice(
+#                             input, start=start_tup, stop=stop_tup, step=step_tup
+#                         )
+#                     )
+#             return splits
 class Chunk(Module):
-    def __init__(self) -> None:
+    def __init__(self, chunks: Union[int, list], dim: int = 0) -> None:
         super().__init__()
+        assert isinstance(chunks, int)
+        self._op = flow.builtin_op("chunk").Input("in").Output("out").Attr("axis", dim).Attr("chunks", chunks).Build()
+        self.dim = dim
 
-    def forward(self, input, chunks, dim):
-        if dim is not None:
-            assert input.shape[dim] > 0, "chunk expects at least a 1-dimensional tensor"
 
-            assert chunks > 0, "chunk expects `chunks` to be greater than 0"
+    def forward(self, input):
+        assert isinstance(input, Tensor)
+        input_shape = input.shape
+        max_dim = len(input_shape)
 
-            channel = input.dim()
-            dim_size = input.shape[dim]
-            chunk_size = (
-                dim_size / chunks
-                if dim_size % chunks == 0
-                else (int)(dim_size / chunks)
-            )
-            last_chunk_size = (
-                dim_size / chunks
-                if dim_size % chunks == 0
-                else dim_size - (chunk_size * (chunks - 1))
-            )
+        # The axis must be in range [-(_max_dim +1), _max_dim]
+        if self.dim < 0:
+            self.dim = self.dim + max_dim + 1
+        assert (self.dim >= 0) and (self.dim <= max_dim)
+        return self._op(input)
 
-            chunk_dim_dict = {}
-            tup_ndim = []
-            splits = []
-
-            for chunk in range(0, chunks):
-                if dim_size % chunks == 0:
-                    start = chunk * chunk_size
-                    stop = (chunk + 1) * chunk_size
-                else:
-                    start = (
-                        chunk * chunk_size
-                        if chunk < chunks - 1
-                        else chunk_size * (chunks - 1)
-                    )
-                    stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
-                step = 1
-                chunk_dim_dict.setdefault(dim, []).append(
-                    [int(start), int(stop), int(step)]
-                )
-
-            for k, v in chunk_dim_dict.items():
-                for v_chunk in v:
-                    tup_list = []
-                    for i in range(0, channel):
-                        if i != dim:
-                            tup_list.append([None, None, None])
-                        else:
-                            tup_list.append(v_chunk)
-                    start_tup, stop_tup, step_tup = check_slice_tup_list(
-                        tup_list, input.shape
-                    )
-                    splits.append(
-                        flow.F.slice(
-                            input, start=start_tup, stop=stop_tup, step=step_tup
-                        )
-                    )
-            return splits
 
 
 @oneflow_export("chunk")
@@ -130,7 +149,7 @@ def chunk_op(input, chunks, dim):
         [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
 
     """
-    return Chunk()(input, chunks, dim)
+    return Chunk(chunks, dim)(input)
 
 
 if __name__ == "__main__":
