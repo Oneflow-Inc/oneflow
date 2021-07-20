@@ -24,13 +24,13 @@ jobs:
           access_token: ${{ github.token }}
   hosted:
     name: CPU-only
-    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
     timeout-minutes: 120
     strategy:
       fail-fast: true
-      max-parallel: 2
+      max-parallel: 3
       matrix:
         test_suite: ["conda", "mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
