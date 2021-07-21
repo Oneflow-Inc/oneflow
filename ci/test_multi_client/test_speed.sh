@@ -5,7 +5,7 @@ set -uxo pipefail
 rc=0
 trap 'rc=$?' ERR
 
-cd $ONEFLOW_MODEL_DIR
+cd $ONEFLOW_MODELS_DIR
 
 function check_relative_speed {
   awk -F'[:(]' -v threshold=$1 'BEGIN { ret=2 } /Relative speed/{ if ($2 > threshold) { ret=0 } else { ret=1 }} {print $0} END { exit ret }'

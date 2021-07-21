@@ -555,6 +555,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
+          ref: 8dbbbd2f12f5e094ac8ceb0164bac53b3ffb6e2e
           path: oneflow-models
       - name: Speed test
         id: speed
@@ -562,7 +563,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_MODEL_DIR=$PWD/oneflow-models \
+            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/test_speed.sh"
       - name: Post speed stats
