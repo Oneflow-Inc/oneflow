@@ -574,7 +574,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "Speed stats:\n${{ steps.speed.outputs.stats }}".replace(/\\n/g, '\n')
+              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Single client op test
         timeout-minutes: 45
