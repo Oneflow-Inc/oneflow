@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -83,15 +84,14 @@ Maybe<void> BuildDstSubsetTickOpAndParallelConf(const HashSet<LogicalBlobId>& ti
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
-                                            const OperatorConf& src_subset_tick,
-                                            const HashSet<LogicalBlobId>& tick_lbis,
-                                            JobBuilder* job_builder) {
+Maybe<void> CreateDstSubsetTickAndSinkTicks(
+    const OperatorConf& src_subset_tick, const HashSet<LogicalBlobId>& tick_lbis,
+    JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSink) {
   OperatorConf dst_subset_tick;
   dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
       src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
-  auto* map = critical_section->mutable_machine_id2sink_tick_op_name();
   for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -113,8 +113,21 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
       sink_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, sink_tick_op));
     }
-    (*map)[machine_id] = sink_tick_op.name();
+    JUST(DoEachSink(machine_id, sink_tick_op.name()));
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
+                                            const OperatorConf& src_subset_tick,
+                                            const HashSet<LogicalBlobId>& tick_lbis,
+                                            JobBuilder* job_builder) {
+  auto* map = critical_section->mutable_machine_id2sink_tick_op_name();
+  const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
   return Maybe<void>::Ok();
 }
 
@@ -131,10 +144,9 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
-                                              OperatorConf* src_subset_tick_op,
-                                              JobBuilder* job_builder) {
-  auto* map = critical_section->mutable_machine_id2source_tick_op_name();
+Maybe<void> CreateSourceTicksAndSrcSubsetTick(
+    OperatorConf* src_subset_tick_op, JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc) {
   for (int64_t machine_id : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
@@ -145,7 +157,7 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
       src_tick_op.mutable_source_tick_conf()->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, src_tick_op));
     }
-    (*map)[machine_id] = src_tick_op.name();
+    JUST(DoEachSrc(machine_id, src_tick_op.name()));
     OperatorConf tick_op;
     {
       tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
@@ -156,6 +168,18 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
     src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(tick_op.name() + "/out");
   }
   JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
+                                              OperatorConf* src_subset_tick_op,
+                                              JobBuilder* job_builder) {
+  auto* map = critical_section->mutable_machine_id2source_tick_op_name();
+  const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(CreateSourceTicksAndSrcSubsetTick(src_subset_tick_op, job_builder, DoEachSrc));
   return Maybe<void>::Ok();
 }
 
@@ -171,21 +195,22 @@ Maybe<void> ConnectSrcSubsetTickAndOtherTick(const OperatorConf& src_subset_tick
     auto mut_helper = NewMutOpConTickInputHelper(op.op_conf());
     if (!mut_helper) { return Maybe<void>::Ok(); }
     if (mut_helper->IsTickInputBound() == true) { return Maybe<void>::Ok(); }
-    job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(src_lbn)});
+    JUST(job_builder->MutOpOnlyOnce(mut_helper->NewTickInputBoundOpConf(src_lbn)));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
 
-const OpNode* GetSrcSubsetTickOpNode(const OpGraph& op_graph) {
+Maybe<const OpNode*> GetSrcSubsetTickOpNode(const OpGraph& op_graph) {
   const OpNode* src_subset_tick = nullptr;
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_src_subset_tick_conf()) {
-      CHECK_ISNULL(src_subset_tick);
+      CHECK_ISNULL_OR_RETURN(src_subset_tick);
       src_subset_tick = op_node;
     }
-  });
-  CHECK_NOTNULL(src_subset_tick);
+    return Maybe<void>::Ok();
+  }));
+  CHECK_NOTNULL_OR_RETURN(src_subset_tick);
   return src_subset_tick;
 }
 
@@ -277,77 +302,81 @@ std::vector<std::string> GetOpNames(const HashSet<const OpNode*>& op_nodes) {
   return ret;
 };
 
-void InitOpTypeCase2OpNodes(
+Maybe<void> InitOpTypeCase2OpNodes(
     const OpGraph& op_graph,
     HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>>* op_type_case2op_nodes) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     const auto& op_conf = op_node->op().op_conf();
     if (IsInterfaceOpConf(op_conf)) {
-      CHECK((*op_type_case2op_nodes)[op_conf.op_type_case()].emplace(op_node).second);
+      CHECK_OR_RETURN((*op_type_case2op_nodes)[op_conf.op_type_case()].emplace(op_node).second);
     }
-  });
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
 }
 
-void ForEachInputCriticalSectionOpNodes(
+Maybe<void> ForEachInputCriticalSectionOpNodes(
     const OpGraph& op_graph,
-    const std::function<void(const HashSet<const OpNode*>&, const std::vector<std::string>&)>&
-        Handler) {
+    const std::function<Maybe<void>(const HashSet<const OpNode*>&,
+                                    const std::vector<std::string>&)>& Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
-  InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
+  JUST(InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes));
   OperatorConf::OpTypeCase op_type_case = OperatorConf::kInputConf;
-  if (op_type_case2op_nodes[op_type_case].empty()) { return; }
+  if (op_type_case2op_nodes[op_type_case].empty()) { return Maybe<void>::Ok(); }
   HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
   for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
     op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
   }
-  Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
+  JUST(Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case])));
+  return Maybe<void>::Ok();
 }
 
-void ForEachOutputCriticalSectionOpNodes(
+Maybe<void> ForEachOutputCriticalSectionOpNodes(
     const OpGraph& op_graph,
-    const std::function<void(const HashSet<const OpNode*>&, const std::vector<std::string>&)>&
-        Handler) {
+    const std::function<Maybe<void>(const HashSet<const OpNode*>&,
+                                    const std::vector<std::string>&)>& Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
-  InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes);
+  JUST(InitOpTypeCase2OpNodes(op_graph, &op_type_case2op_nodes));
   if (op_type_case2op_nodes[OperatorConf::kReturnConf].empty() == false) {
-    Handler(op_type_case2op_nodes[OperatorConf::kReturnConf],
-            GetOpNames(op_type_case2op_nodes[OperatorConf::kReturnConf]));
+    JUST(Handler(op_type_case2op_nodes[OperatorConf::kReturnConf],
+                 GetOpNames(op_type_case2op_nodes[OperatorConf::kReturnConf])));
   }
   if (op_type_case2op_nodes[OperatorConf::kOutputConf].empty() == false) {
-    Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
-            GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));
+    JUST(Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
+                 GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf])));
   }
+  return Maybe<void>::Ok();
 }
 
-std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
-                                              const HashSet<const OpNode*>& op_nodes,
-                                              JobBuilder* job_builder) {
+Maybe<std::vector<OperatorConf>> AddTickForTimeShape(const Shape& src_time_shape,
+                                                     const HashSet<const OpNode*>& op_nodes,
+                                                     JobBuilder* job_builder) {
   HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<const OpNode*>>
       pd7ts2op_nodes;
   for (const OpNode* op_node : op_nodes) {
-    auto ts = std::make_pair(*CHECK_JUST(op_node->op().GetInputOutputFastestTimeShape()),
-                             *CHECK_JUST(op_node->op().GetOpTimeShape()));
+    auto ts = std::make_pair(*JUST(op_node->op().GetInputOutputFastestTimeShape()),
+                             *JUST(op_node->op().GetOpTimeShape()));
     pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
   }
   std::vector<OperatorConf> op_confs;
   for (const auto& pair : pd7ts2op_nodes) {
     const std::pair<Shape, Shape>& ts = pair.first.second;
     if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
-      CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
+      CHECK_GE_OR_RETURN(ts.first.elem_cnt(), ts.second.elem_cnt());
       op_confs.push_back(
           AppendTick("Append", pair.second, std::make_shared<const Shape>(ts.second), job_builder));
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
       op_confs.push_back(AppendAccTick(src_time_shape, pair.second, job_builder));
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
   return op_confs;
 }
 
-void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
-                                         const std::vector<std::string>& lbi_producer_op_names,
-                                         JobBuilder* job_builder) {
+Maybe<void> AddGlobalInputOutputCriticalSection(
+    const HashSet<const OpNode*>& op_nodes, const std::vector<std::string>& lbi_producer_op_names,
+    JobBuilder* job_builder) {
   auto* critical_section =
       Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
   {
@@ -358,22 +387,20 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   auto time_shape = std::make_unique<Shape>(DimVector{1, 1});
   HashMap<ParallelDesc, HashSet<const OpNode*>> parallel_desc2op_nodes;
   for (const OpNode* op_node : op_nodes) {
-    CHECK(parallel_desc2op_nodes[op_node->parallel_desc()].insert(op_node).second);
+    CHECK_OR_RETURN(parallel_desc2op_nodes[op_node->parallel_desc()].insert(op_node).second);
   }
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
   for (const auto& pair : parallel_desc2op_nodes) {
     source_ticks.push_back(PrependTick(pair.second, job_builder));
-    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, pair.second, job_builder)) {
-      sink_ticks.push_back(sink_tick);
-    }
+    const auto& ops = JUST(AddTickForTimeShape(*time_shape, pair.second, job_builder));
+    for (const auto& sink_tick : *ops) { sink_ticks.push_back(sink_tick); }
   }
   OperatorConf src_subset_tick_op;
   {
-    CHECK_EQ(source_ticks.empty(), false);
-    CHECK_JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick_op, job_builder));
-    CHECK_JUST(
-        CreateSourceTicksAndSrcSubsetTick(critical_section, &src_subset_tick_op, job_builder));
+    CHECK_EQ_OR_RETURN(source_ticks.empty(), false);
+    JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick_op, job_builder));
+    JUST(CreateSourceTicksAndSrcSubsetTick(critical_section, &src_subset_tick_op, job_builder));
     for (auto& op_conf : source_ticks) {
       op_conf.mutable_tick_conf()->add_tick(src_subset_tick_op.name() + "/"
                                             + src_subset_tick_op.src_subset_tick_conf().out());
@@ -384,70 +411,109 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   for (const auto& op_conf : sink_ticks) {
     LogicalBlobId lbi;
     lbi.set_op_name(op_conf.name());
-    CHECK(op_conf.has_device_tick_conf());
+    CHECK_OR_RETURN(op_conf.has_device_tick_conf());
     lbi.set_blob_name(op_conf.device_tick_conf().out());
-    CHECK(tick_lbis.insert(lbi).second);
+    CHECK_OR_RETURN(tick_lbis.insert(lbi).second);
   }
-  CHECK_JUST(CreateDstSubsetTickAndSinkTicks(critical_section, src_subset_tick_op, tick_lbis,
-                                             job_builder));
+  JUST(CreateDstSubsetTickAndSinkTicks(critical_section, src_subset_tick_op, tick_lbis,
+                                       job_builder));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-void AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder) {
+Maybe<void> AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder) {
   PrependTickByParallelDesc(op_graph, job_builder);
   OperatorConf src_subset_tick_op;
-  CHECK_JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick_op, job_builder));
-  CHECK_JUST(ConnectSrcSubsetTickAndOtherTick(src_subset_tick_op, job_builder));
+  JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick_op, job_builder));
+  JUST(ConnectSrcSubsetTickAndOtherTick(src_subset_tick_op, job_builder));
+  return Maybe<void>::Ok();
 }
 
-void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
-  const auto& src_time_shape = *CHECK_JUST(GetSrcSubsetTickOpNode(op_graph)->op().GetOpTimeShape());
+Maybe<void> AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
+  const auto* op_node = JUST(GetSrcSubsetTickOpNode(op_graph));
+  const auto& src_time_shape = *JUST(op_node->op().GetOpTimeShape());
   HashSet<const OpNode*> sink_op_nodes;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    CHECK(!op_node->op().op_conf().has_sink_tick_conf());
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    CHECK_OR_RETURN(!op_node->op().op_conf().has_sink_tick_conf());
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt == 0) { sink_op_nodes.insert(op_node); }
-  });
-  AddTickForTimeShape(src_time_shape, sink_op_nodes, job_builder);
+    return Maybe<void>::Ok();
+  }));
+  JUST(AddTickForTimeShape(src_time_shape, sink_op_nodes, job_builder));
+  return Maybe<void>::Ok();
 }
 
-void AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
+Maybe<void> AutoSourceAndSinkTick(
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc,
+    const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSink) {
+  JUST(op_graph.MaybeForEachNode([&](OpNode* node) -> Maybe<void> {
+    CHECK_OR_RETURN(!node->op().op_conf().has_sink_tick_conf());
+    return Maybe<void>::Ok();
+  }));
+  const auto* op_node = JUST(GetSrcSubsetTickOpNode(op_graph));
+  const auto& src_time_shape = JUST(op_node->op().GetOpTimeShape());
+  HashSet<LogicalBlobId> tick_lbis;
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    size_t out_cnt = 0;
+    op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
+    if (out_cnt > 0) { return Maybe<void>::Ok(); }
+    CHECK_OR_RETURN(op_node->op().op_conf().has_device_tick_conf());
+    CHECK_OR_RETURN(JUST(op_node->op().GetOpTimeShape())->elem_cnt() == src_time_shape->elem_cnt());
+    CHECK_OR_RETURN(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
+    return Maybe<void>::Ok();
+  }));
+  OperatorConf src_subset_tick = JUST(FindSrcSubsetTickOpConf(job_builder->job()));
+  JUST(CreateSourceTicksAndSrcSubsetTick(&src_subset_tick, job_builder, DoEachSrc));
+  JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
   auto* critical_section =
       Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
   critical_section->mutable_total_job_critical_section();
-  op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_sink_tick_conf()); });
-  const auto& src_time_shape = *CHECK_JUST(GetSrcSubsetTickOpNode(op_graph)->op().GetOpTimeShape());
-  HashSet<LogicalBlobId> tick_lbis;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    size_t out_cnt = 0;
-    op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
-    if (out_cnt > 0) { return; }
-    CHECK(op_node->op().op_conf().has_device_tick_conf());
-    CHECK(CHECK_JUST(op_node->op().GetOpTimeShape())->elem_cnt() == src_time_shape.elem_cnt());
-    CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
-  });
-  OperatorConf src_subset_tick = CHECK_JUST(FindSrcSubsetTickOpConf(job_builder->job()));
-  CHECK_JUST(CreateSourceTicksAndSrcSubsetTick(critical_section, &src_subset_tick, job_builder));
-  CHECK_JUST(
-      CreateDstSubsetTickAndSinkTicks(critical_section, src_subset_tick, tick_lbis, job_builder));
+  auto* src_map = critical_section->mutable_machine_id2source_tick_op_name();
+  const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*src_map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  auto* sink_map = critical_section->mutable_machine_id2sink_tick_op_name();
+  const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+    (*sink_map)[machine_id] = op_name;
+    return Maybe<void>::Ok();
+  };
+  JUST(AutoSourceAndSinkTick(op_graph, job_builder, DoEachSrc, DoEachSink));
+  return Maybe<void>::Ok();
 }
 
-void AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
-  ForEachInputCriticalSectionOpNodes(
-      op_graph, [&](const HashSet<const OpNode*>& op_nodes,
-                    const std::vector<std::string>& lbi_producer_op_names) {
-        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder);
-      });
+Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
+                                                       JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  JUST(ForEachInputCriticalSectionOpNodes(
+      op_graph,
+      [&](const HashSet<const OpNode*>& op_nodes,
+          const std::vector<std::string>& lbi_producer_op_names) -> Maybe<void> {
+        JUST(AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder));
+        return Maybe<void>::Ok();
+      }));
+  return Maybe<void>::Ok();
 }
 
-void AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder) {
-  ForEachOutputCriticalSectionOpNodes(
-      op_graph, [&](const HashSet<const OpNode*>& op_nodes,
-                    const std::vector<std::string>& lbi_producer_op_names) {
-        AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder);
-      });
+Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
+                                                        JobBuilder* job_builder) {
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  JUST(ForEachOutputCriticalSectionOpNodes(
+      op_graph,
+      [&](const HashSet<const OpNode*>& op_nodes,
+          const std::vector<std::string>& lbi_producer_op_names) -> Maybe<void> {
+        JUST(AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder));
+        return Maybe<void>::Ok();
+      }));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

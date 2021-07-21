@@ -66,10 +66,7 @@ def _test_arctan(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
     def test_atan(test_case):
         arg_dict = OrderedDict()
