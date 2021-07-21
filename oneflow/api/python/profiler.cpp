@@ -26,6 +26,10 @@ ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
   m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
 
   m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+
+  m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
+
+  m.def("ProfilerStop", []() { profiler::ProfilerStop(); });
 }
 
 }  // namespace oneflow

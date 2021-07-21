@@ -20,7 +20,7 @@ import imp
 import importlib.util
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 from typing import List
 import oneflow._oneflow_internal
 

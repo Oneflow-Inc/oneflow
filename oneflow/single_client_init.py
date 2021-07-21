@@ -58,7 +58,6 @@ time.sleep(1)
 del time
 
 oneflow._oneflow_internal.SetIsMultiClient(False)
-env_util.init_default_physical_env()
 session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
 )
@@ -114,12 +113,12 @@ INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 
 import atexit
 from oneflow.compatible.single_client.python.framework.session_context import (
-    TryCloseDefaultSession,
+    TryCloseAllSession,
 )
 
-atexit.register(TryCloseDefaultSession)
+atexit.register(TryCloseAllSession)
 
-del TryCloseDefaultSession
+del TryCloseAllSession
 del atexit
 
 import sys
