@@ -41,7 +41,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
   } else {
     // Sequantialize instructions to avoid explosive memory allocation of source ops
-    if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
+    if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
       DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
     }
   }

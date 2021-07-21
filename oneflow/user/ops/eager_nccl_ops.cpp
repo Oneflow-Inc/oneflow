@@ -28,6 +28,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
+    .Attr<std::vector<int64_t>>("sorted_ranks")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();

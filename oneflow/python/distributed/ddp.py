@@ -23,6 +23,7 @@ from oneflow.python.nn.module import Module
 
 def allreducefn(reversed_param_list, param, nccl_allreduce_op):
     assert param.device.type == "cuda"
+    assert param.device.index == flow.distributed.get_local_rank()
 
     def allreduce(grad):
         reversed_param_list[param][0] = True
@@ -45,12 +46,12 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
 
 @oneflow_export("ddp")
 def DDP(module: Module):
-    assert flow.distributed.get_local_rank() == flow.distributed.get_rank()
     world_size = flow.distributed.get_world_size()
     nccl_allreduce_op = (
         builtin_op("eager_nccl_all_reduce")
         .Input("in")
         .Output("out")
+        .Attr("sorted_ranks", [0, 1])
         .Attr("parallel_conf", f'device_tag: "gpu", device_name: "0:0-{world_size-1}"',)
         .Build()
     )

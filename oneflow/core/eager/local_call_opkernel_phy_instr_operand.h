@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 
+#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -46,17 +47,25 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
-  LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                   const one::EagerBlobObjectListPtr& inputs,
-                                   const one::EagerBlobObjectListPtr& outputs,
-                                   const one::OpExprInterpContext& op_interp_ctx_)
-      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), op_interp_ctx_(op_interp_ctx_) {}
+  LocalCallOpKernelPhyInstrOperand(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+      const one::OpExprInterpContext& op_interp_ctx_,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
+      : opkernel_(opkernel),
+        inputs_(inputs),
+        outputs_(outputs),
+        op_interp_ctx_(op_interp_ctx_),
+        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
+  const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
+    return dev_vm_dep_object_consume_mode_;
+  }
 
   one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
 
@@ -88,6 +97,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   one::EagerBlobObjectListPtr outputs_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
+  const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
 };
 
 }  // namespace vm

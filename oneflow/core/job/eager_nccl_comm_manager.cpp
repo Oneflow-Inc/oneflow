@@ -25,6 +25,13 @@ namespace oneflow {
 
 namespace {
 
+std::string GetNcclUniqueIdRpcKey(const std::vector<int64_t>& sorted_process_ranks) {
+  std::ostringstream oss;
+  oss << "eager_nccl_unique_id_rpc_key";
+  for (const auto& rank : sorted_process_ranks) { oss << "," << rank; }
+  return oss.str();
+}
+
 std::string GetNcclUniqueIdRpcKey(const std::vector<std::pair<int64_t, int64_t>>& sorted_devices) {
   std::ostringstream oss;
   oss << "eager_nccl_unique_id_rpc_key";
@@ -47,6 +54,29 @@ bool CompareDeviceSetPair(const std::pair<int64_t, int64_t>& a,
   } else {
     return a.first < b.first;
   }
+}
+
+void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
+                    const std::vector<int64_t>& sorted_process_ranks) {
+  ncclUniqueId nccl_unique_id{};
+  auto it = std::find(sorted_process_ranks.cbegin(), sorted_process_ranks.cend(),
+                      GlobalProcessCtx::Rank());
+  CHECK(it != sorted_process_ranks.end());
+  int rank_in_comm = std::distance(sorted_process_ranks.cbegin(), it);
+  if (rank_in_comm == 0) {
+    OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
+    Global<CtrlClient>::Get()->PushKV(key,
+                                      std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
+  } else {
+    Global<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
+      memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
+    });
+  }
+  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = "
+            << sorted_process_ranks.size()
+            << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id)
+            << ", rank = " << rank_in_comm << ", key = {" << key << "}\n";
+  OF_NCCL_CHECK(ncclCommInitRank(comm, sorted_process_ranks.size(), nccl_unique_id, rank_in_comm));
 }
 
 void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
@@ -85,6 +115,27 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
       OF_NCCL_CHECK(ncclCommDestroy(device_id7comm.second));
     }
   }
+}
+
+ncclComm_t EagerNcclCommMgr::GetCommForPrimaryDevice(const std::vector<int64_t>& sorted_process_ranks) {
+  int dev;
+  OF_CUDA_CHECK(cudaGetDevice(&dev));
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = sorted_process_ranks2comm_.find(sorted_process_ranks);
+    if (it != sorted_process_ranks2comm_.end()) { return it->second; }
+  }
+
+  ncclComm_t comm;
+  std::string nccl_unique_id_rpc_key = GetNcclUniqueIdRpcKey(sorted_process_ranks);
+  CreateNcclComm(&comm, dev, nccl_unique_id_rpc_key, sorted_process_ranks);
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sorted_process_ranks2comm_[sorted_process_ranks] = comm;
+  }
+  return comm;
 }
 
 ncclComm_t EagerNcclCommMgr::GetCommForDevice(

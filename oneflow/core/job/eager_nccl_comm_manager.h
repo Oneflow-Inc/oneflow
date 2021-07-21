@@ -30,6 +30,7 @@ class EagerNcclCommMgr final {
   OF_DISALLOW_COPY_AND_MOVE(EagerNcclCommMgr);
   ~EagerNcclCommMgr();
 
+  ncclComm_t GetCommForPrimaryDevice(const std::vector<int64_t>& sorted_process_ranks);
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamId(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                          const int32_t stream_id);
@@ -40,6 +41,7 @@ class EagerNcclCommMgr final {
 
   std::map<std::set<std::pair<int64_t, int64_t>>, HashMap<int64_t, ncclComm_t>>
       device_set2device_id2comm_;
+  std::map<std::vector<int64_t>, ncclComm_t> sorted_process_ranks2comm_;
   std::map<std::string, HashMap<int64_t, ncclComm_t>> device7stream2device_id2comm_;
   std::mutex mutex_;
 };
