@@ -15,10 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     python_callback as python_callback,
 )
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.eager import (
     interpreter_callback as interpreter_callback,
 )
 import oneflow._oneflow_internal

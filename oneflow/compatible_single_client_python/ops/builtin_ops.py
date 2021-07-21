@@ -18,11 +18,11 @@ from __future__ import absolute_import
 
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework.attr_util import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework.attr_util import (
     convert_to_user_attr_value,
 )
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("builtin_op")

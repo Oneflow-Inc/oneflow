@@ -18,7 +18,7 @@ import os
 import struct
 import cv2
 import numpy as np
-from oneflow.core.record import record_pb2 as record_pb
+from oneflow.compatible.single_client.core.record import record_pb2 as record_pb
 
 
 class OFRecordDataset(object):

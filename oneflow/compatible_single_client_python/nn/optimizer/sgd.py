@@ -19,11 +19,11 @@ import collections
 
 from oneflow.compatible import single_client as flow
 
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.parameter import Parameter
+from oneflow.compatible.single_client.python.nn.parameter import Parameter
 from .optimizer import Optimizer, ParamGroup
 
 

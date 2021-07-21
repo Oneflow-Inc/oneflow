@@ -15,33 +15,39 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from typing import Optional, Sequence, Union
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_context,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import runtime_mode as rt_mode
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.framework import (
     distribute as distribute_util,
 )
-from oneflow.compatible_single_client_python.experimental import (
+from oneflow.compatible.single_client.python.experimental import (
     name_scope as name_scope,
 )
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
-from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
-from oneflow.compatible_single_client_python.eager import gradient_util as gradient_util
-from oneflow.compatible_single_client_python.eager import op_executor as op_executor
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
+from oneflow.compatible.single_client.core.job import (
+    regularizer_conf_pb2 as regularizer_conf_util,
+)
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 from oneflow.compatible import single_client as flow
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
