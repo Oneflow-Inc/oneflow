@@ -41,7 +41,7 @@ namespace one {
     const auto& tensor = std::make_shared<MirroredTensor>(impl);
     const auto& outputs = std::make_shared<TensorTuple>();
     outputs->push_back(tensor);
-    if (shape->elem_cnt() != 0) { JUST(RunEmptyOp(outputs.get())); }
+    JUST(RunEmptyOp(outputs.get()));
     return tensor;
   }
 }
