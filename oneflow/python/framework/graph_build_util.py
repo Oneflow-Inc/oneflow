@@ -162,6 +162,7 @@ def build_graph_state(state_block):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
+    assert isinstance(state_block.origin, Tensor)
     if not state_block.origin.is_determined:
         state_block.origin.determine()
     tensor_in_c = state_block.origin._local_or_consistent_tensor
