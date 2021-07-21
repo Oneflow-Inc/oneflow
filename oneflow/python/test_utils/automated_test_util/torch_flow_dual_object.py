@@ -161,7 +161,6 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_args,
                             oneflow_kwargs,
                         ) = get_args(pytorch_method, *args, **kwargs)
-                        pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
                         try:
                             pytorch_res = pytorch_method(
                                 *pytorch_args, **pytorch_kwargs
