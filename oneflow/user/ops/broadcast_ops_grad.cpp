@@ -178,7 +178,7 @@ REGISTER_USER_OP_GRAD("broadcast_div")
     });
 
 REGISTER_USER_OP_GRAD("broadcast_floor_mod")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
       }

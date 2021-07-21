@@ -817,12 +817,8 @@ class FMod(Module):
                 y = flow.F.cast(y, flow.float32)
         else:
             raise ValueError("Expected type of other is Tensor or Scalar")
-        cond = x.lt(0)
-        x = x.lt(0).where(-x,x)
-        y = y.lt(0).where(-y,y)
-        res = flow.F.fmod(x, y)
-        
-        return cond.where(-res,res)
+       
+        return flow.F.fmod(x, y)
 
 @oneflow_export("fmod")
 @experimental_api
