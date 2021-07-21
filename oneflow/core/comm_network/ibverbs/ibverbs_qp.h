@@ -66,12 +66,12 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
-  void PostSendReadRequestHandle(ibv_send_wr wr, ibv_sge sge, ibv_send_wr* bad_wr);
+  void PostSendReadInQueue(ibv_send_wr wr, ibv_sge sge);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
   void RecvDone(WorkRequestId*);
-  void ReadSendDoneHandle();
+  void ReadSendDoneSendQueueMessage();
 
  private:
   WorkRequestId* NewWorkRequestId();

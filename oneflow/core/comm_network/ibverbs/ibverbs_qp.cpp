@@ -17,7 +17,6 @@ limitations under the License.
 #include <infiniband/verbs.h>
 #include <memory>
 #include <mutex>
-#include "glog/logging.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -31,7 +30,7 @@ namespace oneflow {
 
 namespace {
 
-constexpr int kMaxSendWr = 4096;
+constexpr int kMaxSendWr = 32;
 
 }
 
@@ -65,7 +64,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
-  max_outstanding_send_wr_ = std::min(device_attr.max_qp_wr, kMaxSendWr) - 2;
+  max_outstanding_send_wr_ = std::min(device_attr.max_qp_wr, kMaxSendWr);
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -157,8 +156,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.imm_data = 0;
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
-    ibv_send_wr* bad_wr = nullptr;
-    PostSendReadRequestHandle(wr, sge, bad_wr);
+    PostSendReadInQueue(wr,  sge);
   }
 }
 
@@ -180,28 +178,19 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr.send_flags = 0;
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
-  ibv_send_wr* bad_wr = nullptr;
-  PostSendReadRequestHandle(wr, sge, bad_wr);
+  PostSendReadInQueue(wr,  sge);
 }
 
-void IBVerbsQP::PostSendReadRequestHandle(ibv_send_wr wr, ibv_sge sge, ibv_send_wr* bad_wr) {
+void IBVerbsQP::PostSendReadInQueue(ibv_send_wr wr, ibv_sge sge) {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
   std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
   if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     num_outstanding_send_wr_++;
+    ibv_send_wr* bad_wr = nullptr;
     CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
   } else {
     std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::make_pair(wr, sge);
     msg_pendding_list_.push(ibv_send_wr_sge);
-    if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
-      std::pair<ibv_send_wr, ibv_sge> new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
-      msg_pendding_list_.pop();
-      ibv_send_wr new_wr = new_ibv_send_wr_sge.first;
-      new_wr.sg_list = &new_ibv_send_wr_sge.second;
-      ibv_send_wr* new_bad_wr = nullptr;
-      num_outstanding_send_wr_++;
-      CHECK_EQ(ibv_post_send(qp_, &new_wr, &new_bad_wr), 0);
-    }
   }
 }
 
@@ -212,7 +201,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
     Global<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
-  ReadSendDoneHandle();
+  ReadSendDoneSendQueueMessage();
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
@@ -221,7 +210,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
     send_msg_buf_.push(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
-  ReadSendDoneHandle();
+  ReadSendDoneSendQueueMessage();
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
@@ -232,12 +221,11 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   DeleteWorkRequestId(wr_id);
 }
 
-void IBVerbsQP::ReadSendDoneHandle() {
+void IBVerbsQP::ReadSendDoneSendQueueMessage() {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
   if (num_outstanding_send_wr_ > 0) { num_outstanding_send_wr_--; }
-  if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
-    std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
-    if (msg_pendding_list_.empty() == false) {
+  std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
+  if (msg_pendding_list_.empty() == false) {
       std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(msg_pendding_list_.front());
       ibv_send_wr wr = ibv_send_wr_sge.first;
       wr.sg_list = &ibv_send_wr_sge.second;
@@ -246,7 +234,6 @@ void IBVerbsQP::ReadSendDoneHandle() {
       num_outstanding_send_wr_++;
       CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
     }
-  }
 }
 
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
