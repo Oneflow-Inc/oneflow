@@ -39,7 +39,7 @@ def check_unwanted_test_scripts(python_test_dir=None, allowed=None):
 
 check_unwanted_test_scripts(
     python_test_dir=os.path.join(src_root, "oneflow/python/test"),
-    allowed=["custom_ops", "dataloader", "graph", "models", "modules", "tensor", "util"],
+    allowed=["custom_ops", "dataloader", "graph", "models", "modules", "tensor"],
 )
 
 check_unwanted_test_scripts(
