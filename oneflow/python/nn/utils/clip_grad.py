@@ -35,7 +35,7 @@ def clip_grad_norm_(
     parameters: _tensor_or_tensors,
     max_norm: float,
     norm_type: float = 2.0,
-    error_if_nonfinite: bool = False,
+    error_if_nonfinite: bool = True,
 ) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
@@ -49,7 +49,7 @@ def clip_grad_norm_(
             infinity norm.
         error_if_nonfinite (bool): if True, an error is thrown if the total
             norm of the gradients from :attr:``parameters`` is ``nan``,
-            ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+            ``inf``, or ``-inf``. Default: True (will switch to True in the future)
 
     Returns:
         Parameters after cliping gradient norm
@@ -100,6 +100,11 @@ def clip_grad_norm_(
         total_norm = (
             norms[0] if len(norms) == 1 else flow.max(flow.experimental.stack(norms))
         )
+    elif norm_type == float("-inf"):
+        norms = [p.grad.detach().abs().min().to(device) for p in parameters]
+        total_norm = (
+            norms[0] if len(norms) == 1 else flow.min(flow.experimental.stack(norms))
+        )
     else:
         total_norm = flow.experimental.linalg.vector_norm(
             flow.experimental.stack(
@@ -132,7 +137,8 @@ def clip_grad_norm_(
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
         for p in parameters:
-            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device))
+            #TODO: Switch to inplace multiply in future
+            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device)) 
     return total_norm
 
 
