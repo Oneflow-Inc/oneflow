@@ -113,11 +113,11 @@ class Graph(object):
                 lazy_arg_op_names.append(op_name)
 
             # Deal with parameter and buffer
-            state_name2tensor = OrderedDict()
+            state_op_names = []
+            state_tensors = []
             for state_block in self._state():
-                state_name2tensor[
-                    state_block.name_prefix + state_block.name
-                ] = state_block.origin
+                state_op_names.append(state_block.name_prefix + state_block.name)
+                state_tensors.append(state_block.origin)
                 state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
 
             # Deal with module in self.build(*args)
@@ -144,7 +144,7 @@ class Graph(object):
                 eager_outputs = tuple(eager_outputs)
 
             # TODO(): call self._c_nn_graph
-            #     register lazy_arg_op_names/state_name2tensor/eager_output_op_names
+            #     register lazy_arg_op_names/state_op_names/state_tensors/eager_output_op_names
 
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
