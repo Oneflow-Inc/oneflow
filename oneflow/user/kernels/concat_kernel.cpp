@@ -57,6 +57,10 @@ class ConcatKernel final : public user_op::OpKernel {
     CHECK_GT(rows, 0);
     int64_t out_col_offset = 0;
     for (const auto& in_arg_pair : ctx->inputs()) {
+      if (ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second)->shape().elem_cnt()
+          == 0) {
+        continue;
+      }
       const user_op::Tensor* in_tensor =
           ctx->Tensor4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
       const int64_t in_cols = in_tensor->shape().Count(axis);

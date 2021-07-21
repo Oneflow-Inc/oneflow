@@ -119,6 +119,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
+  // If all outputs are empty tensor, skips kernel
   if (IsEmptyOutput(outputs)) { return Maybe<void>::Ok(); }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
