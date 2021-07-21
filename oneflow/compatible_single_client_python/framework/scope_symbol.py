@@ -15,8 +15,8 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.eager.symbol import Symbol
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.eager.symbol import Symbol
+from oneflow.compatible.single_client.python.eager import (
     symbol_storage as symbol_storage,
 )
 from oneflow._oneflow_internal.oneflow.core.job import scope as scope_cfg
