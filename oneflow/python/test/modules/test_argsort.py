@@ -47,10 +47,7 @@ def _test_tensor_argsort(test_case, data_shape, axis, descending, data_type, dev
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestArgsort(flow.unittest.TestCase):
     def test_argsort(test_case):
         arg_dict = OrderedDict()

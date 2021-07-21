@@ -28,6 +28,16 @@ def _ntuple(n):
     return parse
 
 
+def _getint():
+    def parse(x):
+        if isinstance(x, container_abcs.Iterable):
+            return int(x[0])
+        return int(x)
+
+    return parse
+
+
+_getint = _getint()
 _single = _ntuple(1)
 _pair = _ntuple(2)
 _triple = _ntuple(3)

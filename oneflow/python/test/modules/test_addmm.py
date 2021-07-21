@@ -51,10 +51,7 @@ def _test_addmm_backward(test_case, shape, alpha, beta, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestAddmm(flow.unittest.TestCase):
     def test_addmm(test_case):
         arg_dict = OrderedDict()
