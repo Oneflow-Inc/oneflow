@@ -22,7 +22,9 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
@@ -201,6 +203,10 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
+  return IsContiguous(tensor).GetOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -219,6 +225,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                  return std::shared_ptr<Tensor>();
                                }
                              })
+      .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
+      .def("stride",
+           [](const Tensor& t) {
+             const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
+             return py::tuple(py::make_iterator(stride.begin(), stride.end()));
+           })
+      .def("is_contiguous", &ApiIsContiguous)
       // setter of grad
       .def("set_grad",
            [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
