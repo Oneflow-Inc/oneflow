@@ -36,7 +36,7 @@ class TestAllReduce(flow.unittest.TestCase):
             flow.builtin_op("eager_nccl_all_reduce")
             .Input("in")
             .Output("out")
-            .Attr("parallel_conf", f'device_tag: "gpu", device_name: "0:0-1"',)
+            .Attr("sorted_ranks", list(range(flow.distributed.get_world_size())))
             .Build()
         )
 

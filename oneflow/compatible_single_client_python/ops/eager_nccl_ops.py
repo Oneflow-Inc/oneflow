@@ -40,6 +40,7 @@ def eager_nccl_all_reduce(
         .Input("in", [x])
         .Output("out")
         .Attr("parallel_conf", parallel_conf)
+        .Attr("sorted_ranks", [])
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

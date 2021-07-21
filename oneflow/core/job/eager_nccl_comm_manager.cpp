@@ -117,7 +117,8 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
   }
 }
 
-ncclComm_t EagerNcclCommMgr::GetCommForPrimaryDevice(const std::vector<int64_t>& sorted_process_ranks) {
+ncclComm_t EagerNcclCommMgr::GetCommForPrimaryDevice(
+    const std::vector<int64_t>& sorted_process_ranks) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
 
