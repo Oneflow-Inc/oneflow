@@ -414,9 +414,8 @@ jobs:
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
           extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
 
-          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-test/0.1"
 
-          oneflow_test_cache_dir=${img_cache_base_dir}/test
+          oneflow_test_cache_dir="$HOME/ci-cache/${{ github.repository }}/test_cache"
           extra_docker_args="-v ${oneflow_test_cache_dir}:${oneflow_test_cache_dir}"
           extra_docker_args="-e ONEFLOW_TEST_CACHE_DIR=${oneflow_test_cache_dir}"
 
@@ -424,6 +423,7 @@ jobs:
           echo "image_name=oneflow-test:0.2" >> $GITHUB_ENV
           echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
 
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-test/0.1"
           pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
       - name: Build docker image for testing
