@@ -148,11 +148,6 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
           /* attributes */ mul_op->getAttrs());
       builder.create<ReturnOp>(mul_op->getLoc(), scalar_mul.y());
       jit_module->push_back(function);
-      jit_module->dump();
-
-      LogicalResult result = Lower(context, jit_module);
-      if (result.failed()) { exit(EXIT_FAILURE); }
-      jit_module->dump();
       std::string mlir;
       llvm::raw_string_ostream os_mlir(mlir);
       jit_module->print(os_mlir);

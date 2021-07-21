@@ -54,6 +54,7 @@ class MlirJitKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "MlirJitKernel::Compute";
+    LOG(ERROR) << ctx->Attr<std::string>("mlir_assembly");
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
