@@ -75,8 +75,7 @@ class DstFile:
         self.imports.add(seg)
 
     def __str__(self) -> str:
-        imports = list(self.imports)
-        return "\n".join(imports + self.segs)
+        return "\n".join(self.segs)
 
     def merge_file(self, path=None):
         with open(path, "r") as f:
@@ -107,7 +106,8 @@ class DstFileDict:
         assert isinstance(imports, list)
         dst_file = cls.state[path]
         for i in imports:
-            if "__future__" not in i:
+            if i not in dst_file.imports and "__future__" not in i:
+                dst_file.append_import(i)
                 dst_file.append_seg(i + "\n")
 
     @classmethod
