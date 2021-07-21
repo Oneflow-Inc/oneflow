@@ -17,11 +17,11 @@ class TransposeOp final : public TVMOpKernel {
 
     tvm::Array<tvm::Integer> tvm_axes;
     for (int32_t dim : axes) { tvm_axes.push_back(dim); }
-    auto transpose_attrs = tvm::make_node<tvm::relay::TransposeAttrs>();
+    auto transpose_attrs = tvm::runtime::make_object<tvm::relay::TransposeAttrs>();
     transpose_attrs->axes = tvm_axes;
 
     auto op = tvm::relay::Op::Get("transpose");
-    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(transpose_attrs), {});
+    auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(transpose_attrs), {});
     ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };

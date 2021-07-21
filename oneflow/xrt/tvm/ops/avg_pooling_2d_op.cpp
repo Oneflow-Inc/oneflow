@@ -9,10 +9,11 @@ namespace of_tvm {
 class AveragePooling2DOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    LOG(WARNING) << ctx->DebugStr();
     tvm::Array<tvm::relay::Expr> node_inputs;
-    node_inputs.push_back(ctx->GetExpr4InputName("in"));
+    node_inputs.push_back(ctx->GetExpr4InputName("x_0"));
 
-    auto attrs = tvm::make_node<tvm::relay::AvgPool2DAttrs>();
+    auto attrs = tvm::runtime::make_object<tvm::relay::AvgPool2DAttrs>();
     {
       std::string data_format = ctx->Attr<std::string>("data_format");
       CHECK(data_format == "channels_last" || data_format == "channels_first")
@@ -23,6 +24,9 @@ class AveragePooling2DOp final : public TVMOpKernel {
         data_format = "NHWC";
       }
       attrs->layout = data_format;
+      attrs->ceil_mode = false;
+      // corresponding to CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING
+      attrs->count_include_pad = false;
 
       std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
       CHECK_EQ(2, strides.size());
@@ -33,16 +37,12 @@ class AveragePooling2DOp final : public TVMOpKernel {
       attrs->pool_size = tvm::Array<tvm::relay::IndexExpr>({pool_size.at(0), pool_size.at(1)});
 
       attrs->padding = Calc2DPadding4Pool(data_format, ctx->Attr<std::string>("padding"),
-          ctx->GetShape4InputName("in"), pool_size, strides);
-
-      attrs->ceil_mode = false;
-      // corresponding to CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING
-      attrs->count_include_pad = false;
+          ctx->GetShape4InputName("x_0"), pool_size, strides);
     }
 
     auto op = tvm::relay::Op::Get("nn.avg_pool2d");
-    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(attrs), {});
-    ctx->SetExpr4OutputName("out", std::move(expr));
+    auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(attrs), {});
+    ctx->SetExpr4OutputName("y_0", std::move(expr));
   }
 };
 

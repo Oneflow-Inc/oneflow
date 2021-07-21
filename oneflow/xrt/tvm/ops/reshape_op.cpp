@@ -19,11 +19,11 @@ class ReshapeOp final : public TVMOpKernel {
     for (int64_t dim : conf_shape.dim_vec()) {
       tvm_conf_shape.push_back(static_cast<int32_t>(dim));
     }
-    auto reshape_attrs = tvm::make_node<tvm::relay::ReshapeAttrs>();
+    auto reshape_attrs = tvm::runtime::make_object<tvm::relay::ReshapeAttrs>();
     reshape_attrs->newshape = tvm_conf_shape;
 
     auto op = tvm::relay::Op::Get("reshape");
-    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(reshape_attrs), {});
+    auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(reshape_attrs), {});
     ctx->SetExpr4OutputName("out", std::move(expr));
   }
 };

@@ -2,6 +2,8 @@
 #define ONEFLOW_XRT_TVM_OPS_NN_UTIL_H_
 
 #include "oneflow/xrt/tvm/ops/op_kernel.h"
+#include <tvm/relay/attrs/nn.h>
+#include <tvm/runtime/memory.h>
 
 namespace oneflow {
 namespace xrt {

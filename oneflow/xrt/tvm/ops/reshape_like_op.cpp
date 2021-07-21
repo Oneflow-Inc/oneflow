@@ -16,7 +16,7 @@ class ReshapeLikeOp final : public TVMOpKernel {
     CHECK_EQ(x_shape.elem_cnt(), like_shape.elem_cnt());
 
     auto op = tvm::relay::Op::Get("reshape_like");
-    auto expr = tvm::relay::CallNode::make(op, node_inputs, tvm::Attrs(), {});
+    auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(), {});
     ctx->SetExpr4OutputName("y", std::move(expr));
   }
 };

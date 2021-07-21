@@ -17,7 +17,6 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Conv(const std::string& data_for
     const std::string& padding_format, const Shape& in_shape, const Shape& weight_shape,
     const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation) {
   if (padding_format == "valid") { return tvm::Array<tvm::relay::IndexExpr>({0, 0}); }
-  CHECK_EQ("same", padding_format);
 
   auto Int64VecToInt32Vec = [](const std::vector<int64_t>& vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret;
@@ -48,11 +47,13 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Conv(const std::string& data_for
 class Conv2DOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    LOG(WARNING) << ctx->DebugStr();
+    
     tvm::Array<tvm::relay::Expr> inputs;
     inputs.push_back(ctx->GetExpr4InputName("in"));
     inputs.push_back(ctx->GetExpr4InputName("weight"));
 
-    auto conv_attrs = tvm::make_node<tvm::relay::Conv2DAttrs>();
+    auto conv_attrs = tvm::runtime::make_object<tvm::relay::Conv2DAttrs>();
     {
       std::string data_format = ctx->Attr<std::string>("data_format");
       CHECK(data_format == "channels_last" || data_format == "channels_first")
@@ -89,16 +90,16 @@ class Conv2DOp final : public TVMOpKernel {
     }
 
     auto conv_op = tvm::relay::Op::Get("nn.conv2d");
-    auto conv = tvm::relay::CallNode::make(conv_op, inputs, tvm::Attrs(conv_attrs), {});
+    auto conv = tvm::relay::Call(conv_op, inputs, tvm::Attrs(conv_attrs), {});
 
     bool use_bias = ctx->Attr<bool>("use_bias");
     if (use_bias) {
-      auto bias_add_attrs = tvm::make_node<tvm::relay::BiasAddAttrs>();
+      auto bias_add_attrs = tvm::runtime::make_object<tvm::relay::BiasAddAttrs>();
       bias_add_attrs->axis = 1;
 
       auto bias_add_in = ctx->GetExpr4InputName("bias");
       auto bias_add_op = tvm::relay::Op::Get("nn.bias_add");
-      auto bias_add = tvm::relay::CallNode::make(
+      auto bias_add = tvm::relay::Call(
           bias_add_op, {conv, bias_add_in}, tvm::Attrs(bias_add_attrs), {});
       ctx->SetExpr4OutputName("out", std::move(bias_add));
     } else {
