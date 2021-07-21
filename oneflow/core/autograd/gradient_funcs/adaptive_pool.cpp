@@ -51,7 +51,7 @@ Maybe<void> AdaptivePoolNdGrad::Init(const OpExpr& op, std::string mode, const i
 }
 
 Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
-                                    const TensorTuple& outputs, const AttrMap& attrs) const {
+                                        const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -59,8 +59,8 @@ Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolInterpState* ctx, const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
-                                  TensorTuple* in_grads) const {
+Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolInterpState* ctx,
+                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 

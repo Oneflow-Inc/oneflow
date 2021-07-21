@@ -25,6 +25,7 @@ from test_util import GenArgList
 
 # TODO: auto test
 
+
 def _test_adaptive_avgpool1d_forward(test_case, device):
     input = flow.Tensor(
         np.array(

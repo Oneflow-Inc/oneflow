@@ -205,8 +205,8 @@ class AdaptivePoolNdGradFunctor {
     for (const auto& mode : {"avg"}) {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] = CHECK_JUST(
-            one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+        op_expr_map_[op_type_name] =
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
       }
     }
   }
@@ -219,7 +219,7 @@ class AdaptivePoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-          << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
+        << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
   }
