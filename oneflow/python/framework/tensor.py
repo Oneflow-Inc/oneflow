@@ -842,9 +842,6 @@ class UndeterminedTensor:
             parallel_distribution = list(sbp)
         return _convert_tensor_to_consistent(self, parallel_distribution, placement)
 
-    def to(self, device):
-        return oneflow._oneflow_internal.F.copy(self, device)
-
 
 # used in Tensor.to_consistent func
 def _convert_tensor_to_consistent(tensor, parallel_distribution, placement):
