@@ -53,8 +53,6 @@ class ReluFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-// training:
-// out = dot(x, y)
 class ReluGradFunctor : public BinaryFunctor {
  public:
   ReluGradFunctor() {

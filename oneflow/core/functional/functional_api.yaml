@@ -700,4 +700,4 @@
 
 - name: "dot_grad"
   signature: "TensorTuple DotGrad(Tensor x, Tensor y, Tensor dout)"
-  bind_python: True
+  bind_python: False
