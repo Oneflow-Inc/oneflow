@@ -52,6 +52,16 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       target_dims->emplace_back(index_item.boolean());
       continue;
     }
+    if (index_item.IsEllipsis()) {
+      int64_t unspecified_ndims = ndims - specified_ndims;
+      unspecified_ndims = std::min(ndims - dim, unspecified_ndims);
+      for (int j = 0; j < unspecified_ndims; ++j) {
+        slice_indices->emplace_back(0, shape.At(dim + j), 1);
+        target_dims->emplace_back(shape.At(dim + j));
+      }
+      dim += unspecified_ndims;
+      continue;
+    }
     CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       CHECK_GT_OR_RETURN(shape.At(dim), 0) << "Slice cannot be applied to a 0-dim tensor.";
@@ -78,14 +88,6 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       }
       slice_indices->emplace_back(integer, integer + 1, 1);
       dim++;
-    } else if (index_item.IsEllipsis()) {
-      int64_t unspecified_ndims = ndims - specified_ndims;
-      unspecified_ndims = std::min(ndims - dim, unspecified_ndims);
-      for (int j = 0; j < unspecified_ndims; ++j) {
-        slice_indices->emplace_back(0, shape.At(dim + j), 1);
-        target_dims->emplace_back(shape.At(dim + j));
-      }
-      dim += unspecified_ndims;
     } else if (index_item.IsTensor()) {
       slice_indices->emplace_back(0, shape.At(dim), 1);
       tensor_indices->resize(target_dims->size());
@@ -99,6 +101,51 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     target_dims->emplace_back(shape.At(i));
   }
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
+  bool first = true;
+  std::shared_ptr<const Shape> expanded_shape;
+  for (int i = 0; i < indices.size(); ++i) {
+    if (!indices.at(i)) { continue; }
+    if (first) {
+      expanded_shape = indices.at(i)->shape();
+      first = false;
+    } else {
+      const auto& shape = indices.at(i)->shape();
+      int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
+      DimVector sizes(ndims);
+      for (int j = ndims - 1; j >= 0; --j) {
+        int dim = j - (ndims - shape->NumAxes());
+        int expanded_dim = j - (ndims - expanded_shape->NumAxes());
+        if (dim < 0) {
+          sizes[j] = expanded_shape->At(expanded_dim);
+        } else if (expanded_dim < 0) {
+          sizes[j] = shape->At(dim);
+        } else {
+          int size = shape->At(dim);
+          int expanded_size = expanded_shape->At(expanded_dim);
+          CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
+              << "Cannot broadcast advanced index to size " << std::max(size, expanded_size)
+              << " at dimension " << j << " since the size of another index is not 1.";
+          sizes[j] = std::max(size, expanded_size);
+        }
+      }
+      expanded_shape.reset(new Shape(sizes));
+    }
+  }
+  auto expanded_indices = std::make_shared<TensorTuple>(indices.size());
+  for (int i = 0; i < indices.size(); ++i) {
+    if (!indices.at(i)) { continue; }
+    if (*(indices.at(i)->shape()) != *expanded_shape) {
+      expanded_indices->at(i) = JUST(Expand(indices.at(i), *expanded_shape));
+    } else {
+      expanded_indices->at(i) = indices.at(i);
+    }
+  }
+  return expanded_indices;
 }
 
 Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
@@ -163,18 +210,20 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   return Transpose(input, permute);
 }
 
+}  // namespace
+
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->shape()->NumAxes(), indices.size())
       << "Too many indices for tensor of dimension " << input->shape()->NumAxes();
-  // TODO(): Expand the indices.
-
+  const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuos_subspace = JUST(IsContinuosSubspace(indices));
+
   // Since the start dimension cannot be specified for `gather_nd`, so we should
   // transpose the input as long as the first indice is null.
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
-  JUST(TransposeFront(input, indices, &transposed_input, &valid_indices));
+  JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
   if (valid_indices.empty()) { return input; }
   int index_ndim = valid_indices.at(0)->shape()->NumAxes();
   std::shared_ptr<Tensor> packed_indices;
@@ -183,7 +232,12 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   } else {
     packed_indices = JUST(ExpandDims(valid_indices.at(0), 0));
   }
-  packed_indices = JUST(Transpose(packed_indices, {1, 0}));
+  int packed_ndim = packed_indices->shape()->NumAxes();
+  CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
+  std::vector<int> permute(packed_ndim);
+  permute[packed_ndim - 1] = 0;
+  std::iota(permute.begin(), permute.end() - 1, 1);
+  packed_indices = JUST(Transpose(packed_indices, permute));
   auto result = JUST(GatherNd(transposed_input, packed_indices));
 
   int required_ndim = input->shape()->NumAxes() - valid_indices.size() + index_ndim;
