@@ -234,7 +234,6 @@ class TestGraph(flow.unittest.TestCase):
                 # weight is not get in conv1's forward, so it will return a Block
                 x = self.conv1.weight
                 test_case.assertEqual(type(x), flow.nn.graph.Block)
-                return x
 
         class SubModule1(flow.nn.Module):
             def __init__(self):
@@ -276,7 +275,6 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
                 )
-                return x
 
         class CustomModule1(flow.nn.Module):
             def __init__(self):
@@ -287,7 +285,6 @@ class TestGraph(flow.unittest.TestCase):
             def forward(self):
                 x = self.layer0()
                 y = self.layer1()
-                return x, y
 
         m = CustomModule1()
 
@@ -306,7 +303,7 @@ class TestGraph(flow.unittest.TestCase):
         g = CustomGraph1()
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        z = g._compile()
+        g._compile()
 
 
 if __name__ == "__main__":
