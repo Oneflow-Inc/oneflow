@@ -32,10 +32,6 @@ class AddOp final : public TVMOpKernel {
     auto op = tvm::relay::Op::Get("add");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(), {});
     ctx->SetExpr4OutputName("out_0", std::move(expr));
-
-    // auto reg = tvm::runtime::Registry::Get("relay.op._Register");
-    // auto s_i = tvm::runtime::Registry::Get("topi.generic.schedule_injective");
-    // (*reg)("add", "FTVMSchedule", *s_i, 10);
   }
 };
 

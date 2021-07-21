@@ -54,6 +54,26 @@ void TVMOpContext::SetExpr4OutputName(const std::string& name, tvm::relay::Expr&
   CHECK(output_name2expr_.emplace(name, std::move(expr)).second);
 }
 
+std::string TVMOpContext::DebugStr() {
+  std::string s;
+  s += "in_exprs: ";
+  for(const auto& pair : input_name2expr_) {
+    s += pair.first;
+    s += ",";
+  }
+  s += "\n input_arg: ";
+  for(const auto& pair : input_name2arg_) {
+    s += pair.first;
+    s += ",";
+  }
+  s += "\n output_expr: ";
+  for(const auto& pair : output_name2expr_) {
+    s += pair.first;
+    s += ",";
+  }
+  return s;
+} 
+
 }  // namespace of_tvm
 }  // namespace xrt
 }  // namespace oneflow

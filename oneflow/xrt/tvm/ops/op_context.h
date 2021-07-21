@@ -43,6 +43,8 @@ class TVMOpContext final : public OpContext {
   tvm::relay::Expr GetExpr4OutputName(const std::string& name) const;
   void SetExpr4OutputName(const std::string& name, tvm::relay::Expr&&);
 
+  std::string DebugStr();
+
  private:
   TVMOpContext(const TVMOpContext&) = delete;
   TVMOpContext& operator=(const TVMOpContext&) = delete;

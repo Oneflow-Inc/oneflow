@@ -112,6 +112,8 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode* node) {
     if (node->IsArgumentNode()) { return; }
+
+    LOG(WARNING) << "TVM compiling node <" << node->type() << ">:" << node->name();
     util::Map<Argument, tvm::relay::Expr> input_arg2expr;
     for (const auto* in_edge : node->in_edges()) {
       const Argument& in_arg = in_edge->argument();
