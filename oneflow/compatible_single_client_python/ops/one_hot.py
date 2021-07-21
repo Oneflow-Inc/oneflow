@@ -22,14 +22,14 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     distribute as distribute_util,
 )
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 from typing import Optional, Union
 

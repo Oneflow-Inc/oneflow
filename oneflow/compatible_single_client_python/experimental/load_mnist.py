@@ -19,7 +19,7 @@ import numpy as np
 from tqdm import tqdm
 import requests
 
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 def get_sha256hash(file_path, Bytes=1024):

@@ -23,25 +23,25 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     interpret_util as interpret_util,
 )
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import module as module_util
-from oneflow.compatible_single_client_python.ops import (
+from oneflow.compatible.single_client.python.framework import module as module_util
+from oneflow.compatible.single_client.python.ops import (
     math_unary_elementwise_ops as math_unary_elementwise_ops,
 )
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     stable_api,
 )
-from oneflow.compatible_single_client_python.ops.transpose_util import (
+from oneflow.compatible.single_client.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
 )
-from oneflow.compatible_single_client_python.ops.transpose_util import get_inversed_perm
+from oneflow.compatible.single_client.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
 

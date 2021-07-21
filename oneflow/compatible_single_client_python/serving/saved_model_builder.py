@@ -20,8 +20,8 @@ from google.protobuf import text_format
 
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
 from oneflow.compatible.single_client.core.serving import (
@@ -37,7 +37,7 @@ from oneflow.compatible.single_client.core.operator import (
 from oneflow.compatible.single_client.core.job import (
     sbp_parallel_pb2 as sbp_parallel_pb,
 )
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("saved_model.ModelBuilder")
