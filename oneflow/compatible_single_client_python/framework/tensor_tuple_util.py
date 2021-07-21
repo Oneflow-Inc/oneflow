@@ -17,7 +17,7 @@ limitations under the License.
 import collections
 from typing import Union, Sequence, Tuple, Optional
 
-from oneflow.compatible_single_client_python.framework.tensor import Tensor as PyTensor
+from oneflow.compatible.single_client.python.framework.tensor import Tensor as PyTensor
 from oneflow._oneflow_internal import TensorTuple, Tensor
 
 
