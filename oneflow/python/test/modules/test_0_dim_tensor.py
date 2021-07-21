@@ -29,10 +29,16 @@ def _test_0_dim_tensor(test_case, device):
     scalar = 9.999
     input_np = np.array(scalar)
     input = flow.Tensor(input_np)
-    # print("input >>>>>>>>>>>>>> ", input) 
-    # # input >>>>>>>>>>>>>>  tensor(9.999, dtype=oneflow.float32)
+    # print(input) >>>  tensor(9.999, dtype=oneflow.float32)
     test_case.assertEqual(input.numel(), 1)
     test_case.assertEqual(input.ndimension(), 0)
+
+    x1 = flow.Tensor(np.array(2), dtype=flow.float32)
+    x2 = flow.Tensor(np.array(3), dtype=flow.float32)
+    y1 = x1 * x2
+    y2 = x1 + x2
+    test_case.assertEqual(y1.numpy(), 6.0)
+    test_case.assertEqual(y2.numpy(), 5.0)
 
 
 @flow.unittest.skip_unless_1n1d()

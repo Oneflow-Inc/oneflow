@@ -50,10 +50,7 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) {
-  UpdateElemCnt();
-  printf("\nShape >>> Initialize >>> elem_cnt_: %ld >> is_scalar: %d", elem_cnt_, is_scalar_);
-}
+Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) { UpdateElemCnt(); }
 
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
