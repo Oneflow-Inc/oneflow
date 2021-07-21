@@ -172,7 +172,11 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {}
+def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
+  let attrs = (ins
+    StrAttr:$mlir_assembly
+  );
+}
 
 #endif // ONEFLOW_OPS
 

@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 REGISTER_USER_OP("mlir_jit")
-    .Attr<std::string>("mlir")
+    .Attr<std::string>("mlir_assembly")
     .InputWithMinimum("in", 0)
     .OutputWithMinimum("out", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

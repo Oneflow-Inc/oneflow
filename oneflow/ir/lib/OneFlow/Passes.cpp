@@ -153,7 +153,10 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
       LogicalResult result = Lower(context, jit_module);
       if (result.failed()) { exit(EXIT_FAILURE); }
       jit_module->dump();
-
+      std::string mlir;
+      llvm::raw_string_ostream os_mlir(mlir);
+      jit_module->print(os_mlir);
+      created->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
       cast_op.erase();
       return created->getResults();
     }
