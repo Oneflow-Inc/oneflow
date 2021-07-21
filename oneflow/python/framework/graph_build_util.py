@@ -128,9 +128,8 @@ def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
 
 
-def build_graph_input_arg(graph_name, arg, input_idx):
+def build_graph_input_arg(op_name, arg):
     assert isinstance(arg, (Tensor, InternalTensor))
-    op_name = "_" + graph_name + "-input_" + str(input_idx)
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
     )
@@ -171,11 +170,10 @@ def build_graph_state(state_block):
     return lazy_tensor
 
 
-def build_graph_output(graph_name, out, out_idx):
+def build_graph_output(op_name, out):
     assert isinstance(out, InternalTensor)
     assert out.is_lazy
 
-    op_name = "_" + graph_name + "-output_" + str(out_idx)
     output_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
     )
