@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
 
