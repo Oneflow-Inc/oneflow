@@ -50,6 +50,11 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
+Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) {
+  UpdateElemCnt();
+  printf("\nShape >>> Initialize >>> elem_cnt_: %ld >> is_scalar: %d", elem_cnt_, is_scalar_);
+}
+
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
@@ -93,9 +98,11 @@ std::string Shape::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  for (int64_t dim : dim_vec_) {
-    ss << dim;
-    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+  if (!is_scalar_) {
+    for (int64_t dim : dim_vec_) {
+      ss << dim;
+      if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+    }
   }
   ss << ")";
   return ss.str();
@@ -124,8 +131,10 @@ int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxe
 
 void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;
-  for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
-  if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
+  if (!is_scalar_) {
+    for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
+    if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
@@ -182,6 +191,11 @@ bool Shape::Containing(const Shape& small_shape) const {
     if (this->At(i) != small_shape.At(i)) { return false; }
   }
   return true;
+}
+
+bool Shape::IsScalar() const {
+  if (is_scalar_) { return true; }
+  return false;
 }
 
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {

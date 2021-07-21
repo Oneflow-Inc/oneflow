@@ -25,6 +25,10 @@ namespace oneflow {
 namespace {
 struct ShapeExportUtil final {
   static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
+    if (py_shape.empty()) {
+      bool is_scalar = true;
+      return std::make_shared<Shape>(is_scalar);
+    }
     DimVector shape_dims;
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     return std::make_shared<Shape>(shape_dims);
@@ -65,6 +69,10 @@ struct ShapeExportUtil final {
   static std::string ToString(const Shape& shape) {
     std::stringstream ss;
     int32_t idx = 0;
+    if (shape.IsScalar()) {
+      ss << "flow.Size()";
+      return ss.str();
+    }
     ss << "flow.Size([";
     for (int64_t dim : shape.dim_vec()) {
       ss << dim;

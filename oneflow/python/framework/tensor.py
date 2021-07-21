@@ -57,8 +57,9 @@ def _local_tensor_numpy(eager_local_tensor):
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
+    n_shape=() if eager_local_tensor.ndimension()==0 else tuple(eager_local_tensor.shape)
     ndarray = np.empty(
-        tuple(eager_local_tensor.shape),
+        n_shape,
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
     copy_to_numpy(ndarray)
@@ -772,7 +773,11 @@ class Tensor:
         if _input_args_is_tuple_or_list(*args):
             numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = np.ascontiguousarray(args[0])
+            if args[0].size == 1 and args[0].ndim == 0:
+                numpy_data = args[0]
+            else:
+                numpy_data = np.ascontiguousarray(args[0])
+
         numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
