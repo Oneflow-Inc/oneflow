@@ -319,7 +319,7 @@ class random_device(generator):
         super().__init__([])
 
     def _calc_value(self):
-        return random_util.choice(['cuda', 'cpu'])
+        return random_util.choice(["cuda", "cpu"])
 
 
 def test_against_pytorch(

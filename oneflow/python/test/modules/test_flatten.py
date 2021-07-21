@@ -72,8 +72,9 @@ class TestFlattenModule(flow.unittest.TestCase):
     # leading to the inconsistency on the leaf-ness of x and thus the existence of x's grad
     @autotest(auto_backward=False)
     def test_against_pytorch(test_case):
-        m = torch.nn.Flatten(start_dim=random(1, 6) | nothing(),
-                end_dim=random(1, 6) | nothing())
+        m = torch.nn.Flatten(
+            start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
+        )
         m.train(random())
         device = random_device()
         m.to(device)
