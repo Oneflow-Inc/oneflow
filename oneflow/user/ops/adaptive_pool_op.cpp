@@ -27,9 +27,9 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   out_shape[0] = x_shape.dim_vec()[0];
   out_shape[1] = x_shape.dim_vec()[1];
   if (output_size.size() == 1) {
-    for (int i = 2; i < out_shape.size(); ++i) { out_shape[i] = output_size[0]; }
-  } else {
-    for (int i = 2; i < out_shape.size(); ++i) { out_shape[i] = output_size[i - 2]; }
+    for (int i = 2; i < out_shape.size(); ++i) {
+      out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
+    }
   }
 
   *ctx->OutputShape("y", 0) = Shape(out_shape);
