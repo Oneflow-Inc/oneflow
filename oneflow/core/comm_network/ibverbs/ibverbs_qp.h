@@ -71,7 +71,7 @@ class IBVerbsQP final {
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
   void RecvDone(WorkRequestId*);
-  void ReadSendDoneSendQueueMessage();
+  void EnqueuePostSend();
 
  private:
   WorkRequestId* NewWorkRequestId();

@@ -13,10 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/graph/node.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
@@ -70,18 +81,11 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  new_msg.setFlag(true);
   qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
-  ActorMsg unuseful_msg = msg;
-  unuseful_msg.setFlag(false);
-  for(int i =0 ; i < 64; i++) {
-    qp_vec_.at(dst_machine_id)->PostSendRequest(unuseful_msg);
-  }
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
   ActorMsg new_msg = msg;
-  if(new_msg.getFlag() == true) {
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
     auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
@@ -92,7 +96,6 @@ void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
     new_msg.set_comm_net_token(desc.get());
   }
   Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(new_msg);
-  }
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {

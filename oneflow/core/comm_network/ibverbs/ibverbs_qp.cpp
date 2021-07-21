@@ -15,8 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include <infiniband/verbs.h>
-#include <memory>
-#include <mutex>
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -24,13 +22,16 @@ limitations under the License.
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 
+#include <memory>
+#include <mutex>
+
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
 namespace {
 
-constexpr int kMaxSendWr = 32;
+constexpr int kMaxSendWr = 4096;
 
 }
 
@@ -156,7 +157,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.imm_data = 0;
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
-    PostSendReadInQueue(wr,  sge);
+    PostSendReadInQueue(wr, sge);
   }
 }
 
@@ -178,7 +179,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr.send_flags = 0;
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
-  PostSendReadInQueue(wr,  sge);
+  PostSendReadInQueue(wr, sge);
 }
 
 void IBVerbsQP::PostSendReadInQueue(ibv_send_wr wr, ibv_sge sge) {
@@ -201,7 +202,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
     Global<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
-  ReadSendDoneSendQueueMessage();
+  EnqueuePostSend();
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
@@ -210,7 +211,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
     send_msg_buf_.push(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
-  ReadSendDoneSendQueueMessage();
+  EnqueuePostSend();
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
@@ -221,19 +222,19 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   DeleteWorkRequestId(wr_id);
 }
 
-void IBVerbsQP::ReadSendDoneSendQueueMessage() {
+void IBVerbsQP::EnqueuePostSend() {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
   if (num_outstanding_send_wr_ > 0) { num_outstanding_send_wr_--; }
   std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
   if (msg_pendding_list_.empty() == false) {
-      std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(msg_pendding_list_.front());
-      ibv_send_wr wr = ibv_send_wr_sge.first;
-      wr.sg_list = &ibv_send_wr_sge.second;
-      msg_pendding_list_.pop();
-      ibv_send_wr* bad_wr = nullptr;
-      num_outstanding_send_wr_++;
-      CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
-    }
+    std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(msg_pendding_list_.front());
+    ibv_send_wr wr = ibv_send_wr_sge.first;
+    wr.sg_list = &ibv_send_wr_sge.second;
+    msg_pendding_list_.pop();
+    ibv_send_wr* bad_wr = nullptr;
+    num_outstanding_send_wr_++;
+    CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
+  }
 }
 
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
