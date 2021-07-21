@@ -101,9 +101,24 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   return Maybe<void>::Ok();
 }
 
+Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
+  int token = 0;
+  for (int i = 0; i < indices.size(); ++i) {
+    if (indices.at(i) && !token) {
+      token = 1;
+    } else if (indices.at(i) && token) {
+      if (token != 1) { return false; }
+    } else if (!token) {
+      token += 1;
+    }
+  }
+  return true;
+}
+
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
                            std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
   std::vector<int> permute;
+  permute.reserve(input->shape()->NumAxes());
   for (int i = 0; i < input->shape()->NumAxes(); ++i) {
     if (i < indices.size() && indices.at(i)) {
       permute.emplace_back(i);
@@ -127,14 +142,41 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
   return Maybe<void>::Ok();
 }
 
+Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
+                             const int& index_ndim) {
+  int index_subspace_pos = -1;
+  for (int i = 0; i < indices.size(); ++i) {
+    if (indices.at(i)) {
+      index_subspace_pos = i;
+      break;
+    }
+  }
+  if (index_subspace_pos <= 0) { return input; }
+  int ndim = input->shape()->NumAxes();
+  CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
+      << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
+  std::vector<int> permute;
+  permute.reserve(ndim);
+  for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
+  for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+  for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
+  return Transpose(input, permute);
+}
+
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->shape()->NumAxes(), indices.size())
       << "Too many indices for tensor of dimension " << input->shape()->NumAxes();
+  // TODO(): Expand the indices.
+
+  bool is_continuos_subspace = JUST(IsContinuosSubspace(indices));
+  // Since the start dimension cannot be specified for `gather_nd`, so we should
+  // transpose the input as long as the first indice is null.
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
   JUST(TransposeFront(input, indices, &transposed_input, &valid_indices));
-
+  if (valid_indices.empty()) { return input; }
+  int index_ndim = valid_indices.at(0)->shape()->NumAxes();
   std::shared_ptr<Tensor> packed_indices;
   if (valid_indices.size() > 1) {
     packed_indices = JUST(Stack(valid_indices, 0));
@@ -142,8 +184,13 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     packed_indices = JUST(ExpandDims(valid_indices.at(0), 0));
   }
   packed_indices = JUST(Transpose(packed_indices, {1, 0}));
-  const auto& result = JUST(GatherNd(transposed_input, packed_indices));
-  // TODO
+  auto result = JUST(GatherNd(transposed_input, packed_indices));
+
+  int required_ndim = input->shape()->NumAxes() - valid_indices.size() + index_ndim;
+  CHECK_EQ_OR_RETURN(result->shape()->NumAxes(), required_ndim)
+      << "The indexing result dimension is " << result->shape()->NumAxes() << ", but shoule be "
+      << required_ndim;
+  if (is_continuos_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
 }
 
