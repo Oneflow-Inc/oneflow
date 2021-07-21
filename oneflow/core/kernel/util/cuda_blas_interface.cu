@@ -291,4 +291,24 @@ void BlasIf<DeviceType::kGPU>::OFDot(DeviceCtx* ctx, const int n, const double* 
   OF_CUBLAS_CHECK(cublasDdot(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy, out));
 }
 
+void BlasIf<DeviceType::kGPU>::OFScal(DeviceCtx* ctx, const int n, const float* alpha, float* x,
+                                      int incx) {
+  OF_CUBLAS_CHECK(cublasSscal(ctx->cublas_tensor_op_math_handle(), n, alpha, x, incx));
+}
+
+void BlasIf<DeviceType::kGPU>::OFScal(DeviceCtx* ctx, const int n, const double* alpha, double* x,
+                                      int incx) {
+  OF_CUBLAS_CHECK(cublasDscal(ctx->cublas_tensor_op_math_handle(), n, alpha, x, incx));
+}
+
+void BlasIf<DeviceType::kGPU>::OFCopy(DeviceCtx* ctx, const int n, const float* x, int incx,
+                                      float* y, int incy) {
+  OF_CUBLAS_CHECK(cublasScopy(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy));
+}
+
+void BlasIf<DeviceType::kGPU>::OFCopy(DeviceCtx* ctx, const int n, const double* x, int incx,
+                                      double* y, int incy) {
+  OF_CUBLAS_CHECK(cublasDcopy(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy));
+}
+
 }  // namespace oneflow

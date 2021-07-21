@@ -79,11 +79,33 @@ REGISTER_USER_OP("dot_grad")
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
       const user_op::TensorDesc& dout = ctx->InputTensorDesc("dout", 0);
-      // CHECK_OR_RETURN((x.data_type() == y.data_type()) & (dout.data_type() == y.data_type())) << "The input tensor type is different";
+      CHECK_OR_RETURN((x.data_type() == y.data_type()) & (dout.data_type() == y.data_type()))
+          << "The input tensor type is different";
       *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       *ctx->OutputDType("dy", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP_GRAD("dot").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("dot_grad")
+        .InputBind("x", ctx->FwOp().input("x", 0))
+        .InputBind("y", ctx->FwOp().input("y", 0))
+        .InputBind("dout", ctx->FwOp().output_grad("out", 0))
+        .Output("dx")
+        .Output("dy")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                            [&ctx, &dot_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(dot_grad_op_name).output("dx", 0);
+                            });
+  ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
+                            [&ctx, &dot_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(dot_grad_op_name).output("dy", 0);
+                            });
+});
 
 }  // namespace
 

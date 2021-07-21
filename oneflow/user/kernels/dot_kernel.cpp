@@ -74,23 +74,45 @@ REGISTER_DOT_KERNEL(DeviceType::kGPU, float)
 REGISTER_DOT_KERNEL(DeviceType::kGPU, double)
 #endif
 
-template<typename T>
-void dot_grad(const int64_t n, const T* x, const T* y, const T* dout, T* dx, T* dy)
-{
-  T tmp = *dout;
+template<DeviceType device_type, typename T>
+struct DotGradCalculation {
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy);
+};
 
-  for(int64_t i = 0; i < n; i++) 
-  { 
-    dx[i] = y[i] * tmp;
-    dy[i] = x[i] * tmp;
+template<typename T>
+struct DotGradCalculation<DeviceType::kCPU, T> {
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy) {
+
+    std::cout<< "dout address = " << static_cast<const void *>(dout) <<std::endl;
+    std::cout<< "dout = "<< *dout <<std::endl;
+    cblas_copy<T>(n, y, 1, dx, 1);
+    cblas_copy<T>(n, x, 1, dy, 1);
+    cblas_scal<T>(n, *dout, dx, 1);
+    cblas_scal<T>(n, *dout, dy, 1);
   }
-}
+};
+
+template<typename T>
+struct DotGradCalculation<DeviceType::kGPU, T> {
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy) {
+    T h_dout;
+    cudaMemcpy( &h_dout, dout, sizeof(T),cudaMemcpyDeviceToHost);
+    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, y, 1, dx, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, x, 1, dy, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, &h_dout, dx, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, &h_dout, dy, 1);
+  }
+};
 
 template<DeviceType device_type, typename T>
 class DotKernelGrad final : public user_op::OpKernel {
  public:
   DotKernelGrad() = default;
   ~DotKernelGrad() = default;
+
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -100,19 +122,25 @@ class DotKernelGrad final : public user_op::OpKernel {
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    dot_grad(n, x->dptr<T>(), y->dptr<T>(), dout->dptr<T>(), 
-             dx->mut_dptr<T>(), dy->mut_dptr<T>());
+    DotGradCalculation<device_type, T>::dot_grad(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
+                                                 dout->dptr<T>(), dx->mut_dptr<T>(),
+                                                 dy->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DOT_GRAD_KERNEL(device, dtype)                                             \
-  REGISTER_USER_KERNEL("dot_grad").SetCreateFn<DotKernelGrad<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                   \
-      & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_DOT_GRAD_KERNEL(device, dtype)            \
+  REGISTER_USER_KERNEL("dot_grad")                         \
+      .SetCreateFn<DotKernelGrad<device, dtype>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kCPU, double)
+#ifdef WITH_CUDA
+REGISTER_DOT_GRAD_KERNEL(DeviceType::kGPU, float)
+REGISTER_DOT_GRAD_KERNEL(DeviceType::kGPU, double)
+#endif
 }  // namespace
 
 }  // namespace oneflow

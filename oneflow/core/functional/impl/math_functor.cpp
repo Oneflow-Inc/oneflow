@@ -403,8 +403,13 @@ class DotFunctor {
 class DotGradFunctor {
  public:
   DotGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dot_grad").Input("x").Input("y").Input("dout")
-      .Output("dx").Output("dy").Build());
+    op_ = CHECK_JUST(one::OpBuilder("dot_grad")
+                         .Input("x")
+                         .Input("y")
+                         .Input("dout")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y,

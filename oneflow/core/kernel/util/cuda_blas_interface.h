@@ -58,6 +58,12 @@ struct BlasIf<DeviceType::kGPU> {
                     float* out);
   static void OFDot(DeviceCtx* ctx, const int n, const double* x, int incx, const double* y,
                     int incy, double* out);
+
+  static void OFScal(DeviceCtx* ctx, const int n, const float* alpha, float* x, int incx);
+  static void OFScal(DeviceCtx* ctx, const int n, const double* alpha, double* x, int incx);
+
+  static void OFCopy(DeviceCtx* ctx, const int n, const float* x, int incx, float* y, int incy);
+  static void OFCopy(DeviceCtx* ctx, const int n, const double* x, int incx, double* y, int incy);
 };
 
 }  // namespace oneflow
