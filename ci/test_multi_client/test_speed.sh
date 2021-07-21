@@ -22,7 +22,7 @@ python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet
 python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 2x3x224x224 | check_relative_speed 0.8 | write_to_file_and_print
 python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 1x3x224x224 | check_relative_speed 0.8 | write_to_file_and_print
 
-result=`cat result`
+result="GPU Name: `nvidia-smi --query-gpu=name --format=csv,noheader -i 0` \n\n `cat result`"
 # escape newline for github actions: https://github.community/t/set-output-truncates-multiline-strings/16852/2
 # note that we escape \n and \r to \\n and \\r (i.e. raw string "\n" and "\r") instead of %0A and %0D, 
 # so that they can be correctly handled in javascript code
