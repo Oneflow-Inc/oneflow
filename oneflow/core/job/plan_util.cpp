@@ -528,7 +528,7 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
   }
 }
 
-void DumpCtrlRegstInfoToPlan(Plan* plan) {
+void PlanUtil::DumpCtrlRegstInfoToPlan(Plan* plan) {
   auto* ctrl_regst_desc_id2producer_task_id =
       plan->mutable_ctrl_regst_desc_info()->mutable_ctrl_regst_desc_id2producer_task_id();
   for (const TaskProto& task : plan->task()) {
@@ -574,8 +574,6 @@ struct CollectiveBoxingRequestInfo {
   int64_t dependency_depth;
 };
 
-}  // namespace
-
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
   device_desc->set_machine_id(task_proto->machine_id());
   const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
@@ -586,6 +584,8 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
     UNIMPLEMENTED();
   }
 }
+
+}  // namespace
 
 void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   using namespace boxing::collective;
