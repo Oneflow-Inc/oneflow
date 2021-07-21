@@ -73,6 +73,7 @@ def _test_transpose_backward_v2(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTranspose(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()
