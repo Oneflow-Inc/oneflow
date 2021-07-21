@@ -16,7 +16,10 @@ limitations under the License.
 import os
 import sys
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(BASE_DIR)
-
+test_util_dir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+if os.getenv("ONEFLOW_TEST_UTIL_DIR"):
+    test_util_dir = os.getenv("ONEFLOW_TEST_UTIL_DIR")
+sys.path.append(test_util_dir)
 from test_utils.automated_test_util import *
