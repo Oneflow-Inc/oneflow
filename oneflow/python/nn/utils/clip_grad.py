@@ -49,7 +49,7 @@ def clip_grad_norm_(
             infinity norm.
         error_if_nonfinite (bool): if True, an error is thrown if the total
             norm of the gradients from :attr:``parameters`` is ``nan``,
-            ``inf``, or ``-inf``. Default: True (will switch to True in the future)
+            ``inf``, or ``-inf``. Default: True
 
     Returns:
         Parameters after cliping gradient norm
