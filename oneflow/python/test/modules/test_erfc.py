@@ -66,10 +66,7 @@ def _test_tensor_erfc_impl(test_case, shape, device):
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestErfcModule(flow.unittest.TestCase):
     def test_erfc(test_case):
         arg_dict = OrderedDict()

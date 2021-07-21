@@ -49,7 +49,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
-.. autofunction:: oneflow.experimental.nn.ReplicationPad2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm1d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm3d
@@ -71,7 +70,11 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ModuleDict
 .. autofunction:: oneflow.experimental.nn.Conv1d
 .. autofunction:: oneflow.experimental.nn.Conv2d
+.. autofunction:: oneflow.experimental.nn.ZeroPad2d
+.. autofunction:: oneflow.experimental.nn.ReflectionPad2d
+.. autofunction:: oneflow.experimental.nn.ReplicationPad2d
 .. autofunction:: oneflow.experimental.nn.ConstantPad2d
+.. autofunction:: oneflow.experimental.nn.ConstantPad3d
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d
 .. autofunction:: oneflow.experimental.nn.Dropout
 .. autofunction:: oneflow.experimental.slice
@@ -191,6 +194,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze
 .. autofunction:: oneflow.experimental.Tensor.squeeze
+.. autofunction:: oneflow.experimental.flip
+.. autofunction:: oneflow.experimental.Tensor.flip
 .. autofunction:: oneflow.experimental.transpose
 .. autofunction:: oneflow.experimental.Tensor.transpose
 .. autofunction:: oneflow.experimental.unsqueeze
@@ -209,6 +214,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
 .. autofunction:: oneflow.experimental.linalg.norm
+.. autofunction:: oneflow.experimental.linalg.vector_norm
+.. autofunction:: oneflow.experimental.linalg.matrix_norm
 .. autofunction:: oneflow.experimental.Tensor.norm
 .. autofunction:: oneflow.experimental.floor
 .. autofunction:: oneflow.experimental.Tensor.floor
@@ -230,7 +237,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
 .. autofunction:: oneflow.experimental.Tensor.expm1
-.. autofunction:: oneflow.experimental.nn.ReflectionPad2d
 .. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
@@ -239,7 +245,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.GroupNorm
 .. autofunction:: oneflow.experimental.gather_nd
 .. autofunction:: oneflow.experimental.scatter_nd
-.. autofunction:: oneflow.experimental.nn.ZeroPad2d
 .. autofunction:: oneflow.experimental.nn.image.flip
 .. autofunction:: oneflow.experimental.tensor_buffer_to_tensor
 .. autofunction:: oneflow.experimental.tensor_to_tensor_buffer

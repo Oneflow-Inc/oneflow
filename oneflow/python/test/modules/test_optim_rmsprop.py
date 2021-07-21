@@ -108,10 +108,7 @@ def compare_with_numpy_rmsprop(
     )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestRMSProp(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()
