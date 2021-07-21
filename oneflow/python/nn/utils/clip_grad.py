@@ -87,7 +87,7 @@ def clip_grad_norm_(
 
     """
 
-    if isinstance(parameters, Tensor):
+    if isinstance(parameters, (Tensor, flow._oneflow_internal.Tensor)):
         parameters = [parameters]
     parameters = [p for p in parameters if p.grad is not None]
     max_norm = float(max_norm)
