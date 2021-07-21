@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from collections import OrderedDict
+from functools import partial
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -116,9 +117,13 @@ class Graph(object):
             state_op_names = []
             state_tensors = []
             for state_block in self._state():
-                state_op_names.append(state_block.name_prefix + state_block.name)
-                state_tensors.append(state_block.origin)
-                state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
+                op_name = state_block.name_prefix + state_block.name
+                state_tensor = state_block.origin
+                state_op_names.append(op_name)
+                state_tensors.append(state_tensor)
+                state_block.set_lazy_origin_builder(
+                    partial(graph_build_util.build_graph_state, op_name, state_tensor)
+                )
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)

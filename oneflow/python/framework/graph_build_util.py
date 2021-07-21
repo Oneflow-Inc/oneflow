@@ -150,8 +150,7 @@ def build_graph_input_arg(op_name, arg):
     return lazy_arg
 
 
-def build_graph_state(state_block):
-    op_name = state_block.name_prefix + state_block.name
+def build_graph_state(op_name, state_tensor):
     var_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
     )
@@ -161,10 +160,10 @@ def build_graph_state(state_block):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    assert isinstance(state_block.origin, Tensor)
-    if not state_block.origin.is_determined:
-        state_block.origin.determine()
-    tensor_in_c = state_block.origin._local_or_consistent_tensor
+    assert isinstance(state_tensor, Tensor)
+    if not state_tensor.is_determined:
+        state_tensor.determine()
+    tensor_in_c = state_tensor._local_or_consistent_tensor
 
     lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
     return lazy_tensor
