@@ -16,48 +16,48 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RPC_TOKEN_H_
 #define ONEFLOW_CORE_FRAMEWORK_RPC_TOKEN_H_
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/type_traits.h"
 
 namespace oneflow {
 
-class ParallelDesc;
-
-enum RpcTokenCmdLocalMajor {
+enum RpcTokenType {
   // Begin
-  kCheckingParallelConfSizeCmdLocalMajor = 0,
-  kInitializingPlacementCmdLocalMajor,
-  kDataSendRecvCmdLocalMajor,
+  kDataRpcTokenType = 0, // e.g. for tensor data transportation
+  kOpTensorMetaRpcTokenType, // e.g. for tensor shape synchronizing or checking
+  kSystemRpcTokenType, // e.g. for rank_group or thread checking
+  kExtendedRpcTokenType, // for compatibility
   // End
-  kRpcTokenCmdLocalMajorSize,
+  kRpcTokenTypeSize,
 };
+
+static_assert(kRpcTokenTypeSize <= 4, "");
 
 class RpcToken final {
  public:
-  RpcToken(uint32_t major, uint32_t minor) : major_(major), minor_(minor) {}
+  RpcToken(RpcTokenType type, uint32_t minor) : major_(major), minor_(minor) {}
   RpcToken(const RpcToken&) = default;
   RpcToken(RpcToken&) = default;
   ~RpcToken() = default;
 
-  static const uint32_t kStartTokenMajor4Cmd = kRpcTokenCmdLocalMajorSize;
-  static const uint32_t kStartTokenMajor4Placement = 4096;
+  int64_t src_machine_id() const { return src_machine_id_; }
+  int64_t dst_machine_id() const { return dst_machine_id_; }
+  RpcTokenType type() const { return static_cast<RpcTokenType>(type_); }
+  int64_t consistent_thread_id() const { return consistent_thread_id_; }
+  int64_t rank_group_id() const { return rank_group_id_; }
+  int64_t seq_id() const { return seq_id_; }
 
-  uint32_t major() const { return major_; }
-  uint32_t minor() const { return minor_; }
-  operator uint64_t() const { return (static_cast<uint64_t>(major_) << 32) + minor_; }
-
-  RpcToken& operator++() {
-    ++minor_;
-    return *this;
-  }
+  operator uint64_t() const;
+  RpcToken& operator++();
 
  private:
-  uint32_t major_;
-  uint32_t minor_;
-};
 
-static_assert(sizeof(RpcToken) == sizeof(uint64_t), "");
+  uint16_t src_machine_id_;
+  uint16_t dst_machine_id_;
+  uint32_t type_:2;
+  uint32_t consistent_thread_id_:3;
+  uint32_t rank_group_id_:3;
+  uint32_t seq_id_:24;
+};
 
 template<>
 struct IsScalarType<RpcToken> final {
