@@ -187,7 +187,6 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
 
 void IBVerbsQP::PostSendReadRequestHandle(ibv_send_wr wr, ibv_sge sge, ibv_send_wr* bad_wr) {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
-  std::unique_lock<std::mutex> use_pendding_list_lck(use_pendding_list_mutex_);
   std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);
   if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     num_outstanding_send_wr_++;
@@ -236,7 +235,6 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
 
 void IBVerbsQP::ReadSendDoneHandle() {
   std::unique_lock<std::mutex> num_outstanding_send_wr_lck(num_outstanding_send_wr_mutex_);
-  std::unique_lock<std::mutex> use_pendding_list_mutex_lck(use_pendding_list_mutex_);
   if (num_outstanding_send_wr_ > 0) { num_outstanding_send_wr_--; }
   if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     std::unique_lock<std::mutex> msg_pendding_list_lck(msg_pendding_list_mutex_);

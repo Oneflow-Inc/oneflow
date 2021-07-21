@@ -91,7 +91,6 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::mutex msg_pendding_list_mutex_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> msg_pendding_list_;
-  std::mutex use_pendding_list_mutex_;
 };
 
 }  // namespace oneflow
