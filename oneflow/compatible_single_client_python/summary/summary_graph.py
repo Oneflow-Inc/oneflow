@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-from oneflow.core.summary import projector_pb2 as projector_pb2
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.core.summary import projector_pb2 as projector_pb2
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 import time
 import logging

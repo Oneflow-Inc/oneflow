@@ -16,12 +16,12 @@ limitations under the License.
 from typing import Union
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 
 
 class Arange(Module):

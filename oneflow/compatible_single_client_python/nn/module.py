@@ -22,15 +22,15 @@ import itertools
 import numpy as np
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
-from oneflow.compatible_single_client_python.framework.check_point_v2 import (
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.framework.check_point_v2 import (
     FeedValueToVariable,
 )
-from oneflow.compatible_single_client_python.framework.function_util import (
+from oneflow.compatible.single_client.python.framework.function_util import (
     global_function_or_identity,
 )
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
-from oneflow.compatible_single_client_python.nn.parameter import Parameter
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.nn.parameter import Parameter
 
 
 class _IncompatibleKeys(

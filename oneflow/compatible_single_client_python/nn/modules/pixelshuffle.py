@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.module import Module
+from oneflow.compatible.single_client.python.nn.module import Module
 
 
 @oneflow_export("nn.PixelShuffle")
