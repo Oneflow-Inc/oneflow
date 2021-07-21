@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.eager import symbol as symbol_util
+from oneflow.compatible.single_client.python.eager import symbol as symbol_util
 from oneflow.compatible.single_client.core.job import (
     sbp_parallel_pb2 as sbp_parallel_pb,
 )

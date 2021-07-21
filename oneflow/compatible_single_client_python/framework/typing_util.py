@@ -17,15 +17,15 @@ from __future__ import absolute_import
 
 import typing
 import inspect
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     local_blob as local_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import pull_util as pull_util
-from oneflow.compatible_single_client_python.framework import typing as oft
-from oneflow.compatible_single_client_python.experimental import (
+from oneflow.compatible.single_client.python.framework import pull_util as pull_util
+from oneflow.compatible.single_client.python.framework import typing as oft
+from oneflow.compatible.single_client.python.experimental import (
     enable_typing_check as enable_typing_check,
 )
 import oneflow._oneflow_internal

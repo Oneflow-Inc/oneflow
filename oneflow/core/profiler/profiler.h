@@ -32,6 +32,10 @@ void RangePop();
 
 void LogHostMemoryUsage(const std::string& name);
 
+void ProfilerStart();
+
+void ProfilerStop();
+
 class RangeGuardCtx;
 
 class RangeGuard final {
