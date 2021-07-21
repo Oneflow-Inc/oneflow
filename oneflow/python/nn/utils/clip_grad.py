@@ -137,8 +137,8 @@ def clip_grad_norm_(
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
         for p in parameters:
-            #TODO: Switch to inplace multiply in future
-            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device)) 
+            # TODO: Switch to inplace multiply in future
+            p.grad[:] = p.grad.detach().mul(clip_coef.to(p.grad.device))
     return total_norm
 
 
