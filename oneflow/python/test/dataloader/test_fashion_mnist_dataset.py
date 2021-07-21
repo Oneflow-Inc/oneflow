@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import unittest
 import time
 
 import oneflow.experimental as flow
@@ -22,7 +23,9 @@ import oneflow.python.utils.vision.transforms as transforms
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
-def load_data_fashion_mnist(batch_size, resize=None, root="./data/fashion-mnist"):
+def load_data_fashion_mnist(
+    batch_size, resize=None, root="./data/fashion-mnist", download=True
+):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
     transformer = []
@@ -32,10 +35,10 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./data/fashion-mnist"
     transformer = transforms.Compose(transformer)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=True, transform=transformer, download=True
+        root=root, train=True, transform=transformer, download=download
     )
     mnist_test = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=False, transform=transformer, download=True
+        root=root, train=False, transform=transformer, download=download
     )
     num_workers = 0
     train_iter = flow.utils.data.DataLoader(
@@ -100,9 +103,29 @@ def evaluate_accuracy(data_iter, net, device=None):
     return acc_sum / n
 
 
-def train(
-    net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer=None,
-):
+def test(test_case):
+    num_inputs, num_outputs, num_hiddens = 784, 10, 256
+    net = nn.Sequential(
+        FlattenLayer(),
+        nn.Linear(num_inputs, num_hiddens),
+        nn.ReLU(),
+        nn.Linear(num_hiddens, num_outputs),
+    )
+
+    device = flow.device("cuda")
+    net.to(device)
+
+    batch_size = 256
+    num_epochs = 1
+    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/fashion-mnist"
+    train_iter, test_iter = load_data_fashion_mnist(
+        batch_size, root=data_dir, download=True
+    )
+    loss = nn.CrossEntropyLoss()
+    loss.to(device)
+
+    optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
+    final_accuracy = 0
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
         start = time.time()
@@ -122,38 +145,29 @@ def train(
             n += y.shape[0]
 
         test_acc = evaluate_accuracy(test_iter, net)
+        final_accuracy = train_acc_sum / n
         print(
             "epoch %d, loss %.4f, train acc %.3f, test acc %.3f, cost >>>>>>> %s(s)"
             % (
                 epoch + 1,
                 train_l_sum / n,
-                train_acc_sum / n,
+                final_accuracy,
                 test_acc,
                 str(time.time() - start),
             )
         )
+        final_accuracy = train_acc_sum / n
+    test_case.assertLess(0.70, final_accuracy)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFashionMnistDataset(flow.unittest.TestCase):
+    def test_fashion_mnist_dataset(test_case):
+        test(test_case)
 
 
 if __name__ == "__main__":
-
-    num_inputs, num_outputs, num_hiddens = 784, 10, 256
-    net = nn.Sequential(
-        FlattenLayer(),
-        nn.Linear(num_inputs, num_hiddens),
-        nn.ReLU(),
-        nn.Linear(num_hiddens, num_outputs),
-    )
-
-    device = flow.device("cuda")
-    net.to(device)
-
-    batch_size = 256
-    train_iter, test_iter = load_data_fashion_mnist(batch_size)
-    loss = nn.CrossEntropyLoss()
-    loss.to(device)
-
-    optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
-
-    num_epochs = 10
-
-    train(net, train_iter, test_iter, loss, num_epochs, batch_size, optimizer)
+    unittest.main()
+    # 1 epoch training log
+    # epoch 1, loss 0.0034, train acc 0.718, test acc 0.771, cost >>>>>>> 158.32699990272522(s)
+    # epoch 2, loss 0.0022, train acc 0.807, test acc 0.726, cost >>>>>>> 159.64465260505676(s)

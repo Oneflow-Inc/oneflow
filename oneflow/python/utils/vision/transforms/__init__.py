@@ -15,9 +15,4 @@ limitations under the License.
 """
 from .transforms import Normalize, Compose, ToTensor, Resize
 
-__all__ = [
-    'Normalize',
-    'Compose',
-    'ToTensor',
-    'Resize'
-]
+__all__ = ["Normalize", "Compose", "ToTensor", "Resize"]

@@ -15,6 +15,7 @@ limitations under the License.
 """
 import os
 import time
+import unittest
 
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
@@ -49,8 +50,9 @@ class LeNet(nn.Module):
         return output
 
 
-
-def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-mnist"):
+def load_data_fashion_mnist(
+    batch_size, resize=None, root="./data-test/fashion-mnist", download=True
+):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
     trans = []
@@ -60,10 +62,10 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-m
     transform = transforms.Compose(trans)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=True, transform=transform, download=True
+        root=root, train=True, transform=transform, download=download
     )
     mnist_test = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=False, transform=transform, download=True
+        root=root, train=False, transform=transform, download=download
     )
     num_workers = 0
 
@@ -76,15 +78,12 @@ def load_data_fashion_mnist(batch_size, resize=None, root="./data-test/fashion-m
     return train_iter, test_iter
 
 
-
 def evaluate_accuracy(data_iter, net, device=None):
     if device is None and isinstance(net, nn.Module):
         device = list(net.parameters())[0].device
     acc_sum, n = 0.0, 0
     with flow.no_grad():
         for X, y in data_iter:
-            X = flow.tensor(X.numpy())
-            y = flow.tensor(y.numpy())
             X = X.to(device=device)
             y = y.to(device=device)
             if isinstance(net, nn.Module):
@@ -105,7 +104,23 @@ def evaluate_accuracy(data_iter, net, device=None):
     return acc_sum / n
 
 
-def train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs):
+def test(test_case):
+    device = flow.device("cuda")
+    net = LeNet()
+    net.to(device)
+
+    batch_size = 256
+    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/fashion-mnist"
+    train_iter, test_iter = load_data_fashion_mnist(
+        batch_size=batch_size, resize=None, root=data_dir, download=True
+    )
+    loss = nn.CrossEntropyLoss()
+    loss.to(device)
+
+    lr, num_epochs = 0.02, 1
+    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
+    final_accuracy = 0
+
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
@@ -126,29 +141,30 @@ def train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_e
             batch_count += 1
 
         test_acc = evaluate_accuracy(test_iter, net)
+        final_accuracy = train_acc_sum / n
         print(
             "epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec"
             % (
                 epoch + 1,
                 train_l_sum / batch_count,
-                train_acc_sum / n,
+                final_accuracy,
                 test_acc,
                 time.time() - start,
             )
         )
+    test_case.assertLess(0.72, final_accuracy)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLenet(flow.unittest.TestCase):
+    def test_lenet(test_case):
+        test(test_case)
 
 
 if __name__ == "__main__":
-
-    device = flow.device("cuda")
-    net = LeNet()
-    net.to(device)
-
-    batch_size = 256
-    train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
-    loss = nn.CrossEntropyLoss()
-    loss.to(device)
-    
-    lr, num_epochs = 0.01, 10
-    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
-    train(net, train_iter, test_iter, batch_size, optimizer, loss, device, num_epochs)
+    unittest.main()
+    # 1 epoch training log
+    # epoch 1, loss 1.1473, train acc 0.569, test acc 0.742, time 162.4 sec
+    # epoch 2, loss 0.5736, train acc 0.784, test acc 0.796, time 158.1 sec
+    # epoch 3, loss 0.4761, train acc 0.826, test acc 0.821, time 154.0 sec
+    # epoch 4, loss 0.4215, train acc 0.848, test acc 0.855, time 160.3 sec

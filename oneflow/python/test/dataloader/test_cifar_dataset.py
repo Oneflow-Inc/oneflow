@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+import unittest
+
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
 import oneflow.python.utils.vision.transforms as transforms
@@ -53,12 +56,12 @@ class Net(nn.Module):
         return x
 
 
-def test():
+def test(test_case):
     device = flow.device("cuda")
     net = Net()
     net.to(device)
 
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=0.002, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
@@ -66,8 +69,9 @@ def test():
         [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
 
+    train_epoch = 1
     batch_size = 4
-    data_dir = "./data/cifar10"
+    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/cifar10"
 
     trainset = flow.utils.vision.datasets.CIFAR10(
         root=data_dir, train=True, download=True, transform=transform
@@ -76,14 +80,8 @@ def test():
         trainset, batch_size=batch_size, shuffle=False, num_workers=0
     )
 
-    testset = flow.utils.vision.datasets.CIFAR10(
-        root=data_dir, train=False, download=True, transform=transform
-    )
-    testloader = flow.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=0
-    )
-
-    for epoch in range(2):  # loop over the dataset multiple times
+    final_loss = 0
+    for epoch in range(train_epoch):  # loop over the dataset multiple times
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
@@ -103,10 +101,28 @@ def test():
             # print statistics
             running_loss += loss.numpy()
             if i % 2000 == 1999:  # print every 2000 mini-batches
-                print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1, running_loss / 2000))
+                final_loss = running_loss / 2000
+                print(
+                    "epoch: %d  step: %5d  loss: %.3f " % (epoch + 1, i + 1, final_loss)
+                )
                 running_loss = 0.0
 
-    print("Finished Training")
+    print("final loss : ", final_loss)
+    test_case.assertLess(final_loss, 1.50)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestCifarDataset(flow.unittest.TestCase):
+    def test_cifar_dataset(test_case):
+        test(test_case)
+
 
 if __name__ == "__main__":
-    test()
+    unittest.main()
+    # 1 epoch training log
+    # epoch: 1  step:  2000  loss: 2.107
+    # epoch: 1  step:  4000  loss: 1.838
+    # epoch: 1  step:  6000  loss: 1.644
+    # epoch: 1  step:  8000  loss: 1.535
+    # epoch: 1  step: 10000  loss: 1.528
+    # epoch: 1  step: 12000  loss: 1.476

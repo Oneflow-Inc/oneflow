@@ -147,18 +147,24 @@ class RandomSampler(Sampler[int]):
         else:
             generator = self.generator
         if self.replacement:
-            # TODO: flow.randint
-            raise NotImplementedError("Not support replacement=True yet!")
+            np.random.randint()
             for _ in range(self.num_samples // 32):
-                yield from flow.randint(
-                    high=n, size=(32,), dtype=flow.int64, generator=generator
+                yield from np.random.randint(
+                    high=n, size=(32,), dtype=np.int64
                 ).tolist()
-            yield from flow.randint(
-                high=n,
-                size=(self.num_samples % 32,),
-                dtype=flow.int64,
-                generator=generator,
+                # TODO: use flow.randint replace np.randint
+                # yield from flow.randint(
+                #     high=n, size=(32,), dtype=flow.int64, generator=generator
+                # ).tolist()
+            yield from np.random.randint(
+                high=n, size=(self.num_samples % 32,), dtype=np.int64
             ).tolist()
+            # yield from flow.randint(
+            #     high=n,
+            #     size=(self.num_samples % 32,),
+            #     dtype=flow.int64,
+            #     generator=generator,
+            # ).tolist()
         else:
             yield from np.random.permutation(n).tolist()
             # TODO: flow.randperm
