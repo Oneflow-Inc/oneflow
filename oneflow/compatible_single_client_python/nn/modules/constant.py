@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.framework.tensor import register_tensor_op
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.common_types import _size_any_t
-from oneflow.compatible_single_client_python.nn.modules.utils import _single
+from oneflow.compatible.single_client.python.nn.common_types import _size_any_t
+from oneflow.compatible.single_client.python.nn.modules.utils import _single
 
 from typing import Optional, Union
 

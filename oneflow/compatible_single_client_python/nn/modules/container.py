@@ -20,11 +20,11 @@ from itertools import islice
 import operator
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.module import Module
+from oneflow.compatible.single_client.python.nn.module import Module
 
 from typing import (
     Any,
@@ -55,14 +55,14 @@ class Sequential(Module):
 
         >>> import oneflow.compatible.single_client.experimental.nn as nn
         >>> nn.Sequential(nn.Conv2d(1,20,5), nn.ReLU(), nn.Conv2d(20,64,5), nn.ReLU()) #doctest: +ELLIPSIS
-        <oneflow.compatible_single_client_python.nn.modules.container.Sequential object at 0x...>
+        <oneflow.compatible.single_client.python.nn.modules.container.Sequential object at 0x...>
         >>> nn.Sequential(OrderedDict([
         ...    ('conv1', nn.Conv2d(1,20,5)),
         ...    ('relu1', nn.ReLU()),
         ...    ('conv2', nn.Conv2d(20,64,5)),
         ...    ('relu2', nn.ReLU())
         ... ])) #doctest: +ELLIPSIS
-        <oneflow.compatible_single_client_python.nn.modules.container.Sequential object at 0x...>
+        <oneflow.compatible.single_client.python.nn.modules.container.Sequential object at 0x...>
 
     """
 
