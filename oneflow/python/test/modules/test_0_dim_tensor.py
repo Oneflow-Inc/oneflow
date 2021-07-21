@@ -30,6 +30,7 @@ def _test_0_dim_tensor(test_case, device):
     input_np = np.array(scalar)
     input = flow.Tensor(input_np)
     # print(input) >>>  tensor(9.999, dtype=oneflow.float32)
+    # print(input.shape) >>> flow.Size()
     test_case.assertEqual(input.numel(), 1)
     test_case.assertEqual(input.ndimension(), 0)
 
