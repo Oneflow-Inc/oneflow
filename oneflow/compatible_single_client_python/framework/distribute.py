@@ -17,10 +17,10 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     distribute_context as distribute_ctx,
 )
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
     oneflow_export_value,

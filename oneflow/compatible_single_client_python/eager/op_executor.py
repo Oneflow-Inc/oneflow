@@ -25,29 +25,29 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.operator import (
     interface_blob_conf_pb2 as inter_face_blob_conf_util,
 )
-from oneflow.compatible_single_client_python.eager import boxing_util as boxing_util
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.python.eager import (
     blob_register as blob_register_util,
 )
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.eager import (
     symbol_storage as symbol_storage,
 )
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     python_callback as python_callback,
 )
-from oneflow.compatible_single_client_python.experimental import (
+from oneflow.compatible.single_client.python.experimental import (
     name_scope as name_scope,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.compatible_single_client_python.eager import op_infer_util as op_infer_util
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.eager import op_infer_util as op_infer_util
+from oneflow.compatible.single_client.python.eager import (
     blob_register as blob_register_util,
 )
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
