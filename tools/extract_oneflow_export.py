@@ -58,6 +58,14 @@ def is_export_decorator(d):
     )
 
 
+def is_experimental_decorator(d):
+    return isinstance(d, ast.Name) and d.id == "experimental_api"
+
+
+def is_stable_decorator(d):
+    return isinstance(d, ast.Name) and d.id == "stable_api"
+
+
 class DstFile:
     def __init__(self, path):
         self.path = path
@@ -136,7 +144,7 @@ class DstFileDict:
 def get_decorator_segs(node=None):
     segs = []
     for d in node.decorator_list:
-        if is_export_decorator(d) == False:
+        if is_export_decorator(d) == False and is_experimental_decorator(d) == False:
             d_src_seg = ast.get_source_segment(txt, d)
             segs.append(f"@{d_src_seg}")
     return segs
@@ -220,12 +228,26 @@ def handle_copy(src_file=None, node=None):
 
 def handle_node(node=None, src_file=None):
     is_exported = False
+    is_experimental = False
+    is_stable = False
     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
         # TODO: append import inside functions and classes
         for d in node.decorator_list:
             if is_export_decorator(d):
                 is_exported = True
-                handle_export(node=node, export_d=d, imports=imports, txt=txt)
+                handle_export(
+                    node=node,
+                    export_d=d,
+                    imports=imports,
+                    txt=txt,
+                    # is_experimental=is_experimental,
+                )
+            if is_experimental_decorator(d):
+                is_experimental = True
+                print(ast.dump(d))
+            if is_stable_decorator(d):
+                is_stable = True
+                print(ast.dump(d))
     if is_exported == False:
         handle_copy(src_file=src_file, node=node)
 
