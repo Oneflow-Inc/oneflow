@@ -195,8 +195,7 @@ void IBVerbsQP::PostSendReadRequestHandle(ibv_send_wr wr, ibv_sge sge, ibv_send_
   } else {
     std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::make_pair(wr, sge);
     msg_pendding_list_.push(ibv_send_wr_sge);
-    if (msg_pendding_list_.empty() == false
-        && num_outstanding_send_wr_ < max_outstanding_send_wr_) {
+    if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
       std::pair<ibv_send_wr, ibv_sge> new_ibv_send_wr_sge = std::move(msg_pendding_list_.front());
       msg_pendding_list_.pop();
       ibv_send_wr new_wr = new_ibv_send_wr_sge.first;
