@@ -15,13 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_ctx,
 )
-from oneflow.compatible_single_client_python.framework import hob as hob
-from oneflow.compatible_single_client_python.lib.core import enable_if as enable_if
-from oneflow.compatible_single_client_python.eager import op_executor as op_executor
-from oneflow.compatible_single_client_python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.framework import hob as hob
+from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 

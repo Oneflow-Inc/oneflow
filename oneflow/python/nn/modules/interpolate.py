@@ -83,7 +83,7 @@ class Interpolate(Module):
             raise ValueError("only one of size or scale_factor should be defined")
         elif self.size is not None:
             assert self.scale_factor is None
-            scale_factors = None
+            scale_factors = []
             if isinstance(self.size, (list, tuple)):
                 if len(self.size) != dim:
                     raise ValueError(
@@ -93,6 +93,8 @@ class Interpolate(Module):
                 output_size = self.size
             else:
                 output_size = [self.size for _ in range(dim)]
+            for i in range(dim):
+                scale_factors.append(output_size[i] / x.shape[i + 2])
         elif self.scale_factor is not None:
             assert self.size is None
             output_size = None
@@ -132,13 +134,15 @@ class Interpolate(Module):
         if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
 
-        if self.recompute_scale_factor is not None and self.recompute_scale_factor:
+        if self.recompute_scale_factor is True:
             assert scale_factors is not None
             output_size = [
                 int(math.floor(float(x.size(i + 2)) * scale_factors[i]))
                 for i in range(dim)
             ]
-            scale_factors = None
+            scale_factors = []
+            for i in range(dim):
+                scale_factors.append(output_size[i] / x.shape[2 + i])
 
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow.F.upsample_nearest_1d(

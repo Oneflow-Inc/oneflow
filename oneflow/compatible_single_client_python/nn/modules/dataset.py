@@ -15,18 +15,18 @@ limitations under the License.
 """
 from oneflow.compatible import single_client as flow
 
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.nn.modules.utils import (
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.nn.modules.utils import (
     _single,
     _pair,
     _triple,
     _reverse_repeat_tuple,
 )
-from oneflow.compatible_single_client_python.nn.common_types import (
+from oneflow.compatible.single_client.python.nn.common_types import (
     _size_1_t,
     _size_2_t,
     _size_3_t,
