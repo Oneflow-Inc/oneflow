@@ -88,7 +88,7 @@ class DstFile:
                 if (
                     "Copyright 2020 The OneFlow Authors. All rights reserved."
                     not in seg
-                ):
+                ) and "oneflow.python_gen" not in seg:
                     segs.append(seg)
             self.prepend_segs(segs)
 
@@ -105,8 +105,10 @@ class DstFileDict:
     def append_imports(cls, path=None, imports=None):
         cls.create_if_absent(path=path)
         assert isinstance(imports, list)
+        dst_file = cls.state[path]
         for i in imports:
-            cls.state[path].append_import(i)
+            if "__future__" not in i:
+                dst_file.append_seg(i + "\n")
 
     @classmethod
     def append_seg(cls, path=None, seg=None):
@@ -145,14 +147,14 @@ def handle_export(node=None, export_d=None, imports=None, txt=None):
     assert len(export_d.args) > 0, str(ast.dump(export_d))
     for (i, a) in enumerate(export_d.args):
         if i == 0:
+            DstFileDict.append_imports(
+                path=get_dst_path(export=a.value), imports=imports,
+            )
             # TODO: check if name of function identical to one of the exported funcs
             for seg in get_decorator_segs(node):
                 DstFileDict.append_seg(
                     path=get_dst_path(export=a.value), seg=f"{seg}\n",
                 )
-            DstFileDict.append_imports(
-                path=get_dst_path(export=a.value), imports=imports,
-            )
             DstFileDict.append_seg(
                 path=get_dst_path(export=a.value), seg=f"{f_src_seg}\n",
             )
@@ -237,7 +239,6 @@ if __name__ == "__main__":
 
     results = pool.map(parse_from_file, files_to_extract)
     pool.close()
-    pool.join()
     for (src_file, txt, module) in results:
         is_exported = False
         # print(ast.dump(parsed))
