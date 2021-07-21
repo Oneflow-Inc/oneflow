@@ -18,18 +18,18 @@ from __future__ import absolute_import
 from typing import Optional
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     stable_api,
 )
-from oneflow.compatible_single_client_python.ops.transpose_util import (
+from oneflow.compatible.single_client.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
 )
-from oneflow.compatible_single_client_python.ops.transpose_util import get_inversed_perm
+from oneflow.compatible.single_client.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
 

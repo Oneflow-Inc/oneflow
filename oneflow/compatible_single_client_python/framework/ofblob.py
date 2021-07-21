@@ -22,10 +22,10 @@ import numpy as np
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 from google.protobuf import text_format
-from oneflow.compatible_single_client_python.framework.dtype import (
+from oneflow.compatible.single_client.python.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible_single_client_python.lib.core.box import Box
+from oneflow.compatible.single_client.python.lib.core.box import Box
 
 
 class OfBlob(object):

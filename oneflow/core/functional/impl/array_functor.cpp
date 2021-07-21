@@ -436,6 +436,36 @@ class CopyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FlipFunctor {
+ public:
+  FlipFunctor() { op_ = CHECK_JUST(one::OpBuilder("flip").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& dims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FlipGradFunctor {
+ public:
+  FlipGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flip_grad").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::vector<int32_t>& dims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class UpsampleFunctor {
  public:
   UpsampleFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample").Input("x").Output("y").Build()); }
@@ -923,6 +953,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::FlipFunctor>("Flip");
+  m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
   m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
   m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
