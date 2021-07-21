@@ -32,30 +32,30 @@ import inspect
 import numpy as np
 
 import oneflow._oneflow_internal
-from oneflow.compatible_single_client_python.framework.check_point_v2 import (
+from oneflow.compatible.single_client.python.framework.check_point_v2 import (
     LoadVariables,
     SaveVarDict,
     GetCheckpoint,
 )
-from oneflow.compatible_single_client_python.framework.function_util import (
+from oneflow.compatible.single_client.python.framework.function_util import (
     api_oneflow_function,
 )
-from oneflow.compatible_single_client_python.framework.function_util import (
+from oneflow.compatible.single_client.python.framework.function_util import (
     FunctionConfig as ExecutionConfig,
 )
-from oneflow.compatible_single_client_python.framework.local_blob import LocalBlob
-from oneflow.compatible_single_client_python.framework.session_util import (
+from oneflow.compatible.single_client.python.framework.local_blob import LocalBlob
+from oneflow.compatible.single_client.python.framework.session_util import (
     api_clear_default_session,
 )
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
-from oneflow.compatible_single_client_python.nn.module import Module
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
-from oneflow.compatible_single_client_python.ops.optimizer import Optimizer
-from oneflow.compatible_single_client_python.nn.optimizer.optimizer import (
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.ops.optimizer import Optimizer
+from oneflow.compatible.single_client.python.nn.optimizer.optimizer import (
     Optimizer as OOPOptimizer,
 )
-from oneflow.compatible_single_client_python.framework import typing as oneflow_typing
-from oneflow.compatible_single_client_python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import typing as oneflow_typing
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
 
 
 @oneflow_export("model.DataModule")

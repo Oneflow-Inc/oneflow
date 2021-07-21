@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible_single_client_python.eager import (
+from oneflow.compatible.single_client.python.eager import (
     eager_blob_util as eager_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     op_expr_util as op_expr_util,
 )
-from oneflow.compatible_single_client_python.framework import functional as functional
-from oneflow.compatible_single_client_python.framework import generator as generator
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import functional as functional
+from oneflow.compatible.single_client.python.framework import generator as generator
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import blob_trait as blob_trait
+from oneflow.compatible.single_client.python.framework import blob_trait as blob_trait
 import oneflow._oneflow_internal
 
 

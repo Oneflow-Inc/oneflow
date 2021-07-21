@@ -1319,12 +1319,9 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
-  // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
   return op_name;
 }
 
