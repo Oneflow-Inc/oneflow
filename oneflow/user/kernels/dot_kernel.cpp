@@ -22,22 +22,22 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-struct DotCalculation {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
-                  int64_t incy, T* out);
+struct DotKernelCalculation {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
+                   T* out);
 };
 
 template<typename T>
-struct DotCalculation<DeviceType::kCPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
-                  int64_t incy, T* out) {
+struct DotKernelCalculation<DeviceType::kCPU, T> {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
+                   T* out) {
     *out = cblas_dot<T>(n, x, 1, y, 1);
   }
 };
 template<typename T>
-struct DotCalculation<DeviceType::kGPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, int64_t incx, const T* y,
-                  int64_t incy, T* out) {
+struct DotKernelCalculation<DeviceType::kGPU, T> {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
+                  T* out) {
     NewKernelUtil<DeviceType::kGPU>::OFDot(ctx, n, x, 1, y, 1, out);
   }
 };
@@ -55,7 +55,7 @@ class DotKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    DotCalculation<device_type, T>::dot(ctx->device_ctx(), n, x->dptr<T>(), 1, y->dptr<T>(), 1,
+    DotKernelCalculation<device_type, T>::dot(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
                                         out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
