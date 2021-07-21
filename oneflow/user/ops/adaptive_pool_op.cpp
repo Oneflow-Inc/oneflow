@@ -26,10 +26,8 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   DimVector out_shape(x_shape.NumAxes());
   out_shape[0] = x_shape.dim_vec()[0];
   out_shape[1] = x_shape.dim_vec()[1];
-  if (output_size.size() == 1) {
-    for (int i = 2; i < out_shape.size(); ++i) {
-      out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
-    }
+  for (int i = 2; i < out_shape.size(); ++i) {
+    out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
   }
 
   *ctx->OutputShape("y", 0) = Shape(out_shape);
@@ -106,6 +104,7 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool1d")
           [&ctx, &adaptive_avg_pool1d_grad_op_name]() -> const std::string& {
             return ctx->GetOp(adaptive_avg_pool1d_grad_op_name).output("dx", 0);
           });
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("adaptive_avg_pool2d")
@@ -175,6 +174,7 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool3d")
           [&ctx, &adaptive_avg_pool3d_grad_op_name]() -> const std::string& {
             return ctx->GetOp(adaptive_avg_pool3d_grad_op_name).output("dx", 0);
           });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace
