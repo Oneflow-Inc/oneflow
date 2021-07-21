@@ -17,11 +17,11 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_context,
 )
-from oneflow.compatible_single_client_python.framework import scope_util as scope_util
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )

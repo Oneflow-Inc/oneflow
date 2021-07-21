@@ -16,7 +16,7 @@ limitations under the License.
 
 import math
 
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     experimental_api,
     oneflow_export,
 )

@@ -20,12 +20,12 @@ import traceback
 from typing import Optional, Union, Sequence, List, Text, Callable
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible_single_client_python.framework import runtime_mode as rt_mode
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
 )

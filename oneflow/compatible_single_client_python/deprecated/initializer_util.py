@@ -22,7 +22,7 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.job import (
     initializer_conf_pb2 as initializer_conf_util,
 )
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("truncated_normal")
