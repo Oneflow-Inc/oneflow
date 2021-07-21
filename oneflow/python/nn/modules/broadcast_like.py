@@ -22,9 +22,10 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
 def _calc_broadcast_axes(x, like_tensor):
-    prepend_shape = [1] * (len(like_tensor.shape) - len(x.shape)) + list(x.shape)
-    broadcast_axes = []
-    for i in range(len(prepend_shape)):
+    num_prepend = len(like_tensor.shape) - len(x.shape)
+    prepend_shape = [1] * num_prepend + list(x.shape)
+    broadcast_axes = [x for x in range(num_prepend)]
+    for i in range(num_prepend, len(prepend_shape)):
         if prepend_shape[i] != like_tensor.shape[i]:
             if prepend_shape[i] != 1:
                 raise RuntimeError(
