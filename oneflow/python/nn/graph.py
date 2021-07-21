@@ -105,11 +105,10 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with input
-            lazy_args = []
-            for arg in args:
-                lazy_args.append(
-                    graph_build_util.build_graph_input_arg(arg, len(lazy_args))
-                )
+            lazy_args = [
+                graph_build_util.build_graph_input_arg(self.name, arg, idx)
+                for idx, arg in enumerate(args)
+            ]
             # Deal with parameter and buffer
             for state_block in self._state():
                 state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
@@ -123,13 +122,11 @@ class Graph(object):
                     outputs = ()
                 else:
                     assert type(outputs) is InternalTensor
-                    print("type(outputs): ", type(outputs))
                     outputs = (outputs,)
-            eager_outputs = []
-            for out in outputs:
-                eager_outputs.append(
-                    graph_build_util.build_graph_output(out, len(eager_outputs))
-                )
+            eager_outputs = [
+                graph_build_util.build_graph_output(self.name, out, idx)
+                for idx, out in enumerate(outputs)
+            ]
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:
