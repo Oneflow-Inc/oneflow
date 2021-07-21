@@ -382,13 +382,6 @@ class ImageResize(Module):
                 .Attr("interpolation_type", interpolation_type)
                 .Build()
             )
-            # TODO(Liang Depeng)
-            # scale = flow.tensor_buffer_to_tensor(
-            #     scale, dtype=flow.float32, instance_shape=(2,)
-            # )
-            # new_size = flow.tensor_buffer_to_tensor(
-            #     new_size, dtype=flow.int32, instance_shape=(2,)
-            # )
         else:
             if (
                 not isinstance(target_size, (list, tuple))
@@ -417,8 +410,19 @@ class ImageResize(Module):
             )
 
     def forward(self, input):
-        res = self._op(input)[0]
-        return res
+        res = self._op(input)
+        res_image = res[0]
+        if len(res) == 3:
+            new_size = flow.experimental.tensor_buffer_to_tensor(
+                res[1], dtype=flow.int32, instance_shape=(2,)
+            )
+            scale = flow.experimental.tensor_buffer_to_tensor(
+                res[2], dtype=flow.float32, instance_shape=(2,)
+            )
+        else:
+            new_size = None
+            scale = res[1]
+        return res_image, scale, new_size
 
 
 @oneflow_export("tmp.RawDecoder")
