@@ -748,6 +748,13 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+    # TODO: find a way to import automated_test_util here to enable the following test
+    #
+    # @autotest()
+    # def test_tensor_tan(test_case):
+    #     x = random_pytorch_tensor().to(random_device())
+    #     return x.tan()
+
     def test_tensor_tan(test_case):
         np_input = np.random.random((2, 3)) - 0.5
         of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
