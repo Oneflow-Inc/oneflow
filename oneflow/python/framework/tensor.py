@@ -401,6 +401,7 @@ class Tensor:
         if not lazy_mode.is_enabled():
             flow.autograd.backward(self, gradient, retain_graph, create_graph)
         else:
+            assert self.is_lazy, "nn.Graph only accept lazy tensor to call backward() in lazy mode."
             flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
     @register_local_tensor_method()
