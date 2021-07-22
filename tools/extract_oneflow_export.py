@@ -39,10 +39,16 @@ def get_files():
         list(Path("oneflow/python").rglob("*.py"))
         + list(Path("oneflow/compatible_single_client_python").rglob("*.py"))
         + [
-            Path("oneflow/init.py"),
-            Path("oneflow/__main__.py"),
-            Path("oneflow/single_client_init.py"),
-            Path("oneflow/single_client_main.py"),
+            {"src": Path("oneflow/init.py"), "dst": "oneflow/__init__.py"},
+            {"src": Path("oneflow/__main__.py"), "dst": "oneflow/__main__.py"},
+            {
+                "src": Path("oneflow/single_client_init.py"),
+                "dst": "oneflow/compatible/single_client/__init__.py",
+            },
+            {
+                "src": Path("oneflow/single_client_main.py"),
+                "dst": "oneflow/compatible/single_client/__main__.py",
+            },
         ],
     )
     pool.close()
