@@ -302,6 +302,7 @@ if __name__ == "__main__":
             str(s.src) == "oneflow/python/__init__.py"
             or str(s.src) == "oneflow/compatible_single_client_python/__init__.py"
         ):
+            assert not s.src.read_text()
             continue
         print("[src]", target_module, s.src)
         assert target_module not in src_module_added, {
