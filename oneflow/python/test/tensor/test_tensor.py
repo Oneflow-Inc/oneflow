@@ -391,7 +391,7 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    @autotest
+    @autotest()
     def test_tensor_tanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
