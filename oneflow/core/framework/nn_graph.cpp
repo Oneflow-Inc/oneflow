@@ -111,6 +111,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
 void NNGraph::NewRuntimeBuffers() {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+  // NOTE(chengcheng):
+  //   The BufferSize for each Buffer:
+  //   1. SourceTick and CallbackNotifier is job_conf.concurrency_width by user (default = 128)
+  //     in Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
+  //   2. Input/Output Buffer is 2 because this is the minimum size of pipeline async launch job.
   size_t concurrency_width = job_.job_conf().concurrency_width();
   buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
