@@ -17,11 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
-
-flow.enable_eager_execution()
+from automated_test_util import *
 
 
 def _test_expm1_impl(test_case, device, shape):
@@ -49,6 +49,19 @@ class TestExpm1Module(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest
+    def test_flow_expm1_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.expm1(x)
+        return y
+
+    @autotest
+    def test_tensor_expm1_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return input.expm1(x)
 
 
 if __name__ == "__main__":

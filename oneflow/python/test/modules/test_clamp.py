@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_clamp(test_case, shape, device):
@@ -101,6 +103,23 @@ class TestClampModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest
+    def test_flow_clamp_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.clamp(
+            x, min=random(0.1, 0.3) | nothing(), max=random(0.5, 0.8) | nothing()
+        )
+        return y
+
+    @autotest
+    def test_tensor_clamp_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.clamp(
+            x, min=random(0.1, 0.3) | nothing(), max=random(0.5, 0.8) | nothing()
+        )
 
 
 if __name__ == "__main__":

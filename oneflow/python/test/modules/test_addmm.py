@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_addmm(test_case, shape, alpha, beta, device):
@@ -46,9 +48,7 @@ def _test_addmm_backward(test_case, shape, alpha, beta, device):
     of_out = flow.addmm(input_tensor, mat1_tensor, mat2_tensor, alpha, beta).sum()
     of_out.backward()
     np_grad_out = np.ones_like(input) * beta
-    test_case.assertTrue(
-        np.allclose(input_tensor.grad.numpy(), np_grad_out, 1e-5, 1e-5)
-    )
+    test_case.assertTrue(np.allclose(input_tensor.grad.numpy(), np_grad_out, 1e-5, 1e-5))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -62,6 +62,32 @@ class TestAddmm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest
+    def test_flow_addmm_with_random_data(test_case):
+        m = random(1, 6)
+        n = random(1, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=m, dim1=m).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=m, dim1=n).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=n, dim1=m).to(device)
+        y = torch.addmm(
+            input, mat1, mat2, beta=random() | nothing(), alpha=random() | nothing(),
+        )
+        return y
+
+    @autotest
+    def test_tensor_addmm_with_random_data(test_case):
+        m = random(1, 6)
+        n = random(1, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=m, dim1=m).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=m, dim1=n).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=n, dim1=m).to(device)
+        y = input.addmm(
+            mat1, mat2, beta=random() | nothing(), alpha=random() | nothing(),
+        )
+        return y
 
 
 if __name__ == "__main__":
