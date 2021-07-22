@@ -23,16 +23,15 @@ out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
 
 class SrcFile:
     def __init__(self, spec) -> None:
-        print(spec)
-        return
-        self.destiny = destiny
-
-        # pool = multiprocessing.Pool()
-        txt = path.read_text()
-        module = ast.parse(txt)
-        self.node2seg = dict(
-            [(node, ast.get_source_segment(txt, node)) for node in module.body]
-        )
+        is_test = "is_test" in spec and spec["is_test"]
+        if is_test:
+            print("[skip test]", spec["src"])
+        else:
+            txt = spec["src"].read_text()
+            module = ast.parse(txt)
+            self.node2seg = dict(
+                [(node, ast.get_source_segment(txt, node)) for node in module.body]
+            )
 
 
 def get_specs_under_python(python_path=None, dst_path=None):
