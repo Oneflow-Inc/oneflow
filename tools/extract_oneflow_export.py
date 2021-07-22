@@ -123,6 +123,7 @@ class ExportVisitor(ast.NodeTransformer):
                     )
                     import_from_exports.append(import_from_export)
                 # TODO: insert "from origin_module import *" in exported func body
+                # TODO: rename function to target_name
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
         return node
@@ -288,13 +289,13 @@ if __name__ == "__main__":
     root_module = ModuleNode(name="oneflow")
     for s in srcs:
         # src
-        target_module = module_from_path(s.dst)
-        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
-        ModuleNode.add_sub_module(root=root_module, module=target_module)
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             ModuleNode.add_sub_module(root=root_module, module=export_path)
+        target_module = module_from_path(s.dst)
+        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        ModuleNode.add_sub_module(root=root_module, module=target_module)
     # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
