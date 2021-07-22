@@ -199,7 +199,7 @@ jobs:
               tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
           fi
       - name: Upload logs
-        if: always()
+        if: contains(github.event.pull_request.labels.*.name, 'upload-artifact')
         uses: actions/upload-artifact@v2
         with:
           name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}
