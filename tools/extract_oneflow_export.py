@@ -208,8 +208,11 @@ class ModuleNode:
 
     def __str__(self) -> str:
         return "\n".join(
-            [self.name]
-            + ["  " * self.level + child.__str__() for child in self.children.values()]
+            [f"[{self.level}] {self.name}"]
+            + [
+                "  " * (self.level + 1) + child.__str__()
+                for child in self.children.values()
+            ]
         )
 
 
@@ -225,7 +228,7 @@ class ModuleFinalizer:
         else:
             self.root_module = ModuleNode(name=parts[0])
         current_node = self.root_module
-        for part in parts:
+        for part in parts[1::]:
             current_node = current_node.add_or_get_child(part)
 
     def __str__(self) -> str:
