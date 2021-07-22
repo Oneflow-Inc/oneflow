@@ -21,9 +21,11 @@ parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--skip_autoflake", "-sa", action="store_true")
 parser.add_argument("--skip_black", "-sb", action="store_true")
 parser.add_argument("--skip_isort", "-si", action="store_true")
+parser.add_argument("--save_ast", "--ast", action="store_true")
 args = parser.parse_args()
 
 OUT_PATH = Path(args.out_dir)
+SAVE_AST = args.save_ast
 
 
 def dumpprint(node):
@@ -272,8 +274,14 @@ def save_trees(args=None):
     dst_full.parent.mkdir(parents=True, exist_ok=True)
     dst_full.touch(exist_ok=False)
     # TODO: append "doctest.testmod(raise_on_error=True)"
-    new_txt = "\n".join([ast.unparse(tree) for tree in trees])
-    dst_full.write_text(new_txt)
+    if SAVE_AST:
+        new_txt = "\n".join(
+            [str(astpretty.pformat(ast.fix_missing_locations(tree))) for tree in trees]
+        )
+        dst_full.write_text(new_txt)
+    else:
+        new_txt = "\n".join([ast.unparse(tree) for tree in trees])
+        dst_full.write_text(new_txt)
 
 
 def append_trees(tree_dict: dict, module: str, tree: ast.AST):
