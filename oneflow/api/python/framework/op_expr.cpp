@@ -96,17 +96,6 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
 
-  py::class_<one::CastConsistentOpExpr, one::OpExpr, std::shared_ptr<one::CastConsistentOpExpr>>(
-      m, "CastConsistentOpExpr");
-
-  py::class_<one::CastToConsistentOpExpr, one::CastConsistentOpExpr,
-             std::shared_ptr<one::CastToConsistentOpExpr>>(m, "CastToConsistentOpExpr")
-      .def(py::init([](const std::string& op_name,
-                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                       Symbol<ParallelDesc> parallel_desc) {
-        return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
-            .GetPtrOrThrow();
-      }));
   // NOTE(chengcheng): export for Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
   PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");
   PybindExportOpExpr<one::FeedVariableOpExpr, cfg::FeedVariableOpConf>(m, "FeedVariableOpExpr");

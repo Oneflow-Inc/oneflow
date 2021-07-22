@@ -41,6 +41,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/framework/op_expr_helper.h"
 
 namespace py = pybind11;
 
@@ -213,11 +215,56 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
+                                  const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                  Symbol<ParallelDesc> parallel_desc) {
+  if (sbp_parallels.size() == 1) {
+    const auto& sbp_parallel = sbp_parallels.at(0);
+    if (sbp_parallel->has_split_parallel()) {
+      return tensor;
+    } else if (sbp_parallel->has_broadcast_parallel()) {
+      if (parallel_desc->device_tag() == "gpu") {
+        TensorTuple input_list;
+        input_list.emplace_back(tensor);
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        std::shared_ptr<UserOpExpr> op_expr =
+            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, 0));
+        auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+        JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
+        return outputs->at(0);
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+    } else if (sbp_parallel->has_partial_sum_parallel()) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        const auto& out_tensor = JUST(tensor->detach());
+        bool requires_grad = autograd::GradMode::is_enabled() && tensor->requires_grad();
+        out_tensor->set_requires_grad(requires_grad);
+        out_tensor->set_is_leaf(!requires_grad);
+        return out_tensor;
+      } else {
+        return functional::ZerosLike(tensor);
+      }
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+  } else {
+    OF_UNIMPLEMENTED();
+  }
+}
+
 // used in mirrored_tensor.to_consistent(sbp, placement)
 Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                     Symbol<ParallelDesc> parallel_desc) {
-  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor);
+  if (tensor->is_cuda()) {
+    CHECK_EQ_OR_RETURN(JUST(tensor->device())->device_id(),
+                       GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode())
+        << "tensor must be on default device of rank!";
+  }
+  std::shared_ptr<Tensor> synced_tensor =
+      JUST(SyncDataAndMetaInfo(tensor, sbp_parallels, parallel_desc));
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(synced_tensor);
   CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
   CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
   TensorTuple input_list;

@@ -285,6 +285,10 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
 Maybe<one::UserOpExpr> SoftmaxGradOp();
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
 
+Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root);
+Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                          const std::string& name);
+
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(

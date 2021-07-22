@@ -216,7 +216,8 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
     const auto& cur_rank_phy_device = JUST(cur_rank_phy_tensor->device());
     CHECK_OR_RETURN(*device == *cur_rank_phy_device)
-        << "only LocalTensors on current rank Device can be casted to ConsistentTensor";
+        << "only LocalTensors on current rank Device can be casted to ConsistentTensor: "
+        << device->ToString() << " vs " << cur_rank_phy_device->ToString();
   }
   const auto& shape =
       JUST(GetLogicalShape(*cur_rank_phy_tensor->shape(), *parallel_distribution, *parallel_desc));
