@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
@@ -99,25 +100,21 @@ class TestSqueeze(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
     def test_flow_squeeze_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "squeeze",
-                extra_annotations={"dim": int,},
-                extra_generators={"dim": random(0, 6)},
-                device=device,
-            )
+        k = random().to(int)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=k, dim0=1, dim1=1).to(device)
+        y = torch.squeeze(input, dim=1)
+        return y
 
+    @autotest()
     def test_flow_tensor_squeeze_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "squeeze",
-                extra_annotations={"dim": int},
-                extra_generators={"dim": random(0, 6)},
-                device=device,
-            )
+        k = random().to(int)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=k, dim0=1, dim1=1).to(device)
+        y = input.squeeze(dim=1)
+        return y
 
 
 if __name__ == "__main__":
