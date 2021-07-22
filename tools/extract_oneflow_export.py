@@ -6,7 +6,8 @@ import ast
 from posixpath import basename, relpath
 import subprocess
 import multiprocessing
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from functools import partial
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -21,7 +22,9 @@ out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
 
 
 class SrcFile:
-    def __init__(self, path: Path = None, destiny=None) -> None:
+    def __init__(self, spec) -> None:
+        print(spec)
+        return
         self.destiny = destiny
 
         # pool = multiprocessing.Pool()
@@ -32,12 +35,27 @@ class SrcFile:
         )
 
 
+def get_specs_under_python(python_path=None, dst_path=None):
+    specs = []
+    for p in Path(python_path).rglob("*.py"):
+        rel = p.relative_to(python_path)
+        dst = PurePosixPath(dst_path).joinpath(rel)
+        spec = {"src": p, "dst": dst}
+        if p.is_relative_to(os.path.join(python_path, "test")):
+            spec["is_test"] = True
+        specs.append(spec)
+    return specs
+
+
 def get_files():
     pool = multiprocessing.Pool()
     segs = pool.map(
         SrcFile,
-        list(Path("oneflow/python").rglob("*.py"))
-        + list(Path("oneflow/compatible_single_client_python").rglob("*.py"))
+        get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
+        + get_specs_under_python(
+            python_path="oneflow/compatible_single_client_python",
+            dst_path="oneflow/compatible/single/client_python",
+        )
         + [
             {"src": Path("oneflow/init.py"), "dst": "oneflow/__init__.py"},
             {"src": Path("oneflow/__main__.py"), "dst": "oneflow/__main__.py"},
