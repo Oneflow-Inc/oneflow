@@ -789,7 +789,7 @@ class TestTensor(flow.unittest.TestCase):
 
     # TODO: find a way to import automated_test_util here to enable the following test
     #
-    # @autotest()()
+    # @autotest()
     # def test_tensor_tan(test_case):
     #     x = random_pytorch_tensor().to(random_device())
     #     return x.tan()
