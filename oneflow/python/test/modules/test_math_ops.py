@@ -21,8 +21,6 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 from automated_test_util import *
-import torch
-
 
 def _test_variance_keepdim(test_case, shape, device):
     np_arr = np.random.randn(*shape)
@@ -101,11 +99,11 @@ class Testsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sinh_impl(test_case, *arg)
 
-    @autotest
+    @autotest()
     def test_flow_sinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.sinh(x)
+        y = torch.sinh(x)
         return y
 
 
@@ -479,14 +477,14 @@ class TestAsin(flow.unittest.TestCase):
     def test_flow_asin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.asin(x)
+        y = torch.asin(x)
         return y
 
     @autotest
     def test_flow_arcsin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.arcsin(x)
+        y = torch.arcsin(x)
         return y
 
 
@@ -538,14 +536,14 @@ class TestAsinh(flow.unittest.TestCase):
     def test_flow_asinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.asinh(x)
+        y = torch.asinh(x)
         return y
 
     @autotest
     def test_flow_arcsinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.arcsinh(x)
+        y = torch.arcsinh(x)
         return y
 
 
@@ -743,7 +741,7 @@ class TestArccosh(flow.unittest.TestCase):
     def test_arccosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.arccosh(x)
+        y = torch.arccosh(x)
         return y
 
 
@@ -797,7 +795,7 @@ class TestAcosh(flow.unittest.TestCase):
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.acosh(x)
+        y = torch.acosh(x)
         return y
 
 
@@ -905,7 +903,7 @@ class TestAtan2(flow.unittest.TestCase):
         device = random_device()
         x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
         x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
-        y = flow.atan2(x1, x2)
+        y = torch.atan2(x1, x2)
         return y
 
 

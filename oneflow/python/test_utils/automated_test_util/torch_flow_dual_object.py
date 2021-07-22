@@ -153,6 +153,7 @@ def GetDualObject(name, pytorch, oneflow):
                 else:
 
                     def dual_method(self, *args, **kwargs):
+                        print(method_name)
                         pytorch_method = getattr(pytorch, method_name)
                         oneflow_method = getattr(oneflow, method_name)
                         (
