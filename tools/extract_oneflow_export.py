@@ -233,6 +233,7 @@ def handle_node(node=None, src_file=None):
     if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
         # TODO: append import inside functions and classes
         for d in node.decorator_list:
+            # if oneflow_export only, create #0 and reference it in the rest
             if is_export_decorator(d):
                 is_exported = True
                 handle_export(
