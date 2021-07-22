@@ -393,49 +393,49 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    @autotest
+    @autotest()
     def test_tensor_tanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.tanh()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_asin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.asin()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_arcsin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.arcsin()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_asinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.asinh()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_arcsinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.arcsinh()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_sinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.sinh()
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tensor_atan2_with_random_data(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
@@ -449,7 +449,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.arccosh()
         return y
 
-    @autotest
+    @autotest()
     def test_acosh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -789,7 +789,7 @@ class TestTensor(flow.unittest.TestCase):
 
     # TODO: find a way to import automated_test_util here to enable the following test
     #
-    # @autotest()
+    # @autotest()()
     # def test_tensor_tan(test_case):
     #     x = random_pytorch_tensor().to(random_device())
     #     return x.tan()
