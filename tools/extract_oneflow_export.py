@@ -32,9 +32,14 @@ class ExportVisitor(ast.NodeVisitor):
         super().__init__()
         self.staging_decorators = []
 
-    def generic_visit(self, node):
-        print("==" * 13)
+    def generic_FunctionDef(self, node):
+        print("\n")
         print_dump(node)
+
+    def generic_visit(self, node):
+        print(type(node).__name__)
+        print_dump(node)
+        ast.NodeVisitor.generic_visit(self, node)
 
 
 class SrcFile:
