@@ -149,7 +149,7 @@ def get_files():
             },
         ]
     )
-    if args.debug == False:
+    if args.debug:
         srcs = [
             {
                 "src": Path("oneflow/python/ops/nn_ops.py"),
