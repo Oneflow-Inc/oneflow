@@ -264,15 +264,15 @@ if __name__ == "__main__":
     for s in srcs:
         final_trees[s.dst] = final_trees.get(s.dst, [])
         final_trees[s.dst].append(s.tree)
-
+        print(s.dst)
         for export_path, export_tree in s.export_visitor.export_modules.items():
             final_trees[export_path] = final_trees.get(export_path, [])
             current_node = root_module
             for part in export_path.split(".")[1::]:
                 current_node = current_node.add_or_get_child(part)
             final_trees[export_path].append(export_tree)
-    print(root_module)
-    print([leaf.full_name() for leaf in root_module.leafs])
+    # print(root_module)
+    leaf_modules = set([leaf.full_name() for leaf in root_module.leafs])
     exit(0)
     pool = multiprocessing.Pool()
     srcs = pool.map(
