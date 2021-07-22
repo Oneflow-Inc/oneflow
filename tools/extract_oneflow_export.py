@@ -135,7 +135,7 @@ def get_files():
         get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
         + get_specs_under_python(
             python_path="oneflow/compatible_single_client_python",
-            dst_path="oneflow/compatible/single_client_python",
+            dst_path="oneflow/compatible/single_client",
         )
         + [
             {"src": Path("oneflow/init.py"), "dst": "oneflow/__init__.py"},
