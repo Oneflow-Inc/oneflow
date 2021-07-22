@@ -280,7 +280,7 @@ def random_or_nothing(low, high):
 
 @data_generator(torch.Tensor)
 class random_tensor(generator):
-    def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None):
+    def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, low=0, high=1, dtype=float):
         if ndim is None:
             ndim = random(1, 6)
         if dim0 is None:
@@ -299,8 +299,11 @@ class random_tensor(generator):
         self.dim2 = pack(dim2).to(int)
         self.dim3 = pack(dim3).to(int)
         self.dim4 = pack(dim4).to(int)
+        self.low = pack(low).to(float)
+        self.high = pack(high).to(float)
+        self.dtype = pack(dtype)
         super().__init__(
-            [self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4]
+            [self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4, self.low, self.high, self.dtype]
         )
 
     def _calc_value(self):
@@ -310,6 +313,9 @@ class random_tensor(generator):
         dim2 = self.dim2.value()
         dim3 = self.dim3.value()
         dim4 = self.dim4.value()
+        low = self.low.value()
+        high = self.high.value()
+        dtype = self.dtype.value()
         shape = rng.integers(low=1, high=8, size=ndim)
         if dim0 is not None:
             shape[0] = dim0
@@ -321,8 +327,14 @@ class random_tensor(generator):
             shape[3] = dim3
         if ndim == 5:
             shape[4] = dim4
-        np_arr = rng.random(shape)
-        return torch.Tensor(np_arr)
+        if dtype == float:
+            np_arr = rng.random(shape)
+            return torch.Tensor(np_arr)
+        elif dtype == int:
+            np_arr = rng.integers(low=low, high=high, size=shape)
+            return torch.tensor(np_arr, dtype=torch.int64)
+        else:
+            raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
 
 @data_generator(bool)
@@ -643,6 +655,7 @@ __all__ = [
     "random_device",
     "random",
     "random_or_nothing",
+    "oneof",
     "constant",
     "nothing",
     "test_module_against_pytorch",

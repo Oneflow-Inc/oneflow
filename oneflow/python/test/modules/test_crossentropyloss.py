@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 g_test_samples = [
     {
@@ -89,7 +90,7 @@ g_test_samples = [
     {
         "input": np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]),
         "target": np.array([[1, 0, 0, 1]], dtype=np.int32),
-        "out": np.array([[0.6882, 0.6832, 0.8544, 1.8006]], dtype=np.float32,),
+        "out": np.array([[0.6882, 0.6832, 0.8544, 1.8006]], dtype=np.float32, ),
         "out_sum": np.array([4.0263], dtype=np.float32),
         "out_mean": np.array([1.0066], dtype=np.float32),
     },
@@ -120,6 +121,24 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
             )
             of_out_mean = loss_mean(input, target)
             assert np.allclose(of_out_mean.numpy(), sample["out_mean"], 1e-4, 1e-4)
+
+    @autotest(n=100)
+    def test_CrossEntropyLoss_with_random_data(test_case):
+        num_classes = random()
+        shape = random_tensor(ndim=random(2, 5), dim1=num_classes).value().shape
+
+        m = torch.nn.CrossEntropyLoss(
+            reduction=oneof("none", "sum", "mean"),
+            ignore_index=random(0, num_classes)
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape) - 1, *shape[:1] + shape[2:], low=0, high=num_classes, dtype=int).to(
+            device)
+        y = m(x, target)
+        return y
 
 
 if __name__ == "__main__":
