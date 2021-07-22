@@ -150,6 +150,7 @@ def get_files():
             },
         ]
     )
+    srcs = list(filter(lambda x: ("oneflow_export" not in x["src"].name), srcs))
     if args.debug:
         srcs = [
             {
