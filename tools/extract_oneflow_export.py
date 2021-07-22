@@ -47,7 +47,7 @@ def get_specs_under_python(python_path=None, dst_path=None):
 
 
 def get_files():
-    pool = multiprocessing.Pool(12)
+    pool = multiprocessing.Pool()
     srcs = pool.map(
         SrcFile,
         get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
