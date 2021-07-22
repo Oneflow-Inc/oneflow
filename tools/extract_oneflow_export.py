@@ -216,7 +216,7 @@ if __name__ == "__main__":
     srcs = pool.map(
         save_trees,
         [
-            {"dst": final_path, "dst": final_trees,}
+            {"dst": final_path, "trees": final_trees,}
             for final_path, final_trees in final_trees.items()
         ],
     )
