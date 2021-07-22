@@ -49,37 +49,20 @@ Maybe<std::set<int64_t>> AllWorldRanks() {
 }
 
 Maybe<void> RankGroup::Init(const std::set<int64_t>& ranks) {
-  // Initialize sorted_rank_ranges_ and size_
-  {
-    size_ = ranks.size();
-    for (int64_t rank : ranks) {
-      if (!sorted_rank_ranges_.empty() && sorted_rank_ranges_.back().end() + 1 == rank) {
-        Range* last = &sorted_rank_ranges_.at(sorted_rank_ranges_.size() - 1);
-        last->mut_end() = rank;
-      } else {
-        sorted_rank_ranges_.push_back(Range(rank, rank));
-      }
-    }
-  }
+  ranks_ = ranks;
   // Initialize rank2next_rank_in_ring_ and rank2prev_rank_in_ring_
   {
-    int64_t last = sorted_rank_ranges_.at(sorted_rank_ranges_.size() - 1).end();
-    for (const auto& machine_id_range : sorted_rank_ranges_) {
-      for (int64_t i = machine_id_range.begin(); i <= machine_id_range.end(); ++i) {
-        CHECK_OR_RETURN(rank2next_rank_in_ring_.emplace(last, i).second);
-        CHECK_OR_RETURN(rank2prev_rank_in_ring_.emplace(i, last).second);
-        last = i;
-      }
+    CHECK_GT_OR_RETURN(ranks.size(), 0);
+    int64_t last = *(--ranks.end());
+    for (int64_t i : ranks) {
+      CHECK_OR_RETURN(rank2next_rank_in_ring_.emplace(last, i).second);
+      CHECK_OR_RETURN(rank2prev_rank_in_ring_.emplace(i, last).second);
+      last = i;
     }
   }
   // Initialize hash_value_
-  {
-    hash_value_ = 0;
-    const auto& hash_functor = std::hash<Range>();
-    for (const auto& range : sorted_rank_ranges_) {
-      HashCombine(&hash_value_, hash_functor(range));
-    }
-  }
+  hash_value_ = 0;
+  for (int64_t i : ranks) { HashCombine(&hash_value_, i); }
   return Maybe<void>::Ok();
 }
 
@@ -104,9 +87,7 @@ bool RankGroup::ContainingCurrentRank() const {
 }
 
 Maybe<void> RankGroup::ForEachRank(const std::function<Maybe<void>(int64_t)>& DoEach) const {
-  for (const auto& range : sorted_rank_ranges_) {
-    for (int64_t i = range.begin(); i <= range.end(); ++i) { JUST(DoEach(i)); }
-  }
+  for (int64_t i : ranks_) { JUST(DoEach(i)); }
   return Maybe<void>::Ok();
 }
 

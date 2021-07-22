@@ -23,7 +23,6 @@ limitations under the License.
 #include <string>
 #include <memory>
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/range.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -35,13 +34,10 @@ class RankGroup final {
   static Maybe<Symbol<RankGroup>> New(const std::set<int64_t>& ranks);
   static Maybe<Symbol<RankGroup>> DefaultRankGroup();
 
-  bool operator==(const RankGroup& that) const {
-    return this->sorted_rank_ranges_ == that.sorted_rank_ranges_;
-  }
+  bool operator==(const RankGroup& that) const { return this->ranks_ == that.ranks_; }
   bool operator!=(const RankGroup& that) const { return !(*this == that); }
 
-  const std::vector<Range>& sorted_rank_ranges() const { return sorted_rank_ranges_; }
-  size_t size() const { return size_; }
+  size_t size() const { return ranks_.size(); }
   size_t hash_value() const { return hash_value_; }
   Maybe<int64_t> GetNextRankInRing(int64_t rank) const;
   Maybe<int64_t> GetNextRankInRing() const;
@@ -55,10 +51,9 @@ class RankGroup final {
   RankGroup() = default;
   Maybe<void> Init(const std::set<int64_t>& ranks);
 
-  std::vector<Range> sorted_rank_ranges_;
+  std::set<int64_t> ranks_;
   std::unordered_map<int64_t, int64_t> rank2next_rank_in_ring_;
   std::unordered_map<int64_t, int64_t> rank2prev_rank_in_ring_;
-  size_t size_;
   size_t hash_value_;
 };
 

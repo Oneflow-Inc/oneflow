@@ -35,6 +35,8 @@ Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
   JUST(SetThisThreadConsistentUniqueId(thread_consistent_uid, thread_tag));
   static thread_local const auto& init_rank_group_scope =
       JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group));
+  // no unused warning for `init_rank_group_scope`.
+  (void)(init_rank_group_scope);
   return Maybe<void>::Ok();
 }
 
