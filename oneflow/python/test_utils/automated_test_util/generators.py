@@ -121,6 +121,12 @@ class generator:
     def __rsub__(self, other):
         return neg(self - other)
 
+    def __mul__(self, other):
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        return self * other
+
     def to(self, annotation):
         self._to(annotation)
         for x in self.children:
@@ -139,6 +145,16 @@ class add(generator):
 
     def _calc_value(self):
         return self.a.value() + self.b.value()
+
+
+class mul(generator):
+    def __init__(self, a, b):
+        self.a = pack(a)
+        self.b = pack(b)
+        super(mul, self).__init__([self.a, self.b])
+
+    def _calc_value(self):
+        return self.a.value() * self.b.value()
 
 
 class neg(generator):
