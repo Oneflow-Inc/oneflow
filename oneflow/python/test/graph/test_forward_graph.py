@@ -49,7 +49,7 @@ class CustomModule(flow.nn.Module):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGraph(flow.unittest.TestCase):
+class TestForwardGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self, module):
