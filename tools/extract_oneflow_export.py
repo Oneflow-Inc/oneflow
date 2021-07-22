@@ -284,10 +284,9 @@ def save_trees(args=None):
         new_txt = "\n".join(
             [str(astpretty.pformat(ast.fix_missing_locations(tree))) for tree in trees]
         )
-        dst_full.write_text(new_txt)
-    else:
-        new_txt = "\n".join([ast.unparse(tree) for tree in trees])
-        dst_full.write_text(new_txt)
+        dst_full.with_suffix(".ast.py").write_text(new_txt)
+    new_txt = "\n".join([ast.unparse(tree) for tree in trees])
+    dst_full.write_text(new_txt)
 
 
 def append_trees(tree_dict: dict, module: str, tree: ast.AST):
