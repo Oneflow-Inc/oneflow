@@ -1,4 +1,4 @@
-# python3 -m pip install isort autoflake
+# python3 -m pip install isort autoflake astpretty
 # requires python3.8 to run
 import os
 import argparse
@@ -9,6 +9,7 @@ import multiprocessing
 from pathlib import Path, PurePosixPath
 from functools import partial
 from collections import OrderedDict
+import astpretty
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -20,26 +21,74 @@ args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
 assert args.out_dir != "/"
-out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
+OUT_PATH = Path(args.out_dir)
 
 
-def print_dump(node):
-    print(ast.dump(node))
+def dumpprint(node):
+    astpretty.pprint(node)
 
 
-class ExportVisitor(ast.NodeVisitor):
-    def __init__(self) -> None:
+def is_export_decorator(d):
+    return (
+        isinstance(d, ast.Call)
+        and isinstance(d.func, ast.Name)
+        and d.func.id == "oneflow_export"
+    )
+
+
+def get_parent_module(value):
+    return ".".join(value.split(".")[0:-1])
+
+
+def join_module(parent, child):
+    return ".".join([parent, child])
+
+
+class ExportVisitor(ast.NodeTransformer):
+    def __init__(self, root_module="oneflow") -> None:
         super().__init__()
         self.staging_decorators = []
+        self.root_module = root_module
 
-    def generic_FunctionDef(self, node):
-        print("\n")
-        print_dump(node)
+    def visit_ImportFrom(self, node):
+        if node.module == "__future__" or node.module.startswith(
+            "oneflow.python.oneflow_export"
+        ):
+            return None
+        if node.module.startswith("oneflow.python"):
+            return node
+        return node
 
-    def generic_visit(self, node):
-        print(type(node).__name__)
-        print_dump(node)
-        ast.NodeVisitor.generic_visit(self, node)
+    def visit_alias(self, node: ast.alias) -> ast.alias:
+        if node.name.startswith("oneflow.python"):
+            node.name = node.name.replace("oneflow.python", "oneflow")
+            return node
+        else:
+            return node
+
+    def visit_FunctionDef(self, node):
+        for d in node.decorator_list:
+            if is_export_decorator(d):
+                import_from_exports = []
+                target_module = None
+                target_name = None
+                for (i, arg) in enumerate(d.args):
+                    if i == 0:
+                        target_module = join_module(
+                            self.root_module, get_parent_module(arg.value)
+                        )
+                        target_name = arg.value.split(".")[-1]
+                    asname = None
+                    if node.name != target_name:
+                        asname = node.name
+                    import_from_export = ast.ImportFrom(
+                        module=target_module,
+                        names=[ast.alias(name=target_name, asname=asname),],
+                        level=0,
+                    )
+                    import_from_exports.append(import_from_export)
+                return import_from_exports
+        return node
 
 
 class SrcFile:
@@ -49,21 +98,15 @@ class SrcFile:
             print("[skip test]", spec["src"])
         else:
             txt = spec["src"].read_text()
+            dst = Path(spec["dst"])
+            dst_full = OUT_PATH.joinpath(dst)
             tree = ast.parse(txt)
             ev = ExportVisitor()
             ev.visit(tree)
-            self.node2seg = OrderedDict(
-                [(node, ast.get_source_segment(txt, node)) for node in tree.body]
-            )
-            assert len(self.node2seg.keys()) == len(list(tree.body))
-            # self.process_exports()
-
-    def process_exports(self):
-        for (node, seg) in self.node2seg.items():
-            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                print_dump(node)
-        # 1. filter exports
-        # 2. replace exports with import as
+            new_txt = ast.unparse(tree)
+            dst_full.parent.mkdir(parents=True, exist_ok=True)
+            dst_full.touch()
+            dst_full.write_text(new_txt)
 
 
 def get_specs_under_python(python_path=None, dst_path=None):
@@ -103,7 +146,11 @@ def get_files():
             {
                 "src": Path("oneflow/python/ops/nn_ops.py"),
                 "dst": "oneflow/ops/nn_ops.py",
-            }
+            },
+            {
+                "src": Path("oneflow/python/advanced/distribute_ops.py"),
+                "dst": "oneflow/advanced/distribute_ops.py",
+            },
         ]
     pool = multiprocessing.Pool()
     srcs = pool.map(SrcFile, srcs,)
@@ -112,6 +159,7 @@ def get_files():
 
 
 if __name__ == "__main__":
+    out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
     subprocess.check_call(f"rm -rf {out_oneflow_dir}", shell=True)
     subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
     # step 0: parse and load all segs into memory
