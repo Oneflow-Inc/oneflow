@@ -84,7 +84,7 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& rpc_token =
-      JUST(RpcToken::NewCmdRpcToken(kRankGroupRpcCmdSyncSymbolConsistentTensorMeta));
+      JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdSyncSymbolConsistentTensorMeta));
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));

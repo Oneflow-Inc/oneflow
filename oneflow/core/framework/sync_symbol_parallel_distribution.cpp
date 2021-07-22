@@ -155,7 +155,7 @@ Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id,
                                            Symbol<cfg::ParallelDistribution> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& rpc_token =
-      JUST(RpcToken::NewCmdRpcToken(kRankGroupRpcCmdSyncSymbolParallelDistribution));
+      JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDistribution));
   SendFlatParallelDistributionAsyncRpcCtx send_ctx(symbol_id, symbol);
   RecvFlatParallelDistributionAsyncRpcCtx recv_ctx(symbol_id, symbol);
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));

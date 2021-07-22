@@ -85,7 +85,7 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& rpc_token = JUST(RpcToken::NewCmdRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
+  const auto& rpc_token = JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));

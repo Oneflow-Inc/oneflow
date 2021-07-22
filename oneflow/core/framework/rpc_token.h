@@ -24,8 +24,8 @@ namespace oneflow {
 enum RpcTokenType {
   // Begin
   kDataRpcTokenType = 0,  // e.g. for tensor data transportation
-  kMetaRpcTokenType,      // e.g. for tensor shape synchronizing or checking
-  kCmdRpcTokenType,       // e.g. for rank_group or thread checking
+  kMetaRpcTokenType,      // e.g. for tensor meta checking
+  kCtrlRpcTokenType,      // e.g. for rank_group or thread checking. see RankGroupRpcCmd
   kExtendedRpcTokenType,  // for compatibility
   // End
   kRpcTokenTypeSize,
@@ -59,7 +59,7 @@ class RpcToken final {
 
   static RpcToken NewDataRpcToken();
   static Maybe<RpcToken> NewMetaRpcToken();
-  static Maybe<RpcToken> NewCmdRpcToken(RankGroupRpcCmd cmd);
+  static Maybe<RpcToken> NewCtrlRpcToken(RankGroupRpcCmd cmd);
 
   static size_t MaxNumberOfThreadConsistentUId() { return (1 << 3); }
 
@@ -83,8 +83,8 @@ class RpcToken final {
 
   static Maybe<RpcToken> NewMetaRpcToken(int32_t thread_consistent_unique_id,
                                          int32_t rank_group_level);
-  static Maybe<RpcToken> NewCmdRpcToken(RankGroupRpcCmd cmd, int32_t thread_consistent_unique_id,
-                                        int32_t rank_group_level);
+  static Maybe<RpcToken> NewCtrlRpcToken(RankGroupRpcCmd cmd, int32_t thread_consistent_unique_id,
+                                         int32_t rank_group_level);
 
   uint16_t src_rank_;
   uint16_t dst_rank_;

@@ -86,19 +86,19 @@ class MetaRpcTokenView final {
 };
 static_assert(sizeof(MetaRpcTokenView) == sizeof(uint64_t), "");
 
-class CmdRpcTokenView final {
+class CtrlRpcTokenView final {
  public:
   int64_t thread_consistent_unique_id() const { return thread_consistent_unique_id_; }
   int64_t rank_group_level() const { return rank_group_level_; }
 
-  static Maybe<CmdRpcTokenView*> MutCast(RpcToken* rpc_token) {
-    CHECK_EQ_OR_RETURN(rpc_token->type(), kCmdRpcTokenType);
-    return reinterpret_cast<CmdRpcTokenView*>(rpc_token);
+  static Maybe<CtrlRpcTokenView*> MutCast(RpcToken* rpc_token) {
+    CHECK_EQ_OR_RETURN(rpc_token->type(), kCtrlRpcTokenType);
+    return reinterpret_cast<CtrlRpcTokenView*>(rpc_token);
   }
 
-  static Maybe<const CmdRpcTokenView*> Cast(const RpcToken* rpc_token) {
-    CHECK_EQ_OR_RETURN(rpc_token->type(), kCmdRpcTokenType);
-    return reinterpret_cast<const CmdRpcTokenView*>(rpc_token);
+  static Maybe<const CtrlRpcTokenView*> Cast(const RpcToken* rpc_token) {
+    CHECK_EQ_OR_RETURN(rpc_token->type(), kCtrlRpcTokenType);
+    return reinterpret_cast<const CtrlRpcTokenView*>(rpc_token);
   }
 
   Maybe<void> set_thread_consistent_unique_id(int8_t val) {
@@ -121,8 +121,8 @@ class CmdRpcTokenView final {
     cmd_ = static_cast<int8_t>(cmd);
   }
 
-  CmdRpcTokenView& operator++() {
-    ++cmd_seq_id_;
+  CtrlRpcTokenView& operator++() {
+    ++ctrl_seq_id_;
     return *this;
   }
 
@@ -133,9 +133,9 @@ class CmdRpcTokenView final {
   uint8_t thread_consistent_unique_id_ : 3;
   uint8_t rank_group_level_ : 3;
   uint8_t cmd_;
-  uint16_t cmd_seq_id_;
+  uint16_t ctrl_seq_id_;
 };
-static_assert(sizeof(CmdRpcTokenView) == sizeof(uint64_t), "");
+static_assert(sizeof(CtrlRpcTokenView) == sizeof(uint64_t), "");
 
 }  // namespace
 
@@ -161,7 +161,7 @@ static_assert(sizeof(CmdRpcTokenView) == sizeof(uint64_t), "");
   return ++**current_rpc_token;
 }
 
-/*static*/ Maybe<RpcToken> RpcToken::NewCmdRpcToken(RankGroupRpcCmd cmd) {
+/*static*/ Maybe<RpcToken> RpcToken::NewCtrlRpcToken(RankGroupRpcCmd cmd) {
   int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
   int32_t rank_group_level = JUST(GetCurrentRankGroupLevel());
   static const int kLimit = 128;
@@ -174,7 +174,7 @@ static_assert(sizeof(CmdRpcTokenView) == sizeof(uint64_t), "");
   CHECK_LT_OR_RETURN(static_cast<int>(cmd), kSizeOfRankGroupRpcCmd);
   auto* current_rpc_token = &rank_group_stack[rank_group_level][cmd];
   if (!*current_rpc_token) {
-    const auto& init = JUST(NewCmdRpcToken(cmd, thread_consistent_unique_id, rank_group_level));
+    const auto& init = JUST(NewCtrlRpcToken(cmd, thread_consistent_unique_id, rank_group_level));
     current_rpc_token->reset(new RpcToken(init));
   }
   return ++**current_rpc_token;
@@ -183,8 +183,8 @@ static_assert(sizeof(CmdRpcTokenView) == sizeof(uint64_t), "");
 Maybe<int64_t> RpcToken::thread_consistent_unique_id() const {
   if (type() == kMetaRpcTokenType) {
     return JUST(MetaRpcTokenView::Cast(this))->thread_consistent_unique_id();
-  } else if (type() == kCmdRpcTokenType) {
-    return JUST(CmdRpcTokenView::Cast(this))->thread_consistent_unique_id();
+  } else if (type() == kCtrlRpcTokenType) {
+    return JUST(CtrlRpcTokenView::Cast(this))->thread_consistent_unique_id();
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
@@ -194,15 +194,15 @@ Maybe<int64_t> RpcToken::thread_consistent_unique_id() const {
 Maybe<int64_t> RpcToken::rank_group_level() const {
   if (type() == kMetaRpcTokenType) {
     return JUST(MetaRpcTokenView::Cast(this))->rank_group_level();
-  } else if (type() == kCmdRpcTokenType) {
-    return JUST(CmdRpcTokenView::Cast(this))->rank_group_level();
+  } else if (type() == kCtrlRpcTokenType) {
+    return JUST(CtrlRpcTokenView::Cast(this))->rank_group_level();
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<RankGroupRpcCmd> RpcToken::cmd() const { return JUST(CmdRpcTokenView::Cast(this))->cmd(); }
+Maybe<RankGroupRpcCmd> RpcToken::cmd() const { return JUST(CtrlRpcTokenView::Cast(this))->cmd(); }
 
 Maybe<void> RpcToken::set_src_rank(int64_t src_rank) {
   CHECK_GE_OR_RETURN(src_rank, 0);
@@ -229,8 +229,8 @@ RpcToken& RpcToken::operator++() {
     UNIMPLEMENTED();
   } else if (rpc_token_type == kMetaRpcTokenType) {
     ++*CHECK_JUST(MetaRpcTokenView::MutCast(this));
-  } else if (rpc_token_type == kCmdRpcTokenType) {
-    ++*CHECK_JUST(CmdRpcTokenView::MutCast(this));
+  } else if (rpc_token_type == kCtrlRpcTokenType) {
+    ++*CHECK_JUST(CtrlRpcTokenView::MutCast(this));
   } else {
     UNIMPLEMENTED();
   }
@@ -246,11 +246,11 @@ RpcToken& RpcToken::operator++() {
   return rpc_token;
 }
 
-/*static*/ Maybe<RpcToken> RpcToken::NewCmdRpcToken(RankGroupRpcCmd cmd,
-                                                    int32_t thread_consistent_unique_id,
-                                                    int32_t rank_group_level) {
-  RpcToken rpc_token(kCmdRpcTokenType);
-  auto* view = JUST(CmdRpcTokenView::MutCast(&rpc_token));
+/*static*/ Maybe<RpcToken> RpcToken::NewCtrlRpcToken(RankGroupRpcCmd cmd,
+                                                     int32_t thread_consistent_unique_id,
+                                                     int32_t rank_group_level) {
+  RpcToken rpc_token(kCtrlRpcTokenType);
+  auto* view = JUST(CtrlRpcTokenView::MutCast(&rpc_token));
   JUST(view->set_thread_consistent_unique_id(thread_consistent_unique_id));
   JUST(view->set_rank_group_level(rank_group_level));
   view->set_cmd(cmd);
