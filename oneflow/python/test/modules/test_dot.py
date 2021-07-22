@@ -35,6 +35,27 @@ def _test_dot_forward(test_case, device, dtype):
     test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
 
 
+def _test_dot_backpropagation(test_case, device, dtype):
+    np_x = np.random.randn(1000).astype(dtype)
+    np_y = np.random.randn(1000).astype(dtype)
+
+    for arg in [[True, True], [False, True], [True, False]]:
+
+        x = flow.tensor(np_x, requires_grad=arg[0], device=flow.device(device))
+        y = flow.tensor(np_y, requires_grad=arg[1], device=flow.device(device))
+        out = flow.dot(x, y)
+        out.backward()
+
+        if arg[0]:
+            test_case.assertTrue(
+                np.allclose(np_y, x.grad.numpy(), rtol=1e-04, atol=1e-10)
+            )
+        if arg[1]:
+            test_case.assertTrue(
+                np.allclose(np_x, y.grad.numpy(), rtol=1e-04, atol=1e-10)
+            )
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -44,11 +65,13 @@ class TestDot(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_dot_forward,
+            _test_dot_backpropagation,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["dtype"] = [np.float32, np.double]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
