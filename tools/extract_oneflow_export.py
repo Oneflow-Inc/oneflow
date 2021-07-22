@@ -206,33 +206,22 @@ class ModuleNode:
             self.children[name] = ModuleNode(name=name, parent=self)
             return self.children[name]
 
+    def is_leaf(self):
+        return self.children.keys()
+
+    def full_name(self):
+        current_parent = self
+        ret = self.name
+        while current_parent.parent:
+            current_parent = current_parent.parent
+            ret = current_parent.name + "." + ret
+        return ret
+
     def __str__(self) -> str:
         return "\n".join(
-            [f"{self.name}"]
-            + [
-                "--" * (self.level + 1) + " " + child.__str__()
-                for child in self.children.values()
-            ]
+            [f"{self.full_name()}"]
+            + [child.__str__() for child in self.children.values()]
         )
-
-
-class ModuleFinalizer:
-    def __init__(self) -> None:
-        self.modules = set()
-        self.root_module = None
-
-    def add(self, module):
-        parts = module.split(".")
-        if self.root_module:
-            assert self.root_module.name == parts[0]
-        else:
-            self.root_module = ModuleNode(name=parts[0])
-        current_node = self.root_module
-        for part in parts[1::]:
-            current_node = current_node.add_or_get_child(part)
-
-    def __str__(self) -> str:
-        return self.root_module.__str__()
 
 
 def save_trees(args=None):
@@ -255,16 +244,18 @@ if __name__ == "__main__":
     srcs = get_files()
     final_trees = {}
 
-    module_finalizer = ModuleFinalizer()
+    root_module = ModuleNode(name="oneflow")
     for s in srcs:
         final_trees[s.dst] = final_trees.get(s.dst, [])
         final_trees[s.dst].append(s.tree)
 
         for export_path, export_tree in s.export_visitor.export_modules.items():
             final_trees[export_path] = final_trees.get(export_path, [])
-            module_finalizer.add(export_path)
+            current_node = root_module
+            for part in export_path.split(".")[1::]:
+                current_node = current_node.add_or_get_child(part)
             final_trees[export_path].append(export_tree)
-    print(module_finalizer)
+    print(root_module)
     exit(0)
     pool = multiprocessing.Pool()
     srcs = pool.map(
