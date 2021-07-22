@@ -62,12 +62,11 @@ class ExportVisitor(ast.NodeTransformer):
         self.export_modules = {}
 
     def append_export(self, target_module=None, node=None):
-        target_path = path_from_module(target_module)
         if target_module not in self.export_modules:
             module = ast.Module(body=[], type_ignores=[])
-            self.export_modules[target_path] = module
+            self.export_modules[target_module] = module
         else:
-            module = self.export_modules[target_path]
+            module = self.export_modules[target_module]
         # dumpprint(module)
         module.body.append(node)
 
