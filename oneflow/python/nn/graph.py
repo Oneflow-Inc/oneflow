@@ -22,7 +22,6 @@ import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.multi_client_session import MultiClientSession
@@ -47,7 +46,6 @@ class Graph(object):
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
-        self._state_tensortuple = None
         self._var2var_op_name = dict()
         self._job_proto = None
 
@@ -108,8 +106,6 @@ class Graph(object):
                 self._var2var_op_name[state_block.origin] = (
                     state_block.name_prefix + state_block.name
                 )
-
-        self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state_list)
 
     def _complete_graph_config(self):
         if len(self._optimizers):
