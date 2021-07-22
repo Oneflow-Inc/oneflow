@@ -52,9 +52,18 @@ def join_module(parent, child):
 
 def path_from_module(module, is_init=False):
     if is_init:
-        return Path("/".join(module.split("."))).joinpath("__init__.py")
+        return Path("/".join(module.split(".") + ["__init__.py"]))
     else:
         return Path("/".join(module.split(".")) + ".py")
+
+
+def module_from_path(path: Path):
+    assert path.name.endswith(".py")
+    parts = path.parts
+    if parts[-1] == "__init__.py":
+        return ".".join(path.parts[0:-1])
+    else:
+        return ".".join(path.parts)[0:-3]
 
 
 class ExportVisitor(ast.NodeTransformer):
@@ -207,7 +216,7 @@ class ModuleNode:
             return self.children[name]
 
     def is_leaf(self):
-        return self.children.keys()
+        return len(self.children.keys()) == 0
 
     def walk(self, cb):
         cb(self)
@@ -216,15 +225,18 @@ class ModuleNode:
 
     @property
     def leafs(self):
-        leafs = []
+        ret = []
 
         def add_leafs(node: ModuleNode):
             if node.is_leaf:
-                leafs.append(node)
+                print("[leaf]", node.full_name)
+                print(node)
+                ret.append(node)
 
         self.walk(add_leafs)
-        return leafs
+        return ret
 
+    @property
     def full_name(self):
         current_parent = self
         ret = self.name
@@ -235,16 +247,16 @@ class ModuleNode:
 
     def __str__(self) -> str:
         return "\n".join(
-            [f"{self.full_name()}"]
+            [f"{self.full_name}"]
             + [child.__str__() for child in self.children.values()]
         )
 
 
 def save_trees(args=None):
-    dst = args["dst"]
+    dst: Path = args["dst"]
     trees = args["trees"]
-    if len(trees) > 2:
-        print(dst.name, len(trees))
+    # if len(trees) > 2:
+    # print(dst, len(trees))
     dst_full = OUT_PATH.joinpath(dst)
     dst_full.parent.mkdir(parents=True, exist_ok=True)
     dst_full.touch()
@@ -262,24 +274,36 @@ if __name__ == "__main__":
 
     root_module = ModuleNode(name="oneflow")
     for s in srcs:
-        final_trees[s.dst] = final_trees.get(s.dst, [])
-        final_trees[s.dst].append(s.tree)
-        print(s.dst)
+        # src
+        target_module = module_from_path(s.dst)
+        final_trees[target_module] = final_trees.get(target_module, [])
+        final_trees[target_module].append(s.tree)
+        # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             final_trees[export_path] = final_trees.get(export_path, [])
-            current_node = root_module
-            for part in export_path.split(".")[1::]:
-                current_node = current_node.add_or_get_child(part)
             final_trees[export_path].append(export_tree)
-    # print(root_module)
-    leaf_modules = set([leaf.full_name() for leaf in root_module.leafs])
-    exit(0)
+            # build module tree
+            parts = export_path.split(".")
+            current_node = root_module
+            assert current_node.name == parts[0]
+            for part in parts[1::]:
+                current_node = current_node.add_or_get_child(part)
+    print(root_module)
+    leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
+
+    def is_init(module):
+        # if module in leaf_modules:
+        #     print("[leaf]", module)
+        # else:
+        #     print("[not leaf]", module)
+        return module not in leaf_modules
+
     srcs = pool.map(
         save_trees,
         [
-            {"dst": final_path, "trees": final_trees,}
-            for final_path, final_trees in final_trees.items()
+            {"dst": path_from_module(module, is_init=is_init(module)), "trees": trees,}
+            for module, trees in final_trees.items()
         ],
     )
     pool.close()
