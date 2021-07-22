@@ -31,6 +31,8 @@ class Argwhere(Module):
 
     def forward(self, x):
         res, size = flow.F.argwhere(x, dtype=self.dtype)
+        if size.shape == flow.Size([]):
+            return flow.Tensor([])
         slice_tup_list = [[0, int(size.numpy()), 1]]
         return flow.experimental.slice(res, slice_tup_list=slice_tup_list)
 
