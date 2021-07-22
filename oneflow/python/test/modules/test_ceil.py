@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torch
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_ceil_impl(test_case, device, shape):
@@ -45,6 +47,19 @@ class TestCeilModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest
+    def test_flow_ceil_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.ceil(x)
+        return y
+
+    @autotest
+    def test_tensor_ceil_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.ceil()
 
 
 if __name__ == "__main__":
