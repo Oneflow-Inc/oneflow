@@ -37,7 +37,7 @@ class StepLR(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
 
         ...
         step_lr = flow.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)

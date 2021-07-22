@@ -56,7 +56,7 @@ class CosineAnnealingLR(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
 
         ...
         cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, steps=100, alpha=0.0)

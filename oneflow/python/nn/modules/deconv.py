@@ -128,7 +128,7 @@ class ConvTranspose2d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding

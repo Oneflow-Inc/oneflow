@@ -56,7 +56,7 @@ class AdaptiveAvgPool1d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> m = nn.AdaptiveAvgPool1d(5)
         >>> input = flow.Tensor(np.random.randn(1, 64, 8))
@@ -113,7 +113,7 @@ class AdaptiveAvgPool2d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
@@ -177,7 +177,7 @@ class AdaptiveAvgPool3d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> m = nn.AdaptiveAvgPool3d((5,7,9))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))

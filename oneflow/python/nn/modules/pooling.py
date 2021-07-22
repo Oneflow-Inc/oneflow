@@ -90,7 +90,7 @@ class AvgPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
         import numpy as np
 
 

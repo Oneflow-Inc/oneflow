@@ -50,7 +50,6 @@ def diag_op(input, diagonal=0):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> arr = np.array(
         ...     [
         ...        [1.0, 2.0, 3.0],

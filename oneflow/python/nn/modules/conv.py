@@ -155,7 +155,7 @@ class Conv1d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
@@ -379,7 +379,7 @@ class Conv2d(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.nn as nn
         
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)

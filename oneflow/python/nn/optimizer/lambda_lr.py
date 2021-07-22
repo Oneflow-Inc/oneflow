@@ -42,7 +42,7 @@ class LambdaLR(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
 
         ...
         lambda1 = lambda step: step // 30
