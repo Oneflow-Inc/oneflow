@@ -11,8 +11,10 @@ class SoftmaxOp final : public TVMOpKernel {
     tvm::Array<tvm::relay::Expr> node_inputs;
     node_inputs.push_back(ctx->GetExpr4InputName("in_0"));
 
+    const auto& input_shape = ctx->GetShape4InputName("in_0");
+    int axis = input_shape.NumAxes() - 1;
     auto softmax_attrs = tvm::runtime::make_object<tvm::relay::SoftmaxAttrs>();
-    softmax_attrs->axis = ctx->Attr<int32_t>("axis");
+    softmax_attrs->axis = axis;
 
     auto op = tvm::relay::Op::Get("nn.softmax");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(softmax_attrs), {});
