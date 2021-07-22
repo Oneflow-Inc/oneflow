@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import numpy as np
 
+
 def check_slice_tup_list(slice_tup_list, shape):
     ndim = len(shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
@@ -66,8 +67,6 @@ def check_slice_tup_list(slice_tup_list, shape):
         step_list.append(step)
 
     return start_list, stop_list, step_list
-
-
 
 
 # Get slice attrs for slice_assign and logical_slice
