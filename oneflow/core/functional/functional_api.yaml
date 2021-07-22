@@ -145,7 +145,7 @@
   bind_python: True
 
 - name: "fmod"
-  signature: "Tensor BroadcastFloorMod(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "log"

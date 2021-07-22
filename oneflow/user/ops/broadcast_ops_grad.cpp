@@ -184,4 +184,10 @@ REGISTER_USER_OP_GRAD("broadcast_floor_mod")
       }
     });
 
+REGISTER_USER_OP_GRAD("broadcast_fmod")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
+      }
+    });
 }  // namespace oneflow

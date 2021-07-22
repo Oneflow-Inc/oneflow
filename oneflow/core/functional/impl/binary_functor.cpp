@@ -79,10 +79,10 @@ class BroadcastDivFunctor : public BinaryFunctor {
 };
 
 
-class BroadcastFloorModFunctor : public BinaryFunctor {
+class BroadcastFModFunctor : public BinaryFunctor {
  public:
-  BroadcastFloorModFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_floor_mod").Input("x").Input("y").Output("z").Build());
+  BroadcastFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_fmod").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -183,7 +183,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
-  m.add_functor<impl::BroadcastFloorModFunctor>("BroadcastFloorMod");
+  m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
 };
 
 }  // namespace functional

@@ -19,22 +19,22 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct BroadcastFloorModInterpState : public OpExprInterpState {
+struct BroadcastFModInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class BroadcastFloorMod : public OpExprGradFunction<BroadcastFloorModInterpState> {
+class BroadcastFMod : public OpExprGradFunction<BroadcastFModInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(BroadcastFloorModInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(BroadcastFModInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const BroadcastFloorModInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadcastFModInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
@@ -43,7 +43,7 @@ class BroadcastFloorMod : public OpExprGradFunction<BroadcastFloorModInterpState
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_floor_mod", BroadcastFloorMod);
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_fmod", BroadcastFMod);
 
 }  // namespace one
 }  // namespace oneflow

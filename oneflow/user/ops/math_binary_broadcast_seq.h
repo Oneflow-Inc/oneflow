@@ -27,8 +27,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)     \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min) \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FMod)
-  // OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)
   
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ        \
