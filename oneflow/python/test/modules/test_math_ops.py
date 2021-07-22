@@ -22,6 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 from automated_test_util import *
 
+
 def _test_variance_keepdim(test_case, shape, device):
     np_arr = np.random.randn(*shape)
     of_out = flow.Tensor(np_arr, device=flow.device(device)).var(0, True)
