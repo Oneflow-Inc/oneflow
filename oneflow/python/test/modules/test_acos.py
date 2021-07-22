@@ -49,13 +49,19 @@ class TestAcos(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_acos_impl(test_case, *arg)
 
-    def test_acos_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(test_case, "acos", device=device)
+    @autotest
+    def test_acos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.acos(x)
+        return z
 
-    def test_tensor_acos_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(test_case, "acos", device=device)
+    @autotest
+    def test_acos_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.acos()
+        return z
 
 
 if __name__ == "__main__":

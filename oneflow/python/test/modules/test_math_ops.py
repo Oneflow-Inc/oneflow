@@ -141,17 +141,19 @@ class TestCosh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_cosh_impl(test_case, *arg)
 
-    def test_flow_cosh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "cosh", device=device,
-            )
+    @autotest
+    def test_cosh_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.cosh(x)
+        return z
 
-    def test_flow_tensor_cosh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "cosh", device=device,
-            )
+    @autotest
+    def test_cosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.cosh()
+        return z
 
 
 def _test_sin(test_case, shape, device):
@@ -364,13 +366,19 @@ class TestSqrt(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_sqrt_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(test_case, "sqrt", device=device)
+    @autotest
+    def test_sqrt_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.sqrt(x)
+        return z
 
-    def test_tensor_sqrt_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(test_case, "sqrt", device=device)
+    @autotest
+    def test_sqrt_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.sqrt()
+        return z
 
 
 def _test_rsqrt(test_case, shape, device):
@@ -441,13 +449,19 @@ class TestSquare(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_square_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(test_case, "square", device=device)
+    @autotest
+    def test_square_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.square(x)
+        return z
 
-    def test_tensor_square_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(test_case, "square", device=device)
+    @autotest
+    def test_square_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.square()
+        return z
 
 
 def _test_pow(test_case, shape, device):
@@ -490,13 +504,21 @@ class TestPow(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_pow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(test_case, "pow", device=device)
+    @autotest
+    def test_pow_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random(1, 5).to(device)
+        z = torch.pow(x, y)
+        return z
 
-    def test_tensor_pow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(test_case, "pow", device=device)
+    @autotest
+    def test_pow_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random(1, 5).to(device)
+        z = x.pow(y)
+        return z
 
 
 def _test_asin(test_case, shape, device):
@@ -808,45 +830,25 @@ class TestTopk(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def arccosh_input_tensor(shape):
-    def generator(_):
-        low = 1
-        high = 2
-        rng = np.random.default_rng()
-        np_arr = rng.random(size=shape) * (high - low) + low
-        return (
-            flow.Tensor(np_arr, dtype=flow.float32),
-            torch.tensor(np_arr, dtype=torch.float32),
-        )
-
-    return generator
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
+    @autotest
     def test_arccosh_flow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "arccosh",
-                device=device,
-                n=2,
-                extra_generators={"input": arccosh_input_tensor((3, 3))},
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.arccosh(x)
+        return z
 
+    @autotest
     def test_arccosh_tensor_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "arccosh",
-                device=device,
-                n=2,
-                extra_generators={"input": arccosh_input_tensor((3, 3))},
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.arccosh()
+        return z
 
 
 def _test_acosh_impl(test_case, shape, device):
@@ -868,20 +870,6 @@ def _test_acosh_impl(test_case, shape, device):
     )
 
 
-def acosh_input_tensor(shape):
-    def generator(_):
-        low = 1
-        high = 2
-        rng = np.random.default_rng()
-        np_arr = rng.random(size=shape) * (high - low) + low
-        return (
-            flow.Tensor(np_arr, dtype=flow.float32),
-            torch.tensor(np_arr, dtype=torch.float32),
-        )
-
-    return generator
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -895,25 +883,19 @@ class TestAcosh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_acosh_impl(test_case, *arg)
 
+    @autotest
     def test_acosh_flow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "acosh",
-                device=device,
-                n=2,
-                extra_generators={"input": acosh_input_tensor((3, 3))},
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.acosh(x)
+        return z
 
+    @autotest
     def test_acosh_tensor_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "acosh",
-                device=device,
-                n=2,
-                extra_generators={"input": acosh_input_tensor((3, 3))},
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.acosh()
+        return z
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):
