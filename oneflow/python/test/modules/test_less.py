@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_less_normal(test_case, device):
@@ -92,6 +93,26 @@ class TestLess(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(auto_backward=False)
+    def test_greater_with_random_data(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        y1 = torch.lt(x1, x2)
+        y2 = torch.lt(x1, random().to(int))
+        y3 = torch.lt(x1, random().to(float))
+        return y1, y2, y3
+
+    @autotest(auto_backward=False)
+    def test_tensor_greater_with_random_data(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        y1 = x1.lt(x2)
+        y2 = x1 < x2
+        y3 = x1.lt(random().to(int))
+        y4 = x1.lt(random().to(float))
+        return y1, y2, y3, y4
 
 if __name__ == "__main__":
     unittest.main()
