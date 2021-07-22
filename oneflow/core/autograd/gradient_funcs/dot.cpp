@@ -22,6 +22,8 @@ namespace one {
 struct DotInterpState : public OpExprInterpState {
   bool x_requires_grad;
   bool y_requires_grad;
+  size_t x_offset;
+  size_t y_offset;
 };
 
 class DotGrad : public OpExprGradFunction<DotInterpState> {
@@ -33,10 +35,12 @@ class DotGrad : public OpExprGradFunction<DotInterpState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    if (ctx->x_requires_grad) {
+      ctx->x_offset = ctx->SaveTensorForBackward(inputs.at(1));
+    }
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
-    if (ctx->y_requires_grad || ctx->x_requires_grad) {
-      ctx->SaveTensorForBackward(inputs.at(0));
-      ctx->SaveTensorForBackward(inputs.at(1));
+    if (ctx->y_requires_grad) {
+      ctx->y_offset = ctx->SaveTensorForBackward(inputs.at(0));
     }
     return Maybe<void>::Ok();
   }
@@ -45,13 +49,19 @@ class DotGrad : public OpExprGradFunction<DotInterpState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
+
     if (ctx->x_requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      const auto& y = ctx->SavedTensors().at(1);
-      const auto& results = JUST(functional::DotGrad(x, y, out_grads.at(0)));
-      in_grads->at(0) = results->at(0);  // x
-      in_grads->at(1) = results->at(1);
+      const auto& x = ctx->SavedTensors().at(ctx->x_offset);
+      const auto& results = JUST(functional::ScalarMulByTensor(x, out_grads.at(0)));
+      in_grads->at(0) = results; 
     }
+
+    if (ctx->y_requires_grad) {
+      const auto& y = ctx->SavedTensors().at(ctx->y_offset);
+      const auto& results = JUST(functional::ScalarMulByTensor(y, out_grads.at(0)));
+      in_grads->at(1) = results; 
+    }
+
     return Maybe<void>::Ok();
   }
 };

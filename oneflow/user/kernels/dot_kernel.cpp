@@ -36,8 +36,6 @@ struct DotKernelCalculation<DeviceType::kCPU, T> {
 
   static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
                        T* dx, T* dy) {
-    std::cout << "dout address = " << static_cast<const void*>(dout) << std::endl;
-    std::cout << "dout = " << *dout << std::endl;
     cblas_copy<T>(n, y, 1, dx, 1);
     cblas_copy<T>(n, x, 1, dy, 1);
     cblas_scal<T>(n, *dout, dx, 1);
