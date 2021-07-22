@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.python.test_utils.automated_test_util.torch_flow_dual_object import autotest
 import unittest
 import random
 from collections import OrderedDict
@@ -21,6 +22,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 import oneflow.typing as oft
+from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -90,7 +92,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape)
         np_zeros = np.zeros(x.shape)
 
-        random_fill_val = random.uniform(-100.0, 100.0)
+        random_fill_val = np.random.uniform(-100.0, 100.0)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -114,7 +116,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
 
-        random_fill_val = random.randint(-100, 100)
+        random_fill_val = np.random.randint(-100, 100)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -388,6 +390,13 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.sum(dim=(2, 1))
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    @autotest
+    def test_tensor_tanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.tanh()
+        return y
 
     def test_asinh(test_case):
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
