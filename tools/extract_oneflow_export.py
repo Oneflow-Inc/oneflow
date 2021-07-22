@@ -21,9 +21,7 @@ parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--skip_autoflake", "-sa", action="store_true")
 parser.add_argument("--skip_black", "-sb", action="store_true")
 args = parser.parse_args()
-assert args.out_dir
-assert args.out_dir != "~"
-assert args.out_dir != "/"
+
 OUT_PATH = Path(args.out_dir)
 
 
@@ -230,8 +228,6 @@ class ModuleNode:
 
         def add_leafs(node: ModuleNode):
             if node.is_leaf:
-                print("[leaf]", node.full_name)
-                print(node)
                 ret.append(node)
 
         self.walk(add_leafs)
@@ -266,9 +262,12 @@ def save_trees(args=None):
 
 
 if __name__ == "__main__":
-    out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
+    out_oneflow_dir = os.path.join(args.out_dir, "*")
+    assert args.out_dir
+    assert args.out_dir != "~"
+    assert args.out_dir != "/"
+    subprocess.check_call(f"mkdir -p {OUT_PATH}", shell=True)
     subprocess.check_call(f"rm -rf {out_oneflow_dir}", shell=True)
-    subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
     # step 0: parse and load all segs into memory
     srcs = get_files()
     final_trees = {}
@@ -289,16 +288,16 @@ if __name__ == "__main__":
             assert current_node.name == parts[0]
             for part in parts[1::]:
                 current_node = current_node.add_or_get_child(part)
-    print(root_module)
+    # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
 
-    def is_init(module):
-        # if module in leaf_modules:
-        #     print("[leaf]", module)
-        # else:
-        #     print("[not leaf]", module)
-        return module not in leaf_modules
+    def is_init(module: str):
+        is_leaf = module in leaf_modules
+        is_magic = module.endswith("__")
+        if is_magic:
+            print("magic", module)
+        return is_leaf == False and is_magic == False
 
     srcs = pool.map(
         save_trees,
