@@ -391,14 +391,11 @@ class ElementwiseAdd(Module):
 
 
 class BroadcastAdd(Module):
-    def __init__(self, inplace: bool = False) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.inplace = inplace
 
     def forward(self, x, y):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.broadcast_add(x, y, self.inplace)
+        return flow.F.broadcast_add(x, y)
 
 
 @oneflow_export("add")
@@ -474,7 +471,8 @@ def _add_inplace(x, y):
     elif y.shape == (1,):
         return ScalarAddByTensor(inplace=True)(x, y)
     else:
-        return BroadcastAdd(inplace=True)(x, y)
+        y = flow.experimental.broadcast_like(y, x)
+        return ElementwiseAdd(inplace=True)(x, y)
 
 
 class Asin(Module):
