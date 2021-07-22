@@ -15,6 +15,7 @@ parser.add_argument(
     "--out_dir", type=str, default="python",
 )
 parser.add_argument("--verbose", "-v", action="store_true")
+parser.add_argument("--debug", "-d", action="store_true")
 args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
@@ -26,6 +27,16 @@ def print_dump(node):
     print(ast.dump(node))
 
 
+class ExportVisitor(ast.NodeVisitor):
+    def __init__(self) -> None:
+        super().__init__()
+        self.staging_decorators = []
+
+    def generic_visit(self, node):
+        print("==" * 13)
+        print_dump(node)
+
+
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
@@ -34,6 +45,8 @@ class SrcFile:
         else:
             txt = spec["src"].read_text()
             tree = ast.parse(txt)
+            ev = ExportVisitor()
+            ev.visit(tree)
             self.node2seg = OrderedDict(
                 [(node, ast.get_source_segment(txt, node)) for node in tree.body]
             )
@@ -61,9 +74,7 @@ def get_specs_under_python(python_path=None, dst_path=None):
 
 
 def get_files():
-    pool = multiprocessing.Pool()
-    srcs = pool.map(
-        SrcFile,
+    srcs = (
         get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
         + get_specs_under_python(
             python_path="oneflow/compatible_single_client_python",
@@ -80,8 +91,17 @@ def get_files():
                 "src": Path("oneflow/single_client_main.py"),
                 "dst": "oneflow/compatible/single_client/__main__.py",
             },
-        ],
+        ]
     )
+    if args.debug:
+        srcs = [
+            {
+                "src": Path("oneflow/python/ops/nn_ops.py"),
+                "dst": "oneflow/ops/nn_ops.py",
+            }
+        ]
+    pool = multiprocessing.Pool()
+    srcs = pool.map(SrcFile, srcs,)
     pool.close()
     return srcs
 
