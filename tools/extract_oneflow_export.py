@@ -335,6 +335,7 @@ if __name__ == "__main__":
         }
         src_module_added[target_module] = s.src
         ModuleNode.add_sub_module(root=root_module, module=target_module)
+    for s in srcs:
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             print("[export]", export_path)
