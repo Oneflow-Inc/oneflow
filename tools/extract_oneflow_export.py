@@ -20,6 +20,7 @@ parser.add_argument("--verbose", "-v", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--skip_autoflake", "-sa", action="store_true")
 parser.add_argument("--skip_black", "-sb", action="store_true")
+parser.add_argument("--skip_isort", "-si", action="store_true")
 args = parser.parse_args()
 
 OUT_PATH = Path(args.out_dir)
@@ -289,13 +290,13 @@ if __name__ == "__main__":
     root_module = ModuleNode(name="oneflow")
     for s in srcs:
         # src
+        target_module = module_from_path(s.dst)
+        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        ModuleNode.add_sub_module(root=root_module, module=target_module)
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             ModuleNode.add_sub_module(root=root_module, module=export_path)
-        target_module = module_from_path(s.dst)
-        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
-        ModuleNode.add_sub_module(root=root_module, module=target_module)
     # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
@@ -334,10 +335,11 @@ if __name__ == "__main__":
             shell=True,
             cwd=args.out_dir,
         )
-    print("[postprocess]", "isort")
-    subprocess.check_call(
-        f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
-    )
+    if args.skip_isort == False:
+        print("[postprocess]", "isort")
+        subprocess.check_call(
+            f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+        )
     if args.skip_black == False:
         print("[postprocess]", "black")
         subprocess.check_call(
