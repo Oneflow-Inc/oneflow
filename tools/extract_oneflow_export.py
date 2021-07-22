@@ -83,6 +83,12 @@ class ExportVisitor(ast.NodeTransformer):
         # dumpprint(module)
         module.body.append(node)
 
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Constant):
+            if "Copyright 2020 The OneFlow Authors" in node.value.value:
+                return None
+        return node
+
     def visit_ImportFrom(self, node):
         if node.module:
             if node.module == "__future__" or node.module.startswith(
