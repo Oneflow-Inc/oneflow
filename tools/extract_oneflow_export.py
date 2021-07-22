@@ -134,7 +134,7 @@ class SrcFile:
             txt = spec["src"].read_text()
             self.tree = ast.parse(txt)
             root_module = "oneflow"
-            if "compatible_single_client_python" in spec["src"].name:
+            if "compatible_single_client_python" in spec["src"].parts:
                 root_module = "oneflow.compatible.single_client"
             self.export_visitor = ExportVisitor(root_module=root_module)
             self.export_visitor.visit(self.tree)
