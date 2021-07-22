@@ -244,7 +244,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=1e-4, atol=1e-5):
             torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()
         ):
             return False
-    return np.allclose(torch_tensor.detach().cpu().numpy(), flow_tensor.numpy(), rtol=rtol, atol=atol)
+    return np.allclose(
+        torch_tensor.detach().cpu().numpy(), flow_tensor.numpy(), rtol=rtol, atol=atol
+    )
 
 
 def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
