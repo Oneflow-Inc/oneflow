@@ -191,6 +191,8 @@ def get_files():
 def save_trees(args=None):
     dst = args["dst"]
     trees = args["trees"]
+    if len(trees) > 2:
+        print(dst.name, len(trees))
     dst_full = OUT_PATH.joinpath(dst)
     dst_full.parent.mkdir(parents=True, exist_ok=True)
     dst_full.touch()
