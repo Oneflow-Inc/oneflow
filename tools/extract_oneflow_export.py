@@ -8,6 +8,7 @@ import subprocess
 import multiprocessing
 from pathlib import Path, PurePosixPath
 from functools import partial
+from collections import OrderedDict
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -29,7 +30,7 @@ class SrcFile:
         else:
             txt = spec["src"].read_text()
             module = ast.parse(txt)
-            self.node2seg = dict(
+            self.node2seg = OrderedDict(
                 [(node, ast.get_source_segment(txt, node)) for node in module.body]
             )
 
