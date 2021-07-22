@@ -104,6 +104,8 @@ class ExportVisitor(ast.NodeTransformer):
         if node.name.startswith("oneflow.python"):
             node.name = node.name.replace("oneflow.python", "oneflow")
             return node
+        elif node.name.startswith("oneflow.oneflow_gen"):
+            return None
         else:
             return node
 
