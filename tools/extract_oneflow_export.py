@@ -35,7 +35,15 @@ class SrcFile:
 def get_files():
     pool = multiprocessing.Pool()
     segs = pool.map(
-        SrcFile, Path("oneflow/compatible_single_client_python").rglob("*.py"),
+        SrcFile,
+        list(Path("oneflow/python").rglob("*.py"))
+        + list(Path("oneflow/compatible_single_client_python").rglob("*.py"))
+        + [
+            Path("oneflow/init.py"),
+            Path("oneflow/__main__.py"),
+            Path("oneflow/single_client_init.py"),
+            Path("oneflow/single_client_main.py"),
+        ],
     )
     pool.close()
     # for path in Path("oneflow/compatible_single_client_python").rglob("*.py"):
