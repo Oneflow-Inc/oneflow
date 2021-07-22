@@ -77,7 +77,6 @@ if __name__ == "__main__":
     subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
     # step 0: parse and load all segs into memory
     srcs = get_files()
-    print(srcs)
     # step 1: extract all exports
     # step 2: merge files under python/ into generated files
     # step 3: rename all
