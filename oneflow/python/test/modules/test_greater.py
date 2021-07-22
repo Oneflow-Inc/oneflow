@@ -100,8 +100,9 @@ class TestGreater(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_greater_with_random_data(test_case):
         device = random_device()
-        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
-        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y1 = torch.gt(x1, x2)
         y2 = torch.gt(x1, random().to(int))
         y3 = torch.gt(x1, random().to(float))
@@ -110,8 +111,9 @@ class TestGreater(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_tensor_greater_with_random_data(test_case):
         device = random_device()
-        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
-        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y1 = x1.gt(x2)
         y2 = x1 > x2
         y3 = x1.gt(random().to(int))

@@ -94,20 +94,22 @@ class TestLess(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(auto_backward=False)
-    def test_greater_with_random_data(test_case):
+    def test_less_with_random_data(test_case):
         device = random_device()
-        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
-        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y1 = torch.lt(x1, x2)
         y2 = torch.lt(x1, random().to(int))
         y3 = torch.lt(x1, random().to(float))
         return y1, y2, y3
 
     @autotest(auto_backward=False)
-    def test_tensor_greater_with_random_data(test_case):
+    def test_tensor_less_with_random_data(test_case):
         device = random_device()
-        x1 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
-        x2 = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y1 = x1.lt(x2)
         y2 = x1 < x2
         y3 = x1.lt(random().to(int))
