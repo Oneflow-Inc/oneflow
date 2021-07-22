@@ -175,6 +175,8 @@ class SrcFile:
 def get_specs_under_python(python_path=None, dst_path=None):
     specs = []
     for p in Path(python_path).rglob("*.py"):
+        if p.name == "version.py":
+            continue
         rel = p.relative_to(python_path)
         dst = Path(dst_path).joinpath(rel)
         spec = {"src": p, "dst": dst}
