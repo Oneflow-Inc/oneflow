@@ -58,7 +58,14 @@ class ExportVisitor(ast.NodeTransformer):
         super().__init__()
         self.staging_decorators = []
         self.root_module = root_module
-        self.export_trees = {}
+        self.export_modules = {}
+
+    def append_export(self, target_module, node):
+        if target_module not in self.export_trees:
+            module = ast.Module()
+        else:
+            module = self.export_trees[target_module]
+        module.body.append(node)
 
     def visit_ImportFrom(self, node):
         if not node.module:
