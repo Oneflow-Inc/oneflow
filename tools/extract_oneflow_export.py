@@ -176,11 +176,12 @@ if __name__ == "__main__":
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
-    subprocess.check_call(
-        f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
-        shell=True,
-        cwd=args.out_dir,
-    )
+    if args.debug == False:
+        subprocess.check_call(
+            f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
+            shell=True,
+            cwd=args.out_dir,
+        )
     subprocess.check_call(
         f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
     )
