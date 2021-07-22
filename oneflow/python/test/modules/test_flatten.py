@@ -82,6 +82,13 @@ class TestFlattenModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(auto_backward=False)
+    def test_tensor_against_pytorch(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.flatten(start_dim=random(1, 6).to(int) | nothing(), end_dim=random(1, 6).to(int) | nothing())
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
