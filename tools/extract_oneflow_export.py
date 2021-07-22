@@ -246,6 +246,14 @@ class ModuleNode:
             + [child.__str__() for child in self.children.values()]
         )
 
+    @staticmethod
+    def add_sub_module(root=None, module=None):
+        parts = module.split(".")
+        current_node = root
+        assert current_node.name == parts[0]
+        for part in parts[1::]:
+            current_node = current_node.add_or_get_child(part)
+
 
 def save_trees(args=None):
     dst: Path = args["dst"]
@@ -280,15 +288,12 @@ if __name__ == "__main__":
         # src
         target_module = module_from_path(s.dst)
         append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        ModuleNode.add_sub_module(root=root_module, module=target_module)
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             # build module tree
-            parts = export_path.split(".")
-            current_node = root_module
-            assert current_node.name == parts[0]
-            for part in parts[1::]:
-                current_node = current_node.add_or_get_child(part)
+            ModuleNode.add_sub_module(root=root_module, module=export_path)
     # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
