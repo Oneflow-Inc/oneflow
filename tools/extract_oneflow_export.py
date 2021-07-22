@@ -49,11 +49,16 @@ def join_module(parent, child):
         return parent
 
 
+def path_from_module(module):
+    return "/".join(module.split(".")) + ".py"
+
+
 class ExportVisitor(ast.NodeTransformer):
     def __init__(self, root_module="oneflow") -> None:
         super().__init__()
         self.staging_decorators = []
         self.root_module = root_module
+        self.export_trees = {}
 
     def visit_ImportFrom(self, node):
         if not node.module:
