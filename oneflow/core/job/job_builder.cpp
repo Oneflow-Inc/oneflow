@@ -160,7 +160,7 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
 
 Maybe<OperatorConf*> JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
   const auto& it = op_name2op_conf_.find(op_name);
-  CHECK(it != op_name2op_conf_.end());
+  CHECK_OR_RETURN(it != op_name2op_conf_.end());
   return it->second;
 }
 
