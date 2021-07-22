@@ -90,8 +90,13 @@ class DstFile:
             txt = f.read()
             module = ast.parse(txt)
             segs = []
-            for node in module.body:
-                seg = ast.get_source_segment(txt, node)
+            pool = multiprocessing.Pool()
+
+            results = pool.starmap(
+                ast.get_source_segment, [(txt, node) for node in module.body]
+            )
+            pool.close()
+            for seg in results:
                 if (
                     "Copyright 2020 The OneFlow Authors. All rights reserved."
                     not in seg
