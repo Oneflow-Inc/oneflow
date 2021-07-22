@@ -22,7 +22,7 @@ from test_util import GenArgList
 import oneflow.experimental as flow
 
 
-def _test_dot(test_case, device, dtype):
+def _test_dot_forward(test_case, device, dtype):
     np_x = np.random.randn(1000).astype(dtype)
     np_y = np.random.randn(1000).astype(dtype)
 
@@ -41,18 +41,15 @@ def _test_dot(test_case, device, dtype):
     ".numpy() doesn't work in lazy mode",
 )
 class TestDot(flow.unittest.TestCase):
-    def test_cpu_dot(test_case):
+    def test_fw_dot(test_case):
         arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_dot_forward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["dtype"] = [np.float32, np.double]
         for arg in GenArgList(arg_dict):
-            _test_dot(test_case, "cpu", *arg)
-
-    def test_gpu_dot(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["dtype"] = [np.float32, np.double]
-        for arg in GenArgList(arg_dict):
-            _test_dot(test_case, "cuda", *arg)
-
+            arg[0](test_case, *arg[1:])
 
 if __name__ == "__main__":
     unittest.main()
