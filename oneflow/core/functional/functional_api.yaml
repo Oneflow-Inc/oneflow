@@ -36,7 +36,7 @@
   bind_python: True
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "sub_scalar_by_tensor"
@@ -404,6 +404,25 @@
                       String data_format=\"channels_first\", Bool ceil_mode=False)"
   bind_python: True
 
+- name: "adaptive_avg_pool1d"
+  signature:
+    "Tensor AdaptiveAvgPool1D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_avg_pool2d"
+  signature:
+    "Tensor AdaptiveAvgPool2D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_avg_pool3d"
+  signature:
+    "Tensor AdaptiveAvgPool3D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_pool_grad"
+  signature:
+    "Tensor AdaptivePoolNdGrad(Tensor x, Tensor dy, *, String mode, Int32 ndims)"
+
 - name: "pool_grad"
   signature:
     "Tensor PoolNdGrad(Tensor x, Tensor y, Tensor dy, *, String mode, Int32 ndims, String data_format,
@@ -411,26 +430,31 @@
                        Int32List strides, Bool ceil_mode)"
   bind_python: False
 
+- name: "maxpool_1d"
+  signature:
+    "TensorTuple Maxpool1D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
 - name: "maxpool_2d"
   signature:
-    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", String padding,
-                      Int32List padding_before, Int32List padding_after,
+    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
 
 - name: "maxpool_3d"
   signature:
-    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", String padding,
-                      Int32List padding_before, Int32List padding_after,
+    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
 
 - name: "pooling_grad"
   signature:
-    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, String data_format,
-                       String padding, Int32List padding_before, Int32List padding_after, Int32List kernel_size,
+    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, 
+                       String data_format, Int32List padding, Int32List kernel_size,
                        Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
   bind_python: False
 
