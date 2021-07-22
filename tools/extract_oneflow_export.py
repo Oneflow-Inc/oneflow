@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from functools import partial
 from collections import OrderedDict
 import astpretty
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -41,7 +42,10 @@ def get_parent_module(value):
 
 
 def join_module(parent, child):
-    return ".".join([parent, child])
+    if child:
+        return ".".join([parent, child])
+    else:
+        return parent
 
 
 class ExportVisitor(ast.NodeTransformer):
@@ -169,3 +173,17 @@ if __name__ == "__main__":
     # step 3: rename all
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
     # step 5: save file and sort imports and format
+    extra_arg = ""
+    if args.verbose == False:
+        extra_arg += "--quiet"
+    subprocess.check_call(
+        f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
+        shell=True,
+        cwd=args.out_dir,
+    )
+    subprocess.check_call(
+        f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+    )
+    subprocess.check_call(
+        f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
+    )
