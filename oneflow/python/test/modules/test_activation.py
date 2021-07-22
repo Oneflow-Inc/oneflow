@@ -211,7 +211,7 @@ class TestELUModule(flow.unittest.TestCase):
 
     @autotest
     def test_elu_module_with_random_data(test_case):
-        m = torch.nn.ELU(alpha=random())
+        m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
@@ -703,7 +703,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
 
     @autotest
     def test_softplus_module_with_random_data(test_case):
-        m = torch.nn.Softplus(beta=random(), threshold=random())
+        m = torch.nn.Softplus(beta=random() | nothing(), threshold=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
@@ -805,7 +805,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
 
     @autotest
     def test_leakyrelu_module_with_random_data(test_case):
-        m = torch.nn.LeakyReLU(negative_slope=random())
+        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
