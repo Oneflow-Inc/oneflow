@@ -22,6 +22,10 @@ assert args.out_dir != "/"
 out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
 
 
+def print_dump(node):
+    print(ast.dump(node))
+
+
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
@@ -33,6 +37,15 @@ class SrcFile:
             self.node2seg = OrderedDict(
                 [(node, ast.get_source_segment(txt, node)) for node in module.body]
             )
+            assert len(self.node2seg.keys()) == len(list(module.body))
+            # self.process_exports()
+
+    def process_exports(self):
+        for (node, seg) in self.node2seg.items():
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                print_dump(node)
+        # 1. filter exports
+        # 2. replace exports with import as
 
 
 def get_specs_under_python(python_path=None, dst_path=None):
