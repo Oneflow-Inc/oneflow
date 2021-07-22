@@ -33,11 +33,11 @@ class SrcFile:
             print("[skip test]", spec["src"])
         else:
             txt = spec["src"].read_text()
-            module = ast.parse(txt)
+            tree = ast.parse(txt)
             self.node2seg = OrderedDict(
-                [(node, ast.get_source_segment(txt, node)) for node in module.body]
+                [(node, ast.get_source_segment(txt, node)) for node in tree.body]
             )
-            assert len(self.node2seg.keys()) == len(list(module.body))
+            assert len(self.node2seg.keys()) == len(list(tree.body))
             # self.process_exports()
 
     def process_exports(self):
