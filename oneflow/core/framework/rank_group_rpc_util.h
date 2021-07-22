@@ -23,13 +23,9 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> MakeInitialRankGroupRpcToken();
-
 Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group);
 
-Maybe<RpcToken> GetAutoIncrementalRpcToken(Symbol<RankGroup> rank_group);
-
-Maybe<int64_t> GetCurrentRankGroupId();
+Maybe<int64_t> GetCurrentRankGroupLevel();
 
 }  // namespace oneflow
 

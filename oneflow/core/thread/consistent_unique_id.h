@@ -21,7 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> SetThisThreadConsistentUniqueId(int64_t thread_consistent_uid, const std::string& debug_string);
+Maybe<void> SetThisThreadConsistentUniqueId(int64_t thread_consistent_uid,
+                                            const std::string& debug_string);
 Maybe<int64_t> GetThisThreadConsistentUniqueId();
 Maybe<const std::string&> GetThreadConsistentUniqueIdDebugString(int64_t thread_consistent_uid);
 

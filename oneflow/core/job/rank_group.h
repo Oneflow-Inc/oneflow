@@ -68,9 +68,7 @@ namespace std {
 
 template<>
 struct hash<oneflow::RankGroup> final {
-  size_t operator()(const oneflow::RankGroup& rank_group) const {
-    return rank_group.hash_value();
-  }
+  size_t operator()(const oneflow::RankGroup& rank_group) const { return rank_group.hash_value(); }
 };
 
 }  // namespace std

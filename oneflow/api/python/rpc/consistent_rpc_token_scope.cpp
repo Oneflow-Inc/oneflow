@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
-#include "oneflow/core/job/symbol.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace py = pybind11;
 
@@ -29,26 +29,27 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag, int64_t thread_consistent_uid,
-Symbol<RankGroup> rank_group) {
-	JUST(SetThisThreadConsistentUniqueId(thread_consistent_uid, thread_tag));
-	static thread_local const auto& init_rank_group_scope =
-			JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group)); 
-  JUST(MakeInitialRankGroupRpcToken());
-	return Maybe<void>::Ok();
+Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
+                                        int64_t thread_consistent_uid,
+                                        Symbol<RankGroup> rank_group) {
+  JUST(SetThisThreadConsistentUniqueId(thread_consistent_uid, thread_tag));
+  static thread_local const auto& init_rank_group_scope =
+      JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group));
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag, int64_t thread_consistent_uid) {
-	const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
-	JUST(InitConsistentRpcTokenScope(thread_tag, thread_consistent_uid, rank_group));
-	return Maybe<void>::Ok();
+Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
+                                        int64_t thread_consistent_uid) {
+  const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
+  JUST(InitConsistentRpcTokenScope(thread_tag, thread_consistent_uid, rank_group));
+  return Maybe<void>::Ok();
 }
 
 void ApiInitDefaultConsistentRpcTokenScope() {
-	return InitConsistentRpcTokenScope("main", 0).GetOrThrow();
+  return InitConsistentRpcTokenScope("main", 0).GetOrThrow();
 }
 
-}
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("InitDefaultConsistentRpcTokenScope", &ApiInitDefaultConsistentRpcTokenScope);

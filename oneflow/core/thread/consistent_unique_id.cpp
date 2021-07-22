@@ -24,26 +24,26 @@ namespace {
 
 class ConsistentUniqueIdStorage final {
  public:
-	ConsistentUniqueIdStorage() = default;
-	~ConsistentUniqueIdStorage() = default;
+  ConsistentUniqueIdStorage() = default;
+  ~ConsistentUniqueIdStorage() = default;
 
-	static ConsistentUniqueIdStorage* Singleton() {
-		static auto* storage = new ConsistentUniqueIdStorage();
-		return storage;
-	}
+  static ConsistentUniqueIdStorage* Singleton() {
+    static auto* storage = new ConsistentUniqueIdStorage();
+    return storage;
+  }
 
-	Maybe<void> Emplace(int64_t id, debug_string) {
-		std::unique_lock<std::mutex> lock(mutex_);
-		CHECK_LE_OR_RETURN(id2debug_string_.size(), RpcToken::MaxNumberOfThreadConsistentUId());
-		for (const auto& pair : id2debug_string_) { CHECK_NE_OR_RETURN(debug_string, pair.second); }
-		CHECK_OR_RETURN(id2debug_string_.emplace(id, debug_string).second);
-		return Maybe<void>::Ok();
-	}
+  Maybe<void> Emplace(int64_t id, const std::string& debug_string) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    CHECK_LE_OR_RETURN(id2debug_string_.size(), RpcToken::MaxNumberOfThreadConsistentUId());
+    for (const auto& pair : id2debug_string_) { CHECK_NE_OR_RETURN(debug_string, pair.second); }
+    CHECK_OR_RETURN(id2debug_string_.emplace(id, debug_string).second);
+    return Maybe<void>::Ok();
+  }
 
-	Maybe<const std::string&> DebugString(int64_t id) const {
-		std::unique_lock<std::mutex> lock(mutex_);
-		return MapAt(id2debug_string_, id);
-	}
+  Maybe<const std::string&> DebugString(int64_t id) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return MapAt(id2debug_string_, id);
+  }
 
  private:
   mutable std::mutex mutex_;
@@ -51,28 +51,28 @@ class ConsistentUniqueIdStorage final {
 };
 
 std::unique_ptr<int64_t>* MutThreadLocalConsistentUniqueId() {
-	static thread_local std::unique_ptr<int64_t> consistent_uid;
-	return &consistent_uid;
+  static thread_local std::unique_ptr<int64_t> consistent_uid;
+  return &consistent_uid;
 }
 
-}
+}  // namespace
 
 Maybe<void> SetThisThreadConsistentUniqueId(int64_t id, const std::string& debug_string) {
-	JUST(ConsistentUniqueIdStorage::Singleton()->Emplace(id, debug_string));
-	auto* ptr = MutThreadLocalConsistentUniqueId();
-	CHECK_ISNULL_OR_RETURN(ptr->get());	
-	ptr->reset(new int64_t(id));
-	return Maybe<void>::Ok();
+  JUST(ConsistentUniqueIdStorage::Singleton()->Emplace(id, debug_string));
+  auto* ptr = MutThreadLocalConsistentUniqueId();
+  CHECK_ISNULL_OR_RETURN(ptr->get());
+  ptr->reset(new int64_t(id));
+  return Maybe<void>::Ok();
 }
 
 Maybe<int64_t> GetThisThreadConsistentUniqueId() {
-	auto* ptr = MutThreadLocalConsistentUniqueId();
-	CHECK_NOTNULL_OR_RETURN(ptr->get());	
-	return **ptr;
+  auto* ptr = MutThreadLocalConsistentUniqueId();
+  CHECK_NOTNULL_OR_RETURN(ptr->get());
+  return **ptr;
 }
 
 Maybe<const std::string&> GetConsistentUniqueIdDebugString(int64_t thread_consistent_unique_id) {
-	return ConsistentUniqueIdStorage::Singleton()->DebugString(thread_consistent_unique_id);
+  return ConsistentUniqueIdStorage::Singleton()->DebugString(thread_consistent_unique_id);
 }
 
 }  // namespace oneflow

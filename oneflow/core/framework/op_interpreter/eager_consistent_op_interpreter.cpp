@@ -51,11 +51,10 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   using TensorImpl = EagerConsistentTensorImpl;
   TensorImpl::NewMethod New =
       (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
-	const auto& rank_group = RankGroupScope::CurrentRankGroup();
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
         JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
-    const auto& rpc_token = JUST(GetAutoIncrementalRpcToken(rank_group));
+    const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }

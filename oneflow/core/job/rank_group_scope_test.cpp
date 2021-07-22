@@ -24,35 +24,40 @@ namespace oneflow {
 namespace test {
 
 TEST(RankGroupScope, initial) {
-	const auto& rank_group0 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1, 2}));
-  const auto& rank_group_scope = CHECK_JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group0));
+  const auto& rank_group0 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1, 2}));
+  auto rank_group_scope = CHECK_JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group0));
   int64_t rank = 0;
-	const auto& rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
+  const auto& rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
   rank = CHECK_JUST(rank_group->GetNextRankInRing(0));
   ASSERT_EQ(rank, 1);
+  rank_group_scope.reset();
+  ASSERT_FALSE(TRY(RankGroupScope::CurrentRankGroup()).IsOk());
 }
 
 TEST(RankGroupScope, nonconsecutive_rank) {
-	const auto& rank_group0 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1, 2}));
-  const auto& rank_group_scope0 = CHECK_JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group0));
+  const auto& rank_group0 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1, 2}));
+  auto rank_group_scope0 = CHECK_JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group0));
   int64_t rank = 0;
-	const auto& rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
+  const auto& rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
   rank = CHECK_JUST(rank_group->GetNextRankInRing(0));
+  ASSERT_EQ(rank, 1);
+  rank = CHECK_JUST(rank_group->GetNextRankInRing(2));
   ASSERT_EQ(rank, 0);
-	{
-		const auto& rank_group1 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1}));
-		const auto& rank_group_scope1 =
-				CHECK_JUST(RankGroupScope::MakeNestedRankGroupScope(rank_group1));
-		{
-			const auto& rank_group2 = RankGroup::New(std::set<int64_t>{0});
-			const auto& rank_group_scope2 =
-					CHECK_JUST(RankGroupScope::MakeNestedRankGroupScope(rank_group2));
-			const auto& current_rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
-			ASSERT_TRUE(rank_group2 == current_rank_group);
-			const auto& root_rank_group = CHECK_JUST(RankGroupScope::RootRankGroup());
-			ASSERT_TRUE(rank_group == root_rank_group);
-		}
-	}
+  {
+    const auto& rank_group1 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0, 1}));
+    auto rank_group_scope1 = CHECK_JUST(RankGroupScope::MakeNestedRankGroupScope(rank_group1));
+    {
+      const auto& rank_group2 = CHECK_JUST(RankGroup::New(std::set<int64_t>{0}));
+      auto rank_group_scope2 = CHECK_JUST(RankGroupScope::MakeNestedRankGroupScope(rank_group2));
+      const auto& current_rank_group = CHECK_JUST(RankGroupScope::CurrentRankGroup());
+      ASSERT_TRUE(rank_group2 == current_rank_group);
+      const auto& root_rank_group = CHECK_JUST(RankGroupScope::RootRankGroup());
+      ASSERT_TRUE(rank_group == root_rank_group);
+      rank_group_scope2.reset();
+    }
+    rank_group_scope1.reset();
+  }
+  rank_group_scope0.reset();
 }
 
 }  // namespace test

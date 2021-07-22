@@ -25,9 +25,8 @@ class FlatTensorConsistency;
 
 class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
  public:
-  CheckConsistencyAsyncRpcCtx(
-			Symbol<ConsistentTensorMeta> tensor_meta,
-  		const RpcToken& tensor_rpc_token)
+  CheckConsistencyAsyncRpcCtx(Symbol<one::ConsistentTensorMeta> tensor_meta,
+                              const RpcToken& tensor_rpc_token)
       : tensor_meta_(tensor_meta), tensor_rpc_token_(tensor_rpc_token) {}
 
   ~CheckConsistencyAsyncRpcCtx() override;
@@ -38,7 +37,7 @@ class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
   Maybe<void> Check() const;
 
  private:
-  Symbol<ConsistentTensorMeta> tensor_meta_;
+  Symbol<one::ConsistentTensorMeta> tensor_meta_;
   RpcToken tensor_rpc_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };

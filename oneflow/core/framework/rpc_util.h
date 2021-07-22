@@ -37,41 +37,40 @@ class AsyncRpcCtx {
   std::shared_ptr<std::atomic<int64_t>> flying_cnt_;
 };
 
-class NaiveAsyncRpcCtx final : AsyncRpcCtx {
+class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
  public:
-	explicit NaiveAsyncRpcCtx(const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare): prepare_(Prepare) {}
-	~NaiveAsyncRpcCtx() override = default;
+  explicit NaiveAsyncRpcCtx(
+      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare)
+      : prepare_(Prepare) {}
+  ~NaiveAsyncRpcCtx() override = default;
 
-  Maybe<void> MakeDataBufferAndCallback(
-			int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) override {
-		return prepare_(buffer, size, Callback);
-	}
+  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                        std::function<void()>* Callback) override {
+    return prepare_(buffer, size, Callback);
+  }
 
  private:
-	std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_;
+  std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_;
 };
 
 class RankGroup;
 
 struct RpcUtil final {
-
-	static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t TimeoutSeconds() { return 60 * 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncRpcCtx& ctx, int64_t seconds);
 
-  static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group,
-                                          const RpcToken& token, AsyncRpcCtx* ctx);
+  static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const RpcToken& token,
+                                          AsyncRpcCtx* ctx);
 
-  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
-                                               const RpcToken& token, AsyncRpcCtx* ctx);
+  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group, const RpcToken& token,
+                                               AsyncRpcCtx* ctx);
 
+  static Maybe<void> BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
+                                              AsyncRpcCtx* ctx);
 
-  static Maybe<void> BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
-                                              const RpcToken& token, AsyncRpcCtx* ctx);
-
-  static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
-                                              const RpcToken& token, AsyncRpcCtx* ctx);
-
+  static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
+                                              AsyncRpcCtx* ctx);
 };
 
 }  // namespace oneflow

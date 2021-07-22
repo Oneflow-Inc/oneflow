@@ -21,13 +21,12 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ Maybe<Symbol<RankGroup>> RankGroup::New(
-		const std::set<int64_t>& ranks) {
+/*static*/ Maybe<Symbol<RankGroup>> RankGroup::New(const std::set<int64_t>& ranks) {
   static thread_local std::map<std::set<int64_t>, Symbol<RankGroup>> map;
   auto iter = map.find(ranks);
   if (iter == map.end()) {
-		RankGroup rank_group;
-		JUST(rank_group->Init(ranks));
+    RankGroup rank_group;
+    JUST(rank_group.Init(ranks));
     iter = map.emplace(ranks, SymbolOf(rank_group)).first;
   }
   return iter->second;
@@ -36,19 +35,18 @@ namespace oneflow {
 namespace {
 
 Maybe<std::set<int64_t>> AllWorldRanks() {
-	const auto& ranks = std::make_shared<std::set<int64_t>>();
-	for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) { ranks->insert(i); }
-	return ranks;
+  const auto& ranks = std::make_shared<std::set<int64_t>>();
+  for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) { ranks->insert(i); }
+  return ranks;
 }
 
-}
+}  // namespace
 
 /*static*/ Maybe<Symbol<RankGroup>> RankGroup::DefaultRankGroup() {
-	const auto& all_wold_ranks = JUST(AllWorldRanks());
-	const auto& rank_group = JUST(RankGroup::New(*all_wold_ranks));
-	return rank_group;
+  const auto& all_wold_ranks = JUST(AllWorldRanks());
+  const auto& rank_group = JUST(RankGroup::New(*all_wold_ranks));
+  return rank_group;
 }
-
 
 Maybe<void> RankGroup::Init(const std::set<int64_t>& ranks) {
   // Initialize sorted_rank_ranges_ and size_
@@ -68,8 +66,8 @@ Maybe<void> RankGroup::Init(const std::set<int64_t>& ranks) {
     int64_t last = sorted_rank_ranges_.at(sorted_rank_ranges_.size() - 1).end();
     for (const auto& machine_id_range : sorted_rank_ranges_) {
       for (int64_t i = machine_id_range.begin(); i <= machine_id_range.end(); ++i) {
-        CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2next_rank_in_ring_.emplace(last, i).second);
-        CHECK_OR_RETURN(sorted_rank_ranges.get()->rank2prev_rank_in_ring_.emplace(i, last).second);
+        CHECK_OR_RETURN(rank2next_rank_in_ring_.emplace(last, i).second);
+        CHECK_OR_RETURN(rank2prev_rank_in_ring_.emplace(i, last).second);
         last = i;
       }
     }
@@ -82,7 +80,7 @@ Maybe<void> RankGroup::Init(const std::set<int64_t>& ranks) {
       HashCombine(&hash_value_, hash_functor(range));
     }
   }
-	return Maybe<void>::Ok();
+  return Maybe<void>::Ok();
 }
 
 Maybe<int64_t> RankGroup::GetNextRankInRing(int64_t rank) const {

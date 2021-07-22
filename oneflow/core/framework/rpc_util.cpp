@@ -87,9 +87,9 @@ Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& tok
 Maybe<void> Send(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
   auto* transport = JUST(GlobalMaybe<Transport>());
-	RpcToken transport_token(token);
-	JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
-	JUST(transport_token.set_dst_rank(rank));
+  RpcToken transport_token(token);
+  JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
+  JUST(transport_token.set_dst_rank(rank));
   transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 }
@@ -97,9 +97,9 @@ Maybe<void> Send(const RpcToken& token, int64_t rank, void* buffer, std::size_t 
 Maybe<void> Recv(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
   auto* transport = JUST(GlobalMaybe<Transport>());
-	RpcToken transport_token(token);
-	JUST(transport_token.set_src_rank(rank));
-	JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
+  RpcToken transport_token(token);
+  JUST(transport_token.set_src_rank(rank));
+  JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
   transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 }

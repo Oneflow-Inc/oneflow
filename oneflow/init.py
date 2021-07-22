@@ -24,6 +24,9 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 no_grad = oneflow._oneflow_internal.autograd.no_grad
+check_current_rank_group_consistency = (
+    oneflow._oneflow_internal.check_current_rank_group_consistency
+)
 
 # define dtype at the begining of oneflow init
 
