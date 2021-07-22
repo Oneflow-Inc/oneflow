@@ -138,7 +138,7 @@ class SrcFile:
         dst_full = OUT_PATH.joinpath(self.dst)
         dst_full.parent.mkdir(parents=True, exist_ok=True)
         dst_full.touch()
-        new_txt = ast.unparse(tree)
+        new_txt = ast.unparse(self.tree)
         dst_full.write_text(new_txt)
 
 
