@@ -208,9 +208,9 @@ class ModuleNode:
 
     def __str__(self) -> str:
         return "\n".join(
-            [f"[{self.level}] {self.name}"]
+            [f"{self.name}"]
             + [
-                "  " * (self.level + 1) + child.__str__()
+                "--" * (self.level + 1) + " " + child.__str__()
                 for child in self.children.values()
             ]
         )
