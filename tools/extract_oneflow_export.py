@@ -120,22 +120,26 @@ class ExportVisitor(ast.NodeTransformer):
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
+        self.export_visitor = None
+        self.tree = None
+        self.dst = Path(spec["dst"])
         if is_test and args.verbose:
             print("[skip test]", spec["src"])
         else:
             txt = spec["src"].read_text()
-            dst = Path(spec["dst"])
-            dst_full = OUT_PATH.joinpath(dst)
-            tree = ast.parse(txt)
+            self.tree = ast.parse(txt)
             root_module = "oneflow"
             if "compatible_single_client_python" in spec["src"].name:
                 root_module = "oneflow.compatible.single_client"
-            ev = ExportVisitor(root_module=root_module)
-            ev.visit(tree)
-            new_txt = ast.unparse(tree)
-            dst_full.parent.mkdir(parents=True, exist_ok=True)
-            dst_full.touch()
-            dst_full.write_text(new_txt)
+            self.export_visitor = ExportVisitor(root_module=root_module)
+            self.export_visitor.visit(self.tree)
+
+    def save(self):
+        dst_full = OUT_PATH.joinpath(self.dst)
+        dst_full.parent.mkdir(parents=True, exist_ok=True)
+        dst_full.touch()
+        new_txt = ast.unparse(tree)
+        dst_full.write_text(new_txt)
 
 
 def get_specs_under_python(python_path=None, dst_path=None):
