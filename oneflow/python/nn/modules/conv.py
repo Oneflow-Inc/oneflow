@@ -77,7 +77,6 @@ class ConvUtil(object):
 
 
 @oneflow_export("nn.Conv1d")
-@experimental_api
 class Conv1d(Module):
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
@@ -155,10 +154,9 @@ class Conv1d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv1d(16, 33, 3, stride=2)
@@ -277,7 +275,6 @@ class Conv1d(Module):
 
 
 @oneflow_export("nn.Conv2d")
-@experimental_api
 class Conv2d(Module):
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
@@ -381,10 +378,9 @@ class Conv2d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))

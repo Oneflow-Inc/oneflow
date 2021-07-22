@@ -34,11 +34,9 @@ class Scatter_nd(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
-        >>> scatter_nd_layer = flow.scatter_nd([8])
+        >>> scatter_nd_layer = flow.experimental.scatter_nd([8])
         >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
         >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
         >>> out = scatter_nd_layer(index,update)

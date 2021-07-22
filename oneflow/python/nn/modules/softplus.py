@@ -29,7 +29,6 @@ class Softplus(Module):
 
 @oneflow_export("softplus")
 @register_tensor_op("softplus")
-@experimental_api
 def softplus_op(x):
     r"""Applies the element-wise function:
 
@@ -50,13 +49,12 @@ def softplus_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
 
         >>> x1 = flow.Tensor(np.array([1, 2, 3]))
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
 
-        >>> flow.enable_eager_execution()
         >>> flow.softplus(x1).numpy()
         array([1.3132616, 2.126928 , 3.0485873], dtype=float32)
         >>> flow.softplus(x2).numpy()

@@ -220,7 +220,6 @@ class Interpolate(Module):
 
 
 @oneflow_export("nn.functional.interpolate")
-@experimental_api
 def interpolate(
     input,
     size=None,
@@ -303,10 +302,9 @@ def interpolate(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
         >>> output = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="linear")
         >>> output

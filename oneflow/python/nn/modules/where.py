@@ -93,8 +93,8 @@ class Where(Module):
 
 
 @oneflow_export("where")
-@register_tensor_op("where")
 @experimental_api
+@register_tensor_op("where")
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
@@ -120,9 +120,7 @@ def where_op(condition, x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = flow.Tensor(
         ...    np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         ...    dtype=flow.float32,

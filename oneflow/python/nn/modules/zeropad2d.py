@@ -23,7 +23,6 @@ from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.ZeroPad2d")
-@experimental_api
 class ZeroPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -46,9 +45,8 @@ class ZeroPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)
         >>> zeropad_layer_tuple = flow.nn.ZeroPad2d((1,2,2,0))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))

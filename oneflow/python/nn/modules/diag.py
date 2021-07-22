@@ -48,10 +48,9 @@ def diag_op(input, diagonal=0):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-
         >>> arr = np.array(
         ...     [
         ...        [1.0, 2.0, 3.0],
@@ -61,7 +60,7 @@ def diag_op(input, diagonal=0):
         ... )
 
         >>> input = flow.Tensor(arr, dtype=flow.float32)
-        >>> flow.diag(input)
+        >>> flow.experimental.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """
 
@@ -69,7 +68,6 @@ def diag_op(input, diagonal=0):
 
 
 @register_tensor_op("diag")
-@experimental_api
 def diag_op_tensor(input, diagonal=0):
     r"""
     diag() -> Tensor

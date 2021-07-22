@@ -41,7 +41,6 @@ def mirrored_gen_random_seed(seed=None):
 
 
 @oneflow_export("nn.OfrecordReader")
-@experimental_api
 class OfrecordReader(Module):
     def __init__(
         self,
@@ -79,7 +78,6 @@ class OfrecordReader(Module):
 
 
 @oneflow_export("nn.OfrecordRawDecoder")
-@experimental_api
 class OfrecordRawDecoder(Module):
     def __init__(
         self,
@@ -115,7 +113,6 @@ class OfrecordRawDecoder(Module):
 
 
 @oneflow_export("nn.CoinFlip")
-@experimental_api
 class CoinFlip(Module):
     def __init__(
         self,
@@ -141,7 +138,6 @@ class CoinFlip(Module):
 
 
 @oneflow_export("nn.CropMirrorNormalize")
-@experimental_api
 class CropMirrorNormalize(Module):
     def __init__(
         self,
@@ -198,7 +194,6 @@ class CropMirrorNormalize(Module):
 
 
 @oneflow_export("nn.OFRecordImageDecoderRandomCrop")
-@experimental_api
 class OFRecordImageDecoderRandomCrop(Module):
     def __init__(
         self,
@@ -231,7 +226,6 @@ class OFRecordImageDecoderRandomCrop(Module):
 
 
 @oneflow_export("nn.OFRecordImageDecoder")
-@experimental_api
 class OFRecordImageDecoder(Module):
     def __init__(
         self, blob_name: str, color_space: str = "BGR",
@@ -279,7 +273,6 @@ def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
 
 
 @oneflow_export("nn.image.Resize")
-@experimental_api
 class ImageResize(Module):
     def __init__(
         self,
@@ -426,7 +419,6 @@ class ImageResize(Module):
 
 
 @oneflow_export("tmp.RawDecoder")
-@experimental_api
 def raw_decoder(
     input_record,
     blob_name: str,
@@ -453,7 +445,6 @@ def raw_decoder(
 
 
 @oneflow_export("tmp.OfrecordReader")
-@experimental_api
 def get_ofrecord_handle(
     ofrecord_dir: str,
     batch_size: int = 1,
@@ -479,7 +470,6 @@ def get_ofrecord_handle(
 
 
 @oneflow_export("nn.image.flip")
-@experimental_api
 class ImageFlip(Module):
     r"""This operator flips the images.
 
@@ -505,17 +495,16 @@ class ImageFlip(Module):
     .. code-block:: python
         
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> arr = np.array([
         ...    [[[1, 2, 3], [3, 2, 1]],
         ...     [[2, 3, 4], [4, 3, 2]]],
         ...    [[[3, 4, 5], [5, 4, 3]],
         ...     [[4, 5, 6], [6, 5, 4]]]])
         >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
-        >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
+        >>> image_tensor_buffer = flow.experimental.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
         >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
         >>> output[0]
         array([[[3., 2., 1.],
@@ -542,7 +531,6 @@ class ImageFlip(Module):
 
 
 @oneflow_export("nn.image.decode")
-@experimental_api
 class ImageDecode(Module):
     def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
         super().__init__()
@@ -560,7 +548,6 @@ class ImageDecode(Module):
 
 
 @oneflow_export("nn.image.normalize")
-@experimental_api
 class ImageNormalize(Module):
     def __init__(self, std: Sequence[float], mean: Sequence[float]):
         super().__init__()
@@ -578,7 +565,6 @@ class ImageNormalize(Module):
 
 
 @oneflow_export("nn.COCOReader")
-@experimental_api
 class COCOReader(Module):
     def __init__(
         self,
@@ -623,7 +609,6 @@ class COCOReader(Module):
 
 
 @oneflow_export("nn.image.batch_align")
-@experimental_api
 class ImageBatchAlign(Module):
     def __init__(self, shape: Sequence[int], dtype: flow.dtype, alignment: int):
         super().__init__()
@@ -645,4 +630,4 @@ class ImageBatchAlign(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)

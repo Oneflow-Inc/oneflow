@@ -49,8 +49,8 @@ class Stack(Module):
 
 
 @oneflow_export("stack")
-@register_tensor_op("stack")
 @experimental_api
+@register_tensor_op("stack")
 def stack(inputs: Tensor, dim: int = 0) -> None:
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
@@ -70,12 +70,11 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
-        >>> out = flow.stack([x, y], dim = -1)
+        >>> out = flow.experimental.stack([x, y], dim = -1)
         >>> out.shape
         flow.Size([1, 3, 5, 2])
     """

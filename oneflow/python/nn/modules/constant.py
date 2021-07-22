@@ -86,10 +86,8 @@ def ones_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> y = flow.ones(5)
+        >>> import oneflow as flow
+        >>> y = flow.experimental.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
@@ -125,10 +123,8 @@ def zeros_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> y = flow.zeros(5)
+        >>> import oneflow as flow
+        >>> y = flow.experimental.zeros(5)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
@@ -158,12 +154,12 @@ def zeros_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        x = flow.Tensor(np.random.rand([5]))
-        y = flow.zeros_like(x)
-        # [0. 0. 0. 0. 0. ]
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.random.rand(5))
+        >>> y = flow.experimental.zeros_like(x)
+        >>> y
+        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
     return ZerosLike()(other)
@@ -191,12 +187,12 @@ def ones_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        x = flow.Tensor(np.random.rand([5]))
-        y = flow.ones_like(x)
-        # [1. 1. 1. 1. 1. ]
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.random.rand(5))
+        >>> y = flow.experimental.ones_like(x)
+        >>> y
+        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
     return OnesLike()(other)
@@ -254,7 +250,6 @@ class NewOnes(Module):
 
 
 @register_tensor_op("new_ones")
-@experimental_api
 def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     r"""
     
@@ -271,9 +266,8 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
         >>> y = x.new_ones((2, 2))
         >>> y

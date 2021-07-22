@@ -37,7 +37,6 @@ class Less(Module):
 
 @oneflow_export("lt")
 @register_tensor_op("lt")
-@experimental_api
 def less_op(x, y):
     r"""Returns the truth value of :math:`x < y` element-wise.
 
@@ -53,9 +52,8 @@ def less_op(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 

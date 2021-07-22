@@ -24,7 +24,6 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSeq
 
 
 @oneflow_export("nn.AvgPool1d")
-@experimental_api
 class AvgPool1d(Module):
     r"""Applies a 1D average pooling over an input signal composed of several input planes.
 
@@ -69,7 +68,6 @@ class AvgPool1d(Module):
 
 
 @oneflow_export("nn.AvgPool2d")
-@experimental_api
 class AvgPool2d(Module):
     r"""Performs the 2d-average pooling on the input.
 
@@ -158,7 +156,6 @@ class AvgPool2d(Module):
 
 
 @oneflow_export("nn.AvgPool3d")
-@experimental_api
 class AvgPool3d(Module):
     r"""Applies a 3D average pooling over an input signal composed of several input planes.
 
@@ -202,10 +199,9 @@ class AvgPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
@@ -402,12 +398,10 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> kernel_size, stride, padding = (3, 4), (1, 1), (1, 2)
-        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        >>> m = flow.experimental.nn.MaxPool2d(kernel_size, stride, padding)
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
         >>> y = m(x)
@@ -417,7 +411,7 @@ class MaxPool2d(Module):
                   [0.9256, 0.9256, 0.9256, 0.9256]]]], dtype=oneflow.float32)
 
         >>> kernel_size, stride, padding = (2, 4), (4, 5), (1, 2)
-        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        >>> m = flow.experimental.nn.MaxPool2d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 32, 20))
         >>> y = m(x)
         >>> y.shape
@@ -530,12 +524,10 @@ class MaxPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> kernel_size, stride, padding = (3, 3, 4), (1, 1, 1), (1, 1, 2)
-        >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
+        >>> m = flow.experimental.nn.MaxPool3d(kernel_size, stride, padding)
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
         >>> y = m(x)
@@ -544,7 +536,7 @@ class MaxPool3d(Module):
                    ...
                    [0.9447, 0.9447, 0.9447, 0.6668]]]]], dtype=oneflow.float32)
         >>> kernel_size, stride, padding = (4, 2, 4), (3, 4, 5), (2, 1, 2)
-        >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
+        >>> m = flow.experimental.nn.MaxPool3d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
         >>> y.shape

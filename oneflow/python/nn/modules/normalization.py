@@ -64,17 +64,15 @@ class GroupNorm(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> input = flow.Tensor(np.random.randn(20, 6, 10, 10))
         >>> # Separate 6 channels into 3 groups
-        >>> m = flow.nn.GroupNorm(3, 6)
+        >>> m = flow.experimental.nn.GroupNorm(3, 6)
         >>> # Separate 6 channels into 6 groups (equivalent with InstanceNorm)
-        >>> m = flow.nn.GroupNorm(6, 6)
+        >>> m = flow.experimental.nn.GroupNorm(6, 6)
         >>> # Put all 6 channels into a single group (equivalent with LayerNorm)
-        >>> m = flow.nn.GroupNorm(1, 6)
+        >>> m = flow.experimental.nn.GroupNorm(1, 6)
         >>> # Activating the module
         >>> output = m(input)
     
@@ -138,7 +136,6 @@ class GroupNorm(Module):
 
 
 @oneflow_export("nn.LayerNorm")
-@experimental_api
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
     the paper `Layer Normalization <https://arxiv.org/abs/1607.06450>`__
@@ -186,9 +183,8 @@ class LayerNorm(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input_arr = np.array(
         ...     [
         ...         [

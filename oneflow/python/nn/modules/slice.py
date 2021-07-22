@@ -50,12 +50,10 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
         >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
-        >>> y = flow.slice(input, slice_tup_list=tup_list)
+        >>> y = flow.experimental.slice(input, slice_tup_list=tup_list)
         >>> y.shape
         flow.Size([3, 3, 2])
     """
@@ -93,12 +91,10 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+        >>> y = flow.experimental.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         >>> y.numpy()
         array([1., 2., 3., 4., 1.], dtype=float32)
     """
@@ -125,7 +121,6 @@ class LogicalSliceAssign(Module):
 
 # NOTE: conflict with existing userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign
 @oneflow_export("tmp.logical_slice_assign")
-@experimental_api
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 
@@ -139,9 +134,8 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])

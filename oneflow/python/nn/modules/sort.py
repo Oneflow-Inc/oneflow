@@ -52,8 +52,8 @@ class Sort(Module):
 
 
 @oneflow_export("sort")
-@register_tensor_op("sort")
 @experimental_api
+@register_tensor_op("sort")
 def sort_op(input, dim: int = -1, descending: bool = False):
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.
 
@@ -71,27 +71,25 @@ def sort_op(input, dim: int = -1, descending: bool = False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> input = flow.Tensor(x)
-        >>> (values, indices) = flow.sort(input)
+        >>> (values, indices) = flow.experimental.sort(input)
         >>> values
         tensor([[1., 2., 3., 7., 8.],
                 [1., 2., 3., 4., 9.]], dtype=oneflow.float32)
         >>> indices
         tensor([[0, 4, 1, 3, 2],
                 [0, 4, 3, 2, 1]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.sort(input, descending=True)
+        >>> (values, indices) = flow.experimental.sort(input, descending=True)
         >>> values
         tensor([[8., 7., 3., 2., 1.],
                 [9., 4., 3., 2., 1.]], dtype=oneflow.float32)
         >>> indices
         tensor([[2, 3, 1, 4, 0],
                 [1, 2, 3, 4, 0]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.sort(input, dim=0)
+        >>> (values, indices) = flow.experimental.sort(input, dim=0)
         >>> values
         tensor([[1., 3., 4., 3., 2.],
                 [1., 9., 8., 7., 2.]], dtype=oneflow.float32)

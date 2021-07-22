@@ -131,15 +131,13 @@ class InstanceNorm1d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
 
         >>> # Without Learnable Parameters
-        >>> m = flow.nn.InstanceNorm1d(100)
+        >>> m = flow.experimental.nn.InstanceNorm1d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.nn.InstanceNorm1d(100, affine=True)
+        >>> m = flow.experimental.nn.InstanceNorm1d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 40))
         >>> output = m(x)
 
@@ -224,15 +222,13 @@ class InstanceNorm2d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
 
         >>> # Without Learnable Parameters
-        >>> m = flow.nn.InstanceNorm2d(100)
+        >>> m = flow.experimental.nn.InstanceNorm2d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.nn.InstanceNorm2d(100, affine=True)
+        >>> m = flow.experimental.nn.InstanceNorm2d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 35, 45))
         >>> output = m(x)
 
@@ -310,15 +306,12 @@ class InstanceNorm3d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
-
         >>> # Without Learnable Parameters
-        >>> m = flow.nn.InstanceNorm3d(100)
+        >>> m = flow.experimental.nn.InstanceNorm3d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.nn.InstanceNorm3d(100, affine=True)
+        >>> m = flow.experimental.nn.InstanceNorm3d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 35, 45, 10))
         >>> output = m(x)
 

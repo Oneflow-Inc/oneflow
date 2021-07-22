@@ -47,7 +47,6 @@ class Flip(Module):
 
 
 @oneflow_export("flip")
-@experimental_api
 def flip_op(input, dims):
 
     r"""
@@ -67,7 +66,7 @@ def flip_op(input, dims):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
         
         >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
@@ -86,7 +85,6 @@ def flip_op(input, dims):
 
 
 @register_tensor_op("flip")
-@experimental_api
 def flip_op_tensor(input, dims):
     r"""
     See :func:`oneflow.experimental.flip`

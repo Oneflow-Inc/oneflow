@@ -31,7 +31,6 @@ class BMM(Module):
 
 
 @oneflow_export("bmm")
-@experimental_api
 def bmm_op(x, y):
     """
     Performs a batch matrix-matrix product of matrices stored in input and mat2.
@@ -48,9 +47,8 @@ def bmm_op(x, y):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
         >>> of_out = flow.bmm(input1, input2)
@@ -61,7 +59,6 @@ def bmm_op(x, y):
 
 
 @register_tensor_op("bmm")
-@experimental_api
 def bmm_op_tensor(x, y):
     r"""
 

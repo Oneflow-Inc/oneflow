@@ -69,20 +69,18 @@ class PixelShufflev2(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
-        >>> m = flow.nn.PixelShuffle(upscale_factor=2)
+        >>> m = flow.experimental.nn.PixelShuffle(upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.shape
         flow.Size([3, 1, 10, 10])
 
-        >>> m = flow.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
+        >>> m = flow.experimental.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
         >>> x = flow.Tensor(np.random.randn(1, 24, 2, 2))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.shape
         flow.Size([1, 2, 6, 8])
 
     .. _Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network:

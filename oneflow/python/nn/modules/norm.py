@@ -208,7 +208,6 @@ class Norm(Module):
 
 
 @oneflow_export("linalg.norm")
-@experimental_api
 def norm_op(input, ord=None, dim=None, keepdim=False):
     r"""linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
 
@@ -262,10 +261,9 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> from oneflow.experimental import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
@@ -329,7 +327,6 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
 
 @register_tensor_op("norm")
-@experimental_api
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
     See :func:`oneflow.experimental.linalg.norm`
@@ -338,7 +335,6 @@ def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
 
 
 @oneflow_export("linalg.vector_norm")
-@experimental_api
 def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     r"""
     linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
@@ -385,10 +381,9 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> from oneflow.experimental import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
@@ -406,7 +401,6 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
 
 
 @oneflow_export("linalg.matrix_norm")
-@experimental_api
 def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     r"""
     linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
@@ -450,10 +444,9 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> from oneflow.experimental import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape((3,3))
         >>> a
         tensor([[0., 1., 2.],

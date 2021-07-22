@@ -21,7 +21,6 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
 @oneflow_export("bernoulli")
-@experimental_api
 def bernoulli(input, *, generator=None, out=None):
     r"""This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
@@ -39,9 +38,8 @@ def bernoulli(input, *, generator=None, out=None):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> arr = np.array(
         ...    [
         ...        [1.0, 1.0, 1.0],

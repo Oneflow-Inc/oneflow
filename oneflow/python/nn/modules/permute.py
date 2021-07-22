@@ -39,7 +39,6 @@ class Permute(Module):
 
 
 @register_tensor_op("permute")
-@experimental_api
 def permute_op(tensor, *dims):
     r"""Returns a view of the original tensor with its dimensions permuted.
 
@@ -51,9 +50,8 @@ def permute_op(tensor, *dims):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = input.permute(1, 0, 2, 3).shape
         >>> out

@@ -44,7 +44,6 @@ class Eq(Module):
 
 @oneflow_export("eq", "equal")
 @register_tensor_op("eq")
-@experimental_api
 def eq_op(input, other):
     r"""
     Computes element-wise equality.
@@ -62,10 +61,9 @@ def eq_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
         >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 

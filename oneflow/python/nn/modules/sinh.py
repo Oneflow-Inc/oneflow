@@ -28,7 +28,6 @@ class Sinh(Module):
 
 
 @oneflow_export("sinh")
-@experimental_api
 def sinh_op(x):
     r"""Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
@@ -43,13 +42,12 @@ def sinh_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
 
         >>> x1 = flow.Tensor(np.array([1, 2, 3]))
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
 
-        >>> flow.enable_eager_execution()
         >>> flow.sinh(x1).numpy()
         array([ 1.1752012,  3.6268604, 10.017875 ], dtype=float32)
         >>> flow.sinh(x2).numpy()
@@ -63,7 +61,6 @@ def sinh_op(x):
 
 
 @register_tensor_op("sinh")
-@experimental_api
 def sinh_op_tensor(x):
     r"""
 
