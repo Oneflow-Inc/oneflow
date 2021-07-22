@@ -215,6 +215,7 @@ class ModuleNode:
             self.children[name] = ModuleNode(name=name, parent=self)
             return self.children[name]
 
+    @property
     def is_leaf(self):
         return len(self.children.keys()) == 0
 
