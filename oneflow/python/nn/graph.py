@@ -34,7 +34,6 @@ from oneflow.python.framework.function_util import FunctionConfig
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
-@experimental_api
 class Graph(object):
     _child_init_cnt = dict()
 
@@ -231,7 +230,6 @@ class Graph(object):
 
 
 @oneflow_export("nn.graph.GraphConfig")
-@experimental_api
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()

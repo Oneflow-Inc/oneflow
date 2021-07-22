@@ -20,7 +20,6 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 
 
 @oneflow_export("nn.graph.OptimizerConfig")
-@experimental_api
 class OptimizerConfig(object):
     def __init__(
         self,
