@@ -23,22 +23,41 @@ namespace {
 
 template<DeviceType device_type, typename T>
 struct DotKernelCalculation {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
-                   T* out);
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out);
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy);
 };
 
 template<typename T>
 struct DotKernelCalculation<DeviceType::kCPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
-                   T* out) {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out) {
     *out = cblas_dot<T>(n, x, 1, y, 1);
+  }
+
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy) {
+    std::cout << "dout address = " << static_cast<const void*>(dout) << std::endl;
+    std::cout << "dout = " << *dout << std::endl;
+    cblas_copy<T>(n, y, 1, dx, 1);
+    cblas_copy<T>(n, x, 1, dy, 1);
+    cblas_scal<T>(n, *dout, dx, 1);
+    cblas_scal<T>(n, *dout, dy, 1);
   }
 };
 template<typename T>
 struct DotKernelCalculation<DeviceType::kGPU, T> {
-  static void dot(DeviceCtx* ctx, const int64_t n, const T* x,  const T* y,
-                  T* out) {
+  static void dot(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* out) {
     NewKernelUtil<DeviceType::kGPU>::OFDot(ctx, n, x, 1, y, 1, out);
+  }
+
+  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
+                       T* dx, T* dy) {
+
+    NewKernelUtil<DeviceType::kGPU>::OFSetPointerMod(ctx, CUBLAS_POINTER_MODE_DEVICE);
+    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, y, 1, dx, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, x, 1, dy, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, dout, dx, 1);
+    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, dout, dy, 1);
   }
 };
 
@@ -56,7 +75,7 @@ class DotKernel final : public user_op::OpKernel {
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
     DotKernelCalculation<device_type, T>::dot(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
-                                        out->mut_dptr<T>());
+                                              out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -75,39 +94,6 @@ REGISTER_DOT_KERNEL(DeviceType::kGPU, double)
 #endif
 
 template<DeviceType device_type, typename T>
-struct DotGradCalculation {
-  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
-                       T* dx, T* dy);
-};
-
-template<typename T>
-struct DotGradCalculation<DeviceType::kCPU, T> {
-  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
-                       T* dx, T* dy) {
-
-    std::cout<< "dout address = " << static_cast<const void *>(dout) <<std::endl;
-    std::cout<< "dout = "<< *dout <<std::endl;
-    cblas_copy<T>(n, y, 1, dx, 1);
-    cblas_copy<T>(n, x, 1, dy, 1);
-    cblas_scal<T>(n, *dout, dx, 1);
-    cblas_scal<T>(n, *dout, dy, 1);
-  }
-};
-
-template<typename T>
-struct DotGradCalculation<DeviceType::kGPU, T> {
-  static void dot_grad(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dout,
-                       T* dx, T* dy) {
-    T h_dout;
-    cudaMemcpy( &h_dout, dout, sizeof(T),cudaMemcpyDeviceToHost);
-    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, y, 1, dx, 1);
-    NewKernelUtil<DeviceType::kGPU>::OFCopy(ctx, n, x, 1, dy, 1);
-    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, &h_dout, dx, 1);
-    NewKernelUtil<DeviceType::kGPU>::OFScal(ctx, n, &h_dout, dy, 1);
-  }
-};
-
-template<DeviceType device_type, typename T>
 class DotKernelGrad final : public user_op::OpKernel {
  public:
   DotKernelGrad() = default;
@@ -122,9 +108,9 @@ class DotKernelGrad final : public user_op::OpKernel {
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     int64_t n = x->shape().elem_cnt();
     CHECK(n <= INT_MAX);
-    DotGradCalculation<device_type, T>::dot_grad(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
-                                                 dout->dptr<T>(), dx->mut_dptr<T>(),
-                                                 dy->mut_dptr<T>());
+    DotKernelCalculation<device_type, T>::dot_grad(ctx->device_ctx(), n, x->dptr<T>(), y->dptr<T>(),
+                                                   dout->dptr<T>(), dx->mut_dptr<T>(),
+                                                   dy->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -137,6 +123,7 @@ class DotKernelGrad final : public user_op::OpKernel {
 
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kCPU, double)
+
 #ifdef WITH_CUDA
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_DOT_GRAD_KERNEL(DeviceType::kGPU, double)

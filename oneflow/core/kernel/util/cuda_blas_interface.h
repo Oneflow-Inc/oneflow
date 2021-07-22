@@ -64,6 +64,8 @@ struct BlasIf<DeviceType::kGPU> {
 
   static void OFCopy(DeviceCtx* ctx, const int n, const float* x, int incx, float* y, int incy);
   static void OFCopy(DeviceCtx* ctx, const int n, const double* x, int incx, double* y, int incy);
+
+  static void OFSetPointerMod(DeviceCtx* ctx, cublasPointerMode_t mode);
 };
 
 }  // namespace oneflow

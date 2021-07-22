@@ -311,4 +311,8 @@ void BlasIf<DeviceType::kGPU>::OFCopy(DeviceCtx* ctx, const int n, const double*
   OF_CUBLAS_CHECK(cublasDcopy(ctx->cublas_tensor_op_math_handle(), n, x, incx, y, incy));
 }
 
+void BlasIf<DeviceType::kGPU>::OFSetPointerMod(DeviceCtx* ctx, cublasPointerMode_t mode) {
+  OF_CUBLAS_CHECK(cublasSetPointerMode(ctx->cublas_tensor_op_math_handle(), mode));
+}
+
 }  // namespace oneflow

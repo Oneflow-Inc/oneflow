@@ -32,6 +32,7 @@ def _test_dot(test_case, device, dtype):
     y = flow.tensor(np_y, device=flow.device(device))
 
     out = flow.dot(x, y)
+    print(np_out, out)
     test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
 
 
