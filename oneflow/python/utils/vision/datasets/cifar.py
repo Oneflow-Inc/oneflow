@@ -43,7 +43,7 @@ class CIFAR10(VisionDataset):
     """
 
     base_folder = "cifar-10-batches-py"
-    url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz"
+    url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     filename = "cifar-10-python.tar.gz"
     tgz_md5 = "c58f30108f718f92721af3b95e74349a"
     train_list = [

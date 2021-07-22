@@ -47,7 +47,7 @@ class MNIST(VisionDataset):
     """
 
     mirrors = [
-        "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/MNIST/",
+        "http://yann.lecun.com/exdb/mnist/",
         "https://ossci-datasets.s3.amazonaws.com/mnist/",
     ]
 
@@ -238,7 +238,7 @@ class FashionMNIST(MNIST):
     """
 
     mirrors = [
-        "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
+        "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"
     ]
 
     resources = [
