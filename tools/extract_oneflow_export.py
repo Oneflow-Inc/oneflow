@@ -55,12 +55,16 @@ class ExportVisitor(ast.NodeTransformer):
         self.root_module = root_module
 
     def visit_ImportFrom(self, node):
-        if node.module == "__future__" or node.module.startswith(
-            "oneflow.python.oneflow_export"
-        ):
-            return None
-        if node.module.startswith("oneflow.python"):
-            return node
+        if not node.module:
+            dumpprint(node)
+        if node.module:
+            if node.module == "__future__" or node.module.startswith(
+                "oneflow.python.oneflow_export"
+            ):
+                return None
+            if node.module.startswith("oneflow.python"):
+                node.module = node.module.replace("oneflow.python", "oneflow")
+                return node
         return node
 
     def visit_alias(self, node: ast.alias) -> ast.alias:
@@ -98,7 +102,7 @@ class ExportVisitor(ast.NodeTransformer):
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
-        if is_test:
+        if is_test and args.verbose:
             print("[skip test]", spec["src"])
         else:
             txt = spec["src"].read_text()
@@ -130,7 +134,7 @@ def get_files():
         get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
         + get_specs_under_python(
             python_path="oneflow/compatible_single_client_python",
-            dst_path="oneflow/compatible/single/client_python",
+            dst_path="oneflow/compatible/single_client_python",
         )
         + [
             {"src": Path("oneflow/init.py"), "dst": "oneflow/__init__.py"},
@@ -177,14 +181,17 @@ if __name__ == "__main__":
     if args.verbose == False:
         extra_arg += "--quiet"
     if args.debug == False:
+        print("[postprocess]", "autoflake")
         subprocess.check_call(
             f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
             shell=True,
             cwd=args.out_dir,
         )
+    print("[postprocess]", "isort")
     subprocess.check_call(
         f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
     )
+    print("[postprocess]", "black")
     subprocess.check_call(
         f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
     )
