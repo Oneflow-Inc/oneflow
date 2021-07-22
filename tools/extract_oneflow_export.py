@@ -122,6 +122,7 @@ class ExportVisitor(ast.NodeTransformer):
 
     def visit_FunctionDef(self, node):
         for d in node.decorator_list:
+            # if @register_tensor_op, export it in __init__.py
             if is_export_decorator(d):
                 import_from_exports = []
                 target_module = None
