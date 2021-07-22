@@ -81,8 +81,6 @@ class ExportVisitor(ast.NodeTransformer):
         module.body.append(node)
 
     def visit_ImportFrom(self, node):
-        if not node.module:
-            dumpprint(node)
         if node.module:
             if node.module == "__future__" or node.module.startswith(
                 "oneflow.python.oneflow_export"
@@ -295,11 +293,15 @@ if __name__ == "__main__":
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
 
+    print("leaf_modules", leaf_modules)
+
     def is_init(module: str):
         is_leaf = module in leaf_modules
         is_magic = module.endswith("__")
         if is_magic:
             print("magic", module)
+        if is_leaf == False and is_magic == False:
+            print("is_init", module)
         return is_leaf == False and is_magic == False
 
     srcs = pool.map(
