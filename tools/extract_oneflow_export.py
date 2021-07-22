@@ -19,6 +19,7 @@ parser.add_argument(
 parser.add_argument("--verbose", "-v", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--skip_autoflake", "-sa", action="store_true")
+parser.add_argument("--skip_black", "-sb", action="store_true")
 args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
@@ -206,7 +207,7 @@ if __name__ == "__main__":
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
-    if args.debug == False and args.skip_autoflake == False:
+    if args.skip_autoflake == False:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
             f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
@@ -217,7 +218,8 @@ if __name__ == "__main__":
     subprocess.check_call(
         f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
     )
-    print("[postprocess]", "black")
-    subprocess.check_call(
-        f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
-    )
+    if args.skip_black == False:
+        print("[postprocess]", "black")
+        subprocess.check_call(
+            f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
+        )
