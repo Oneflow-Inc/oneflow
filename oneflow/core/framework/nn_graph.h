@@ -40,7 +40,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
-  Maybe<void> CompileAndRuntime();
+  Maybe<void> CompileAndInitRuntime();
 
  private:
   std::string name_;
@@ -52,6 +52,11 @@ class NNGraph final : public NNGraphIf {
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
 };
+
+Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
+                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
+                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+                           const std::shared_ptr<NNGraph>& nn_graph);
 
 }  // namespace oneflow
 

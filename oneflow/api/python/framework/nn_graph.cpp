@@ -42,7 +42,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return graph.RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors)
                  .GetOrThrow();
            })
-      .def("complie_and_runtime",
-           [](NNGraph& graph) { return graph.CompileAndRuntime().GetOrThrow(); });
+      .def("complie_and_init_runtime",
+           [](NNGraph& graph) { return graph.CompileAndInitRuntime().GetOrThrow(); });
+
+  m.def("RunLazyNNGraph", [](const std::vector<std::shared_ptr<one::Tensor>>& inputs,
+                             const std::vector<std::shared_ptr<one::Tensor>>& outputs,
+                             const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+                             const std::shared_ptr<NNGraph>& nn_graph) {
+    return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
+  });
 }
 }  // namespace oneflow

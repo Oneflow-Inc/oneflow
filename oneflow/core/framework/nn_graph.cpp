@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/runtime.h"
-#include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 
@@ -63,9 +64,10 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndRuntime() {
+Maybe<void> NNGraph::CompileAndInitRuntime() {
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   job_ = job_ctx->job();
+  // TODO(chengcheng): CHECK job valid for each rank.
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -93,7 +95,16 @@ Maybe<void> NNGraph::CompileAndRuntime() {
     }
     OF_SESSION_BARRIER();
   }
+  // TODO(chengcheng): BufferMgr->NewBuffer for each inputs, outputs, wait ids, callback.
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
+                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
+                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+                           const std::shared_ptr<NNGraph>& nn_graph) {
+  TODO();  // call InstructionsBuilder::RunLazyJob
   return Maybe<void>::Ok();
 }
 
