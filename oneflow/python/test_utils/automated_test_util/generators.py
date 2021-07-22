@@ -629,6 +629,7 @@ __all__ = [
     "random_or_nothing",
     "constant",
     "nothing",
+    "oneof",
     "test_module_against_pytorch",
     "test_flow_against_pytorch",
     "test_tensor_against_pytorch",

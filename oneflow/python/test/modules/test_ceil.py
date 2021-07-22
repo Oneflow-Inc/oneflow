@@ -48,14 +48,14 @@ class TestCeilModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest
+    @autotest()
     def test_flow_ceil_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.ceil(x)
         return y
 
-    @autotest
+    @autotest()
     def test_tensor_ceil_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

@@ -63,29 +63,36 @@ class TestAddmm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest
+    @autotest()
     def test_flow_addmm_with_random_data(test_case):
-        m = random(1, 6)
-        n = random(1, 6)
+        m = random(1, 6).to(int)
+        n = random(1, 6).to(int)
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=m, dim1=m).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=m, dim1=n).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=n, dim1=m).to(device)
         y = torch.addmm(
-            input, mat1, mat2, beta=random() | nothing(), alpha=random() | nothing(),
+            input,
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
         )
         return y
 
-    @autotest
+    @autotest()
     def test_tensor_addmm_with_random_data(test_case):
-        m = random(1, 6)
-        n = random(1, 6)
+        m = random(1, 6).to(int)
+        n = random(1, 6).to(int)
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=m, dim1=m).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=m, dim1=n).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=n, dim1=m).to(device)
         y = input.addmm(
-            mat1, mat2, beta=random() | nothing(), alpha=random() | nothing(),
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
         )
         return y
 
