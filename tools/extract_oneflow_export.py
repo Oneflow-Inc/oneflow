@@ -110,6 +110,8 @@ class ExportVisitor(ast.NodeTransformer):
         if node.name.startswith("oneflow.python."):
             node.name = node.name.replace("oneflow.python.", "oneflow.")
             return node
+        if node.name == "oneflow.python":
+            node.name = "oneflow"
         elif "__export_symbols__" in node.name:
             return None
         else:
