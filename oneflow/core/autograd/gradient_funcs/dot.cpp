@@ -19,19 +19,19 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DotInterpState : public OpExprInterpState {
+struct DotGradInterpState : public OpExprInterpState {
   bool x_requires_grad;
   bool y_requires_grad;
   size_t x_offset;
   size_t y_offset;
 };
 
-class DotGrad : public OpExprGradFunction<DotInterpState> {
+class DotGrad : public OpExprGradFunction<DotGradInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(DotInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(DotGradInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
@@ -41,7 +41,7 @@ class DotGrad : public OpExprGradFunction<DotInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const DotInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DotGradInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
