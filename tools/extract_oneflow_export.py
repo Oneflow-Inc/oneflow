@@ -122,6 +122,7 @@ class ExportVisitor(ast.NodeTransformer):
                         level=0,
                     )
                     import_from_exports.append(import_from_export)
+                # TODO: insert imports in func body
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
         return node
