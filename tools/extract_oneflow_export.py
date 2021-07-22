@@ -41,7 +41,7 @@ def get_specs_under_python(python_path=None, dst_path=None):
         rel = p.relative_to(python_path)
         dst = PurePosixPath(dst_path).joinpath(rel)
         spec = {"src": p, "dst": dst}
-        if p.is_relative_to(os.path.join(python_path, "test")):
+        if rel.parts[0] == "test":
             spec["is_test"] = True
         specs.append(spec)
     return specs
