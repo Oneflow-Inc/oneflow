@@ -261,6 +261,11 @@ def save_trees(args=None):
     dst_full.write_text(new_txt)
 
 
+def append_trees(tree_dict: dict, module: str, tree: ast.AST):
+    tree_dict[module] = tree_dict.get(module, [])
+    tree_dict[module].append(tree)
+
+
 if __name__ == "__main__":
     out_oneflow_dir = os.path.join(args.out_dir, "*")
     assert args.out_dir
@@ -276,12 +281,10 @@ if __name__ == "__main__":
     for s in srcs:
         # src
         target_module = module_from_path(s.dst)
-        final_trees[target_module] = final_trees.get(target_module, [])
-        final_trees[target_module].append(s.tree)
+        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
-            final_trees[export_path] = final_trees.get(export_path, [])
-            final_trees[export_path].append(export_tree)
+            append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             # build module tree
             parts = export_path.split(".")
             current_node = root_module
