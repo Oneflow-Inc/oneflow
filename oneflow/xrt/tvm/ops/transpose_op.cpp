@@ -9,9 +9,9 @@ class TransposeOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
     tvm::Array<tvm::relay::Expr> node_inputs;
-    node_inputs.push_back(ctx->GetExpr4InputName("in"));
+    node_inputs.push_back(ctx->GetExpr4InputName("in_0"));
 
-    const Shape& in_shape = ctx->GetShape4InputName("in");
+    const Shape& in_shape = ctx->GetShape4InputName("in_0");
     std::vector<int32_t> axes = ctx->Attr<std::vector<int32_t>>("perm");
     CHECK_EQ(axes.size(), in_shape.NumAxes());
 
@@ -22,7 +22,7 @@ class TransposeOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("transpose");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(transpose_attrs), {});
-    ctx->SetExpr4OutputName("out", std::move(expr));
+    ctx->SetExpr4OutputName("out_0", std::move(expr));
   }
 };
 

@@ -50,8 +50,8 @@ class Conv2DOp final : public TVMOpKernel {
     LOG(WARNING) << ctx->DebugStr();
     
     tvm::Array<tvm::relay::Expr> inputs;
-    inputs.push_back(ctx->GetExpr4InputName("in"));
-    inputs.push_back(ctx->GetExpr4InputName("weight"));
+    inputs.push_back(ctx->GetExpr4InputName("in_0"));
+    inputs.push_back(ctx->GetExpr4InputName("weight_0"));
 
     auto conv_attrs = tvm::runtime::make_object<tvm::relay::Conv2DAttrs>();
     {
@@ -76,8 +76,8 @@ class Conv2DOp final : public TVMOpKernel {
       CHECK_EQ(2, dilation.size());
       conv_attrs->dilation = tvm::Array<tvm::relay::IndexExpr>({dilation.at(0), dilation.at(1)});
 
-      conv_attrs->padding = Calc2DPadding4Conv(data_format, ctx->Attr<std::string>("padding"),
-          ctx->GetShape4InputName("in"), ctx->GetShape4InputName("weight"), stride, dilation);
+      std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
+      conv_attrs->padding = tvm::Array<tvm::relay::IndexExpr>({padding.at(0), padding.at(1)});
 
       std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
       CHECK_EQ(2, kernel_size.size());
@@ -92,19 +92,7 @@ class Conv2DOp final : public TVMOpKernel {
     auto conv_op = tvm::relay::Op::Get("nn.conv2d");
     auto conv = tvm::relay::Call(conv_op, inputs, tvm::Attrs(conv_attrs), {});
 
-    bool use_bias = ctx->Attr<bool>("use_bias");
-    if (use_bias) {
-      auto bias_add_attrs = tvm::runtime::make_object<tvm::relay::BiasAddAttrs>();
-      bias_add_attrs->axis = 1;
-
-      auto bias_add_in = ctx->GetExpr4InputName("bias");
-      auto bias_add_op = tvm::relay::Op::Get("nn.bias_add");
-      auto bias_add = tvm::relay::Call(
-          bias_add_op, {conv, bias_add_in}, tvm::Attrs(bias_add_attrs), {});
-      ctx->SetExpr4OutputName("out", std::move(bias_add));
-    } else {
-      ctx->SetExpr4OutputName("out", std::move(conv));
-    }
+    ctx->SetExpr4OutputName("out_0", std::move(conv));
   }
 };
 

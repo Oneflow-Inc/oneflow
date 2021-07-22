@@ -8,11 +8,12 @@ namespace of_tvm {
 class ReshapeOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    LOG(WARNING) << ctx->DebugStr();
     tvm::Array<tvm::relay::Expr> node_inputs;
-    node_inputs.push_back(ctx->GetExpr4InputName("in"));
+    node_inputs.push_back(ctx->GetExpr4InputName("in_0"));
 
-    const Shape& in_shape = ctx->GetShape4InputName("in");
-    const Shape& conf_shape = ctx->Attr<Shape>("shape");
+    const Shape& in_shape = ctx->GetShape4InputName("in_0");
+    const Shape& conf_shape = ctx->GetShape4OutputName("out_0");
     CHECK_EQ(in_shape.elem_cnt(), conf_shape.elem_cnt());
 
     tvm::Array<tvm::Integer> tvm_conf_shape;
@@ -24,7 +25,7 @@ class ReshapeOp final : public TVMOpKernel {
 
     auto op = tvm::relay::Op::Get("reshape");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(reshape_attrs), {});
-    ctx->SetExpr4OutputName("out", std::move(expr));
+    ctx->SetExpr4OutputName("out_0", std::move(expr));
   }
 };
 
