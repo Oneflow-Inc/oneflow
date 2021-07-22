@@ -37,24 +37,41 @@ class AsyncRpcCtx {
   std::shared_ptr<std::atomic<int64_t>> flying_cnt_;
 };
 
-class SortedRankRanges;
+class NaiveAsyncRpcCtx final : AsyncRpcCtx {
+ public:
+	explicit NaiveAsyncRpcCtx(const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare): prepare_(Prepare) {}
+	~NaiveAsyncRpcCtx() override = default;
+
+  Maybe<void> MakeDataBufferAndCallback(
+			int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) override {
+		return prepare_(buffer, size, Callback);
+	}
+
+ private:
+	std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_;
+};
+
+class RankGroup;
 
 struct RpcUtil final {
-  static Maybe<uint32_t> GetRpcTokenCmdMajor(RpcTokenCmdLocalMajor cmd_local_major);
+
+	static int64_t TimeoutSeconds() { return 60 * 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncRpcCtx& ctx, int64_t seconds);
 
-  static Maybe<void> BroadcastToAllOtherRanks(Symbol<SortedRankRanges> rank_ranges,
-                                              const RpcToken& token, AsyncRpcCtx* ctx);
-
-  static Maybe<void> CollectFromAllOtherRanks(Symbol<SortedRankRanges> rank_ranges,
-                                              const RpcToken& token, AsyncRpcCtx* ctx);
-
-  static Maybe<void> SendToNextRankInRing(Symbol<SortedRankRanges> rank_ranges,
+  static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group,
                                           const RpcToken& token, AsyncRpcCtx* ctx);
 
-  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<SortedRankRanges> rank_ranges,
+  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
                                                const RpcToken& token, AsyncRpcCtx* ctx);
+
+
+  static Maybe<void> BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
+                                              const RpcToken& token, AsyncRpcCtx* ctx);
+
+  static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
+                                              const RpcToken& token, AsyncRpcCtx* ctx);
+
 };
 
 }  // namespace oneflow

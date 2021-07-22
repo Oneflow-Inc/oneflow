@@ -13,17 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_THREAD_UNIQUE_TAG_H_
-#define ONEFLOW_CORE_THREAD_THREAD_UNIQUE_TAG_H_
+#ifndef ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
+#define ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-Maybe<void> SetThisThreadUniqueTag(const std::string& thread_tag);
-Maybe<const std::string&> GetThisThreadUniqueTag();
+Maybe<void> SetThisThreadConsistentUniqueId(int64_t thread_consistent_uid, const std::string& debug_string);
+Maybe<int64_t> GetThisThreadConsistentUniqueId();
+Maybe<const std::string&> GetThreadConsistentUniqueIdDebugString(int64_t thread_consistent_uid);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_THREAD_UNIQUE_TAG_H_
+#endif  // ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_

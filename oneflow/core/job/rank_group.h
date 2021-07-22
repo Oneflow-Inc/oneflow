@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_SORTED_RANK_RANGES_
-#define ONEFLOW_CORE_JOB_SORTED_RANK_RANGES_
+#ifndef ONEFLOW_CORE_JOB_RANK_GROUP_H_
+#define ONEFLOW_CORE_JOB_RANK_GROUP_H_
 
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <set>
 #include <string>
 #include <memory>
 #include "oneflow/core/common/symbol.h"
@@ -27,21 +28,17 @@ limitations under the License.
 
 namespace oneflow {
 
-class ParallelDesc;
-
-class SortedRankRanges final {
+class RankGroup final {
  public:
-  ~SortedRankRanges() = default;
+  ~RankGroup() = default;
 
-  static Maybe<Symbol<SortedRankRanges>> New4SoleDevicePerRankParallelDesc(
-      Symbol<ParallelDesc> parallel_desc);
-  static Maybe<SortedRankRanges> New4SoleDevicePerRankParallelDesc(
-      const ParallelDesc& parallel_desc);
+  static Maybe<Symbol<RankGroup>> New(const std::set<int64_t>& ranks);
+  static Maybe<Symbol<RankGroup>> DefaultRankGroup();
 
-  bool operator==(const SortedRankRanges& that) const {
+  bool operator==(const RankGroup& that) const {
     return this->sorted_rank_ranges_ == that.sorted_rank_ranges_;
   }
-  bool operator!=(const SortedRankRanges& that) const { return !(*this == that); }
+  bool operator!=(const RankGroup& that) const { return !(*this == that); }
 
   const std::vector<Range>& sorted_rank_ranges() const { return sorted_rank_ranges_; }
   size_t size() const { return size_; }
@@ -55,8 +52,8 @@ class SortedRankRanges final {
   Maybe<void> ForEachRank(const std::function<Maybe<void>(int64_t)>&) const;
 
  private:
-  SortedRankRanges() = default;
-  Maybe<void> Init();
+  RankGroup() = default;
+  Maybe<void> Init(const std::set<int64_t>& ranks);
 
   std::vector<Range> sorted_rank_ranges_;
   std::unordered_map<int64_t, int64_t> rank2next_rank_in_ring_;
@@ -70,12 +67,12 @@ class SortedRankRanges final {
 namespace std {
 
 template<>
-struct hash<oneflow::SortedRankRanges> final {
-  size_t operator()(const oneflow::SortedRankRanges& sorted_rank_ranges) const {
-    return sorted_rank_ranges.hash_value();
+struct hash<oneflow::RankGroup> final {
+  size_t operator()(const oneflow::RankGroup& rank_group) const {
+    return rank_group.hash_value();
   }
 };
 
 }  // namespace std
 
-#endif  // ONEFLOW_CORE_JOB_SORTED_RANK_RANGES_
+#endif  // ONEFLOW_CORE_JOB_RANK_GROUP_H_

@@ -21,18 +21,14 @@ limitations under the License.
 
 namespace oneflow {
 
-class FlatConsistentTensorMeta;
+class FlatTensorConsistency;
 
 class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
  public:
-  CheckConsistencyAsyncRpcCtx(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                              const RpcToken& rpc_token, Symbol<ParallelDesc> parallel_desc,
-                              Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : shape_(shape),
-        dtype_(dtype),
-        rpc_token_(rpc_token),
-        parallel_desc_(parallel_desc),
-        parallel_distribution_(parallel_distribution) {}
+  CheckConsistencyAsyncRpcCtx(
+			Symbol<ConsistentTensorMeta> tensor_meta,
+  		const RpcToken& tensor_rpc_token)
+      : tensor_meta_(tensor_meta), tensor_rpc_token_(tensor_rpc_token) {}
 
   ~CheckConsistencyAsyncRpcCtx() override;
 
@@ -42,13 +38,9 @@ class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
   Maybe<void> Check() const;
 
  private:
-  std::shared_ptr<const Shape> shape_;
-  DataType dtype_;
-  RpcToken rpc_token_;
-  Symbol<ParallelDesc> parallel_desc_;
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
-
-  std::shared_ptr<FlatConsistentTensorMeta> flatten_consistent_tensor_meta_;
+  Symbol<ConsistentTensorMeta> tensor_meta_;
+  RpcToken tensor_rpc_token_;
+  std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };
 
 Maybe<CheckConsistencyAsyncRpcCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor);

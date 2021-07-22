@@ -26,7 +26,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
-#include "oneflow/core/framework/placement_rpc_util.h"
+#include "oneflow/core/framework/rank_group_rpc_util.h"
+#include "oneflow/core/job/rank_group.h"
+#include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -49,10 +51,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   using TensorImpl = EagerConsistentTensorImpl;
   TensorImpl::NewMethod New =
       (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
+	const auto& rank_group = RankGroupScope::CurrentRankGroup();
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
         JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
-    const auto& rpc_token = JUST(GetAutoIncrementalRpcToken(parallel_desc));
+    const auto& rpc_token = JUST(GetAutoIncrementalRpcToken(rank_group));
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }

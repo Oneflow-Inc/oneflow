@@ -19,34 +19,12 @@ limitations under the License.
 #include "oneflow/core/framework/rpc_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/thread/thread_unique_tag.h"
-#include "oneflow/core/job/sorted_rank_ranges.h"
+#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
-
-namespace {
-
-Maybe<uint32_t> GetCurrentThreadUid() {
-  const auto& thread_unique_tag = JUST(GetThisThreadUniqueTag());
-  // Only the main thread supported now.
-  CHECK_EQ_OR_RETURN(thread_unique_tag, "main");
-  return 0;
-}
-
-}  // namespace
-
-/*static*/ Maybe<uint32_t> RpcUtil::GetRpcTokenCmdMajor(RpcTokenCmdLocalMajor cmd_local_major) {
-  CHECK_LT_OR_RETURN(cmd_local_major, kRpcTokenCmdLocalMajorSize);
-  uint32_t thread_uid = JUST(GetCurrentThreadUid());
-  static const uint32_t kOffset = RpcToken::kStartTokenMajor4Cmd;
-  static const uint32_t kSize = kRpcTokenCmdLocalMajorSize;
-  uint32_t ret = kOffset + thread_uid * kSize + cmd_local_major;
-  static const uint32_t kLimit = RpcToken::kStartTokenMajor4Placement;
-  CHECK_LT_OR_RETURN(ret, kLimit);
-  return ret;
-}
 
 /*static*/ Maybe<void> RpcUtil::WaitUntilDoneOrTimeout(const AsyncRpcCtx& ctx, int64_t seconds) {
   const auto& start = std::chrono::steady_clock::now();
@@ -64,11 +42,11 @@ namespace {
 
 template<Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&)>
-Maybe<void> AccessToAllOtherRanks(Symbol<SortedRankRanges> rank_ranges, const RpcToken& token,
+Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
                                   AsyncRpcCtx* ctx) {
-  CHECK_OR_RETURN(rank_ranges->ContainingCurrentRank());
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   const auto& flying_cnt = ctx->flying_cnt();
-  JUST(rank_ranges->ForEachRank([&](int64_t rank) -> Maybe<void> {
+  JUST(rank_group->ForEachRank([&](int64_t rank) -> Maybe<void> {
     if (rank == GlobalProcessCtx::Rank()) { return Maybe<void>::Ok(); }
     ++*flying_cnt;
     void* buffer = nullptr;
@@ -84,13 +62,13 @@ Maybe<void> AccessToAllOtherRanks(Symbol<SortedRankRanges> rank_ranges, const Rp
   return Maybe<void>::Ok();
 }
 
-template<Maybe<int64_t> (SortedRankRanges::*GetPrevOrNext)() const,
+template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
          Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&)>
-Maybe<void> AccessToNearbyRank(Symbol<SortedRankRanges> rank_ranges, const RpcToken& token,
+Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& token,
                                AsyncRpcCtx* ctx) {
-  if (rank_ranges->size() == 1) { return Maybe<void>::Ok(); }
-  const auto* rank_ranges_ptr = &*rank_ranges;
+  if (rank_group->size() == 1) { return Maybe<void>::Ok(); }
+  const auto* rank_ranges_ptr = &*rank_group;
   int64_t rank = JUST((rank_ranges_ptr->*GetPrevOrNext)());
   CHECK_NE_OR_RETURN(rank, GlobalProcessCtx::Rank());
   const auto& flying_cnt = ctx->flying_cnt();
@@ -109,40 +87,46 @@ Maybe<void> AccessToNearbyRank(Symbol<SortedRankRanges> rank_ranges, const RpcTo
 Maybe<void> Send(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
   auto* transport = JUST(GlobalMaybe<Transport>());
-  transport->Send(static_cast<uint64_t>(token), rank, buffer, size, Callback);
+	RpcToken transport_token(token);
+	JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
+	JUST(transport_token.set_dst_rank(rank));
+  transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Recv(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
   auto* transport = JUST(GlobalMaybe<Transport>());
-  transport->Receive(static_cast<uint64_t>(token), rank, buffer, size, Callback);
+	RpcToken transport_token(token);
+	JUST(transport_token.set_src_rank(rank));
+	JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
+  transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-/*static*/ Maybe<void> RpcUtil::BroadcastToAllOtherRanks(Symbol<SortedRankRanges> rank_ranges,
+/*static*/ Maybe<void> RpcUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
                                                          const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Send>(rank_ranges, token, ctx));
+  JUST(AccessToAllOtherRanks<&Send>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::CollectFromAllOtherRanks(Symbol<SortedRankRanges> rank_ranges,
+/*static*/ Maybe<void> RpcUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                                          const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Recv>(rank_ranges, token, ctx));
+  JUST(AccessToAllOtherRanks<&Recv>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::SendToNextRankInRing(Symbol<SortedRankRanges> rank_ranges,
+/*static*/ Maybe<void> RpcUtil::SendToNextRankInRing(Symbol<RankGroup> rank_group,
                                                      const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&SortedRankRanges::GetNextRankInRing, &Send>(rank_ranges, token, ctx));
+  JUST(AccessToNearbyRank<&RankGroup::GetNextRankInRing, &Send>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::ReceiveFromPrevRankInRing(Symbol<SortedRankRanges> rank_ranges,
+/*static*/ Maybe<void> RpcUtil::ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
                                                           const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&SortedRankRanges::GetPrevRankInRing, &Recv>(rank_ranges, token, ctx));
+  JUST(AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 

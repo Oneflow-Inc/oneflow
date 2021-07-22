@@ -19,24 +19,17 @@ limitations under the License.
 #include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/framework/rpc_util.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/job/rank_group.h"
 
 namespace oneflow {
 
-// Do nothing unless except rpc_token check.
-class NaiveTokenCheckAsyncRpcCtx : public AsyncRpcCtx {
- public:
-  NaiveTokenCheckAsyncRpcCtx() = default;
-  ~NaiveTokenCheckAsyncRpcCtx() override = default;
+Maybe<void> MakeInitialRankGroupRpcToken();
 
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override;
-};
+Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group);
 
-class ParallelDesc;
+Maybe<RpcToken> GetAutoIncrementalRpcToken(Symbol<RankGroup> rank_group);
 
-Maybe<NaiveTokenCheckAsyncRpcCtx> CheckRpcToken(Symbol<ParallelDesc> parallel_desc);
-
-Maybe<RpcToken> GetAutoIncrementalRpcToken(Symbol<ParallelDesc> parallel_desc);
+Maybe<int64_t> GetCurrentRankGroupId();
 
 }  // namespace oneflow
 

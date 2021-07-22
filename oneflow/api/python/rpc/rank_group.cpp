@@ -17,16 +17,33 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/thread/thread_unique_tag.h"
+#include "oneflow/core/framework/rank_group_rpc_util.h"
+#include "oneflow/core/job/rank_group.h"
+#include "oneflow/core/job/rank_group_scope.h"
+#include "oneflow/core/job/symbol.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> CheckCurrentRankGroupConsistency(int64_t seconds) {
+	const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+  const auto& ctx = JUST(CheckRpcToken(rank_group));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  return Maybe<void>::Ok();
+}
+
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("SetThisThreadUniqueTag", [](const std::string& thread_tag) {
-    return SetThisThreadUniqueTag(thread_tag).GetOrThrow();
-  });
+  m.def("check_current_rank_group_consistency", [](int64_t seconds){
+		return CheckCurrentRankGroupConsistency(seconds).GetOrThrow();
+	});
+  m.def("check_current_rank_group_consistency", [](){
+		return CheckCurrentRankGroupConsistency(60*5).GetOrThrow();
+	});
 }
 
 }  // namespace oneflow

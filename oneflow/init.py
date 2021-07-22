@@ -18,7 +18,6 @@ from __future__ import absolute_import
 
 import oneflow._oneflow_internal
 
-oneflow._oneflow_internal.SetThisThreadUniqueTag("main")
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 
 Size = oneflow._oneflow_internal.Size
@@ -75,6 +74,7 @@ if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
+oneflow._oneflow_internal.InitDefaultConsistentRpcTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
