@@ -32,7 +32,6 @@ def _test_dot_forward(test_case, device, dtype):
     y = flow.tensor(np_y, device=flow.device(device))
 
     out = flow.dot(x, y)
-    print(np_out, out)
     test_case.assertTrue(np.allclose(np_out, out.numpy(), rtol=1e-04, atol=1e-10))
 
 
@@ -50,13 +49,6 @@ class TestDot(flow.unittest.TestCase):
         arg_dict["dtype"] = [np.float32, np.double]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
-    # def test_gpu_dot(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["dtype"] = [np.float32, np.double]
-    #     for arg in GenArgList(arg_dict):
-    #         _test_dot(test_case, "cuda", *arg)
-
 
 if __name__ == "__main__":
     unittest.main()
