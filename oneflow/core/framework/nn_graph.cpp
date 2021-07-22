@@ -111,8 +111,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
 void NNGraph::NewRuntimeBuffers() {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-  buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), 128);
-  buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), 128);
+  size_t concurrency_width = job_.job_conf().concurrency_width();
+  buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
+  buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   for (const std::string& input_op_name : input_op_names_) {
     buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), 2);
   }
