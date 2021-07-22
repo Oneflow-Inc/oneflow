@@ -41,8 +41,9 @@ def abs_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow as flow
+        >>> import oneflow.experimental as flow
         >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)
