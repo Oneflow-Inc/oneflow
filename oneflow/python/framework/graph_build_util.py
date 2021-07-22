@@ -128,14 +128,11 @@ def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
 
 
-def build_graph_input_arg(arg, input_idx):
+def build_graph_input_arg(op_name, arg):
     assert isinstance(arg, (Tensor, InternalTensor))
-    op_name = "input_" + str(input_idx)
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
     )
-    input_conf.set_in_0("in_0")
-    input_conf.set_out_0("out_0")
 
     input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
         op_name, input_conf, ["in_0"], ["out_0"]
@@ -153,38 +150,32 @@ def build_graph_input_arg(arg, input_idx):
     return lazy_arg
 
 
-def build_graph_state(state_block):
-    op_name = state_block.name_prefix + state_block.name
+def build_graph_state(op_name, state_tensor):
     var_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
     )
-    var_conf.set_in_0("in_0")
-    var_conf.set_out_0("out_0")
 
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
         op_name, var_conf, ["in_0"], ["out_0"]
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    if not state_block.origin.is_determined:
-        state_block.origin.determine()
-    tensor_in_c = state_block.origin._local_or_consistent_tensor
+    assert isinstance(state_tensor, Tensor)
+    if not state_tensor.is_determined:
+        state_tensor.determine()
+    tensor_in_c = state_tensor._local_or_consistent_tensor
 
     lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
     return lazy_tensor
 
 
-def build_graph_output(out, out_idx):
+def build_graph_output(op_name, out):
     assert isinstance(out, InternalTensor)
     assert out.is_lazy
-    assert out.is_consistent
 
-    op_name = "output_" + str(out_idx)
     output_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
     )
-    output_conf.set_in_0("in_0")
-    output_conf.set_out_0("out_0")
 
     output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
         op_name, output_conf, ["in_0"], ["out_0"]

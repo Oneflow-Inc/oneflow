@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from typing import Optional, TypeVar
 
 from oneflow.compatible.single_client.core.job.job_set_pb2 import JobSet
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 _VT = TypeVar("_VT")
 

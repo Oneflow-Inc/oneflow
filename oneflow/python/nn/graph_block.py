@@ -232,8 +232,8 @@ class Block(object):
                                 )
                                 # Create and return lazy tensor
                                 with p_block.scope_context():
-                                    p_block._lazy_origin = p_block._lazy_origin_builder(
-                                        p_block
+                                    p_block._lazy_origin = (
+                                        p_block._lazy_origin_builder()
                                     )
                             return p_block._lazy_origin
                         else:
@@ -257,8 +257,8 @@ class Block(object):
                                 )
                                 # Create and return lazy tensor
                                 with b_block.scope_context():
-                                    b_block._lazy_origin = b_block._lazy_origin_builder(
-                                        b_block
+                                    b_block._lazy_origin = (
+                                        b_block._lazy_origin_builder()
                                     )
                             return b_block._lazy_origin
                         else:

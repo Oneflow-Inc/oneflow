@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict
 from typing import Dict
+from functools import partial
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
@@ -132,13 +133,23 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with input
             lazy_args = []
-            for arg in args:
-                lazy_args.append(
-                    graph_build_util.build_graph_input_arg(arg, len(lazy_args))
-                )
+            lazy_arg_op_names = []
+            for idx, arg in enumerate(args):
+                op_name = "_" + self.name + "-input_" + str(idx)
+                lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
+                lazy_arg_op_names.append(op_name)
+
             # Deal with parameter and buffer
+            state_op_names = []
+            state_tensors = []
             for state_block in self._state():
-                state_block.set_lazy_origin_builder(graph_build_util.build_graph_state)
+                op_name = state_block.name_prefix + state_block.name
+                state_tensor = state_block.origin
+                state_op_names.append(op_name)
+                state_tensors.append(state_tensor)
+                state_block.set_lazy_origin_builder(
+                    partial(graph_build_util.build_graph_state, op_name, state_tensor)
+                )
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
@@ -149,19 +160,22 @@ class Graph(object):
                     outputs = ()
                 else:
                     assert type(outputs) is InternalTensor
-                    print("type(outputs): ", type(outputs))
                     outputs = (outputs,)
             eager_outputs = []
-            for out in outputs:
-                eager_outputs.append(
-                    graph_build_util.build_graph_output(out, len(eager_outputs))
-                )
+            eager_output_op_names = []
+            for idx, out in enumerate(outputs):
+                op_name = "_" + self.name + "-output_" + str(idx)
+                eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
+                eager_output_op_names.append(op_name)
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:
                 eager_outputs = eager_outputs[0]
             else:
                 eager_outputs = tuple(eager_outputs)
+
+            # TODO(): call self._c_nn_graph
+            #     register lazy_arg_op_names/state_op_names/state_tensors/eager_output_op_names
 
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()

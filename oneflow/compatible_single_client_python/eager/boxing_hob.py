@@ -15,13 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.compatible_single_client_python.lib.core.high_order_bool import (
+from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
     bool_functor,
 )
-from oneflow.compatible_single_client_python.lib.core.high_order_bool import (
+from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
     hob_context_attr,
 )
-from oneflow.compatible_single_client_python.lib.core.high_order_bool import BoolFunctor
+from oneflow.compatible.single_client.python.lib.core.high_order_bool import BoolFunctor
 import oneflow._oneflow_internal
 
 
