@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.python.test_utils.automated_test_util.torch_flow_dual_object import autotest
+from oneflow.python.test_utils.automated_test_util.torch_flow_dual_object import (
+    autotest,
+)
 import unittest
 import random
 from collections import OrderedDict
@@ -397,7 +399,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.tanh()
         return y
-    
+
     @autotest
     def test_flow_tensor_asin_with_random_data(test_case):
         device = random_device()
@@ -432,7 +434,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.sinh()
         return y
-    
+
     @autotest
     def test_flow_tensor_atan2_with_random_data(test_case):
         device = random_device()
@@ -440,13 +442,13 @@ class TestTensor(flow.unittest.TestCase):
         x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
         y = x1.atan2(x2)
         return y
-    
+
     def test_arccosh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.arccosh()
         return y
-    
+
     @autotest
     def test_acosh_tensor_with_random_data(test_case):
         device = random_device()

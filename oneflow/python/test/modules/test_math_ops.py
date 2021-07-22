@@ -801,7 +801,6 @@ class TestAcosh(flow.unittest.TestCase):
         return y
 
 
-
 def _test_atan2_forward(test_case, shape, scalar, device):
     np_input_x = 10 * np.random.rand(*shape)
     np_input_y = 10 * np.random.randn(*shape)
