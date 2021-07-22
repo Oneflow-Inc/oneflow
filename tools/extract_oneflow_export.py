@@ -66,6 +66,14 @@ def is_stable_decorator(d):
     return isinstance(d, ast.Name) and d.id == "stable_api"
 
 
+def get_segs_from_body(body=None, txt=None):
+    pool = multiprocessing.Pool()
+
+    results = pool.starmap(ast.get_source_segment, [(txt, node) for node in body])
+    pool.close()
+    return results
+
+
 class DstFile:
     def __init__(self, path):
         self.path = path
@@ -90,12 +98,7 @@ class DstFile:
             txt = f.read()
             module = ast.parse(txt)
             segs = []
-            pool = multiprocessing.Pool()
-
-            results = pool.starmap(
-                ast.get_source_segment, [(txt, node) for node in module.body]
-            )
-            pool.close()
+            results = get_segs_from_body(body=module.body, txt=txt)
             for seg in results:
                 if (
                     "Copyright 2020 The OneFlow Authors. All rights reserved."
