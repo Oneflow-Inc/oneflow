@@ -202,8 +202,14 @@ if __name__ == "__main__":
     subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
     # step 0: parse and load all segs into memory
     srcs = get_files()
+    final_trees = {}
     for s in srcs:
-        s.save()
+        final_trees[s.dst] = final_trees.get(s.dst, [])
+        final_trees[s.dst].append(s.tree)
+
+        for export_path, export_tree in s.export_visitor.export_modules.items():
+            final_trees[export_path] = final_trees.get(export_path, [])
+            final_trees[export_path].append(export_tree)
     # step 1: extract all exports
     # step 2: merge files under python/ into generated files
     # step 3: rename all
