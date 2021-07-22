@@ -401,7 +401,7 @@ class Tensor:
         if not lazy_mode.is_enabled():
             flow.autograd.backward(self, gradient, retain_graph, create_graph)
         else:
-            self.add_as_lazy_loss()
+            flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
     @register_local_tensor_method()
     def _transform_ellipsis_type(self, key):

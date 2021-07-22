@@ -18,10 +18,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
@@ -117,15 +115,6 @@ int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 std::shared_ptr<Tensor> ConsistentTensor::data() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
-}
-
-Maybe<void> ConsistentTensor::add_as_lazy_loss() const {
-  CHECK_OR_RETURN(is_lazy());
-  CHECK_OR_RETURN(LazyMode::is_enabled());
-  const std::string& loss_lbn =
-      TensorNameScope::Global()->LookupByPtr(reinterpret_cast<uint64_t>(this));
-  CHECK_OR_RETURN("" != loss_lbn);
-  return JUST(GetCurInferCtx())->AddLossLogicalBlobName(loss_lbn);
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {

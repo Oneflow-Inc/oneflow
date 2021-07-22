@@ -101,9 +101,6 @@ class Tensor {
   virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
-  // Tensor.backward() to lazy add_loss(Tensor)
-  virtual Maybe<void> add_as_lazy_loss() const = 0;
-
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
 
  protected:
@@ -195,9 +192,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
   }
-
-  // Tensor.backward() to lazy add_loss(Tensor)
-  Maybe<void> add_as_lazy_loss() const override { OF_UNIMPLEMENTED(); }
 
   // Operators for tensor
   Maybe<Tensor> detach() const override;
@@ -291,9 +285,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
   }
-
-  // Tensor.backward() to lazy add_loss(Tensor)
-  Maybe<void> add_as_lazy_loss() const override;
 
   // Operators for tensor
   Maybe<Tensor> detach() const override;

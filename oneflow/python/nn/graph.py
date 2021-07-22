@@ -43,7 +43,7 @@ class Graph(object):
         self.config = GraphConfig()
         self._generate_name()
         self.config.proto.set_job_name(self._name)
-        self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
@@ -271,17 +271,18 @@ class GraphConfig(FunctionConfig):
 
     @property
     def training(self):
-        if self.function_desc.job_config_proto.has_train_conf():
+        if self.proto.has_train_conf():
             return True
-        if self.function_desc.job_config_proto.has_predict_conf():
+        if self.proto.has_predict_conf():
             return False
         raise NotImplementedError
 
     def _train(self, mode: bool = True):
         if mode:
-            self.function_desc.job_config_proto.mutable_train_conf()
+            self.proto.mutable_train_conf()
+            self.proto.mutable_train_conf().set_loss_scale_factor(1.0)
         else:
-            self.function_desc.job_config_proto.mutable_predict_conf()
+            self.proto.mutable_predict_conf()
 
     def add_optimizer_config(
         self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None

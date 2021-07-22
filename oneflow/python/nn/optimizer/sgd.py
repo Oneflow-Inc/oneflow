@@ -16,6 +16,7 @@ limitations under the License.
 
 from typing import List, Dict, Callable, Union, Iterator
 import collections
+import math
 
 import oneflow as flow
 
@@ -141,15 +142,16 @@ class SGD(Optimizer):
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
             lr = param_group["lr"]
             beta = param_group["momentum"]
-            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             scale = param_group["scale"]
-            if scale != 1.0:
-                print(
-                    "nn.Graph only support one scale factor, the effective scale factor is ",
-                    scale,
-                )
-                train_conf.set_loss_scale_factor(scale)
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
+            base_scale = train_conf.loss_scale_factor()
+            assert math.isclose(base_scale, 1, rel_tol=1e-4) or math.isclose(
+                scale, base_scale, rel_tol=1e-4
+            ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
+                base_scale, scale
+            )
 
+            train_conf.set_loss_scale_factor(scale)
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
                 optimizer_conf.mutable_naive_conf()
