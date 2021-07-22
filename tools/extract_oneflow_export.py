@@ -50,8 +50,11 @@ def join_module(parent, child):
         return parent
 
 
-def path_from_module(module):
-    return Path("/".join(module.split(".")) + ".py")
+def path_from_module(module, is_init=False):
+    if is_init:
+        return Path("/".join(module.split("."))).joinpath("__init__.py")
+    else:
+        return Path("/".join(module.split(".")) + ".py")
 
 
 class ExportVisitor(ast.NodeTransformer):
