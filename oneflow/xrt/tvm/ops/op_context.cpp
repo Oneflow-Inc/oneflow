@@ -56,7 +56,7 @@ void TVMOpContext::SetExpr4OutputName(const std::string& name, tvm::relay::Expr&
 
 std::string TVMOpContext::DebugStr() {
   std::string s;
-  s += "in_exprs: ";
+  s += "\nin_exprs: ";
   for(const auto& pair : input_name2expr_) {
     s += pair.first;
     s += ",";
@@ -71,6 +71,7 @@ std::string TVMOpContext::DebugStr() {
     s += pair.first;
     s += ",";
   }
+  s += "\n";
   return s;
 } 
 
