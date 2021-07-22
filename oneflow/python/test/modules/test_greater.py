@@ -97,28 +97,24 @@ class TestGreater(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False)
+    @autotest(n=60, auto_backward=False)
     def test_greater_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y1 = torch.gt(x1, x2)
-        y2 = torch.gt(x1, random().to(int))
-        y3 = torch.gt(x1, random().to(float))
-        return y1, y2, y3
+        y = torch.gt(x1, oneof(x2, random().to(int), random().to(float)))
+        return y
 
-    @autotest(auto_backward=False)
+    @autotest(n=60, auto_backward=False)
     def test_tensor_greater_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y1 = x1.gt(x2)
+        y1 = x1.gt(oneof(x2, random().to(int), random().to(float)))
         y2 = x1 > x2
-        y3 = x1.gt(random().to(int))
-        y4 = x1.gt(random().to(float))
-        return y1, y2, y3, y4
+        return y1, y2
 
 
 if __name__ == "__main__":

@@ -93,28 +93,25 @@ class TestLess(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False)
+    @autotest(n=60, auto_backward=False)
     def test_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y1 = torch.lt(x1, x2)
-        y2 = torch.lt(x1, random().to(int))
-        y3 = torch.lt(x1, random().to(float))
-        return y1, y2, y3
+        y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
+        return y
 
-    @autotest(auto_backward=False)
+    @autotest(n=60, auto_backward=False)
     def test_tensor_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y1 = x1.lt(x2)
+        y1 = x1.lt(oneof(x2, random().to(int), random().to(float)))
         y2 = x1 < x2
-        y3 = x1.lt(random().to(int))
-        y4 = x1.lt(random().to(float))
-        return y1, y2, y3, y4
+        return y1, y2
+
 
 if __name__ == "__main__":
     unittest.main()
