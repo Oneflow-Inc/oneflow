@@ -27,7 +27,7 @@ namespace one {
 const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
   std::lock_guard<std::mutex> lock(mutex_);
-  const auto& it = tensor_names_.find(tensor_ptr);
+  const auto& it = tensor_names_.find(key);
   if (it != tensor_names_.end()) {
     return it->second;
   } else {
