@@ -113,7 +113,6 @@ class ExportVisitor(ast.NodeTransformer):
         elif "__export_symbols__" in node.name:
             return None
         else:
-            print(node.name)
             return node
 
     def visit_ClassDef(self, node):
