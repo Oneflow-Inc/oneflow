@@ -47,8 +47,8 @@ def get_specs_under_python(python_path=None, dst_path=None):
 
 
 def get_files():
-    pool = multiprocessing.Pool()
-    segs = pool.map(
+    pool = multiprocessing.Pool(12)
+    srcs = pool.map(
         SrcFile,
         get_specs_under_python(python_path="oneflow/python", dst_path="oneflow")
         + get_specs_under_python(
@@ -69,17 +69,15 @@ def get_files():
         ],
     )
     pool.close()
-    # for path in Path("oneflow/compatible_single_client_python").rglob("*.py"):
-    #     SrcFile(path=path)
-    # for path in Path("oneflow/python").rglob("*.py"):
-    #     print(path.absolute())
+    return srcs
 
 
 if __name__ == "__main__":
     subprocess.check_call(f"rm -rf {out_oneflow_dir}", shell=True)
     subprocess.check_call(f"mkdir -p {out_oneflow_dir}", shell=True)
     # step 0: parse and load all segs into memory
-    get_files()
+    srcs = get_files()
+    print(srcs)
     # step 1: extract all exports
     # step 2: merge files under python/ into generated files
     # step 3: rename all
