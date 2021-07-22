@@ -73,7 +73,7 @@ def floor_op(x):
 @register_tensor_op("floor")
 def floor_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.floor`
+    See :func:`oneflow.floor`
     """
     return Floor()(input)
 

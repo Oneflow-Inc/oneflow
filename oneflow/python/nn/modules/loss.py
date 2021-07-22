@@ -48,12 +48,12 @@ class L1Loss(Module):
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
-        input (oneflow.experimental.Tensor): The input Tensor.
-        target (oneflow.experimental.Tensor): The target Tensor.
+        input (oneflow.Tensor): The input Tensor.
+        target (oneflow.Tensor): The target Tensor.
         reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
 
     Returns:
-        oneflow.experimental.Tensor: The result Tensor.
+        oneflow.Tensor: The result Tensor.
 
     For example:
 
@@ -252,14 +252,14 @@ class BCELoss(Module):
         out = -\sum_{i=1}^n(Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i))
 
     Args:
-        weight (oneflow.experimental.Tensor, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        weight (oneflow.Tensor, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
 
     Attention:
         The input value must be in the range of (0, 1). Or the loss function may return `nan` value.
 
     Returns:
-        oneflow.experimental.Tensor: The result Tensor.
+        oneflow.Tensor: The result Tensor.
 
     For example:
 

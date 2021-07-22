@@ -58,7 +58,7 @@ def atanh_op(input):
 def atanh_op_tensor(x):
     r"""
     atanh() -> Tensor
-    See :func:`oneflow.experimental.atanh`
+    See :func:`oneflow.atanh`
 
     """
 
@@ -69,7 +69,7 @@ def atanh_op_tensor(x):
 def arctanh_op(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.atanh`
     """
 
     return Atanh()(input)
@@ -79,7 +79,7 @@ def arctanh_op(input):
 def arctanh_op_tensor(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.atanh`
     """
 
     return Atanh()(input)

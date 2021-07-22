@@ -64,7 +64,7 @@ def sign_op_tensor(x):
 
     sign() -> Tensor
 
-    See :func:`oneflow.experimental.sign`
+    See :func:`oneflow.sign`
 
     """
 

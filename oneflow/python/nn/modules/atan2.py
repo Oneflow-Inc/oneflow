@@ -75,7 +75,7 @@ def atan2_op_tensor(input, other):
 
     atan2(other) -> Tensor
 
-    See :func:`oneflow.experimental.atan2`
+    See :func:`oneflow.atan2`
     """
     return Atan2()(input, other)
 

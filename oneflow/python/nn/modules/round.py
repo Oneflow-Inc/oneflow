@@ -60,7 +60,7 @@ def round_op_tensor(x):
     r"""
     round() -> Tensor
 
-    See :func:`oneflow.experimental.round`
+    See :func:`oneflow.round`
 
     """
 

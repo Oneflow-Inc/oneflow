@@ -444,7 +444,7 @@ def _add(x, y):
 @register_tensor_op("add_")
 def _add_inplace(x, y):
     r"""
-    In-place version of :func:`oneflow.experimental.Tensor.add`.
+    In-place version of :func:`oneflow.Tensor.add`.
     """
 
     if isinstance(y, (int, float)):
@@ -508,7 +508,7 @@ def asin_op(input):
 def asin_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asin`
+    See :func:`oneflow.asin`
     """
     return Asin()(input)
 
@@ -517,7 +517,7 @@ def asin_op_tensor(input):
 def arcsin_op(input):
     r"""
   
-    Alias for :func:`oneflow.experimental.asin`
+    Alias for :func:`oneflow.asin`
     """
     return Asin()(input)
 
@@ -526,7 +526,7 @@ def arcsin_op(input):
 def arcsin_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asin`
+    See :func:`oneflow.asin`
     """
     return Asin()(input)
 
@@ -579,7 +579,7 @@ def asinh_op(input):
 def arcsinh_op(input):
     r"""
   
-    Alias for :func:`oneflow.experimental.asinh`
+    Alias for :func:`oneflow.asinh`
     """
     return Asinh()(input)
 
@@ -588,7 +588,7 @@ def arcsinh_op(input):
 def asinh_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asinh`
+    See :func:`oneflow.asinh`
     """
     return Asinh()(input)
 
@@ -597,7 +597,7 @@ def asinh_op_tensor(input):
 def arcsinh_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.asinh`
+    See :func:`oneflow.asinh`
     """
     return Asinh()(input)
 
@@ -651,7 +651,7 @@ def sin_op_tensor(tensor):
 
     sin() -> Tensor
 
-    See :func:`oneflow.experimental.sin`
+    See :func:`oneflow.sin`
     
     """
 
@@ -661,7 +661,7 @@ def sin_op_tensor(tensor):
 @register_tensor_op("sin_")
 def inplace_sin_op_tensor(x):
     r"""
-    In-place version of :func:`oneflow.experimental.sin`
+    In-place version of :func:`oneflow.sin`
     
     """
 
@@ -740,7 +740,7 @@ def atan_op(tensor):
 def atan_op_tensor(tensor):
     r"""
 
-    See :func:`oneflow.experimental.atan`
+    See :func:`oneflow.atan`
     
     """
     return Atan()(tensor)
@@ -749,7 +749,7 @@ def atan_op_tensor(tensor):
 @oneflow_export("arctan")
 def arctan_op(tensor):
     r"""
-    Alias for :func:`oneflow.experimental.atan`
+    Alias for :func:`oneflow.atan`
     
     """
     return Atan()(tensor)
@@ -759,7 +759,7 @@ def arctan_op(tensor):
 def arctan_op_tensor(tensor):
     r"""
 
-    See :func:`oneflow.experimental.arctan`
+    See :func:`oneflow.arctan`
     
     """
     return Atan()(tensor)
@@ -1123,7 +1123,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
 @register_tensor_op("addmm")
 def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     r"""
-    See :func:`oneflow.experimental.addmm`
+    See :func:`oneflow.addmm`
     """
     return Addmm()(input, mat1, mat2, alpha, beta)
 
@@ -1348,7 +1348,7 @@ def erf_op(input):
 @register_tensor_op("erf")
 def erf_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.erf`
+    See :func:`oneflow.erf`
     """
     return Erf()(input)
 
@@ -1415,7 +1415,7 @@ def erfc_op(input):
 @register_tensor_op("erfc")
 def erfc_op_tensor(input):
     r"""
-    See :func:`oneflow.experimental.erfc`
+    See :func:`oneflow.erfc`
     """
     return Erfc()(input)
 
@@ -1489,7 +1489,7 @@ def ceil_op(x):
 @register_tensor_op("ceil")
 def ceil_op_tensor(x):
     r"""
-    See :func:`oneflow.experimental.ceil`
+    See :func:`oneflow.ceil`
     """
 
     return Ceil()(x)
@@ -1563,7 +1563,7 @@ def expm1_op(x):
 @register_tensor_op("expm1")
 def expm1_op_tensor(x):
     r"""
-    See :func:`oneflow.experimental.expm1`
+    See :func:`oneflow.expm1`
     """
 
     return Expm1()(x)

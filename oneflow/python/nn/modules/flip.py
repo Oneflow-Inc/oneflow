@@ -87,7 +87,7 @@ def flip_op(input, dims):
 @register_tensor_op("flip")
 def flip_op_tensor(input, dims):
     r"""
-    See :func:`oneflow.experimental.flip`
+    See :func:`oneflow.flip`
     """
     return Flip(dims)(input)
 

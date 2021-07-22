@@ -972,7 +972,7 @@ def mish_op(x):
     .. note::
         See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
 
-    See :mod:`oneflow.experimental.nn.Mish`
+    See :mod:`oneflow.nn.Mish`
     """
 
     return Mish()(x)
@@ -982,7 +982,7 @@ def mish_op(x):
 def mish_op_tensor(x):
     r"""
     mish() -> Tensor
-    See :func:`oneflow.experimental.mish`
+    See :func:`oneflow.mish`
     """
 
     return Mish()(x)

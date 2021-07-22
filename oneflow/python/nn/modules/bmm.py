@@ -64,7 +64,7 @@ def bmm_op_tensor(x, y):
 
     bmm() -> Tensor
 
-    See :func:`oneflow.experimental.bmm`
+    See :func:`oneflow.bmm`
 
     """
     return BMM()(x, y)

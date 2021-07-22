@@ -65,7 +65,7 @@ def acosh_op_tensor(x):
 
     acosh() -> Tensor
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.acosh`
 
     """
 
@@ -76,7 +76,7 @@ def acosh_op_tensor(x):
 def arccosh_op(x):
     r"""
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.acosh`
 
     """
 
@@ -89,7 +89,7 @@ def arccosh_op_tensor(x):
 
     arccosh() -> Tensor
 
-    See :func:`oneflow.experimental.acosh`
+    See :func:`oneflow.acosh`
 
     """
 

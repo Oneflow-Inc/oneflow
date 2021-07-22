@@ -85,7 +85,7 @@ class AdaptiveAvgPool1d(Module):
 def adaptive_avg_pool1d(input, output_size):
     r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool1d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool1d`
 
     Args:
         input: input tensor
@@ -149,7 +149,7 @@ class AdaptiveAvgPool2d(Module):
 def adaptive_avg_pool2d(input, output_size):
     r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool2d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool2d`
 
     Args:
         input: input tensor
@@ -213,7 +213,7 @@ class AdaptiveAvgPool3d(Module):
 def adaptive_avg_pool3d(input, output_size):
     r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool3d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool3d`
 
     Args:
         input: input tensor

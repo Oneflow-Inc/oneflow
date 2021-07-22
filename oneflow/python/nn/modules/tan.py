@@ -59,7 +59,7 @@ def tan_op(input):
 def tan_op_tensor(input):
     r"""
     tan() -> Tensor
-    See :func:`oneflow.experimental.tan`
+    See :func:`oneflow.tan`
 
     """
 

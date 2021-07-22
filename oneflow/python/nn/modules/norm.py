@@ -262,7 +262,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
     Examples::
 
         >>> import oneflow as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
@@ -329,7 +329,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 @register_tensor_op("norm")
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
-    See :func:`oneflow.experimental.linalg.norm`
+    See :func:`oneflow.linalg.norm`
     """
     return Norm(ord, dim, keepdim)(input)
 
@@ -382,7 +382,7 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     Examples::
 
         >>> import oneflow as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
@@ -445,7 +445,7 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     Examples::
 
         >>> import oneflow as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
         >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape((3,3))
         >>> a

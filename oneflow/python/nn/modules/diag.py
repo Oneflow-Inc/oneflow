@@ -70,7 +70,7 @@ def diag_op(input, diagonal=0):
 def diag_op_tensor(input, diagonal=0):
     r"""
     diag() -> Tensor
-    See :func:`oneflow.experimental.diag`
+    See :func:`oneflow.diag`
     
     """
 

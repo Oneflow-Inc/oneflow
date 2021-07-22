@@ -85,7 +85,7 @@ def in_top_k_op_tensor(targets, predictions, k):
 
     in_top_k() -> Tensor
 
-    See :func:`oneflow.experimental.in_top_k`
+    See :func:`oneflow.in_top_k`
 
     """
 

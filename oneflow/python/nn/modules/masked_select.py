@@ -92,7 +92,7 @@ def masked_select_op(x, mask):
 def tensor_masked_select_op(x, mask):
     r"""
 
-    See :func:`oneflow.experimental.masked_select`
+    See :func:`oneflow.masked_select`
 
     """
     return MaskedSelect()(x, mask)

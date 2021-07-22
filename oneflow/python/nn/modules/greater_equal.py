@@ -70,7 +70,7 @@ def greater_equal_op_tensor(x, y):
 
     ge() -> Tensor
 
-    See :func:`oneflow.experimental.ge`
+    See :func:`oneflow.ge`
 
     """
     return GreaterEqual()(x, y)

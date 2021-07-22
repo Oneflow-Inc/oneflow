@@ -91,7 +91,7 @@ def chunk_op(input, chunks, dim):
     r"""Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
     Args:
-        input (oneflow.experimental.Tensor): The tensor to split.
+        input (oneflow.Tensor): The tensor to split.
         chunks (int): Number of chunks to return.
         dim (int): Dimension along which to split the tensor.
 

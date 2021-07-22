@@ -70,7 +70,7 @@ def greater_op_tensor(x, y):
 
     gt() -> Tensor
 
-    See :func:`oneflow.experimental.gt`
+    See :func:`oneflow.gt`
 
     """
     return Greater()(x, y)
