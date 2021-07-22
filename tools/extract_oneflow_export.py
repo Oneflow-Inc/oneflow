@@ -51,7 +51,7 @@ def join_module(parent, child):
 
 
 def path_from_module(module):
-    return "/".join(module.split(".")) + ".py"
+    return Path("/".join(module.split(".")) + ".py")
 
 
 class ExportVisitor(ast.NodeTransformer):
@@ -62,10 +62,12 @@ class ExportVisitor(ast.NodeTransformer):
         self.export_modules = {}
 
     def append_export(self, target_module=None, node=None):
+        target_path = path_from_module(target_module)
         if target_module not in self.export_modules:
             module = ast.Module(body=[])
+            self.export_modules[target_path] = module
         else:
-            module = self.export_modules[target_module]
+            module = self.export_modules[target_path]
         # dumpprint(module)
         module.body.append(node)
 
@@ -118,6 +120,14 @@ class ExportVisitor(ast.NodeTransformer):
         return node
 
 
+def append_tree_txt(dst: Path = None, tree: ast.AST = None):
+    dst_full = OUT_PATH.joinpath(dst)
+    dst_full.parent.mkdir(parents=True, exist_ok=True)
+    dst_full.touch()
+    new_txt = ast.unparse(tree)
+    dst_full.write_text(new_txt)
+
+
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
@@ -135,19 +145,12 @@ class SrcFile:
             self.export_visitor = ExportVisitor(root_module=root_module)
             self.export_visitor.visit(self.tree)
 
-    def save(self):
-        dst_full = OUT_PATH.joinpath(self.dst)
-        dst_full.parent.mkdir(parents=True, exist_ok=True)
-        dst_full.touch()
-        new_txt = ast.unparse(self.tree)
-        dst_full.write_text(new_txt)
-
 
 def get_specs_under_python(python_path=None, dst_path=None):
     specs = []
     for p in Path(python_path).rglob("*.py"):
         rel = p.relative_to(python_path)
-        dst = PurePosixPath(dst_path).joinpath(rel)
+        dst = Path(dst_path).joinpath(rel)
         spec = {"src": p, "dst": dst}
         if rel.parts[0] == "test":
             spec["is_test"] = True
