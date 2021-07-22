@@ -182,6 +182,7 @@ REGISTER_USER_OP_GRAD("broadcast_floor_mod")
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_fmod")
@@ -189,5 +190,6 @@ REGISTER_USER_OP_GRAD("broadcast_fmod")
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
       }
+      return Maybe<void>::Ok();
     });
 }  // namespace oneflow

@@ -810,7 +810,7 @@ class FMod(Module):
             raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([abs(y)],dtype=flow.float32,device=x.device)
+            y = flow.tensor([y],dtype=flow.float32,device=x.device)
         elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
             if x.dtype != y.dtype:
                 x = flow.F.cast(x, flow.float32)
