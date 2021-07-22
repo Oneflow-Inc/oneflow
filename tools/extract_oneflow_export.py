@@ -120,14 +120,6 @@ class ExportVisitor(ast.NodeTransformer):
         return node
 
 
-def append_tree_txt(dst: Path = None, tree: ast.AST = None):
-    dst_full = OUT_PATH.joinpath(dst)
-    dst_full.parent.mkdir(parents=True, exist_ok=True)
-    dst_full.touch()
-    new_txt = ast.unparse(tree)
-    dst_full.write_text(new_txt)
-
-
 class SrcFile:
     def __init__(self, spec) -> None:
         is_test = "is_test" in spec and spec["is_test"]
@@ -196,6 +188,16 @@ def get_files():
     return srcs
 
 
+def save_trees(args=None):
+    dst = args["dst"]
+    trees = args["trees"]
+    dst_full = OUT_PATH.joinpath(dst)
+    dst_full.parent.mkdir(parents=True, exist_ok=True)
+    dst_full.touch()
+    new_txt = "\n".join([ast.unparse(tree) for tree in trees])
+    dst_full.write_text(new_txt)
+
+
 if __name__ == "__main__":
     out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
     subprocess.check_call(f"rm -rf {out_oneflow_dir}", shell=True)
@@ -210,6 +212,15 @@ if __name__ == "__main__":
         for export_path, export_tree in s.export_visitor.export_modules.items():
             final_trees[export_path] = final_trees.get(export_path, [])
             final_trees[export_path].append(export_tree)
+    pool = multiprocessing.Pool()
+    srcs = pool.map(
+        save_trees,
+        [
+            {"dst": final_path, "dst": final_trees,}
+            for final_path, final_trees in final_trees.items()
+        ],
+    )
+    pool.close()
     # step 1: extract all exports
     # step 2: merge files under python/ into generated files
     # step 3: rename all
