@@ -116,7 +116,6 @@ class TestReLU6Module(flow.unittest.TestCase):
         return y
 
 
-
 def _test_tanh_nn_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -171,7 +170,7 @@ class TestTanh(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
-    
+
     @autotest
     def test_flow_tanh_with_random_data(test_case):
         device = random_device()
