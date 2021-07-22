@@ -265,7 +265,7 @@ def save_trees(args=None):
     # print(dst, len(trees))
     dst_full = OUT_PATH.joinpath(dst)
     dst_full.parent.mkdir(parents=True, exist_ok=True)
-    dst_full.touch()
+    dst_full.touch(exist_ok=False)
     # TODO: append "doctest.testmod(raise_on_error=True)"
     new_txt = "\n".join([ast.unparse(tree) for tree in trees])
     dst_full.write_text(new_txt)
