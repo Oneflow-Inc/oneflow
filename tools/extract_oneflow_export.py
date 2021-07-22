@@ -1,4 +1,5 @@
 # python3 -m pip install isort autoflake
+# requires python3.8 to run
 import os
 import argparse
 import ast
