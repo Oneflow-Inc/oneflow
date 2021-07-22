@@ -60,11 +60,12 @@ class ExportVisitor(ast.NodeTransformer):
         self.root_module = root_module
         self.export_modules = {}
 
-    def append_export(self, target_module, node):
-        if target_module not in self.export_trees:
-            module = ast.Module()
+    def append_export(self, target_module=None, node=None):
+        if target_module not in self.export_modules:
+            module = ast.Module(body=[])
         else:
-            module = self.export_trees[target_module]
+            module = self.export_modules[target_module]
+        # dumpprint(module)
         module.body.append(node)
 
     def visit_ImportFrom(self, node):
@@ -111,6 +112,7 @@ class ExportVisitor(ast.NodeTransformer):
                         level=0,
                     )
                     import_from_exports.append(import_from_export)
+                self.append_export(target_module=target_module, node=node)
                 return import_from_exports
         return node
 
