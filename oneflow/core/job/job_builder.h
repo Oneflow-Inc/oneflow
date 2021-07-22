@@ -51,6 +51,7 @@ class JobBuilder final {
   }
 
   Maybe<const OperatorConf&> OpConf4OpName(const std::string& op_name) const;
+  Maybe<OperatorConf*> MutableOpConf4OpName(const std::string& op_name);
 
   Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);

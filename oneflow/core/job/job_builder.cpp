@@ -158,6 +158,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   }
 }
 
+Maybe<OperatorConf*> JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
+  const auto& it = op_name2op_conf_.find(op_name);
+  CHECK(it != op_name2op_conf_.end());
+  return it->second;
+}
+
 Maybe<const OperatorConf&> JobBuilder::OpConf4OpName(const std::string& op_name) const {
   return *JUST(MapAt(op_name2op_conf_, op_name));
 }

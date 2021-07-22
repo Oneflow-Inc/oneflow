@@ -420,7 +420,7 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddMultiClientWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
+Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
                                          const std::string& src_op_name) {
   ParallelConf parallel_conf;
   {
@@ -449,7 +449,7 @@ Maybe<void> AddMultiClientWaitAndSendIds(JobBuilder* job_builder, int64_t machin
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddMultiClientCallbackNotifier(JobBuilder* job_builder, int64_t machine_id,
+Maybe<void> MultiClientAddCallbackNotifier(JobBuilder* job_builder, int64_t machine_id,
                                            const std::string& sink_op_name) {
   ParallelConf parallel_conf;
   {
@@ -557,10 +557,10 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
   {
     JobBuilder job_builder(job);
     for (const auto& pair : machine_id2src_op_name) {
-      JUST(AddMultiClientWaitAndSendIds(&job_builder, pair.first, pair.second));
+      JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
     }
     for (const auto& pair : machine_id2sink_op_name) {
-      JUST(AddMultiClientCallbackNotifier(&job_builder, pair.first, pair.second));
+      JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
     }
   }
   return Maybe<void>::Ok();
