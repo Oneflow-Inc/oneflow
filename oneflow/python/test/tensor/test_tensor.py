@@ -397,34 +397,49 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.tanh()
         return y
+    
+    @autotest
+    def test_flow_tensor_asin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.asin()
+        return y
 
-    def test_asinh(test_case):
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = input.asinh()
-        np_out = np.arcsinh(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    @autotest
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arcsin()
+        return y
 
-    def test_arcsinh(test_case):
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = input.arcsinh()
-        np_out = np.arcsinh(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    @autotest
+    def test_flow_tensor_asinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.asinh()
+        return y
 
-    def test_asin(test_case):
-        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
-        of_out = input.asin()
-        np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-        )
+    @autotest
+    def test_flow_tensor_arcsinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arcsinh()
+        return y
 
-    def test_arcsin(test_case):
-        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
-        of_out = input.arcsin()
-        np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-        )
+    @autotest
+    def test_flow_tensor_sinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sinh()
+        return y
+    
+    @autotest
+    def test_flow_tensor_atan2_with_random_data(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        y = x1.atan2(x2)
+        return y
 
     def test_mean(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)

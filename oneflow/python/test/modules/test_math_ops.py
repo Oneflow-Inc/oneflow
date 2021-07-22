@@ -101,17 +101,12 @@ class Testsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sinh_impl(test_case, *arg)
 
+    @autotest
     def test_flow_sinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "sinh", device=device,
-            )
-
-    def test_flow_tensor_sinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "sinh", device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = flow.sinh(x)
+        return y
 
 
 def _test_sin(test_case, shape, device):
@@ -480,29 +475,19 @@ class TestAsin(flow.unittest.TestCase):
             _test_asin(test_case, *arg)
             _test_arcsin(test_case, *arg)
 
+    @autotest
     def test_flow_asin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "asin", device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = flow.asin(x)
+        return y
 
+    @autotest
     def test_flow_arcsin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "arcsin", device=device,
-            )
-
-    def test_flow_tensor_asin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "asin", device=device,
-            )
-
-    def test_flow_tensor_arcsin_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "arcsin", device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = flow.arcsin(x)
+        return y
 
 
 def _test_asinh(test_case, shape, device):
@@ -549,29 +534,19 @@ class TestAsinh(flow.unittest.TestCase):
             _test_asinh(test_case, *arg)
             _test_arcsinh(test_case, *arg)
 
+    @autotest
     def test_flow_asinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "asinh", device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = flow.asinh(x)
+        return y
 
+    @autotest
     def test_flow_arcsinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "arcsinh", device=device,
-            )
-
-    def test_flow_tensor_asinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "asinh", device=device,
-            )
-
-    def test_flow_tensor_arcsinh_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case, "arcsinh", device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = flow.arcsinh(x)
+        return y
 
 
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
@@ -758,31 +733,31 @@ def arccosh_input_tensor(shape):
     return generator
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-@flow.unittest.skip_unless_1n1d()
-class TestArccosh(flow.unittest.TestCase):
-    def test_arccosh_flow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "arccosh",
-                device=device,
-                n=2,
-                extra_generators={"input": arccosh_input_tensor((3, 3))},
-            )
+# @unittest.skipIf(
+#     not flow.unittest.env.eager_execution_enabled(),
+#     ".numpy() doesn't work in lazy mode",
+# )
+# @flow.unittest.skip_unless_1n1d()
+# class TestArccosh(flow.unittest.TestCase):
+#     def test_arccosh_flow_with_random_data(test_case):
+#         for device in ["cpu", "cuda"]:
+#             test_flow_against_pytorch(
+#                 test_case,
+#                 "arccosh",
+#                 device=device,
+#                 n=2,
+#                 extra_generators={"input": arccosh_input_tensor((3, 3))},
+#             )
 
-    def test_arccosh_tensor_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "arccosh",
-                device=device,
-                n=2,
-                extra_generators={"input": arccosh_input_tensor((3, 3))},
-            )
+#     def test_arccosh_tensor_with_random_data(test_case):
+#         for device in ["cpu", "cuda"]:
+#             test_tensor_against_pytorch(
+#                 test_case,
+#                 "arccosh",
+#                 device=device,
+#                 n=2,
+#                 extra_generators={"input": arccosh_input_tensor((3, 3))},
+#             )
 
 
 def _test_acosh_impl(test_case, shape, device):
@@ -831,25 +806,25 @@ class TestAcosh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_acosh_impl(test_case, *arg)
 
-    def test_acosh_flow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "acosh",
-                device=device,
-                n=2,
-                extra_generators={"input": acosh_input_tensor((3, 3))},
-            )
+    # def test_acosh_flow_with_random_data(test_case):
+    #     for device in ["cpu", "cuda"]:
+    #         test_flow_against_pytorch(
+    #             test_case,
+    #             "acosh",
+    #             device=device,
+    #             n=2,
+    #             extra_generators={"input": acosh_input_tensor((3, 3))},
+    #         )
 
-    def test_acosh_tensor_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "acosh",
-                device=device,
-                n=2,
-                extra_generators={"input": acosh_input_tensor((3, 3))},
-            )
+    # def test_acosh_tensor_with_random_data(test_case):
+    #     for device in ["cpu", "cuda"]:
+    #         test_tensor_against_pytorch(
+    #             test_case,
+    #             "acosh",
+    #             device=device,
+    #             n=2,
+    #             extra_generators={"input": acosh_input_tensor((3, 3))},
+    #         )
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):
@@ -951,18 +926,13 @@ class TestAtan2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_atan2_backward(test_case, *arg)
 
+    @autotest
     def test_flow_atan2_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "atan2",
-                extra_annotations={"other": flow.Tensor},
-                extra_generators={
-                    "input": random_tensor(ndim=1, dim1=1),
-                    "other": random_tensor(ndim=1, dim1=1),
-                },
-                device=device,
-            )
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        y = flow.atan2(x1, x2)
+        return y
 
 
 if __name__ == "__main__":

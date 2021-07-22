@@ -210,15 +210,15 @@ class TestELUModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_elu_function_impl(test_case, *arg)
 
+    @autotest
     def test_elu_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
-                test_case,
-                "nn.ELU",
-                extra_annotations={"alpha": float},
-                extra_generators={"alpha": random(0, 6)},
-                device=device,
-            )
+        m = torch.nn.ELU(alpha=random())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def _np_gelu(x):
@@ -702,16 +702,15 @@ class TestSoftplusModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip("Pytorch Softplus has bug")
+    @autotest
     def test_softplus_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
-                test_case,
-                "nn.Softplus",
-                extra_annotations={"beta": int, "threshold": int},
-                extra_generators={"beta": random(3, 4), "threshold": random(1, 2)},
-                device=device,
-            )
+        m = torch.nn.Softplus(beta=random(), threshold=random())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def _test_hardswish_impl(test_case, shape, device):
