@@ -96,10 +96,7 @@ g_test_samples = [
 ]
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_CrossEntropyLoss(test_case):
         global g_test_samples

@@ -40,6 +40,26 @@ class UnaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceableUnaryFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get()));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+    }
+  }
+
+ protected:
+  InplaceableUnaryFunctor() = default;
+  virtual ~InplaceableUnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 }  // namespace functional

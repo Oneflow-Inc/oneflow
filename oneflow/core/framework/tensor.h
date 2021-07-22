@@ -64,6 +64,8 @@ class Tensor {
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
@@ -165,6 +167,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
+  Maybe<const Stride> stride() const override { return impl_->stride(); }
+  Maybe<int64_t> storage_offset() const override { return impl_->storage_offset(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const override { return impl_->acc_grad(); }

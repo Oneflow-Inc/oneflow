@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -99,7 +100,8 @@ void UpdateOpName2AncestorsNeedNoGrad(
 
 }  // namespace
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
+    : job_(job), job_id_(job_id), unique_op_name_index_(0) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
@@ -500,7 +502,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  auto op = ConstructOp(op_conf, parallel_desc.device_type());
+  auto op = JUST(ConstructOp(op_conf, parallel_desc.device_type()));
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
@@ -571,7 +573,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
       << Error::OpConfDeviceTagNoSetError() << "op_name: " << op_name << " not set device tag";
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf));
+  op_name2op_.emplace(op_name, JUST(ConstructOp(op_conf)));
   Operator* op = op_name2op_.at(op_name).get();
 
   cfg::SbpSignature sbp_sig_conf;
@@ -625,7 +627,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
-  InferBlobBackwardSignature(op);
+  JUST(InferBlobBackwardSignature(op));
   // Check splitability
   JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
@@ -1028,30 +1030,31 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
+Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
   std::function<bool(const LogicalBlobId&)> IsLbiBackwardUsed;
-  InferBlobBackwardSignature(*op, &IsLbiBackwardUsed);
+  JUST(InferBlobBackwardSignature(*op, &IsLbiBackwardUsed));
   auto* map = op->mut_blob_backward_used_signature()->mutable_bn_in_op2blob_backward_used();
   const auto& SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
     (*map)[bn_in_op] = IsLbiBackwardUsed(op->BnInOp2Lbi(bn_in_op));
   };
   for (const auto& ibn : op->input_bns()) { SetIsBlobBackwardUsed(ibn); }
   for (const auto& obn : op->output_bns()) { SetIsBlobBackwardUsed(obn); }
+  return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtx::InferBlobBackwardSignature(
+Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
     const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
   const bool is_train = job().job_conf().has_train_conf();
   if (!is_train) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
-    return;
+    return Maybe<void>::Ok();
   }
   const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
   UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, is_train, &op_name2ancestors_need_no_grad_);
   // always return true if output_size > 1
   if (op.output_bns().size() > 1) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
-    return;
+    return Maybe<void>::Ok();
   }
   std::vector<OperatorConf> bw_op_confs;
   LogicalBlobId fake_diff_lbi;
@@ -1090,7 +1093,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
-    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type());
+    const auto& bw_op = JUST(ConstructOp(bw_op_conf, op.device_type()));
     for (const auto& ibn : bw_op->input_bns()) {
       const auto& lbi = bw_op->BnInOp2Lbi(ibn);
       if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }
@@ -1099,6 +1102,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
     return backward_used_lbis->find(lbi) != backward_used_lbis->end();
   };
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -1293,6 +1297,32 @@ Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
                                                      const std::string& bn_in_op) const {
   const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
   return GenLogicalBlobName(lbi);
+}
+
+Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
+    const OperatorConf& op_conf) {
+  // NOTE(chengcheng): arg op_conf has a default global op_name because it is created by
+  //  static functional op expr, so we need reset a unique op name for each functional op.
+  //  This op_conf can NOT be a input/output/varible op which has set correct name in nn.Graph.
+  CHECK_OR_RETURN(
+      !(op_conf.has_input_conf() || op_conf.has_variable_conf() || op_conf.has_output_conf()));
+
+  const auto& scope = JUST(GetCurrentScope());
+
+  std::string op_name_prefix;
+  for (const std::string& prefix : scope->scope_proto().scope_op_name_prefixes()) {
+    op_name_prefix += (prefix + "-");
+  }
+  std::string op_type_name;
+  if (op_conf.has_user_conf()) {
+    op_type_name = op_conf.user_conf().op_type_name();
+  } else {
+    op_type_name = "SystemOp";
+  }
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  ++unique_op_name_index_;
+
+  return op_name;
 }
 
 }  // namespace oneflow

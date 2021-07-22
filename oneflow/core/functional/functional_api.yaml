@@ -36,7 +36,7 @@
   bind_python: True
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "sub_scalar_by_tensor"
@@ -133,7 +133,7 @@
   bind_python: True
 
 - name: "sin"
-  signature: "Tensor Sin(Tensor x)"
+  signature: "Tensor Sin(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "cos"
@@ -313,7 +313,7 @@
   bind_python: False
 
 - name: "expand"
-  signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  signature: "Tensor Expand(Tensor x, *, Shape shape)"
   bind_python: True
 
 - name: "expand_dims"
@@ -411,26 +411,31 @@
                        Int32List strides, Bool ceil_mode)"
   bind_python: False
 
+- name: "maxpool_1d"
+  signature:
+    "TensorTuple Maxpool1D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
 - name: "maxpool_2d"
   signature:
-    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", String padding,
-                      Int32List padding_before, Int32List padding_after,
+    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
 
 - name: "maxpool_3d"
   signature:
-    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", String padding,
-                      Int32List padding_before, Int32List padding_after,
+    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
                       Int32List kernel_size, Int32List stride, Int32List dilation, 
                       Bool return_indices=True, Bool ceil_mode=False)"
   bind_python: True
 
 - name: "pooling_grad"
   signature:
-    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, String data_format,
-                       String padding, Int32List padding_before, Int32List padding_after, Int32List kernel_size,
+    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, 
+                       String data_format, Int32List padding, Int32List kernel_size,
                        Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
   bind_python: False
 
@@ -470,11 +475,103 @@
   signature: "Tensor Copy(Tensor x, *, String device_type, Int64 device_id)"
   bind_python: True
 
+- name: "flip"
+  signature: "Tensor Flip(Tensor x, *, Int32List dims)"
+  bind_python: True
+
+- name: "flip_grad"
+  signature: "Tensor FlipGrad(Tensor dy, *, Int32List dims)"
+  bind_python: False
+
 - name: "upsample"
   signature:
     "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
                      String interpolation, String data_format=\"channels_first\")"
   bind_python: True
+
+- name: "upsample_linear_1d"
+  signature:
+    "Tensor UpsampleLinear1D(Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_linear_1d_grad"
+  signature:
+    "Tensor UpsampleLinear1DGrad(Tensor dy, Tensor x, *, Float scale_factor, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_1d"
+  signature:
+    "Tensor UpsampleNearest1D(Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_1d_grad"
+  signature:
+    "Tensor UpsampleNearest1DGrad(Tensor dy, Tensor x, *, Float scale_factor,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_2d"
+  signature:
+    "Tensor UpsampleNearest2D(Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: True  
+
+- name: "upsample_nearest_2d_grad"
+  signature:
+    "Tensor UpsampleNearest2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, 
+                     String data_format=\"channels_first\")"
+  bind_python: False 
+
+- name: "upsample_bilinear_2d"
+  signature:
+    "Tensor UpsampleBilinear2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bilinear_2d_grad"
+  signature:
+    "Tensor UpsampleBilinear2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_bicubic_2d"
+  signature:
+    "Tensor UpsampleBicubic2D(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_bicubic_2d_grad"
+  signature:
+    "Tensor UpsampleBicubic2DGrad(Tensor dy, Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_nearest_3d"
+  signature:
+    "Tensor UpsampleNearest3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_nearest_3d_grad"
+  signature:
+    "Tensor UpsampleNearest3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "upsample_trilinear_3d"
+  signature:
+    "Tensor UpsampleTrilinear3D(Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: True
+
+- name: "upsample_trilinear_3d_grad"
+  signature:
+    "Tensor UpsampleTrilinear3DGrad(Tensor dy, Tensor x, *, Float depth_scale, Float height_scale, Float width_scale,
+                     Bool align_corners, String data_format=\"channels_first\")"
+  bind_python: False
 
 - name: "abs"
   signature: "Tensor Abs(Tensor x)"
@@ -610,3 +707,6 @@
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True
 
+- name: "tensor_setitem"
+  signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
+  bind_python: True
