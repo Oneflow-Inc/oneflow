@@ -292,7 +292,6 @@ if __name__ == "__main__":
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
-            # build module tree
             ModuleNode.add_sub_module(root=root_module, module=export_path)
     # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
