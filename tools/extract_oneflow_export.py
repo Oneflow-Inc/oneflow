@@ -18,6 +18,7 @@ parser.add_argument(
 )
 parser.add_argument("--verbose", "-v", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
+parser.add_argument("--skip_autoflake", "-sa", action="store_true")
 args = parser.parse_args()
 assert args.out_dir
 assert args.out_dir != "~"
@@ -180,7 +181,7 @@ if __name__ == "__main__":
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
-    if args.debug == False:
+    if args.debug == False and args.skip_autoflake == False:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
             f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
