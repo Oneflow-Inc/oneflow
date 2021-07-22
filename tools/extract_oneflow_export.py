@@ -75,6 +75,9 @@ class ExportVisitor(ast.NodeTransformer):
         else:
             return node
 
+    def visit_ClassDef(self, node):
+        return self.visit_FunctionDef(node)
+
     def visit_FunctionDef(self, node):
         for d in node.decorator_list:
             if is_export_decorator(d):
