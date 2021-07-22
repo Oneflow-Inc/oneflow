@@ -45,13 +45,18 @@ class LeNet(nn.Module):
 
     def forward(self, img):
         feature = self.conv(img)
-        feature = feature.reshape(shape=[img.shape[0], -1])
+        feature = feature.flatten(start_dim=1)
         output = self.fc(feature)
         return output
 
 
 def load_data_fashion_mnist(
-    batch_size, resize=None, root="./data-test/fashion-mnist", download=True
+    batch_size,
+    resize=None,
+    root="./data-test/fashion-mnist",
+    download=True,
+    source_url=None,
+    num_workers=0,
 ):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
@@ -62,12 +67,19 @@ def load_data_fashion_mnist(
     transform = transforms.Compose(trans)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=True, transform=transform, download=download
+        root=root,
+        train=True,
+        transform=transform,
+        download=download,
+        source_url=source_url,
     )
     mnist_test = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=False, transform=transform, download=download
+        root=root,
+        train=False,
+        transform=transform,
+        download=download,
+        source_url=source_url,
     )
-    num_workers = 0
 
     train_iter = flow.utils.data.DataLoader(
         mnist_train, batch_size, shuffle=True, num_workers=num_workers
@@ -82,37 +94,33 @@ def evaluate_accuracy(data_iter, net, device=None):
     if device is None and isinstance(net, nn.Module):
         device = list(net.parameters())[0].device
     acc_sum, n = 0.0, 0
+    net.eval()
     with flow.no_grad():
         for X, y in data_iter:
             X = X.to(device=device)
             y = y.to(device=device)
-            if isinstance(net, nn.Module):
-                net.eval()  #  evaluating mode
-                acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
-                net.train()  # turn to training mode
-            else:
-                if "is_training" in net.__code__.co_varnames:
-                    # set is_training = False
-                    acc_sum += (
-                        (net(X, is_training=False).argmax(dim=1).numpy() == y.numpy())
-                        .float()
-                        .sum()
-                    )
-                else:
-                    acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).float().sum()
+            acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
+    net.train()
     return acc_sum / n
 
 
-def test(test_case):
+def test_train_and_eval(test_case):
     device = flow.device("cuda")
     net = LeNet()
     net.to(device)
 
     batch_size = 256
     data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/fashion-mnist"
+    source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
+
     train_iter, test_iter = load_data_fashion_mnist(
-        batch_size=batch_size, resize=None, root=data_dir, download=True
+        batch_size=batch_size,
+        resize=None,
+        root=data_dir,
+        download=True,
+        source_url=source_url,
+        num_workers=0,
     )
     loss = nn.CrossEntropyLoss()
     loss.to(device)
@@ -126,7 +134,6 @@ def test(test_case):
         for X, y in train_iter:
             X = X.to(device=device)
             y = y.to(device=device)
-            X.requires_grad = True
             # forward
             y_hat = net(X)
             l = loss(y_hat, y).sum()
@@ -152,13 +159,13 @@ def test(test_case):
                 time.time() - start,
             )
         )
-    test_case.assertLess(0.72, final_accuracy)
+    test_case.assertLess(0.52, final_accuracy)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestLenet(flow.unittest.TestCase):
     def test_lenet(test_case):
-        test(test_case)
+        test_train_and_eval(test_case)
 
 
 if __name__ == "__main__":

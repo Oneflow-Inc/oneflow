@@ -24,7 +24,7 @@ import oneflow.python.utils.vision.transforms as transforms
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
 def load_data_fashion_mnist(
-    batch_size, resize=None, root="./data/fashion-mnist", download=True
+    batch_size, resize=None, root="./data/fashion-mnist", download=True, source_url=None
 ):
     """Download the Fashion-MNIST dataset and then load into memory."""
     root = os.path.expanduser(root)
@@ -35,10 +35,18 @@ def load_data_fashion_mnist(
     transformer = transforms.Compose(transformer)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=True, transform=transformer, download=download
+        root=root,
+        train=True,
+        transform=transformer,
+        download=download,
+        source_url=source_url,
     )
     mnist_test = flow.utils.vision.datasets.FashionMNIST(
-        root=root, train=False, transform=transformer, download=download
+        root=root,
+        train=False,
+        transform=transformer,
+        download=download,
+        source_url=source_url,
     )
     num_workers = 0
     train_iter = flow.utils.data.DataLoader(
@@ -81,25 +89,16 @@ def evaluate_accuracy(data_iter, net, device=None):
         # using net device if not specified
         device = list(net.parameters())[0].device
     acc_sum, n = 0.0, 0
+    net.eval()
     with flow.no_grad():
         for X, y in data_iter:
             X = X.to(device=device)
             y = y.to(device=device)
-            if isinstance(net, nn.Module):
-                net.eval()
-                acc_sum += (
-                    net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()
-                ).sum()
-                net.train()
-            else:
-                if "is_training" in net.__code__.co_varnames:
-                    # set is_training=False if has 'is_training' param
-                    acc_sum += (
-                        net(X, is_training=False).argmax(dim=1).numpy() == y.numpy()
-                    ).sum()
-                else:
-                    acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
+            acc_sum += (
+                net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()
+            ).sum()
             n += y.shape[0]
+    net.train()
     return acc_sum / n
 
 
@@ -118,8 +117,9 @@ def test(test_case):
     batch_size = 256
     num_epochs = 1
     data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/fashion-mnist"
+    source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
     train_iter, test_iter = load_data_fashion_mnist(
-        batch_size, root=data_dir, download=True
+        batch_size, root=data_dir, download=True, source_url=source_url
     )
     loss = nn.CrossEntropyLoss()
     loss.to(device)
@@ -130,12 +130,11 @@ def test(test_case):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
         start = time.time()
         for X, y in train_iter:
-            X.requires_grad = True
             X = X.to(device=device)
             y = y.to(device=device)
             y_hat = net(X)
-            l = loss(y_hat, y).sum()
 
+            l = loss(y_hat, y).sum()
             optimizer.zero_grad()
             l.backward()
             optimizer.step()

@@ -70,6 +70,7 @@ class CIFAR10(VisionDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         download: bool = False,
+        source_url: Optional[str] = None,
     ) -> None:
 
         super(CIFAR10, self).__init__(
@@ -77,6 +78,8 @@ class CIFAR10(VisionDataset):
         )
 
         self.train = train  # training set or test set
+        if source_url is not None:
+            self.url = source_url
 
         if download:
             self.download()

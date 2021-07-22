@@ -74,16 +74,20 @@ def test(test_case):
     data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/cifar10"
 
     trainset = flow.utils.vision.datasets.CIFAR10(
-        root=data_dir, train=True, download=True, transform=transform
+        root=data_dir,
+        train=True,
+        download=True,
+        transform=transform,
+        source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
     )
     trainloader = flow.utils.data.DataLoader(
         trainset, batch_size=batch_size, shuffle=False, num_workers=0
     )
 
     final_loss = 0
-    for epoch in range(train_epoch):  # loop over the dataset multiple times
+    for epoch in range(1, train_epoch + 1):  # loop over the dataset multiple times
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
+        for i, data in enumerate(trainloader, 1):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
             inputs = inputs.to(dtype=flow.float32, device=device)
@@ -100,11 +104,9 @@ def test(test_case):
 
             # print statistics
             running_loss += loss.numpy()
-            if i % 2000 == 1999:  # print every 2000 mini-batches
+            if i % 2000 == 0:  # print every 2000 mini-batches
                 final_loss = running_loss / 2000
-                print(
-                    "epoch: %d  step: %5d  loss: %.3f " % (epoch + 1, i + 1, final_loss)
-                )
+                print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
                 running_loss = 0.0
 
     print("final loss : ", final_loss)
