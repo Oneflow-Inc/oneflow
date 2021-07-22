@@ -209,6 +209,22 @@ class ModuleNode:
     def is_leaf(self):
         return self.children.keys()
 
+    def walk(self, cb):
+        cb(self)
+        for child in self.children.values():
+            child.walk(cb)
+
+    @property
+    def leafs(self):
+        leafs = []
+
+        def add_leafs(node: ModuleNode):
+            if node.is_leaf:
+                leafs.append(node)
+
+        self.walk(add_leafs)
+        return leafs
+
     def full_name(self):
         current_parent = self
         ret = self.name
@@ -256,6 +272,7 @@ if __name__ == "__main__":
                 current_node = current_node.add_or_get_child(part)
             final_trees[export_path].append(export_tree)
     print(root_module)
+    print([leaf.full_name() for leaf in root_module.leafs])
     exit(0)
     pool = multiprocessing.Pool()
     srcs = pool.map(
