@@ -136,13 +136,18 @@ class SrcFile:
         self.export_visitor = None
         self.tree = None
         self.dst = Path(spec["dst"])
+        self.src: Path = spec["src"]
         if is_test and args.verbose:
-            print("[skip test]", spec["src"])
+            print("[skip test]", self.src)
         else:
-            txt = spec["src"].read_text()
+            txt = self.src.read_text()
             self.tree = ast.parse(txt)
             root_module = "oneflow"
-            if "compatible_single_client_python" in spec["src"].parts:
+            if (
+                "compatible_single_client_python" in self.src.parts
+                or self.src.name == "single_client_init.py"
+                or self.src.name == "single_client_main.py"
+            ):
                 root_module = "oneflow.compatible.single_client"
             self.export_visitor = ExportVisitor(root_module=root_module)
             self.export_visitor.visit(self.tree)
@@ -288,13 +293,27 @@ if __name__ == "__main__":
     final_trees = {}
 
     root_module = ModuleNode(name="oneflow")
+    src_module_added = {}
     for s in srcs:
         # src
         target_module = module_from_path(s.dst)
         append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        if (
+            str(s.src) == "oneflow/python/__init__.py"
+            or str(s.src) == "oneflow/compatible_single_client_python/__init__.py"
+        ):
+            continue
+        print("[src]", target_module, s.src)
+        assert target_module not in src_module_added, {
+            "target_module": target_module,
+            "new": str(s.src),
+            "exist": str(src_module_added[target_module]),
+        }
+        src_module_added[target_module] = s.src
         ModuleNode.add_sub_module(root=root_module, module=target_module)
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
+            print("[export]", export_path)
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             ModuleNode.add_sub_module(root=root_module, module=export_path)
     # print(root_module)
