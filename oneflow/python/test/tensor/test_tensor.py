@@ -440,6 +440,19 @@ class TestTensor(flow.unittest.TestCase):
         x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
         y = x1.atan2(x2)
         return y
+    
+    def test_arccosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arccosh()
+        return y
+    
+    @autotest
+    def test_acosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.acosh()
+        return y
 
     def test_mean(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
