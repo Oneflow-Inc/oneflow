@@ -81,7 +81,6 @@ class VisionDataset(data.Dataset):
         return ""
 
 
-@oneflow_export("utils.vision.transforms.StandardTransform")
 class StandardTransform(object):
     def __init__(
         self,
