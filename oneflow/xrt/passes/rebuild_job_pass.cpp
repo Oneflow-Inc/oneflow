@@ -319,7 +319,7 @@ void FoldSubgraphBuilder::FixupControlInOpNames() {
     } else {
       for (const XrtNode* sub_node : node->sub_graph()->Nodes()) {
         if (sub_node->IsArgumentNode()) { continue; }
-        const auto& folded_op_conf = builder_->OpConf4OpName(sub_node->name());
+        const auto& folded_op_conf = CHECK_JUST(builder_->OpConf4OpName(sub_node->name()));
         for (const auto& op_name : folded_op_conf.ctrl_in_op_name()) {
           AddControlInOpName(op_conf, op_name);
         }
