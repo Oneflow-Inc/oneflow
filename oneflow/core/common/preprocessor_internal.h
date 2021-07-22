@@ -7502,5 +7502,5 @@ limitations under the License.
 #define OF_PP_INTERNAL_D2_SEQ_FOR_EACH_512(apply, m, d, seq) \
   apply(m, d, OF_PP_INTERNAL_SEQ_HEAD(seq))                  \
       OF_PP_INTERNAL_D2_SEQ_FOR_EACH_511(apply, m, d, OF_PP_INTERNAL_SEQ_TAIL(seq))
-	  
+
 #endif  // ONEFLOW_CORE_COMMON_PREPROCESSOR_INTERNAL_H_
