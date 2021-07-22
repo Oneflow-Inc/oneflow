@@ -35,7 +35,6 @@ class BlockType:
 
 
 @oneflow_export("nn.graph.Block")
-@experimental_api
 class Block(object):
     def __init__(
         self,
@@ -308,7 +307,6 @@ class Block(object):
 
 
 @oneflow_export("nn.graph.BlockConfig")
-@experimental_api
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
