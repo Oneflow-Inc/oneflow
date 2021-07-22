@@ -113,7 +113,10 @@ class SrcFile:
             dst = Path(spec["dst"])
             dst_full = OUT_PATH.joinpath(dst)
             tree = ast.parse(txt)
-            ev = ExportVisitor()
+            root_module = "oneflow"
+            if "compatible_single_client_python" in spec["src"].name:
+                root_module = "oneflow.compatible.single_client"
+            ev = ExportVisitor(root_module=root_module)
             ev.visit(tree)
             new_txt = ast.unparse(tree)
             dst_full.parent.mkdir(parents=True, exist_ok=True)
