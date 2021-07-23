@@ -87,6 +87,15 @@ def is_compatible_root_module(module: str):
     assert module=="oneflow"
     return False
 
+class ReservedKeywordsVisitor(ast.NodeVisitor):
+    def __init__(self, keywords=None) -> None:
+        self.keywords = keywords
+        self.has_reserved_keyword = False
+
+    def visit_Name(self, node: ast.Name):
+        if node.id in self.keywords:
+            self.has_reserved_keyword = True
+
 class ExportVisitor(ast.NodeTransformer):
     def __init__(self, root_module="oneflow", src_target_module:str=None) -> None:
         super().__init__()
@@ -176,6 +185,9 @@ class ExportVisitor(ast.NodeTransformer):
         import_star_from_src = ast.ImportFrom(
             module=self.src_target_module, names=[ast.alias(name='*')], level=0
         )
+        rkv = ReservedKeywordsVisitor(keywords=set({"int", "float"}))
+        rkv.visit(node)
+        has_reserved_keyword = rkv.has_reserved_keyword
         is_deprecated = False
         for d in node.decorator_list:
             if is_decorator(d, name="oneflow_deprecate"):
@@ -183,40 +195,53 @@ class ExportVisitor(ast.NodeTransformer):
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
             if is_decorator(d, name="oneflow_export"):
-                import_from_exports = []
-                target_module = None
-                target_name = None
-                for (i, arg) in enumerate(d.args):
-                    if i == 0:
-                        target_module = join_module(
-                            self.root_module, get_parent_module(arg.value)
-                        )
-                        target_name = arg.value.split(".")[-1]
-                    asname = None
-                    if node.name != target_name:
-                        asname = node.name
-                    import_from_export = ast.ImportFrom(
-                        module=target_module,
-                        names=[ast.alias(name=target_name, asname=asname),],
+                arg0 = d.args[0]
+                target_module0 = join_module(
+                    self.root_module, get_parent_module(arg0.value)
+                )
+                target_name0 = arg0.value.split(".")[-1]
+
+                # src: import from first export
+                ret = ast.ImportFrom(
+                    module=target_module0,
+                    names=[ast.alias(name=target_name0, asname=node.name),],
+                    level=0,
+                )
+
+                # nth export: import from first export
+                for argN in d.args[1::]:
+                    target_moduleN = join_module(
+                        self.root_module, get_parent_module(argN.value)
+                    )
+                    target_nameN = target_name = argN.value.split(".")[-1]
+                    assert arg0 != argN, {
+                        "arg0": arg0, "argN": argN
+                    }
+                    import_from_first_export = ast.ImportFrom(
+                        module=target_moduleN,
+                        names=[ast.alias(name=target_nameN, asname=target_nameN),],
                         level=0,
                     )
-                    import_from_exports.append(import_from_export)
-                if target_name != node.name:
-                    node.name = target_name
+                    self.append_export(target_module=target_moduleN, node=import_from_first_export)
+
+                # finalize function for first export
+                node.name = target_name0
                 node.decorator_list = compact_decorator_list
 
-                # append export
+                # prepend imports in target module
                 if is_deprecated:
                     import_oneflow_deprecate = ast.ImportFrom(
                         module="oneflow", names=[ast.alias(name="oneflow_deprecate")], level=0
                     )
-                    self.append_export(target_module=target_module, node=import_oneflow_deprecate)
+                    self.append_export(target_module=target_module0, node=import_oneflow_deprecate)
                 # TODO: if target_module and and src_target_module is the same, no need to append there top level imports?
-                self.append_export(target_module=target_module, node=self.top_imports)
+                self.append_export(target_module=target_module0, node=self.top_imports)
                 # TODO: insert "from origin_module import *" in exported func body
-                self.append_export(target_module=target_module, node=import_star_from_src)
-                self.append_export(target_module=target_module, node=node)
-                return import_from_exports
+                self.append_export(target_module=target_module0, node=import_star_from_src)
+
+                # save first export in target module
+                self.append_export(target_module=target_module0, node=node)
+                return ret
             if is_decorator(d, name="oneflow_export_value"):
                 assert len(node.body) == 2
                 assert len(d.args) == 1
