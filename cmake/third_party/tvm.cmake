@@ -5,7 +5,7 @@ if (WITH_TVM)
 set(TVM_DIR ${CMAKE_CURRENT_BINARY_DIR}/third_party/tvm)
 set(TVM_SOURCES_DIR ${TVM_DIR}/src/tvm)
 # set(TVM_URL https://github.com/apache/tvm/archive/refs/tags/v0.6.0.tar.gz)
-set(TVM_URL /scratch/dev/tvm_oneflow/tvm/v0.7.0.tar.gz)
+set(TVM_URL https://github.com/VertexC/tvm/releases/download/v0.7.0-all/v0.7.0.tar.gz)
 # set(TVM_GIT_URL https://github.com/apache/incubator-tvm.git) 
 # set(TVM_GIT_TAG c6f8c23c349f3ef8bacceaf3203f7cc08e6529de) # tag 0.6.0
 
