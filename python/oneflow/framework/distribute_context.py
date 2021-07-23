@@ -1,5 +1,5 @@
-import oneflow.framework.session_context as session_ctx
 import oneflow.framework.scope_util as scope_util
+import oneflow.framework.session_context as session_ctx
 
 
 class DistributeStrategy(object):

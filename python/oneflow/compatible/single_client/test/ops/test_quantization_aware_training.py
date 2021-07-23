@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
+from test_util import GenArgList
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as tp
-from test_util import GenArgList
 
 
 def _test(test_case, per_channel, symmetric, target_backend, build_backbone_fn):

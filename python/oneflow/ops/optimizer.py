@@ -1,14 +1,15 @@
 import collections.abc
 import traceback
-from typing import Optional, Union, Sequence, List, Text, Callable
+from typing import Callable, List, Optional, Sequence, Text, Union
+
 import oneflow as flow
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.runtime_mode as rt_mode
-from oneflow import oneflow_deprecate
+import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow._oneflow_internal.oneflow.core.job.learning_rate_schedule_conf as learning_rate_schedule_conf_cfg
-import oneflow._oneflow_internal
+import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.session_context as session_ctx
+from oneflow import oneflow_deprecate
 
 
 def GetVariablesForCurrentJob() -> List[Text]:

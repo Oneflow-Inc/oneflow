@@ -1,10 +1,12 @@
 import functools
 import math
-import numpy as np
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from typing import Optional, Sequence, Union
+
+import numpy as np
+
+import oneflow as flow
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 
 def empty_initializer(

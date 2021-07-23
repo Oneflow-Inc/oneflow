@@ -1,16 +1,17 @@
-from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
-from oneflow.compatible.single_client.python.eager import op_executor as op_executor
+from google.protobuf import text_format
+
+import oneflow._oneflow_internal
+from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
+from oneflow.compatible.single_client.core.job import scope_pb2 as scope_pb
 from oneflow.compatible.single_client.core.operator import (
     op_attribute_pb2 as op_attribute_pb,
 )
-from oneflow.compatible.single_client.core.job import scope_pb2 as scope_pb
-from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
-from google.protobuf import text_format
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.eager import op_executor as op_executor
 from oneflow.compatible.single_client.python.eager import (
     symbol_storage as symbol_storage,
 )
-import oneflow._oneflow_internal
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):

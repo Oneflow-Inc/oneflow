@@ -1,7 +1,9 @@
-import numpy as np
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow._oneflow_internal
 import traceback
+
+import numpy as np
+
+import oneflow._oneflow_internal
+import oneflow.framework.remote_blob as remote_blob_util
 
 
 class LocalBlob(object):

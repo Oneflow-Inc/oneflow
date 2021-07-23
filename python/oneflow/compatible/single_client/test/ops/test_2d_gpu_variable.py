@@ -1,6 +1,7 @@
-from oneflow.compatible import single_client as flow
 import os
 import unittest
+
+from oneflow.compatible import single_client as flow
 
 
 @flow.unittest.skip_unless_1n2d()

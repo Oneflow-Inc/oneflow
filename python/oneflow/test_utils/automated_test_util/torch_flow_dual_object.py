@@ -1,11 +1,14 @@
 import collections.abc
-import inspect
 import functools
+import inspect
 import os
-import torch as torch_original
-import oneflow as flow
+
 import numpy as np
-from .generators import generator, random_tensor, Nothing
+import torch as torch_original
+
+import oneflow as flow
+
+from .generators import Nothing, generator, random_tensor
 
 postulate = [".rand", ".Tensor"]
 

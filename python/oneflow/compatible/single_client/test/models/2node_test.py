@@ -1,11 +1,13 @@
 import os
+
 import cnns_tests
 import env_2node
 import numpy
-from oneflow.compatible import single_client as flow
 from absl import app
 from absl.testing import absltest
 from test_2node_mixin import Test2NodeMixin
+
+from oneflow.compatible import single_client as flow
 
 
 class TestAlexNet(Test2NodeMixin, cnns_tests.TestAlexNetMixin, absltest.TestCase):

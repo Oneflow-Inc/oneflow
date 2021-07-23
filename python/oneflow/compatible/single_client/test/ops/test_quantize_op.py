@@ -1,11 +1,13 @@
-from collections import OrderedDict
 import math
-import numpy as np
 import unittest
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client import typing as oft
+from collections import OrderedDict
+
+import numpy as np
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 def gen_quant_scale_for_min_max_symmetric(weight, quantization_bit):

@@ -1,12 +1,13 @@
+from google.protobuf import text_format
+
+import oneflow._oneflow_internal
+import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.core.job.scope_pb2 as scope_pb
+import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.eager.gradient_util as gradient_util
 import oneflow.eager.op_executor as op_executor
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow.core.job.scope_pb2 as scope_pb
-import oneflow.core.job.placement_pb2 as placement_pb
-from google.protobuf import text_format
-import oneflow.framework.scope_util as scope_util
 import oneflow.eager.symbol_storage as symbol_storage
-import oneflow._oneflow_internal
+import oneflow.framework.scope_util as scope_util
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):

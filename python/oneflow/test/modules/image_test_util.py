@@ -1,9 +1,11 @@
-import numpy as np
-import cv2
-import oneflow as flow
-import PIL
-import random
 import os
+import random
+
+import cv2
+import numpy as np
+import PIL
+
+import oneflow as flow
 
 global_coco_dict = dict()
 default_coco_anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"

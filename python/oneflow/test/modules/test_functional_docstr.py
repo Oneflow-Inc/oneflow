@@ -1,9 +1,11 @@
-import unittest
 import inspect
+import unittest
 from collections import OrderedDict
+
+from test_util import GenArgList
+
 import oneflow as flow
 from oneflow.framework.functional import Function
-from test_util import GenArgList
 
 
 def _is_oneflow_functional(object):

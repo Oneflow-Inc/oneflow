@@ -1,6 +1,6 @@
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.python.nn.module import Module
 
 
 class Softplus(Module):

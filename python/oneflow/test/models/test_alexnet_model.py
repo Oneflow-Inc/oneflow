@@ -1,9 +1,10 @@
 import os
-from datetime import datetime
 import unittest
+from datetime import datetime
+
 import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 _DATA_DIR = "/dataset/PNGS/PNG227/of_record_repeated"
 _MODEL_SAVE_DIR = "./model_save-{}".format(

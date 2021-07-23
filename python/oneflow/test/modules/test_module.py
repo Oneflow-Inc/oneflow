@@ -1,9 +1,11 @@
 import collections.abc
-from itertools import repeat
-import unittest
-from typing import Tuple, Union
 import tempfile
+import unittest
+from itertools import repeat
+from typing import Tuple, Union
+
 import numpy as np
+
 import oneflow as flow
 import oneflow.typing as tp
 

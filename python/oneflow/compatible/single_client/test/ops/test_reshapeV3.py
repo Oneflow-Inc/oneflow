@@ -1,8 +1,10 @@
-import unittest
 import os
+import unittest
 from collections import OrderedDict
-from oneflow.compatible import single_client as flow
+
 from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 
 
 def distribute_reshape_test(device_type, device_num, input_shape, shape):

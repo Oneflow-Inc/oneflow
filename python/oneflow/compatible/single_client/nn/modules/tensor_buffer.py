@@ -1,4 +1,5 @@
-from typing import Sequence, Optional
+from typing import Optional, Sequence
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 

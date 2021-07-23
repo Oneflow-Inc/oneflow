@@ -1,13 +1,15 @@
+import math
+import os
+import random
+import unittest
+from collections import OrderedDict
+
 import numpy as np
+import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import test_global_storage
-import random
-import math
-import unittest
-import os
-from test_util import GenArgList, type_name_to_flow_type
-from collections import OrderedDict
 
 
 def split_like(input, like, name):

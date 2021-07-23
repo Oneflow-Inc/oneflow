@@ -1,9 +1,12 @@
 from google.protobuf import text_format
+
+import oneflow
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
-import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.job_pb2 as job_pb
+import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -12,8 +15,6 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
-import oneflow
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 
 
 def CurrentResource():

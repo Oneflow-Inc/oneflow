@@ -1,6 +1,8 @@
 import atexit
-from oneflow.compatible import single_client as flow
+
 from absl import flags
+
+from oneflow.compatible import single_client as flow
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(

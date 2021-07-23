@@ -1,10 +1,13 @@
 from typing import Optional
+
 import oneflow as flow
+import oneflow._oneflow_internal
 import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
-from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
-from oneflow.ops.transpose_util import get_inversed_perm
-import oneflow._oneflow_internal
+from oneflow.ops.transpose_util import (
+    get_inversed_perm,
+    get_perm_when_transpose_axis_to_last_dim,
+)
 
 
 def _sort_at_last_dim(

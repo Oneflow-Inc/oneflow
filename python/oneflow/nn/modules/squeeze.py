@@ -1,8 +1,9 @@
-import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.framework.tensor import register_tensor_op
-import oneflow.framework.id_util as id_util
 from typing import Optional, Sequence
+
+import oneflow as flow
+import oneflow.framework.id_util as id_util
+from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.module import Module
 
 
 class Squeeze(Module):

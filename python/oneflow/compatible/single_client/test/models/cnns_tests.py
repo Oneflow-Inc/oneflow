@@ -1,9 +1,11 @@
 import imp
 import os
 import sys
+
 import numpy
-from oneflow.compatible import single_client as flow
 from absl import app, flags
+
+from oneflow.compatible import single_client as flow
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("python_bin", "python3", "python binary program name or filepath.")

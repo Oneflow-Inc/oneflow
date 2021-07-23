@@ -1,9 +1,11 @@
-import unittest
-import numpy as np
-from oneflow.compatible import single_client as flow
-from scipy.special import erf, erfc, gammaln
-from oneflow.compatible.single_client import typing as oft
 import os
+import unittest
+
+import numpy as np
+from scipy.special import erf, erfc, gammaln
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 @flow.unittest.skip_unless_1n2d()

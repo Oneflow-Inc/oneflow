@@ -1,11 +1,11 @@
+import traceback
 from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+from oneflow import oneflow_deprecate
 from oneflow.compatible.single_client.python.framework import (
     distribute_context as distribute_ctx,
 )
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
-import traceback
-from oneflow import oneflow_deprecate
 
 
 @oneflow_deprecate()

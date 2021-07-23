@@ -1,15 +1,17 @@
 import getpass
 import os
+import subprocess
 import sys
 import uuid
 from tempfile import NamedTemporaryFile
+
 from google.protobuf import text_format as pbtxt
-from oneflow.compatible.single_client.python.framework import env_util as env_util
-from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
+
 from oneflow.compatible.single_client.core.control.ctrl_bootstrap_pb2 import (
     BootstrapConf,
 )
-import subprocess
+from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
+from oneflow.compatible.single_client.python.framework import env_util as env_util
 
 
 def delete_worker_by_bootstrap(ssh_port=22) -> None:

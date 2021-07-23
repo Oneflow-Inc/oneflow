@@ -1,6 +1,8 @@
 import enum
 import inspect
+
 from google.protobuf import text_format
+
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util

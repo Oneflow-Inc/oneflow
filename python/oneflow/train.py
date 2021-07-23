@@ -1,2 +1,1 @@
-from oneflow.framework.check_point import CheckPoint
-from oneflow.framework.check_point import SimpleCheckPointManager
+from oneflow.framework.check_point import CheckPoint, SimpleCheckPointManager

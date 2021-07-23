@@ -1,9 +1,11 @@
-from oneflow.framework.sysconfig import get_include
-from oneflow.framework.sysconfig import get_lib
-from oneflow.framework.sysconfig import get_compile_flags
-from oneflow.framework.sysconfig import get_link_flags
-from oneflow.framework.sysconfig import with_cuda
-from oneflow.framework.sysconfig import with_xla
-from oneflow.framework.sysconfig import has_rpc_backend_grpc
-from oneflow.framework.sysconfig import has_rpc_backend_local
-from oneflow.framework.sysconfig import cmake_build_type
+from oneflow.framework.sysconfig import (
+    cmake_build_type,
+    get_compile_flags,
+    get_include,
+    get_lib,
+    get_link_flags,
+    has_rpc_backend_grpc,
+    has_rpc_backend_local,
+    with_cuda,
+    with_xla,
+)

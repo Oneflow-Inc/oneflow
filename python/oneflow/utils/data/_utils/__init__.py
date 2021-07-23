@@ -6,8 +6,8 @@ functions defined in global environment (py2 can't serialize static methods).
 Therefore, for code tidiness we put these functions into different files in this
 folder.
 """
-import sys
 import atexit
+import sys
 
 IS_WINDOWS = sys.platform == "win32"
 MP_STATUS_CHECK_INTERVAL = 5.0

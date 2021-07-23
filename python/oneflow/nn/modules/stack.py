@@ -1,8 +1,8 @@
-import oneflow as flow
 from typing import List, Tuple
-from oneflow.framework.tensor import register_tensor_op
+
+import oneflow as flow
+from oneflow.framework.tensor import Tensor, register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.framework.tensor import Tensor
 
 
 class Stack(Module):

@@ -1,7 +1,9 @@
-import numpy as np
-import unittest
-from oneflow.compatible import single_client as flow
 import os
+import unittest
+
+import numpy as np
+
+from oneflow.compatible import single_client as flow
 
 
 def _make_gpt_data_loader_func(

@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
-from test_util import GenArgList
 import test_global_storage
+from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 
 
 def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):

@@ -62,13 +62,15 @@ def _calculate_fan_in_and_fan_out(tensor):
     return (fan_in, fan_out)
 
 
-from oneflow.nn.init import calculate_gain
-from oneflow.nn.init import uniform_
-from oneflow.nn.init import normal_
-from oneflow.nn.init import xavier_uniform_
-from oneflow.nn.init import xavier_normal_
-from oneflow.nn.init import kaiming_uniform_
-from oneflow.nn.init import kaiming_normal_
-from oneflow.nn.init import constant_
-from oneflow.nn.init import ones_
-from oneflow.nn.init import zeros_
+from oneflow.nn.init import (
+    calculate_gain,
+    constant_,
+    kaiming_normal_,
+    kaiming_uniform_,
+    normal_,
+    ones_,
+    uniform_,
+    xavier_normal_,
+    xavier_uniform_,
+    zeros_,
+)

@@ -1,14 +1,16 @@
-import numpy as np
-import six
 import hashlib
 import json
 import time
-import oneflow.core.summary.plugin_data_pb2 as plugin_data_pb2
-import oneflow.core.summary.summary_pb2 as summary_pb2
-import oneflow.core.summary.event_pb2 as event_pb2
-import oneflow.core.summary.tensor_pb2 as tensor_pb2
-import oneflow.core.summary.projector_pb2 as projector_pb2
+
+import numpy as np
+import six
+
 import oneflow as flow
+import oneflow.core.summary.event_pb2 as event_pb2
+import oneflow.core.summary.plugin_data_pb2 as plugin_data_pb2
+import oneflow.core.summary.projector_pb2 as projector_pb2
+import oneflow.core.summary.summary_pb2 as summary_pb2
+import oneflow.core.summary.tensor_pb2 as tensor_pb2
 
 
 def text(text, tag=None):

@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-import oneflow.framework.session_context as session_context
-import oneflow.framework.scope_util as scope_util
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
 import traceback
+from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+import oneflow.framework.scope_util as scope_util
+import oneflow.framework.session_context as session_context
 from oneflow import oneflow_deprecate
 
 

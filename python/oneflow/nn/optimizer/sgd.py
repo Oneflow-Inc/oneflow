@@ -1,8 +1,10 @@
-from typing import List, Dict, Callable, Union, Iterator
 import collections
 import math
+from typing import Callable, Dict, Iterator, List, Union
+
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
+
 from .optimizer import Optimizer, ParamGroup
 
 

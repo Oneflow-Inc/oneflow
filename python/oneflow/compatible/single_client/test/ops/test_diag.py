@@ -1,11 +1,12 @@
-import unittest
 import os
-from collections import OrderedDict
 import unittest
+from collections import OrderedDict
+
 import numpy as np
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as tp
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 def diag_grad_np(input, diagonal, output, grad):

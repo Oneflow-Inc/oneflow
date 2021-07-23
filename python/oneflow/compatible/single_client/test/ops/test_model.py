@@ -1,6 +1,8 @@
-import unittest
-import numpy as np
 import tempfile
+import unittest
+
+import numpy as np
+
 from oneflow.compatible.single_client import experimental as flow
 from oneflow.compatible.single_client.python.nn.parameter import Parameter
 

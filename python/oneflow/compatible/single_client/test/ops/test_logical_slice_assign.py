@@ -1,8 +1,10 @@
 from collections import OrderedDict
-from oneflow.compatible import single_client as flow
+
 import numpy as np
-from oneflow.compatible.single_client import typing as oft
 from test_util import GenArgDict
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 def _test_slice_assign(

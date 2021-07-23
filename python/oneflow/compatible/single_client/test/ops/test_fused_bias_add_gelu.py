@@ -1,12 +1,12 @@
-import unittest
 import os
+import unittest
 from collections import OrderedDict
+
 import numpy as np
+import test_global_storage
+from test_util import Args, GenArgDict, GenArgList, type_name_to_flow_type
+
 from oneflow.compatible import single_client as flow
-import test_global_storage
-from test_util import GenArgList, type_name_to_flow_type
-import test_global_storage
-from test_util import Args, GenArgDict
 from oneflow.compatible.single_client import typing as oft
 
 

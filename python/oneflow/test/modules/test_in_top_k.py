@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _topk_np(input, k, dim: int = -1, largest: bool = True, _sorted: bool = True):

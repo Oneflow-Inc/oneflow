@@ -1,7 +1,9 @@
-import oneflow as flow
-import numpy as np
 import os
 import unittest
+
+import numpy as np
+
+import oneflow as flow
 
 
 class DCGAN(flow.model.Model):

@@ -1,9 +1,11 @@
-import numpy as np
+import os
 import unittest
 from collections import OrderedDict
-import os
-from oneflow.compatible import single_client as flow
+
+import numpy as np
 from test_util import GenArgDict
+
+from oneflow.compatible import single_client as flow
 
 
 def _np_dtype_to_of_dtype(np_dtype):

@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
 
 
 def nll_loss_1d(logs, targets, reduction="none", ignore_index=None):

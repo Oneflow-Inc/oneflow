@@ -1,9 +1,10 @@
+from model_util import conv2d_layer
+
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.job import (
     initializer_conf_pb2 as initializer_conf_util,
 )
-from model_util import conv2d_layer
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 
 
 def _conv_block(in_blob, index, filters, conv_times):

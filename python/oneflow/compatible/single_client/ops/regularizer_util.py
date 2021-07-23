@@ -1,7 +1,7 @@
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.job import (
     regularizer_conf_pb2 as regularizer_conf_util,
 )
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 
 
 def l1_l2_regularizer(

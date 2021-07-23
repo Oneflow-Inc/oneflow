@@ -1,8 +1,10 @@
-from oneflow.compatible import single_client as flow
-import numpy as np
-from oneflow.compatible.single_client import typing as tp
 import os
 import unittest
+
+import numpy as np
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as tp
 
 
 @flow.unittest.skip_unless_1n1d()

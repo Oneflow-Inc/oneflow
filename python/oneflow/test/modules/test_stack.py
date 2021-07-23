@@ -1,9 +1,11 @@
-import oneflow as flow
-from test_util import GenArgList
-import numpy as np
+import random
 import unittest
 from collections import OrderedDict
-import random
+
+import numpy as np
+from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _test_stack(test_case, device, shape):

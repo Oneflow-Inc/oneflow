@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
+
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 
 func_config = flow.FunctionConfig()

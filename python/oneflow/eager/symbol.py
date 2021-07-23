@@ -1,6 +1,7 @@
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.core.job.placement_pb2 as placement_pb
 import functools
+
+import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.framework.c_api_util as c_api_util
 
 
 class Symbol(object):

@@ -1,9 +1,10 @@
-import oneflow
-from typing import Sequence, Optional
-import oneflow.framework.input_blob_def as input_blob_def
-import typing
 import inspect
 import sys
+import typing
+from typing import Optional, Sequence
+
+import oneflow
+import oneflow.framework.input_blob_def as input_blob_def
 
 
 class PyStructCompatibleToBlob(object):

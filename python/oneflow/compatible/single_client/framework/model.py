@@ -7,21 +7,25 @@ __all__ = [
     "Callback",
     "Model",
 ]
-from abc import ABC
-from typing import Optional, Any, Union, Tuple, List
 import inspect
+from abc import ABC
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
+
 import oneflow._oneflow_internal
+from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.framework import typing as oneflow_typing
 from oneflow.compatible.single_client.python.framework.check_point_v2 import (
+    GetCheckpoint,
     LoadVariables,
     SaveVarDict,
-    GetCheckpoint,
-)
-from oneflow.compatible.single_client.python.framework.function_util import (
-    api_oneflow_function,
 )
 from oneflow.compatible.single_client.python.framework.function_util import (
     FunctionConfig as ExecutionConfig,
+)
+from oneflow.compatible.single_client.python.framework.function_util import (
+    api_oneflow_function,
 )
 from oneflow.compatible.single_client.python.framework.local_blob import LocalBlob
 from oneflow.compatible.single_client.python.framework.session_util import (
@@ -29,12 +33,10 @@ from oneflow.compatible.single_client.python.framework.session_util import (
 )
 from oneflow.compatible.single_client.python.framework.tensor import Tensor
 from oneflow.compatible.single_client.python.nn.module import Module
-from oneflow.compatible.single_client.python.ops.optimizer import Optimizer
 from oneflow.compatible.single_client.python.nn.optimizer.optimizer import (
     Optimizer as OOPOptimizer,
 )
-from oneflow.compatible.single_client.python.framework import typing as oneflow_typing
-from oneflow.compatible.single_client.python.framework import dtype as dtype_util
+from oneflow.compatible.single_client.python.ops.optimizer import Optimizer
 
 
 class DataModule(Module):

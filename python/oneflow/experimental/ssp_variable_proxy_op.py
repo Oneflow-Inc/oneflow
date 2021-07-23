@@ -1,8 +1,9 @@
-import oneflow as flow
 from typing import Tuple
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.id_util as id_util
+
+import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow.framework.id_util as id_util
+import oneflow.framework.remote_blob as remote_blob_util
 
 
 def ssp_variable_proxy(

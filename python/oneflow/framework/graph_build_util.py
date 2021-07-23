@@ -1,12 +1,14 @@
 from contextlib import contextmanager
+
 from google.protobuf import text_format
+
+import oneflow._oneflow_internal
 import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
-import oneflow._oneflow_internal
 from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.framework.tensor import Tensor
 

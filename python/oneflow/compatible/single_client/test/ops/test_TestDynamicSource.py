@@ -1,7 +1,9 @@
-import numpy as np
-from oneflow.compatible import single_client as flow
-import unittest
 import os
+import unittest
+
+import numpy as np
+
+from oneflow.compatible import single_client as flow
 
 
 def my_test_source(name):

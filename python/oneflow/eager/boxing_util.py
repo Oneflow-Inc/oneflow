@@ -1,23 +1,24 @@
+import random
 from contextlib import contextmanager
-import oneflow.eager.symbol as symbol_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+
+import oneflow
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
-import oneflow.framework.id_util as id_util
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.balanced_splitter as balanced_splitter
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.lib.core.high_order_bool as high_order_bool
+import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.eager.boxing_hob as boxing_hob
-import oneflow.eager.op_infer_util as op_infer_util
-from oneflow.eager.boxing_hob import BoxingHobContext
 import oneflow.eager.boxing_middle as boxing_middle
-import random
-import oneflow
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
-import oneflow._oneflow_internal
+import oneflow.eager.op_infer_util as op_infer_util
+import oneflow.eager.symbol as symbol_util
+import oneflow.framework.balanced_splitter as balanced_splitter
+import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.id_util as id_util
+import oneflow.lib.core.enable_if as enable_if
+import oneflow.lib.core.high_order_bool as high_order_bool
+from oneflow.eager.boxing_hob import BoxingHobContext
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):

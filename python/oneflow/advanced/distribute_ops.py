@@ -1,13 +1,14 @@
+from typing import Callable, List, Optional, Sequence, Tuple, Union
+
 import oneflow
+import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.framework.interpret_util as interpret_util
-import oneflow.framework.id_util as id_util
-import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.hob as hob
+import oneflow.framework.id_util as id_util
+import oneflow.framework.interpret_util as interpret_util
+import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.lib.core.enable_if as enable_if
-from typing import Union, Tuple, List, Optional, Sequence, Callable
-import oneflow._oneflow_internal
 
 
 def api_distribute_clone(

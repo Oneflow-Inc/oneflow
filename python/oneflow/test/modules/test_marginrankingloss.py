@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
 
 
 def np_margin_ranking_loss(margin, input1, input2, targets, reduction="none"):

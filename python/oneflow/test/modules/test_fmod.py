@@ -1,10 +1,12 @@
+import random as rd
 import unittest
 from collections import OrderedDict
-import random as rd
+
 import numpy as np
-import oneflow as flow
-from test_util import GenArgList
 from automated_test_util import *
+from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _numpy_fmod(x, y):

@@ -1,6 +1,7 @@
-import unittest
-from oneflow.compatible import single_client as flow
 import os
+import unittest
+
+from oneflow.compatible import single_client as flow
 
 
 @unittest.skipIf(flow.sysconfig.has_rpc_backend_grpc() == False, "lacks grpc")

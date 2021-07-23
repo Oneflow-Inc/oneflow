@@ -1,7 +1,8 @@
-import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from model_util import conv2d_layer
+
+import oneflow as flow
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 
 def _conv_block(in_blob, index, filters, conv_times):

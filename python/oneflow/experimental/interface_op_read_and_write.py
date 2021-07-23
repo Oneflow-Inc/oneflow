@@ -1,17 +1,17 @@
 import oneflow as flow
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.lib.core.async_util as async_util
-import oneflow.framework.input_blob_def as input_blob_def_util
-import oneflow.framework.dtype as dtype_util
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.push_util as push_util
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.runtime_mode as rt_mode
-import oneflow.eager.op_executor as op_executor
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
-import oneflow._oneflow_internal
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.eager.op_executor as op_executor
+import oneflow.framework.dtype as dtype_util
+import oneflow.framework.input_blob_def as input_blob_def_util
+import oneflow.framework.push_util as push_util
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.session_context as session_ctx
+import oneflow.lib.core.async_util as async_util
 
 
 def sync_default_session_if_normal():

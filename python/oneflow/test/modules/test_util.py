@@ -2,7 +2,9 @@ import itertools
 import os
 from collections import OrderedDict
 from collections.abc import Iterable
+
 import numpy as np
+
 import oneflow as flow
 
 

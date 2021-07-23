@@ -1,11 +1,13 @@
+import collections
+import os
+import typing as tp
+import unittest
+
 import numpy as np
+import test_util
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as otp
-import test_util
-import typing as tp
-import collections
-import unittest
-import os
 
 DEFAULT_DEVICE_TAG = "gpu"
 if os.getenv("ONEFLOW_TEST_CPU_ONLY"):

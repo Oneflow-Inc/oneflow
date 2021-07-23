@@ -1,10 +1,12 @@
-import unittest
 import random
+import unittest
 from collections import OrderedDict
+
 import numpy as np
+from automated_test_util import *
+
 import oneflow as flow
 import oneflow.typing as oft
-from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()

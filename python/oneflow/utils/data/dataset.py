@@ -1,18 +1,19 @@
 import bisect
-import warnings
 import functools
+import warnings
 from typing import (
-    TypeVar,
+    Callable,
+    Dict,
     Generic,
     Iterable,
     Iterator,
-    Sequence,
     List,
     Optional,
+    Sequence,
     Tuple,
-    Dict,
-    Callable,
+    TypeVar,
 )
+
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 

@@ -1,5 +1,6 @@
-import oneflow as flow
 from model_util import conv2d_layer
+
+import oneflow as flow
 
 
 def alexnet(images, trainable=True):

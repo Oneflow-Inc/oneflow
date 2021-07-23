@@ -1,5 +1,6 @@
-import unittest
 import os
+import unittest
+
 from oneflow.compatible import single_client as flow
 
 

@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
-from test_util import GenArgList
 from automated_test_util import *
+from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _test_sum_impl(test_case, device):

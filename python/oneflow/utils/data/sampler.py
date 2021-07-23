@@ -1,6 +1,8 @@
 import builtins
-from typing import Iterator, Union, Optional, Sequence, List, TypeVar, Generic, Sized
+from typing import Generic, Iterator, List, Optional, Sequence, Sized, TypeVar, Union
+
 import numpy as np
+
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 

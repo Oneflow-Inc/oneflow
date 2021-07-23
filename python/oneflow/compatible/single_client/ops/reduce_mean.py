@@ -1,5 +1,7 @@
 import collections
 from typing import Optional, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
@@ -9,7 +11,6 @@ from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-import oneflow._oneflow_internal
 
 
 def reduce_mean(

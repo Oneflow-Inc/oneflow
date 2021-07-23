@@ -1,8 +1,10 @@
 import unittest
+
 import numpy as np
+
 import oneflow as flow
-import oneflow.utils.data as Data
 import oneflow.nn as nn
+import oneflow.utils.data as Data
 
 
 class LinearNet(nn.Module):

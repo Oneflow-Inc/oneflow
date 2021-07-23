@@ -1,9 +1,11 @@
 import imp
 import os
 import sys
+
 import numpy
-import oneflow
 from absl import app, flags
+
+import oneflow
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("python_bin", "python3", "python binary program name or filepath.")

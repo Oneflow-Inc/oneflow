@@ -2,12 +2,14 @@ import argparse
 import os
 import time
 from datetime import datetime
+
 import alexnet_model
 import data_loader
 import inceptionv3_model
-from oneflow.compatible import single_client as flow
 import resnet_model
 import vgg_model
+
+from oneflow.compatible import single_client as flow
 
 parser = argparse.ArgumentParser(description="flags for cnn benchmark")
 parser.add_argument("--gpu_num_per_node", type=int, default=1, required=False)

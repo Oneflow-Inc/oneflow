@@ -1,17 +1,18 @@
 import collections
 import os
-import sys
 import random
-from typing import Union, Optional, Sequence, Tuple, List
+import sys
+from typing import List, Optional, Sequence, Tuple, Union
+
 import oneflow as flow
+import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.framework.interpret_util as interpret_util
+import oneflow.framework.distribute as distribute_util
 import oneflow.framework.id_util as id_util
+import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.module as module_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.distribute as distribute_util
-import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]
 

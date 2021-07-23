@@ -1,24 +1,25 @@
-import socket
 import os
+import socket
+import traceback
 from contextlib import closing
+
+import oneflow._oneflow_internal
+from oneflow import oneflow_deprecate
 from oneflow.compatible.single_client.core.control import (
     ctrl_bootstrap_pb2 as ctrl_bootstrap_pb,
 )
 from oneflow.compatible.single_client.core.job import env_pb2 as env_pb
+from oneflow.compatible.single_client.core.job import resource_pb2 as resource_util
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_ctx,
 )
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
 from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow.compatible.single_client.core.job import resource_pb2 as resource_util
-from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
-import traceback
 
 
 def api_all_device_placement(device_type: str) -> None:

@@ -1,8 +1,10 @@
 import unittest
+from typing import Dict, List, Tuple
+
+import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import numpy as np
-from typing import Tuple, Dict, List
 
 
 @flow.unittest.skip_unless_1n1d()

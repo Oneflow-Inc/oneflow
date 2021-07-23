@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
-import oneflow
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow
+import oneflow as flow
 
 
 def _test_instruction_replay_impl(test_case, device, shape):

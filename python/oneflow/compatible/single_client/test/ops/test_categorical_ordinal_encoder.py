@@ -1,10 +1,12 @@
+import os
 import sys
-import numpy as np
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client import typing as oft
 import typing
 import unittest
-import os
+
+import numpy as np
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 def _test_categorical_ordinal_encoder(

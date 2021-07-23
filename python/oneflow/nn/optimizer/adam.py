@@ -1,8 +1,9 @@
-from typing import List, Dict, Callable, Union, Iterator, Tuple
 import collections
+from typing import Callable, Dict, Iterator, List, Tuple, Union
+
 import oneflow as flow
-from oneflow.nn.parameter import Parameter
 from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.nn.parameter import Parameter
 
 
 class Adam(Optimizer):

@@ -7,22 +7,24 @@ __all__ = [
     "Callback",
     "Model",
 ]
-from abc import ABC
-from typing import Optional, Any, Union, Tuple, List
 import inspect
+from abc import ABC
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
+
 import oneflow._oneflow_internal
-from oneflow.framework.check_point_v2 import LoadVariables, SaveVarDict, GetCheckpoint
-from oneflow.framework.function_util import api_oneflow_function
+import oneflow.framework.dtype as dtype_util
+import oneflow.framework.typing as oneflow_typing
+from oneflow.framework.check_point_v2 import GetCheckpoint, LoadVariables, SaveVarDict
 from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
+from oneflow.framework.function_util import api_oneflow_function
 from oneflow.framework.local_blob import LocalBlob
 from oneflow.framework.session_util import api_clear_default_session
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
-from oneflow.ops.optimizer import Optimizer
 from oneflow.nn.optimizer.optimizer import Optimizer as OOPOptimizer
-import oneflow.framework.typing as oneflow_typing
-import oneflow.framework.dtype as dtype_util
+from oneflow.ops.optimizer import Optimizer
 
 
 class DataModule(Module):

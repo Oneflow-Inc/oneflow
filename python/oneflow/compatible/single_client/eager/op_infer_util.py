@@ -1,12 +1,13 @@
-from oneflow.compatible.single_client.core.operator import (
-    op_node_signature_pb2 as op_node_signature_pb,
-)
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
+from google.protobuf import text_format
+
 from oneflow._oneflow_internal.oneflow.core.operator import (
     op_node_signature as op_node_signature_cfg,
 )
 from oneflow.compatible import single_client as flow
-from google.protobuf import text_format
+from oneflow.compatible.single_client.core.operator import (
+    op_node_signature_pb2 as op_node_signature_pb,
+)
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 
 
 def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):

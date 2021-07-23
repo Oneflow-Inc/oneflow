@@ -1,8 +1,10 @@
-import unittest
-import numpy as np
-import cv2
 import operator
+import unittest
 from functools import reduce
+
+import cv2
+import numpy as np
+
 import oneflow as flow
 
 

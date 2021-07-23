@@ -1,8 +1,10 @@
-from oneflow.compatible.single_client.framework.sysconfig import get_include
-from oneflow.compatible.single_client.framework.sysconfig import get_lib
-from oneflow.compatible.single_client.framework.sysconfig import get_compile_flags
-from oneflow.compatible.single_client.framework.sysconfig import get_link_flags
-from oneflow.compatible.single_client.framework.sysconfig import with_cuda
-from oneflow.compatible.single_client.framework.sysconfig import with_xla
-from oneflow.compatible.single_client.framework.sysconfig import has_rpc_backend_grpc
-from oneflow.compatible.single_client.framework.sysconfig import has_rpc_backend_local
+from oneflow.compatible.single_client.framework.sysconfig import (
+    get_compile_flags,
+    get_include,
+    get_lib,
+    get_link_flags,
+    has_rpc_backend_grpc,
+    has_rpc_backend_local,
+    with_cuda,
+    with_xla,
+)

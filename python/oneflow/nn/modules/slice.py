@@ -1,8 +1,10 @@
+from typing import Sequence, Tuple
+
 import numpy as np
+
 import oneflow as flow
 from oneflow.nn.module import Module
-from oneflow.ops.array_ops import check_slice_tup_list, GetSliceAttrs
-from typing import Sequence, Tuple
+from oneflow.ops.array_ops import GetSliceAttrs, check_slice_tup_list
 
 
 class Slice(Module):

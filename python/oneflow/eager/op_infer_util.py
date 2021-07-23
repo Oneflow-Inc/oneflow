@@ -1,8 +1,9 @@
+from google.protobuf import text_format
+
+import oneflow
+import oneflow._oneflow_internal.oneflow.core.operator.op_node_signature as op_node_signature_cfg
 import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.framework.c_api_util as c_api_util
-import oneflow._oneflow_internal.oneflow.core.operator.op_node_signature as op_node_signature_cfg
-import oneflow
-from google.protobuf import text_format
 
 
 def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):

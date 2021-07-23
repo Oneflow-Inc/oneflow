@@ -1,34 +1,34 @@
+import inspect
 import threading
-from oneflow.core.job.job_set_pb2 import ConfigProto
+import traceback
+from contextlib import contextmanager
+from typing import Callable
+
+from google.protobuf import text_format
+
+import oneflow
+import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.eager.op_executor as op_executor
 import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.compiler as compiler
 import oneflow.framework.config_util as config_util
 import oneflow.framework.env_util as env_util
-import oneflow.framework.typing_util as oft_util
 import oneflow.framework.hob as hob
 import oneflow.framework.job_instance as job_instance_util
+import oneflow.framework.module as module_util
 import oneflow.framework.push_util as push_util
 import oneflow.framework.session_context as session_ctx
+import oneflow.framework.typing_util as oft_util
 import oneflow.lib.core.enable_if as enable_if
-import oneflow.eager.op_executor as op_executor
-from oneflow.experimental import interface_op_read_and_write
-from oneflow.core.job.job_set_pb2 import ConfigProto
-from oneflow.framework.function_desc import FunctionDesc
-import oneflow.framework.module as module_util
-from oneflow.framework.pull_util import LazyFutureRemoteBlobs, EagerFutureRemoteBlobs
-from oneflow.framework.session_context import SessionStatus
 from oneflow import oneflow_deprecate
-from oneflow.framework.function_desc import FunctionDesc
+from oneflow.core.job.job_set_pb2 import ConfigProto
+from oneflow.experimental import interface_op_read_and_write
 from oneflow.framework.check_point import SnapshotManager
-import oneflow.framework.check_point_v2 as check_point_v2
-from contextlib import contextmanager
-from typing import Callable
-import inspect
-import oneflow
-import oneflow._oneflow_internal
-import traceback
-from google.protobuf import text_format
+from oneflow.framework.function_desc import FunctionDesc
+from oneflow.framework.pull_util import EagerFutureRemoteBlobs, LazyFutureRemoteBlobs
+from oneflow.framework.session_context import SessionStatus
 
 
 class Session(object):

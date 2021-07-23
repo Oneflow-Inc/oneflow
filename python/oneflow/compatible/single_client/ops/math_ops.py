@@ -1,26 +1,27 @@
 import os
-from typing import Union, Optional, Sequence, List, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
+from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     interpret_util as interpret_util,
 )
-from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import module as module_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible.single_client.python.framework import module as module_util
 from oneflow.compatible.single_client.python.ops import (
     math_unary_elementwise_ops as math_unary_elementwise_ops,
 )
 from oneflow.compatible.single_client.python.ops.transpose_util import (
+    get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )
-from oneflow.compatible.single_client.python.ops.transpose_util import get_inversed_perm
-import oneflow._oneflow_internal
 
 
 def add(

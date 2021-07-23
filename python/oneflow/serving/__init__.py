@@ -1,3 +1,5 @@
-from oneflow.serving.inference_session import ModelVersionPolicy
-from oneflow.serving.inference_session import SessionOption
-from oneflow.serving.inference_session import InferenceSession
+from oneflow.serving.inference_session import (
+    InferenceSession,
+    ModelVersionPolicy,
+    SessionOption,
+)

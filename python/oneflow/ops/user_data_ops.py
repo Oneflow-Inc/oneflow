@@ -1,12 +1,13 @@
-import oneflow as flow
-import oneflow.framework.id_util as id_util
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.module as module_util
-import oneflow._oneflow_internal
-from typing import Optional, Sequence, Union
 import random
 import sys
 import traceback
+from typing import Optional, Sequence, Union
+
+import oneflow as flow
+import oneflow._oneflow_internal
+import oneflow.framework.id_util as id_util
+import oneflow.framework.module as module_util
+import oneflow.framework.remote_blob as remote_blob_util
 
 
 def OFRecordRawDecoder(

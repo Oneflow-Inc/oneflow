@@ -1,7 +1,7 @@
 from typing import Optional
+
 import oneflow as flow
-from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import register_tensor_op
+from oneflow.framework.tensor import Tensor, register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.ops.array_ops import check_slice_tup_list
 

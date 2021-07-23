@@ -1,7 +1,8 @@
+from typing import List, Optional, Tuple
+
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
-from typing import Optional, List, Tuple
 
 
 class Embedding(Module):

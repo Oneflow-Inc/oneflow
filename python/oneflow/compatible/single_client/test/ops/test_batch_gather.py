@@ -1,10 +1,12 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 import tensorflow as tf
 from tensorflow.python.ops import gen_math_ops
 from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

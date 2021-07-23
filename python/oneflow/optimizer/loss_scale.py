@@ -1,2 +1,2 @@
-from oneflow.ops.optimizer import StaticLossScalePolicy
-from oneflow.ops.optimizer import DynamicLossScalePolicy
+from oneflow.ops.optimizer import DynamicLossScalePolicy as dynamic_loss_scale
+from oneflow.ops.optimizer import StaticLossScalePolicy as static_loss_scale

@@ -1,10 +1,12 @@
-from oneflow.compatible import single_client as flow
-import numpy as np
-from oneflow.compatible.single_client import typing as oft
-from test_util import GenArgList
+import os
 import unittest
 from collections import OrderedDict
-import os
+
+import numpy as np
+from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):

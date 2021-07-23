@@ -1,11 +1,13 @@
-import numpy as np
-import cv2
-import unittest
-import sys
-import os
 import argparse
-from oneflow.compatible import single_client as flow
+import os
+import sys
+import unittest
+
+import cv2
+import numpy as np
 import style_model
+
+from oneflow.compatible import single_client as flow
 
 
 def init_env():

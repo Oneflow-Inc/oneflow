@@ -1,7 +1,9 @@
 import unittest
+
 import numpy as np
-import oneflow as flow
 from automated_test_util import *
+
+import oneflow as flow
 
 
 @flow.unittest.skip_unless_1n1d()

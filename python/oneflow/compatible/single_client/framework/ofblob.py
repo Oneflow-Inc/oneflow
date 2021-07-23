@@ -1,9 +1,11 @@
 import collections
 from functools import reduce
+
 import numpy as np
-from oneflow.compatible import single_client as flow
-import oneflow._oneflow_internal
 from google.protobuf import text_format
+
+import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )

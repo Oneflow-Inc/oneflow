@@ -1,9 +1,10 @@
-import os
 import imp
 import importlib.util
-from oneflow.compatible import single_client as flow
+import os
 from typing import List
+
 import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 
 
 def get_include() -> str:

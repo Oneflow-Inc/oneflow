@@ -1,17 +1,19 @@
+from functools import reduce
+
+import numpy
+
 import oneflow
-import oneflow.framework.input_blob_def as input_blob_def
-import oneflow.framework.dtype as dtype_util
-import oneflow.framework.python_callback as python_callback
-import oneflow.framework.balanced_splitter as balanced_splitter
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.id_util as id_util
-import oneflow.eager.boxing_util as boxing_util
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal
-import numpy
-from functools import reduce
+import oneflow.eager.boxing_util as boxing_util
+import oneflow.framework.balanced_splitter as balanced_splitter
+import oneflow.framework.dtype as dtype_util
+import oneflow.framework.id_util as id_util
+import oneflow.framework.input_blob_def as input_blob_def
+import oneflow.framework.python_callback as python_callback
+import oneflow.framework.remote_blob as remote_blob_util
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

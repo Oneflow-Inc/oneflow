@@ -1,14 +1,16 @@
 import os
-import unittest
 import shutil
+import unittest
+
 import numpy as np
+from alexnet import alexnet, load_data
 from google.protobuf import text_format as text_format
+from ofrecord_dataset import ImageNetRecordDataset
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.serving import (
     saved_model_pb2 as saved_model_pb,
 )
-from alexnet import load_data, alexnet
-from ofrecord_dataset import ImageNetRecordDataset
 
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"

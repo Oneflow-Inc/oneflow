@@ -1,12 +1,13 @@
-from oneflow.compatible.single_client.python.eager.symbol import Symbol
+import collections
+import re
+
+import oneflow._oneflow_internal
+from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
+from oneflow._oneflow_internal.oneflow.core.job import scope as scope_cfg
 from oneflow.compatible.single_client.python.eager import (
     symbol_storage as symbol_storage,
 )
-from oneflow._oneflow_internal.oneflow.core.job import scope as scope_cfg
-from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
-import oneflow._oneflow_internal
-import collections
-import re
+from oneflow.compatible.single_client.python.eager.symbol import Symbol
 
 
 class ScopeSymbol(Symbol):

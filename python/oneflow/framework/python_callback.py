@@ -1,10 +1,11 @@
 import traceback
-import oneflow.framework.ofblob as ofblob
-import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
+import oneflow.framework.ofblob as ofblob
 
 
 def GetIdForRegisteredCallback(cb):

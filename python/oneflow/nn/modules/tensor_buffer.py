@@ -1,4 +1,5 @@
-from typing import Sequence, Optional
+from typing import Optional, Sequence
+
 import oneflow as flow
 from oneflow.nn.module import Module
 

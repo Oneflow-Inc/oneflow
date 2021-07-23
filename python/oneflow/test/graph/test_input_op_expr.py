@@ -1,12 +1,14 @@
-import unittest
-import numpy as np
 import os
+import unittest
+
+import numpy as np
+
 import oneflow
-import oneflow.experimental as flow
-import oneflow.framework.session_context as session_ctx
 import oneflow._oneflow_internal
-from oneflow.framework.multi_client_session import MultiClientSession
+import oneflow.experimental as flow
 import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.session_context as session_ctx
+from oneflow.framework.multi_client_session import MultiClientSession
 
 
 @flow.unittest.skip_unless_1n1d()

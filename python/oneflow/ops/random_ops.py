@@ -1,9 +1,10 @@
 from typing import Optional
+
 import oneflow as flow
-import oneflow.framework.id_util as id_util
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.module as module_util
 import oneflow._oneflow_internal
+import oneflow.framework.id_util as id_util
+import oneflow.framework.module as module_util
+import oneflow.framework.remote_blob as remote_blob_util
 
 
 def Bernoulli(

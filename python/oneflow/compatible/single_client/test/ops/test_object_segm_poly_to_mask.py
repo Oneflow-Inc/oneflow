@@ -1,8 +1,10 @@
-import unittest
 import os
 import random
+import unittest
+
 import cv2
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 
@@ -314,9 +316,9 @@ def _poly_to_mask_with_of_and_cv(
 
 def _vis_img_segm_mask_cmp(mask_list, cmp_mask_list):
     assert len(mask_list) == len(cmp_mask_list)
-    import matplotlib.pyplot as plt
     import ipywidgets as ipw
-    from IPython.display import display, clear_output
+    import matplotlib.pyplot as plt
+    from IPython.display import clear_output, display
 
     plt.close("all")
     plt.ioff()

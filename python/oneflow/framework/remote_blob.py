@@ -1,20 +1,21 @@
+import sys
+import traceback
+
 import oneflow
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.id_util as id_util
-import oneflow.framework.placement_context as placement_ctx
-import oneflow.framework.blob_trait as blob_trait
-from oneflow.framework.dtype import convert_proto_dtype_to_oneflow_dtype
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.framework.hob as hob
-import oneflow.eager.eager_blob_util as eager_blob_util
-import oneflow.eager.gradient_util as gradient_util
-import oneflow.eager.boxing_util as boxing_util
+import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal
-import traceback
-import sys
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.eager.boxing_util as boxing_util
+import oneflow.eager.eager_blob_util as eager_blob_util
+import oneflow.eager.gradient_util as gradient_util
+import oneflow.framework.blob_trait as blob_trait
+import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.hob as hob
+import oneflow.framework.id_util as id_util
+import oneflow.framework.placement_context as placement_ctx
+import oneflow.lib.core.enable_if as enable_if
+from oneflow.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

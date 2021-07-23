@@ -1,9 +1,13 @@
-from typing import Optional, Sequence, Tuple, Union, List
+import traceback
+from typing import List, Optional, Sequence, Tuple, Union
+
+import oneflow._oneflow_internal
+from oneflow import oneflow_deprecate
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.job import (
     initializer_conf_pb2 as initializer_conf_util,
 )
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
@@ -14,9 +18,6 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
-import traceback
 
 
 class ImagePreprocessor(object):

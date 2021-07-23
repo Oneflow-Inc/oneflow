@@ -1,13 +1,22 @@
+import inspect
 import uuid
 from typing import Callable, Optional, Union
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
+
+import numpy as np
+
+import oneflow._oneflow_internal
+from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.core.job.lbi_diff_watcher_info_pb2 import (
+    LbiAndDiffWatcherUuidPair,
 )
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.python import eager as eager_util
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_context,
 )
+from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     local_blob as local_blob_util,
@@ -15,20 +24,13 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible.single_client.python.framework import watcher as watcher_util
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
 from oneflow.compatible.single_client.python.framework import typing as oft
 from oneflow.compatible.single_client.python.framework import typing_util as oft_util
+from oneflow.compatible.single_client.python.framework import watcher as watcher_util
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.core.job.lbi_diff_watcher_info_pb2 import (
-    LbiAndDiffWatcherUuidPair,
-)
-from oneflow.compatible.single_client.python import eager as eager_util
-from oneflow.compatible import single_client as flow
-import oneflow._oneflow_internal
-from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
-import inspect
-import numpy as np
 
 
 def Watch(

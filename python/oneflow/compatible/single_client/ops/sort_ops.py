@@ -1,14 +1,15 @@
 from typing import Optional
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
 from oneflow.compatible.single_client.python.ops.transpose_util import (
+    get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )
-from oneflow.compatible.single_client.python.ops.transpose_util import get_inversed_perm
-import oneflow._oneflow_internal
 
 
 def _sort_at_last_dim(

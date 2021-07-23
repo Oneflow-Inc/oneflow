@@ -1,29 +1,31 @@
 import asyncio
 import contextlib
-import inspect
-import numpy as np
-import os
 import enum
+import inspect
+import os
+
 import google.protobuf.text_format as text_format
+import numpy as np
+
 import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
 import oneflow._oneflow_internal.oneflow.core.common.data_type as dtype_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
 import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
+import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.compile_context as compile_ctx
-import oneflow.framework.session_util as session_util
-import oneflow.framework.placement_util as placement_util
-import oneflow.framework.scope_util as scope_util
-import oneflow.framework.runtime_mode as runtime_mode
-import oneflow.framework.job_instance as job_instance_util
-import oneflow.framework.input_blob_def as input_blob_util
 import oneflow.framework.dtype as dtype_util
+import oneflow.framework.input_blob_def as input_blob_util
+import oneflow.framework.job_instance as job_instance_util
+import oneflow.framework.placement_util as placement_util
+import oneflow.framework.runtime_mode as runtime_mode
+import oneflow.framework.scope_util as scope_util
+import oneflow.framework.session_util as session_util
 
 
 def _is_int(val):

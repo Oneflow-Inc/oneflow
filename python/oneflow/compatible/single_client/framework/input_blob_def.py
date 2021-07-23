@@ -1,15 +1,20 @@
 import sys
+import traceback
 from functools import reduce
 from typing import Any, Optional, Sequence, Union
+
 import numpy as np
+
+import oneflow._oneflow_internal
+from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.operator import (
-    interface_blob_conf_pb2 as inter_face_blob_conf_util,
-)
 from oneflow.compatible.single_client.core.job import (
     sbp_parallel_pb2 as sbp_parallel_pb,
 )
+from oneflow.compatible.single_client.core.operator import (
+    interface_blob_conf_pb2 as inter_face_blob_conf_util,
+)
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.python.framework import (
     compile_context as compile_context,
@@ -24,10 +29,6 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
-import oneflow._oneflow_internal
-from functools import reduce
-import traceback
 
 
 class ArgBlobDef(object):

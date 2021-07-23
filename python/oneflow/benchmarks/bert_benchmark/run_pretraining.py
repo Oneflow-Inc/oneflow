@@ -4,9 +4,11 @@ import random
 import time
 from collections import OrderedDict
 from datetime import datetime
+
 import benchmark_util
-import oneflow as flow
 from pretrain import PreTrain
+
+import oneflow as flow
 
 parser = argparse.ArgumentParser(description="flags for bert")
 parser.add_argument("--gpu_num_per_node", type=int, default=1)

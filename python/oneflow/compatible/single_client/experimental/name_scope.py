@@ -1,12 +1,12 @@
+import traceback
 from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+from oneflow import oneflow_deprecate
+from oneflow.compatible.single_client.python.framework import scope_util as scope_util
 from oneflow.compatible.single_client.python.framework import (
     session_context as session_context,
 )
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
-import traceback
-from oneflow import oneflow_deprecate
 
 
 @oneflow_deprecate()

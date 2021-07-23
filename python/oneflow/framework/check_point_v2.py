@@ -1,29 +1,30 @@
 import os
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
 from google.protobuf import text_format
+
 import oneflow
 import oneflow._oneflow_internal
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.framework.config_util as config_util
-import oneflow.framework.dtype as dtype_util
-import oneflow.framework.runtime_mode as rt_mode
-import oneflow.ops.initializer_util as initializer_util
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.framework.id_util as id_util
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.lib.core.async_util as async_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_pb
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.eager.boxing_util as boxing_util
 import oneflow.eager.op_infer_util as op_infer_util
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
-from oneflow.experimental import interface_op_read_and_write
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.framework.config_util as config_util
+import oneflow.framework.dtype as dtype_util
+import oneflow.framework.id_util as id_util
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.session_context as session_ctx
+import oneflow.lib.core.async_util as async_util
 import oneflow.ops.get_variable as get_variable
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal
+import oneflow.ops.initializer_util as initializer_util
 from oneflow._oneflow_internal import EagerBlobTrait
-from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
+from oneflow.experimental import interface_op_read_and_write
 
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"

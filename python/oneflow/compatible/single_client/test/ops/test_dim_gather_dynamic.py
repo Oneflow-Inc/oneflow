@@ -1,8 +1,10 @@
+import os
 import unittest
+
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import os
 
 
 def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):

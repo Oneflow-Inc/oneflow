@@ -1,6 +1,6 @@
-from typing import List
 import collections.abc as container_abcs
 from itertools import repeat
+from typing import List
 
 
 def _ntuple(n):

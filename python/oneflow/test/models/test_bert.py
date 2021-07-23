@@ -1,11 +1,13 @@
 import copy
+import os
 import sys
+import unittest
+
 import numpy as np
-import oneflow as flow
 from absl import flags
 from pretrain import PreTrain
-import unittest
-import os
+
+import oneflow as flow
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")

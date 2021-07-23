@@ -1,11 +1,9 @@
+import oneflow._oneflow_internal
 from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
+    BoolFunctor,
     bool_functor,
-)
-from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
     hob_context_attr,
 )
-from oneflow.compatible.single_client.python.lib.core.high_order_bool import BoolFunctor
-import oneflow._oneflow_internal
 
 
 class BoxingHobContext(object):

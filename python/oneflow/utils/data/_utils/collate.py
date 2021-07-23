@@ -4,9 +4,10 @@ collate samples fetched from dataset into Tensor(s).
 These **needs** to be in global scope since Py2 doesn't support serializing
 static methods.
 """
-import oneflow as flow
-import re
 import collections
+import re
+
+import oneflow as flow
 import oneflow.utils as utils
 
 string_classes = (str, bytes)

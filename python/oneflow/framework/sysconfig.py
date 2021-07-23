@@ -1,8 +1,9 @@
-import os
 import imp
 import importlib.util
-import oneflow
+import os
 from typing import List
+
+import oneflow
 import oneflow._oneflow_internal
 
 

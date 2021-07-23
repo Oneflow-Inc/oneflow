@@ -1,16 +1,18 @@
-import unittest
-from oneflow.compatible import single_client as flow
-import numpy as np
 import os
 import random
-from oneflow.compatible.single_client import typing as oft
+import unittest
 from collections import OrderedDict
+
+import numpy as np
 from test_util import (
-    GenArgList,
     GenArgDict,
+    GenArgList,
     type_name_to_flow_type,
     type_name_to_np_type,
 )
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as oft
 
 
 def _compare_with_np(test_case, x_shape, dtype):

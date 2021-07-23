@@ -1,7 +1,8 @@
-import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
+
+import oneflow as flow
+from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.module import Module
 
 
 class Permute(Module):

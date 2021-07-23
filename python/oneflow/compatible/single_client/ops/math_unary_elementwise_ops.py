@@ -1,6 +1,8 @@
 import os
 import traceback
 from typing import Optional
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
@@ -16,7 +18,6 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.ops import (
     user_op_builder as user_op_builder,
 )
-import oneflow._oneflow_internal
 
 
 def build_unary_elemwise_math_op(math_op, x, name=None):

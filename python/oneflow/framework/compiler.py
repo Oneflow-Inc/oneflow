@@ -1,25 +1,25 @@
-from contextlib import contextmanager
 import inspect
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.distribute as distribute_util
-import oneflow.framework.input_blob_def as input_blob_util
-import oneflow.framework.hob as hob
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.framework.placement_util as placement_util
-import oneflow.framework.placement_context as placement_ctx
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.runtime_mode as runtime_mode
-import oneflow.framework.push_util as push_util
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.scope_util as scope_util
-import oneflow.framework.typing as oft
-import oneflow.framework.typing_util as oft_util
-import oneflow.lib.core.func_inspect_util as func_inspect_util
-import oneflow.ops as ops
 import typing
+from contextlib import contextmanager
+
 import oneflow
 import oneflow._oneflow_internal
-import inspect
+import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.distribute as distribute_util
+import oneflow.framework.hob as hob
+import oneflow.framework.input_blob_def as input_blob_util
+import oneflow.framework.placement_context as placement_ctx
+import oneflow.framework.placement_util as placement_util
+import oneflow.framework.push_util as push_util
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.runtime_mode as runtime_mode
+import oneflow.framework.scope_util as scope_util
+import oneflow.framework.session_context as session_ctx
+import oneflow.framework.typing as oft
+import oneflow.framework.typing_util as oft_util
+import oneflow.lib.core.enable_if as enable_if
+import oneflow.lib.core.func_inspect_util as func_inspect_util
+import oneflow.ops as ops
 
 
 def Compile(session, function_desc, config_proto):

@@ -1,6 +1,7 @@
+from contextlib import contextmanager
+
 import oneflow
 import oneflow._oneflow_internal
-from contextlib import contextmanager
 
 
 @contextmanager

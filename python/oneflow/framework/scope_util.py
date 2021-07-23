@@ -1,12 +1,14 @@
-from contextlib import contextmanager
 import traceback
+from contextlib import contextmanager
+
 from google.protobuf import text_format
-import oneflow.core.job.scope_pb2 as scope_pb2_util
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.attr_util as attr_util
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-from oneflow import oneflow_deprecate
+
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.core.job.scope_pb2 as scope_pb2_util
+import oneflow.framework.attr_util as attr_util
+import oneflow.framework.session_context as session_ctx
+from oneflow import oneflow_deprecate
 
 
 def api_scope_config(**kwargs):

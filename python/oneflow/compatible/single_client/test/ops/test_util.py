@@ -2,10 +2,12 @@ import itertools
 import os
 from collections import OrderedDict
 from collections.abc import Iterable
+
 import numpy as np
+import test_global_storage
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import test_global_storage
 
 
 def GenCartesianProduct(sets):

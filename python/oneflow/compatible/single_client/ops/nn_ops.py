@@ -1,25 +1,26 @@
 import collections
 import os
-import sys
 import random
-from typing import Union, Optional, Sequence, Tuple, List
+import sys
+from typing import List, Optional, Sequence, Tuple, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
 from oneflow.compatible.single_client.python.framework import (
-    interpret_util as interpret_util,
+    distribute as distribute_util,
 )
 from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
+    interpret_util as interpret_util,
+)
 from oneflow.compatible.single_client.python.framework import module as module_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible.single_client.python.framework import (
-    distribute as distribute_util,
-)
-import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]
 

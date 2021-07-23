@@ -1,9 +1,10 @@
 import math
+
 import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single, _pair
-from oneflow.nn.common_types import _size_1_t, _size_2_t
 from oneflow.nn import init
+from oneflow.nn.common_types import _size_1_t, _size_2_t
+from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _pair, _single
 
 
 def slice(x, begin, size):

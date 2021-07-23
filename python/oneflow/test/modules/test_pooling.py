@@ -1,9 +1,11 @@
+import math
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import math
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _nd_tuple_to_dhw(nd_tuple, dim, prefix=1, dhw_offset=0):

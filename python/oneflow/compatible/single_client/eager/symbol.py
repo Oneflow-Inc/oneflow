@@ -1,6 +1,7 @@
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
 import functools
+
+from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 
 
 class Symbol(object):

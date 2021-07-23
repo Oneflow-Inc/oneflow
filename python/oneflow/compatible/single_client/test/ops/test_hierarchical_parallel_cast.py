@@ -1,12 +1,14 @@
-import unittest
-import numpy as np
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client import typing as tp
-from test_util import GenArgList
-from collections import OrderedDict
-from typing import Dict
 import os
 import random
+import unittest
+from collections import OrderedDict
+from typing import Dict
+
+import numpy as np
+from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as tp
 
 
 def _test(test_case, device_num):

@@ -1,24 +1,26 @@
+import inspect
 import uuid
 from typing import Callable, Optional, Union
+
+import numpy as np
+
+import oneflow
+import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.eager as eager_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.session_context as session_ctx
 import oneflow.framework.compile_context as compile_context
+import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.local_blob as local_blob_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.watcher as watcher_util
+import oneflow.framework.session_context as session_ctx
 import oneflow.framework.typing as oft
 import oneflow.framework.typing_util as oft_util
+import oneflow.framework.watcher as watcher_util
 import oneflow.lib.core.enable_if as enable_if
-import oneflow.framework.hob as hob
-from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
-import oneflow.eager as eager_util
-import oneflow
-import oneflow._oneflow_internal
 from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
-import inspect
-import numpy as np
+from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 
 
 def Watch(

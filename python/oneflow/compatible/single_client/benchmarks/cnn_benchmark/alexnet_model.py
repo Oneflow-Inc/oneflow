@@ -1,5 +1,6 @@
-from oneflow.compatible import single_client as flow
 from model_util import conv2d_layer
+
+from oneflow.compatible import single_client as flow
 
 
 def alexnet(images, trainable=True):

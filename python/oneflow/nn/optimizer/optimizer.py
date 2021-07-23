@@ -1,8 +1,9 @@
-import warnings
-from typing import Dict, Callable, Union, Any, Iterator
 import collections
-from oneflow.nn.parameter import Parameter
+import warnings
+from typing import Any, Callable, Dict, Iterator, Union
+
 from oneflow.framework.tensor import Tensor
+from oneflow.nn.parameter import Parameter
 
 
 class ParamGroup(object):

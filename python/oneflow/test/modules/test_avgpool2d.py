@@ -1,7 +1,9 @@
 import unittest
+
 import numpy as np
+
 import oneflow as flow
-from oneflow.nn.modules.utils import _single, _pair, _triple, _reverse_repeat_tuple
+from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 
 g_samples = [
     {

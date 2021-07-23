@@ -1,7 +1,9 @@
-from collections import OrderedDict, namedtuple
-from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
+from collections import OrderedDict, namedtuple
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework.check_point_v2 import (
     FeedValueToVariable,

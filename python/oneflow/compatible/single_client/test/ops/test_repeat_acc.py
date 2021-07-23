@@ -1,9 +1,11 @@
 import unittest
+from collections import OrderedDict
+
 import numpy as np
+from test_util import Args, GenArgDict
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-from collections import OrderedDict
-from test_util import Args, GenArgDict
 
 func_config = flow.FunctionConfig()
 func_config.default_logical_view(flow.scope.mirrored_view())

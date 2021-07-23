@@ -1,23 +1,24 @@
+import os
 from typing import Optional, Sequence, Union
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.compile_context as compile_context
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.runtime_mode as rt_mode
-import oneflow.framework.distribute as distribute_util
-import oneflow.experimental.name_scope as name_scope
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
+
+import oneflow
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.framework.hob as hob
 import oneflow.eager.boxing_util as boxing_util
 import oneflow.eager.gradient_util as gradient_util
 import oneflow.eager.op_executor as op_executor
+import oneflow.experimental.name_scope as name_scope
+import oneflow.framework.compile_context as compile_context
+import oneflow.framework.distribute as distribute_util
+import oneflow.framework.hob as hob
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.session_context as session_ctx
 import oneflow.lib.core.enable_if as enable_if
-import oneflow
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow._oneflow_internal
-import os
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

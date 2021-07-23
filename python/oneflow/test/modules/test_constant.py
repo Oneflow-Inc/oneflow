@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
-from oneflow.framework.tensor import register_tensor_op
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
+from oneflow.framework.tensor import register_tensor_op
 
 
 def _test_ones(test_case, device, shape):

@@ -1,8 +1,10 @@
 import os
 import unittest
+
 import numpy as np
+from resnet50_model import FakeBN, resnet50
+
 import oneflow as flow
-from resnet50_model import resnet50, FakeBN
 
 
 @flow.unittest.skip_unless_1n1d()

@@ -1,7 +1,9 @@
-from oneflow.compatible import single_client as flow
 import math
-import pandas as pd
 import time
+
+import pandas as pd
+
+from oneflow.compatible import single_client as flow
 
 
 class COCODataLoadConfig(object):

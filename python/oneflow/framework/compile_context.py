@@ -1,15 +1,14 @@
 from contextlib import contextmanager
+
 import oneflow
+import oneflow._oneflow_internal
 import oneflow.experimental.name_scope as name_scope
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.distribute_context as distribute_ctx
+import oneflow.framework.hob as hob
 import oneflow.framework.placement_context as placement_context
 import oneflow.framework.session_context as session_ctx
-import oneflow.framework.hob as hob
 import oneflow.lib.core.enable_if as enable_if
-import oneflow.experimental.name_scope as name_scope
-import oneflow
-import oneflow._oneflow_internal
 
 
 def GetCurJobConfigProto():

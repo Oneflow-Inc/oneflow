@@ -1,11 +1,12 @@
+import inspect
+import sys
+import typing
+from typing import Optional, Sequence
+
 from oneflow.compatible import single_client as flow
-from typing import Sequence, Optional
 from oneflow.compatible.single_client.python.framework import (
     input_blob_def as input_blob_def,
 )
-import typing
-import inspect
-import sys
 
 
 class PyStructCompatibleToBlob(object):

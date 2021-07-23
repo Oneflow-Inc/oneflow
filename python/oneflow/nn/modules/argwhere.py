@@ -1,8 +1,10 @@
 from typing import Optional
-import oneflow as flow
+
 import numpy as np
-from oneflow.nn.module import Module
+
+import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.module import Module
 
 
 class Argwhere(Module):

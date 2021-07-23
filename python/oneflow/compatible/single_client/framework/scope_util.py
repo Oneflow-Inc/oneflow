@@ -1,12 +1,13 @@
 import traceback
+from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+from oneflow import oneflow_deprecate
+from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
+from oneflow.compatible.single_client.python.framework import attr_util as attr_util
 from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible.single_client.python.framework import attr_util as attr_util
-from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
-from contextlib import contextmanager
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
 
 
 def api_scope_config(**kwargs):

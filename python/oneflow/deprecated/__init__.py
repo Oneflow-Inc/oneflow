@@ -1,3 +1,5 @@
-from oneflow.deprecated.init_cluster_env import delete_worker_by_bootstrap
-from oneflow.deprecated.init_cluster_env import delete_worker_of_multi_process
+from oneflow.deprecated.init_cluster_env import (
+    delete_worker_by_bootstrap,
+    delete_worker_of_multi_process,
+)
 from oneflow.experimental.name_scope import deprecated_name_scope as variable_scope

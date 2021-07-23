@@ -1,7 +1,8 @@
 import os
-import oneflow.core.summary.projector_pb2 as projector_pb2
 import time
+
 import oneflow as flow
+import oneflow.core.summary.projector_pb2 as projector_pb2
 
 
 class Projector(object):

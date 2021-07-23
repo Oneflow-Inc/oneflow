@@ -1,8 +1,10 @@
-import random
 import os
+import random
 import struct
+
 import cv2
 import numpy as np
+
 from oneflow.compatible.single_client.core.record import record_pb2 as record_pb
 
 

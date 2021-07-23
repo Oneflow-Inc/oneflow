@@ -1,12 +1,13 @@
 import collections
 import re
+
+import oneflow
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.op_util as op_util
 import oneflow.framework.session_context as session_ctx
-import oneflow
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal
 
 
 class PlacementScope(object):

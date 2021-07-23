@@ -1,5 +1,5 @@
-from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 
 
 def RecursveDetermine(arg):
@@ -35,6 +35,7 @@ class Function:
 
 def RegisterFunctionalApis():
     import inspect
+
     from oneflow.compatible.single_client import F
     from oneflow.compatible.single_client.experimental import F as expr_F
 

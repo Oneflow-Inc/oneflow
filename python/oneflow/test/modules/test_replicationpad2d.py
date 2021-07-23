@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
+from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
+
 import oneflow as flow
-from test_util import GenArgList, FlattenArray, Array2Numpy, Index2Coordinate
 
 
 def _np_replication_pad2d_grad(src, dest, padding):

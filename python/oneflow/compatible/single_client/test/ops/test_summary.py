@@ -1,12 +1,14 @@
 import os
-import numpy as np
-from oneflow.compatible import single_client as flow
-from collections import OrderedDict
-import cv2
-import time
 import tempfile
+import time
 import unittest
+from collections import OrderedDict
+
+import cv2
+import numpy as np
 from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 
 
 def summary_demo():

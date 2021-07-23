@@ -1,5 +1,5 @@
-import os
 import argparse
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

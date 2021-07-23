@@ -1,25 +1,23 @@
 import copy
 import functools
-import re
 import inspect
+import re
+import sys
 import traceback
 from typing import Any, Callable, Optional, Union
-import oneflow.framework.session_context as session_ctx
+
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow.framework.distribute_context as distribute_ctx
 import oneflow.framework.hob as hob
+import oneflow.framework.placement_context as placement_ctx
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.session_context as session_ctx
+import oneflow.framework.typing_util as oft_util
 import oneflow.lib.core.enable_if as enable_if
+import oneflow.lib.core.pb_util as pb_util
 from oneflow import oneflow_deprecate
 from oneflow.framework.function_desc import FunctionDesc
-import oneflow.framework.placement_context as placement_ctx
-import oneflow.framework.distribute_context as distribute_ctx
-import oneflow.framework.placement_context as placement_ctx
-import oneflow.framework.typing_util as oft_util
-import oneflow.framework.runtime_mode as rt_mode
-import oneflow.lib.core.pb_util as pb_util
-from oneflow.framework.function_desc import FunctionDesc
-import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow._oneflow_internal
-import traceback
-import sys
 
 
 class FunctionConfig(object):

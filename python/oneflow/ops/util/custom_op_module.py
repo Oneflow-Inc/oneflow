@@ -5,10 +5,12 @@ import shutil
 import subprocess as sp
 import sys
 import sysconfig
+
 import numpy
-import oneflow.framework.sysconfig as oneflow_sysconfig
+
 import oneflow
 import oneflow._oneflow_internal
+import oneflow.framework.sysconfig as oneflow_sysconfig
 
 
 def run_cmd(cmd, cwd=None):

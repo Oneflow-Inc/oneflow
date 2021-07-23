@@ -1,8 +1,9 @@
+import os
 import sys
 import traceback
-import os
 import warnings
-from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
+from typing import Any, Callable, Generic, List, Optional, Sequence, TypeVar
+
 import oneflow as flow
 
 
@@ -30,14 +31,14 @@ class ExceptionWrapper(object):
 
 string_classes = (str, bytes)
 from . import (
-    IterableDataset,
-    Sampler,
-    SequentialSampler,
-    RandomSampler,
     BatchSampler,
     Dataset,
+    IterableDataset,
+    RandomSampler,
+    Sampler,
+    SequentialSampler,
+    _utils,
 )
-from . import _utils
 
 T_co = TypeVar("T_co", covariant=True)
 T = TypeVar("T")

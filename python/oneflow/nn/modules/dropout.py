@@ -1,8 +1,9 @@
-import sys
 import random
+import sys
+
 import oneflow as flow
-from oneflow.nn.module import Module
 import oneflow.framework.id_util as id_util
+from oneflow.nn.module import Module
 
 
 class _DropoutNd(Module):

@@ -1,16 +1,19 @@
 import os
-from typing import Union, Optional, Sequence, List, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
+
 import oneflow as flow
+import oneflow._oneflow_internal
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.id_util as id_util
-import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.module as module_util
+import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
-from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
-from oneflow.ops.transpose_util import get_inversed_perm
-import oneflow._oneflow_internal
+from oneflow.ops.transpose_util import (
+    get_inversed_perm,
+    get_perm_when_transpose_axis_to_last_dim,
+)
 
 
 def add(

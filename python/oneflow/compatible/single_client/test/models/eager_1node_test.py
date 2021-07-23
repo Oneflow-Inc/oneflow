@@ -1,15 +1,17 @@
-from oneflow.compatible import single_client as flow
-import env_1node
 import os
+
+import env_1node
 from absl import app
 from absl.testing import absltest
-from test_1node_mixin import Test1NodeMixin
 from cnns_tests import (
     TestAlexNetMixin,
+    TestInceptionV3Mixin,
     TestResNet50Mixin,
     TestVgg16Mixin,
-    TestInceptionV3Mixin,
 )
+from test_1node_mixin import Test1NodeMixin
+
+from oneflow.compatible import single_client as flow
 
 
 class TestAlexNet(Test1NodeMixin, TestAlexNetMixin, absltest.TestCase):

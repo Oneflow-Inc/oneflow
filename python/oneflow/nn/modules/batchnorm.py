@@ -1,4 +1,5 @@
 from typing import Union
+
 import oneflow as flow
 from oneflow.nn.module import Module
 

@@ -1,22 +1,24 @@
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-from oneflow._oneflow_internal.exception import IndexException
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow._oneflow_internal
-import oneflow._oneflow_internal.lazy_mode as lazy_mode
-import numpy as np
 import inspect
 from typing import Union
+
+import numpy as np
+
+import oneflow as flow
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow.framework.id_util as id_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.framework.check_point_v2 as check_point_v2
-from oneflow.framework.function_util import global_function_or_identity
-import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.dtype as dtype_util
+import oneflow.framework.id_util as id_util
 import oneflow.framework.ofblob as ofblob_util
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.runtime_mode as rt_mode
+import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.lib.core.async_util as async_util
 import oneflow.ops.initializer_util as initializer_util
-import oneflow.framework.dtype as dtype_util
-import oneflow.framework.tensor_str as tensor_str_util
-import oneflow as flow
+from oneflow._oneflow_internal.exception import IndexException
+from oneflow.framework.function_util import global_function_or_identity
 
 
 def register_local_tensor_method(name=None):

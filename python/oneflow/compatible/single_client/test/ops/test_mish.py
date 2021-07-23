@@ -1,11 +1,13 @@
-from oneflow.compatible import single_client as flow
-import numpy as np
-from oneflow.compatible.single_client import typing as tp
-from test_util import GenArgList
+import os
 import unittest
 from collections import OrderedDict
 from typing import Dict
-import os
+
+import numpy as np
+from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client import typing as tp
 
 
 def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):

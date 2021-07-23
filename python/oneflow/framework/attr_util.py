@@ -1,7 +1,7 @@
 import oneflow
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
 import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 
 

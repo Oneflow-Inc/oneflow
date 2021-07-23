@@ -1,4 +1,5 @@
 from typing import Optional, TypeVar
+
 from oneflow.core.job.job_set_pb2 import JobSet
 
 _VT = TypeVar("_VT")

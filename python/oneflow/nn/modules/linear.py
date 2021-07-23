@@ -1,8 +1,9 @@
+import math
+
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
-import math
+from oneflow.nn.module import Module
 
 
 class Identity(Module):

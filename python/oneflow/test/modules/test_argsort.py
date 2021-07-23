@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
+
+import oneflow as flow
 
 
 def _test_argsort(test_case, data_shape, axis, descending, data_type, device):

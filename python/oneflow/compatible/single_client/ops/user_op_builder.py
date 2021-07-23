@@ -1,8 +1,31 @@
-from oneflow.compatible.single_client.python.framework import (
-    interpret_util as interpret_util,
+import random
+import traceback
+
+from google.protobuf import text_format
+
+import oneflow._oneflow_internal
+from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
+from oneflow._oneflow_internal.oneflow.core.framework import (
+    user_op_attr as user_op_attr_cfg,
 )
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.core.eager import (
+    eager_symbol_pb2 as eager_symbol_util,
+)
+from oneflow.compatible.single_client.core.framework import (
+    user_op_attr_pb2 as attr_value_pb,
+)
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.python.eager import (
+    eager_blob_util as eager_blob_util,
+)
+from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.python.experimental import (
+    name_scope as name_scope,
 )
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.python.framework import (
@@ -11,39 +34,12 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import distribute as distribute
 from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.framework import (
+    interpret_util as interpret_util,
+)
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.framework import (
-    user_op_attr_pb2 as attr_value_pb,
-)
-from oneflow._oneflow_internal.oneflow.core.framework import (
-    user_op_attr as user_op_attr_cfg,
-)
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
-from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
-from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.experimental import (
-    name_scope as name_scope,
-)
-from oneflow.compatible.single_client.core.eager import (
-    eager_symbol_pb2 as eager_symbol_util,
-)
-from oneflow.compatible.single_client.python.eager import (
-    eager_blob_util as eager_blob_util,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-import random
-from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
-from oneflow.compatible import single_client as flow
-import oneflow._oneflow_internal
-import traceback
-from google.protobuf import text_format
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

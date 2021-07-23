@@ -1,8 +1,8 @@
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.ops import (
     user_op_builder as user_op_builder,
 )
-from oneflow.compatible import single_client as flow
 
 
 def write_scalar(value, step, tag, name=None):

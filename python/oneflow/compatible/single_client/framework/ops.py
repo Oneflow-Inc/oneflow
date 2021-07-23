@@ -1,3 +1,7 @@
+from typing import Optional, Sequence, Union
+
+import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.common import data_type_pb2 as data_type_util
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
@@ -9,15 +13,12 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import (
     distribute as distribute_util,
 )
+from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible import single_client as flow
-import oneflow._oneflow_internal
-from typing import Union, Optional, Sequence
 
 
 def api_repeat(

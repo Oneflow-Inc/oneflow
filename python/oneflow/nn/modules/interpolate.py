@@ -1,9 +1,10 @@
 import math
 import warnings
+from typing import Optional, Tuple, Union
+
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
-from typing import Optional, Union, Tuple
+from oneflow.nn.module import Module
 
 
 class Interpolate(Module):

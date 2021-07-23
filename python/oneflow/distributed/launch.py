@@ -1,13 +1,13 @@
 """
 This file is mostly copied from PyTorch v1.8.1 torch/distributed/launch.py
 """
-import time
-import signal
-import sys
-import subprocess
 import os
-from argparse import ArgumentParser, REMAINDER
-from typing import Optional, IO, List, Any
+import signal
+import subprocess
+import sys
+import time
+from argparse import REMAINDER, ArgumentParser
+from typing import IO, Any, List, Optional
 
 stdout_filename = "stdout"
 stderr_filename = "stderr"

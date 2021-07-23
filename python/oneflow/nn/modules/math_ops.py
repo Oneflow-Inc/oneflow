@@ -1,12 +1,13 @@
 import collections
 from typing import Optional, Sequence, Union
+
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_axis, _check_inplace_valid
 from oneflow.ops.transpose_util import (
-    get_perm_when_transpose_axis_to_last_dim,
     get_inversed_perm,
+    get_perm_when_transpose_axis_to_last_dim,
 )
 
 

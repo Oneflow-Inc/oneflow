@@ -1,4 +1,6 @@
 from typing import Optional, Sequence, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import (
     distribute as distribute_util,
@@ -12,7 +14,6 @@ from oneflow.compatible.single_client.python.lib.core import enable_if as enable
 from oneflow.compatible.single_client.python.ops import (
     user_op_builder as user_op_builder,
 )
-import oneflow._oneflow_internal
 
 
 def api_two_stage_reduce_max(

@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
+from test_util import GenArgList
+
 import oneflow as flow
 import oneflow.nn as nn
-from test_util import GenArgList
 
 
 def _test_deconv_bias_false(test_case, device):

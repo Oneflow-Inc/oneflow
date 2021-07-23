@@ -1,8 +1,10 @@
-import unittest
 import math
 import os
+import unittest
+
 import cv2
 import numpy as np
+
 import oneflow as flow
 
 

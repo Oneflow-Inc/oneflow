@@ -1,25 +1,26 @@
-import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
-import oneflow.eager.boxing_util as boxing_util
-import oneflow.eager.blob_register as blob_register_util
-import oneflow.eager.symbol_storage as symbol_storage
-import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.python_callback as python_callback
-import oneflow.experimental.name_scope as name_scope
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.scope_util as scope_util
-import oneflow.eager.op_infer_util as op_infer_util
-import oneflow.eager.blob_register as blob_register_util
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import os
+
+import numpy as np
 from google.protobuf import text_format
+
 import oneflow
 import oneflow._oneflow_internal
-import numpy as np
-import os
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.eager.blob_register as blob_register_util
+import oneflow.eager.boxing_util as boxing_util
+import oneflow.eager.op_infer_util as op_infer_util
+import oneflow.eager.symbol_storage as symbol_storage
+import oneflow.experimental.name_scope as name_scope
+import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.python_callback as python_callback
+import oneflow.framework.remote_blob as remote_blob_util
+import oneflow.framework.scope_util as scope_util
+import oneflow.framework.session_context as session_ctx
 
 default_blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

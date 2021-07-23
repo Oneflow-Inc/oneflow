@@ -1,20 +1,21 @@
-from collections import OrderedDict
 import collections.abc
-from itertools import islice
 import operator
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.nn.module import Module
+from collections import OrderedDict
+from itertools import islice
 from typing import (
     Any,
     Iterable,
     Iterator,
     Mapping,
     Optional,
-    overload,
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
+
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.python.nn.module import Module
 
 T = TypeVar("T")
 if __name__ == "__main__":

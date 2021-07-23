@@ -1,5 +1,5 @@
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 
 
 def l1_l2_regularizer(

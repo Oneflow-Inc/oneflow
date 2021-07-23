@@ -1,13 +1,14 @@
 import inspect
-import typing
-from typing import Dict, Optional, Tuple, Any, Union
-from collections import namedtuple
-import random as random_util
 import os
+import random as random_util
+import typing
+from collections import namedtuple
+from typing import Any, Dict, Optional, Tuple, Union
+
 import numpy as np
-import oneflow as flow
 import torch
-import numpy as np
+
+import oneflow as flow
 
 py_tuple = tuple
 TEST_MODULE = 0

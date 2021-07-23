@@ -1,10 +1,11 @@
+from typing import Optional, Tuple
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-import oneflow._oneflow_internal
-from typing import Optional, Tuple
 
 
 def smooth_l1_loss(

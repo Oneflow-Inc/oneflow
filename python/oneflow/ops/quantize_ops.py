@@ -1,8 +1,9 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
 import oneflow as flow
+import oneflow._oneflow_internal
 import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow._oneflow_internal
 
 
 def min_max_observer(

@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
-import oneflow as flow
+
 import numpy as np
-from test_util import GenArgList, FlattenArray, Array2Numpy, Index2Coordinate
+from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
+
+import oneflow as flow
 
 
 def gen_numpy_test_sample(input, padding):

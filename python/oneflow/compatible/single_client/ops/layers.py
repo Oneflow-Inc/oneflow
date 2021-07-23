@@ -1,19 +1,20 @@
-from typing import Callable, Optional, Union, Tuple, Sequence
+from typing import Callable, Optional, Sequence, Tuple, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.job import (
     initializer_conf_pb2 as initializer_conf_util,
 )
 from oneflow.compatible.single_client.core.job import (
     regularizer_conf_pb2 as regularizer_conf_util,
 )
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.python.framework import (
     distribute as distribute_util,
 )
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]
 

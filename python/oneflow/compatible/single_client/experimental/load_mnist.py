@@ -1,8 +1,9 @@
-import os
 import hashlib
+import os
+
 import numpy as np
-from tqdm import tqdm
 import requests
+from tqdm import tqdm
 
 
 def get_sha256hash(file_path, Bytes=1024):

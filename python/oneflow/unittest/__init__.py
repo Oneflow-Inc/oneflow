@@ -1,9 +1,11 @@
-from oneflow.framework.unittest import register_test_cases
-from oneflow.framework.unittest import num_nodes_required
-from oneflow.framework.unittest import TestCase
-from oneflow.framework.unittest import skip_unless_1n1d
-from oneflow.framework.unittest import skip_unless_1n2d
-from oneflow.framework.unittest import skip_unless_1n4d
-from oneflow.framework.unittest import skip_unless_2n1d
-from oneflow.framework.unittest import skip_unless_2n2d
-from oneflow.framework.unittest import skip_unless_2n4d
+from oneflow.framework.unittest import (
+    TestCase,
+    num_nodes_required,
+    register_test_cases,
+    skip_unless_1n1d,
+    skip_unless_1n2d,
+    skip_unless_1n4d,
+    skip_unless_2n1d,
+    skip_unless_2n2d,
+    skip_unless_2n4d,
+)

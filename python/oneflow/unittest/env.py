@@ -1,8 +1,10 @@
-from oneflow.framework.unittest import eager_execution_enabled
-from oneflow.framework.unittest import typing_check_enabled
-from oneflow.framework.unittest import node_list
-from oneflow.framework.unittest import has_node_list
-from oneflow.framework.unittest import node_size
-from oneflow.framework.unittest import has_world_size
-from oneflow.framework.unittest import world_size
-from oneflow.framework.unittest import device_num
+from oneflow.framework.unittest import (
+    device_num,
+    eager_execution_enabled,
+    has_node_list,
+    has_world_size,
+    node_list,
+    node_size,
+    typing_check_enabled,
+    world_size,
+)

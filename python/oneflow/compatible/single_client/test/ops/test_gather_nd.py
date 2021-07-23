@@ -1,9 +1,11 @@
 import os
-import numpy as np
 import unittest
 from collections import OrderedDict
-from oneflow.compatible import single_client as flow
+
+import numpy as np
 from test_util import GenArgDict, type_name_to_flow_type, type_name_to_np_type
+
+from oneflow.compatible import single_client as flow
 
 
 def _random_inputs(x_shape, x_dtype, index_shape, index_dtype):

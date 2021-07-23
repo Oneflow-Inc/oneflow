@@ -1,5 +1,7 @@
 import os
 from typing import Optional, Sequence, Sized, Union
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.core.register import (
@@ -12,7 +14,6 @@ from oneflow.compatible.single_client.python.framework import (
 from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-import oneflow._oneflow_internal
 
 
 def _gen_unique_name_if_need(name, default_name):

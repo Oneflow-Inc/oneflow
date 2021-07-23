@@ -1,19 +1,20 @@
 import re
+
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.eager.blob_register as blob_register_util
+import oneflow.eager.boxing_util as boxing_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.compile_context as compile_context
+import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.input_blob_def as input_blob_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.hob as hob
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.framework.session_context as session_ctx
 import oneflow.framework.scope_util as scope_util
-import oneflow.eager.boxing_util as boxing_util
-import oneflow.eager.blob_register as blob_register_util
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal
+import oneflow.framework.session_context as session_ctx
+import oneflow.lib.core.enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

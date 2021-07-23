@@ -1,8 +1,10 @@
 import unittest
-import numpy as np
 from collections import OrderedDict
-from oneflow.compatible import single_client as flow
+
+import numpy as np
 from test_util import GenArgDict, type_name_to_flow_type, type_name_to_np_type
+
+from oneflow.compatible import single_client as flow
 
 
 def _make_cast_to_static_shape_fn(

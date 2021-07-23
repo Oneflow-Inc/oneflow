@@ -1,6 +1,6 @@
+import oneflow as flow
 import oneflow.framework.id_util as id_util
 import oneflow.ops.user_op_builder as user_op_builder
-import oneflow as flow
 
 
 def write_scalar(value, step, tag, name=None):

@@ -1,7 +1,5 @@
-from oneflow.lib.core.high_order_bool import bool_functor
-from oneflow.lib.core.high_order_bool import hob_context_attr
-from oneflow.lib.core.high_order_bool import BoolFunctor
 import oneflow._oneflow_internal
+from oneflow.lib.core.high_order_bool import BoolFunctor, bool_functor, hob_context_attr
 
 
 class BoxingHobContext(object):

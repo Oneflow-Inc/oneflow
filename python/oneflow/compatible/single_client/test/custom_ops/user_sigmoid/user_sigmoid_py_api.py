@@ -1,6 +1,7 @@
 import os
+from typing import Callable, List, Optional, Sequence, Tuple, Union
+
 import oneflow.compatible.single_client as flow
-from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 def user_sigmoid_forward(x, name: Optional[str] = None):

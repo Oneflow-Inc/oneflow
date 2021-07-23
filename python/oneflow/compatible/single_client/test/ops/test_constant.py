@@ -1,12 +1,12 @@
-import unittest
-import os
-from collections import OrderedDict
-import numpy as np
-from oneflow.compatible import single_client as flow
-from test_util import GenArgList
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
 import math
+import os
+import unittest
+from collections import OrderedDict
+
+import numpy as np
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
+from oneflow.compatible import single_client as flow
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)

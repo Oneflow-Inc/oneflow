@@ -1,8 +1,10 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from test_util import GenArgList
+
+import oneflow as flow
 
 dummy_val = np.random.randn(2, 3)
 in_val = np.full((2, 3), -2)

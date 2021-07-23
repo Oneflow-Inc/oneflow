@@ -1,8 +1,10 @@
 import threading
+
+import numpy as np
+
+import oneflow._oneflow_internal
 import oneflow.framework.local_blob as local_blob_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow._oneflow_internal
-import numpy as np
 
 
 class FutureRemoteBlobs(object):

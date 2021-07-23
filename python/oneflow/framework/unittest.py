@@ -1,18 +1,20 @@
-import os
-import sys
-import imp
-import socket
-from contextlib import closing
-import uuid
-import unittest
 import atexit
+import imp
+import os
+import socket
+import subprocess
+import sys
+import unittest
+import uuid
+from contextlib import closing
 from tempfile import NamedTemporaryFile
+from typing import Any, Callable, Dict
+
 import google.protobuf.text_format as pbtxt
+
 import oneflow
 import oneflow.framework.env_util as env_util
 from oneflow.core.job.env_pb2 import EnvProto
-from typing import Any, Dict, Callable
-import subprocess
 
 
 class _ClearDefaultSession(object):

@@ -1,4 +1,8 @@
 import traceback
+
+from google.protobuf import text_format
+
+import oneflow._oneflow_internal
 from oneflow.compatible.single_client.core.record import record_pb2 as record_util
 from oneflow.compatible.single_client.python.framework import (
     local_blob as local_blob_util,
@@ -11,8 +15,6 @@ from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
 from oneflow.compatible.single_client.python.framework import typing_util as oft_util
-import oneflow._oneflow_internal
-from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):

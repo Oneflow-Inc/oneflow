@@ -1,10 +1,12 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from scipy import special
-import oneflow as flow
-from test_util import GenArgList
 from automated_test_util import *
+from scipy import special
+from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _test_relu_impl(test_case, shape, device):

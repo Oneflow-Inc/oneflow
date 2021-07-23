@@ -1,2 +1,1 @@
-from oneflow.ops.optimizer import constant
-from oneflow.ops.optimizer import linear
+from oneflow.ops.optimizer import constant, linear

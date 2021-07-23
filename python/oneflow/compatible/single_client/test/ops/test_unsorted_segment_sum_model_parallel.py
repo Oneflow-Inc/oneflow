@@ -1,10 +1,12 @@
-import unittest
 import os
+import unittest
 from collections import OrderedDict
+
 import numpy as np
+from test_util import GenArgList
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-from test_util import GenArgList
 
 
 def _gen_test_data(out_shape, segment_ids_shape, axis):

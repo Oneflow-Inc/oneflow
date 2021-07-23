@@ -1,18 +1,19 @@
 from collections import OrderedDict
-from typing import Dict
 from functools import partial
+from typing import Dict
+
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
 from oneflow._oneflow_internal import Tensor as InternalTensor
+from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.utils import add_indent
-from oneflow.framework.function_util import FunctionConfig
 
 
 class Graph(object):
@@ -240,8 +241,7 @@ class GraphConfig(FunctionConfig):
         )
 
 
-from oneflow.nn.graph_block import Block
-from oneflow.nn.graph_block import BlockConfig
 from oneflow.nn.graph import Graph as Graph
 from oneflow.nn.graph import GraphConfig
+from oneflow.nn.graph_block import Block, BlockConfig
 from oneflow.nn.graph_optimizer import OptimizerConfig

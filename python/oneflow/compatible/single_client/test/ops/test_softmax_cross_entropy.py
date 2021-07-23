@@ -1,14 +1,14 @@
-import unittest
 import os
+import unittest
+from collections import OrderedDict
+
 import numpy as np
 import tensorflow as tf
+import test_global_storage
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-from collections import OrderedDict
-from test_util import GenArgList
-import test_global_storage
-from test_util import type_name_to_flow_type
-from test_util import type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:

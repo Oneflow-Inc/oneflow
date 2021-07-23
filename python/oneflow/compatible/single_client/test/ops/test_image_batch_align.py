@@ -1,6 +1,8 @@
 import unittest
+
 import cv2
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 

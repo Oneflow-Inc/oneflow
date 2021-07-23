@@ -1,14 +1,14 @@
 from __future__ import absolute_import
 
-import os
-import sys
 import argparse
 import glob
+import os
 import platform
-from setuptools import find_packages
-from setuptools import setup
-from setuptools.dist import Distribution
+import sys
+
+from setuptools import find_packages, setup
 from setuptools.command.install import install
+from setuptools.dist import Distribution
 
 
 # https://github.com/google/or-tools/issues/616

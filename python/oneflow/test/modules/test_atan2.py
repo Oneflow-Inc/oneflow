@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from test_util import GenArgList
-import oneflow as flow
 from automated_test_util import *
+from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):

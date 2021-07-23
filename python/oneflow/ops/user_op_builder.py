@@ -1,29 +1,28 @@
-import oneflow.framework.interpret_util as interpret_util
-import oneflow.framework.remote_blob as remote_blob_util
+import random
+import traceback
+
+from google.protobuf import text_format
+
+import oneflow
+import oneflow as flow
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
+import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
+import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow.eager.eager_blob_util as eager_blob_util
+import oneflow.eager.gradient_util as gradient_util
+import oneflow.experimental.name_scope as name_scope
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.compile_context as compile_context
 import oneflow.framework.distribute as distribute
 import oneflow.framework.hob as hob
+import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.lib.core.enable_if as enable_if
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
-import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
-import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
-import oneflow
-import oneflow.framework.hob as hob
-import oneflow.experimental.name_scope as name_scope
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.eager.eager_blob_util as eager_blob_util
-import oneflow.lib.core.enable_if as enable_if
-import random
-import oneflow.eager.gradient_util as gradient_util
-import oneflow as flow
-import oneflow._oneflow_internal
-import traceback
-from google.protobuf import text_format
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

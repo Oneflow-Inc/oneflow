@@ -1,9 +1,11 @@
-from collections import OrderedDict
-import numpy as np
-from oneflow.compatible import single_client as flow
-from test_util import GenArgList
-import unittest
 import os
+import unittest
+from collections import OrderedDict
+
+import numpy as np
+from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 
 
 def do_test(test_case, mirrored):

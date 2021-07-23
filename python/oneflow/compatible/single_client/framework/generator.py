@@ -1,5 +1,5 @@
-from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 
 
 def create_generator(device=None):

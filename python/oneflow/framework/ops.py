@@ -1,15 +1,16 @@
+from typing import Optional, Sequence, Union
+
+import oneflow
+import oneflow._oneflow_internal
 import oneflow.core.common.data_type_pb2 as data_type_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.framework.compile_context as compile_context
 import oneflow.framework.distribute as distribute_util
+import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.framework.hob as hob
 import oneflow.lib.core.enable_if as enable_if
-import oneflow
-import oneflow._oneflow_internal
-from typing import Union, Optional, Sequence
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)

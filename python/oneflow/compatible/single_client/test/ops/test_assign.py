@@ -1,10 +1,12 @@
+import os
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 from test_util import GenArgDict
+
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import os
 
 flow_to_np_dtype_dict = {
     flow.int32: np.int32,

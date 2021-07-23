@@ -1,20 +1,21 @@
-from collections import OrderedDict
 import collections.abc
-from itertools import islice
 import operator
-import oneflow as flow
-from oneflow.nn.module import Module
+from collections import OrderedDict
+from itertools import islice
 from typing import (
     Any,
     Iterable,
     Iterator,
     Mapping,
     Optional,
-    overload,
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
+
+import oneflow as flow
+from oneflow.nn.module import Module
 
 T = TypeVar("T")
 

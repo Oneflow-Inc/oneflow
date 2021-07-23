@@ -1,9 +1,10 @@
 import functools
 import operator
-from oneflow.compatible import single_client as flow
+from typing import List, Optional, Sequence
+
 import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from typing import Optional, Sequence, List
 
 
 def tensor_buffer_to_tensor(

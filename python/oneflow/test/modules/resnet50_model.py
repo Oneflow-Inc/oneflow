@@ -1,7 +1,8 @@
+from typing import Any, Callable, List, Optional, Type, Union
+
 import oneflow as flow
 import oneflow.nn as nn
 from oneflow import Tensor
-from typing import Type, Any, Callable, Union, List, Optional
 
 
 class FakeBN(nn.Module):

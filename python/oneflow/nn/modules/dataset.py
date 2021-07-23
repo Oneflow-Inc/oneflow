@@ -1,11 +1,12 @@
-import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single, _pair, _triple, _reverse_repeat_tuple
-from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from typing import Optional, List, Tuple, Sequence, Union
 import random
 import sys
 import traceback
+from typing import List, Optional, Sequence, Tuple, Union
+
+import oneflow as flow
+from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
+from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
 
 
 def mirrored_gen_random_seed(seed=None):

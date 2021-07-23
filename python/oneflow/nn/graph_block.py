@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from typing import Union, Optional, Iterator, Set
+from typing import Iterator, Optional, Set, Union
+
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.framework.tensor import Tensor

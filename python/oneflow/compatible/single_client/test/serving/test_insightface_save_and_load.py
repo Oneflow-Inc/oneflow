@@ -1,12 +1,14 @@
-import os
-import sys
-import numpy as np
-import shutil
-import unittest
 import argparse
-from oneflow.compatible import single_client as flow
+import os
+import shutil
+import sys
+import unittest
+
+import numpy as np
 from insightface_resnet100 import Resnet100
 from ofrecord_dataset import FaceEmoreRecordDataset
+
+from oneflow.compatible import single_client as flow
 
 
 def init_env():

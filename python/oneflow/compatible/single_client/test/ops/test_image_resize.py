@@ -1,10 +1,12 @@
-import unittest
-import cv2
-import numpy as np
 import typing as tp
+import unittest
+
+import cv2
+import image_test_util
+import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as otp
-import image_test_util
 
 
 def _make_image_resize_to_fixed_func(

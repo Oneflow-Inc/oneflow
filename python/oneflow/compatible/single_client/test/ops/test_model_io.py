@@ -1,9 +1,11 @@
+import os
+import time
 import unittest
+
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as tp
-import time
-import os
 
 
 def _make_gen_var_func(shape, dtype, lr):

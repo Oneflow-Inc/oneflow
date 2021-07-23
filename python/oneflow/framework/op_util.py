@@ -1,5 +1,5 @@
-from oneflow.core.operator.op_conf_pb2 import OperatorConf
 import oneflow._oneflow_internal
+from oneflow.core.operator.op_conf_pb2 import OperatorConf
 
 
 def IsOpConfOnlyCpuSupported(op_conf):

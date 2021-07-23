@@ -1,9 +1,11 @@
+import time
 import unittest
+from typing import Tuple
+
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-from typing import Tuple
-import time
 
 
 @flow.unittest.skip_unless_2n1d()

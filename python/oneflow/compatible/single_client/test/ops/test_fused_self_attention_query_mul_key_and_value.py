@@ -1,9 +1,11 @@
 import os
-import numpy as np
-import unittest
 import typing
-from oneflow.compatible import single_client as flow
+import unittest
+
+import numpy as np
 import test_global_storage
+
+from oneflow.compatible import single_client as flow
 
 
 def get_func_conf():

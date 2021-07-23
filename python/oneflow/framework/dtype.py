@@ -1,7 +1,8 @@
 import numpy as np
-import oneflow.core.common.data_type_pb2 as data_type_pb2
+
 import oneflow
 import oneflow._oneflow_internal
+import oneflow.core.common.data_type_pb2 as data_type_pb2
 
 _dtypes = [
     oneflow.char,

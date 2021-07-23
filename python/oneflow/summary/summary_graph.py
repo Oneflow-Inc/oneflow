@@ -1,9 +1,10 @@
-import os
-import oneflow.core.summary.projector_pb2 as projector_pb2
-import oneflow._oneflow_internal
-import time
 import logging
+import os
+import time
+
 import oneflow as flow
+import oneflow._oneflow_internal
+import oneflow.core.summary.projector_pb2 as projector_pb2
 
 
 class Graph(object):

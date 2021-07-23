@@ -1,9 +1,11 @@
 import unittest
+from typing import Tuple
+
 import numpy as np
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import oneflow._oneflow_internal
-from typing import Tuple
 
 
 @flow.unittest.skip_unless_1n4d()

@@ -35,6 +35,7 @@ class Function:
 
 def RegisterFunctionalApis():
     import inspect
+
     import oneflow.F
 
     for s in dir(oneflow._oneflow_internal.F):

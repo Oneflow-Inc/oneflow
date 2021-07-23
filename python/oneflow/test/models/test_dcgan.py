@@ -1,8 +1,10 @@
-import oneflow as flow
-import oneflow.typing as oft
-import numpy as np
 import os
 import unittest
+
+import numpy as np
+
+import oneflow as flow
+import oneflow.typing as oft
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

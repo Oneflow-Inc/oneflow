@@ -1,7 +1,9 @@
-import unittest
-import os
-import numpy as np
 import math
+import os
+import unittest
+
+import numpy as np
+
 import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as oft
 

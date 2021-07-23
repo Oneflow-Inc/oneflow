@@ -1,10 +1,10 @@
-from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
-from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
 from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
+from oneflow._oneflow_internal.oneflow.core.common import shape as shape_cfg
 from oneflow._oneflow_internal.oneflow.core.framework import (
     user_op_attr as user_op_attr_cfg,
 )
+from oneflow.compatible import single_client as flow
 
 
 def SetAttrValue(attr_value, py_value, default_attr_value):

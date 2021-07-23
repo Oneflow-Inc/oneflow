@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 import tensorflow as tf
 from test_util import GenArgList
+
+from oneflow.compatible import single_client as flow
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:

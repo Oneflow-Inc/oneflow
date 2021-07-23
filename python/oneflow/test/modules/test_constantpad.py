@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
+
 import numpy as np
-import oneflow as flow
 from automated_test_util import *
-from test_util import GenArgList, FlattenArray, Array2Numpy, Index2Coordinate
+from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
+
+import oneflow as flow
 
 
 def _np_constant_pad2d_grad(src, dest, padding):

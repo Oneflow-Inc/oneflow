@@ -1,10 +1,11 @@
 import unittest
-import numpy as np
-import oneflow as flow
-from scipy import special
 from collections import OrderedDict
-import oneflow as flow
+
+import numpy as np
+from scipy import special
 from test_util import GenArgList
+
+import oneflow as flow
 
 
 def _test_erfc_impl(test_case, shape, device):

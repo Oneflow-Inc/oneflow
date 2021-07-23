@@ -1,6 +1,7 @@
-from oneflow.compatible import single_client as flow
-import oneflow._oneflow_internal
 from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+from oneflow.compatible import single_client as flow
 
 
 @contextmanager

@@ -1,11 +1,13 @@
 import os
+import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 import test_global_storage
 from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_type
+
+from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-import unittest
 
 
 def margin_loss(loss_m1, loss_m2, loss_m3, s, inputs, labels):

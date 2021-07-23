@@ -1,8 +1,8 @@
-from contextlib import contextmanager
-import oneflow.framework.distribute_context as distribute_ctx
-from oneflow import oneflow_deprecate
-import oneflow._oneflow_internal
 import traceback
+from contextlib import contextmanager
+
+import oneflow._oneflow_internal
+import oneflow.framework.distribute_context as distribute_ctx
 from oneflow import oneflow_deprecate
 
 

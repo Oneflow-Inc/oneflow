@@ -1,9 +1,11 @@
 import unittest
+
 import cv2
+import image_test_util
 import numpy as np
+
 import oneflow as flow
 import oneflow.nn as nn
-import image_test_util
 
 
 def _of_image_resize(

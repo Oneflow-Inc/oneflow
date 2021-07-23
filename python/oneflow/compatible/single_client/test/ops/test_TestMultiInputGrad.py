@@ -1,10 +1,12 @@
 import os
+import unittest
 from collections import OrderedDict
+
 import numpy as np
-from oneflow.compatible import single_client as flow
 import test_global_storage
 from test_util import GenArgList
-import unittest
+
+from oneflow.compatible import single_client as flow
 
 
 def TestMultiInput(x1, x2):

@@ -1,9 +1,8 @@
-import oneflow.framework.session_context as session_ctx
-import oneflow.framework.hob as hob
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.framework.session_context as session_ctx
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.framework.hob as hob
+import oneflow.framework.session_context as session_ctx
+import oneflow.lib.core.enable_if as enable_if
 
 
 class FunctionAttribute(object):

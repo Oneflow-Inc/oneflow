@@ -1,8 +1,9 @@
 from typing import Optional, Sequence, Union
+
 import oneflow
+import oneflow._oneflow_internal
 import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow._oneflow_internal
 
 
 def pad(

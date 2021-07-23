@@ -1,15 +1,17 @@
 import os
 import typing
+
 from google.protobuf import text_format
+
 import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
+import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
+import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
-import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
-import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
-import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 
 
 class ModelBuilder(object):

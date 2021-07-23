@@ -1,4 +1,6 @@
 from contextlib import contextmanager
+
+import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.experimental import (
     name_scope as name_scope,
@@ -7,18 +9,14 @@ from oneflow.compatible.single_client.python.framework import c_api_util as c_ap
 from oneflow.compatible.single_client.python.framework import (
     distribute_context as distribute_ctx,
 )
+from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.framework import (
     placement_context as placement_context,
 )
 from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
-from oneflow.compatible.single_client.python.framework import hob as hob
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.python.experimental import (
-    name_scope as name_scope,
-)
-import oneflow._oneflow_internal
 
 
 def GetCurJobConfigProto():

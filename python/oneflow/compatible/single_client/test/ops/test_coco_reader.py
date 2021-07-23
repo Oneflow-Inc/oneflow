@@ -1,8 +1,10 @@
-import unittest
 import math
 import os
+import unittest
+
 import cv2
 import numpy as np
+
 from oneflow.compatible import single_client as flow
 
 VERBOSE = False
