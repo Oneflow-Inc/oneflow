@@ -15,6 +15,7 @@ OneFlow API Reference
     tensor
     nn
     F
+    linagl
     optim
 
 
