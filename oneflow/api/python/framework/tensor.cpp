@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
@@ -258,8 +259,9 @@ Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                     Symbol<ParallelDesc> parallel_desc) {
   if (tensor->is_cuda()) {
-    CHECK_EQ_OR_RETURN(JUST(tensor->device())->device_id(),
-                       GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode())
+    CHECK_EQ_OR_RETURN(
+        JUST(tensor->device())->device_id(),
+        GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum()))
         << "tensor must be on default device of rank!";
   }
   std::shared_ptr<Tensor> synced_tensor =
@@ -411,7 +413,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                int device_id = -1;
                ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
                if (device_id == -1) {
-                 device_id = GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode();
+                 if (type == "cpu") {
+                   device_id = GlobalProcessCtx::LocalRank()
+                               % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+                 } else {
+                   device_id = GlobalProcessCtx::LocalRank()
+                               % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
+                 }
                }
                return ConvertTensorDevice(tensor, type, device_id).GetPtrOrThrow();
              } else {
