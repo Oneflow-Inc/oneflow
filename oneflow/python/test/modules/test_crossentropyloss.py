@@ -128,8 +128,8 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
         shape = random_tensor(ndim=random(2, 5), dim1=num_classes).value().shape
 
         m = torch.nn.CrossEntropyLoss(
-            reduction=oneof("none", "sum", "mean"),
-            ignore_index=random(0, num_classes)
+            reduction=oneof("none", "sum", "mean", nothing()),
+            ignore_index=random(0, num_classes) | nothing()
         )
         m.train(random())
         device = random_device()

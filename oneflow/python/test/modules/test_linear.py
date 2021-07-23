@@ -19,6 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
+from test_util import GenArgList
 from automated_test_util import *
 
 
@@ -182,7 +183,7 @@ class TestLinear(flow.unittest.TestCase):
     @autotest()
     def test_linear_with_random_data(test_case):
         input_size = random()
-        m = torch.nn.Linear(in_features=input_size, out_features=random())
+        m = torch.nn.Linear(in_features=input_size, out_features=random(), bias=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
