@@ -243,9 +243,12 @@ class ExportVisitor(ast.NodeTransformer):
 
                 node.decorator_list = compact_decorator_list
                 if is_kept_in_src:
+                    asname = target_symbol
+                    if node.name == target_symbol:
+                        asname = None
                     import_from_src = ast.ImportFrom(
                         module=self.src_target_module,
-                        names=[ast.alias(name=node.name, asname=target_symbol),],
+                        names=[ast.alias(name=node.name, asname=asname),],
                         level=0,
                     )
                     self.append_export(
