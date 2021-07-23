@@ -190,7 +190,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
     if (it == creators.end()) {                                                              \
       LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()       \
                  << " with device_type = " << device_type                                    \
-                 << ", dtype= " << kernel_conf.data_type();                                  \
+                 << ", dtype = " << kernel_conf.data_type();                                 \
     }                                                                                        \
     return (it->second)();                                                                   \
   }                                                                                          \
@@ -259,7 +259,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
     if (it == creators.end()) {                                                              \
       LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()       \
                  << " with device_type = " << device_type                                    \
-                 << ", dtype= " << kernel_conf.data_type();                                  \
+                 << ", dtype = " << kernel_conf.data_type();                                 \
     }                                                                                        \
     return (it->second)();                                                                   \
   }                                                                                          \
