@@ -220,7 +220,7 @@ class ExportVisitor(ast.NodeTransformer):
                     target_moduleN = join_module(
                         self.root_module, get_parent_module(argN.value)
                     )
-                    target_nameN = target_name = argN.value.split(".")[-1]
+                    target_nameN = argN.value.split(".")[-1]
                     assert arg0 != argN, {"arg0": arg0, "argN": argN}
                     import_from_first_export = ast.ImportFrom(
                         module=target_module,
