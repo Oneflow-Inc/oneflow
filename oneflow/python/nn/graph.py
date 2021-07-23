@@ -195,6 +195,7 @@ class Graph(object):
         for idx, arg in enumerate(args):
             eager_inputs.append(arg)
         inputs = convert_to_tensor_tuple(eager_inputs)
+        # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
         oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
             inputs, self._outputs, self._variables, self._c_nn_graph
         )
