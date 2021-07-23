@@ -220,6 +220,7 @@ class SrcFile:
         self.tree = None
         self.dst = Path(spec["dst"])
         self.src: Path = spec["src"]
+        self.target_module = module_from_path(self.dst)
         if is_test and args.verbose:
             print("[skip test]", self.src)
         else:
@@ -389,7 +390,6 @@ if __name__ == "__main__":
     src_module_added = {}
     for s in srcs:
         # src
-        target_module = module_from_path(s.dst)
         append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
         if (
             str(s.src) == "oneflow/python/__init__.py"
@@ -397,14 +397,14 @@ if __name__ == "__main__":
         ):
             assert not s.src.read_text()
             continue
-        print("[src]", target_module, "<=", s.src)
-        assert target_module not in src_module_added, {
-            "target_module": target_module,
+        print("[src]", s.target_module, "<=", s.src)
+        assert s.target_module not in src_module_added, {
+            "target_module": s.target_module,
             "new": str(s.src),
-            "exist": str(src_module_added[target_module]),
+            "exist": str(src_module_added[s.target_module]),
         }
-        src_module_added[target_module] = s.src
-        ModuleNode.add_sub_module(root=root_module, module=target_module)
+        src_module_added[s.target_module] = s.src
+        ModuleNode.add_sub_module(root=root_module, module=s.target_module)
     for s in srcs:
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
