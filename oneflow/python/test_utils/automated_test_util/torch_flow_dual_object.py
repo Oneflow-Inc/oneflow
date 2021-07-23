@@ -246,7 +246,11 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=1e-4, atol=1e-5):
             return False
 
     return np.allclose(
-        torch_tensor.detach().cpu().numpy(), flow_tensor.numpy(), rtol=rtol, atol=atol, equal_nan=True,
+        torch_tensor.detach().cpu().numpy(),
+        flow_tensor.numpy(),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=True,
     )
 
 
