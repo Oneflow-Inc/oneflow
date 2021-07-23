@@ -449,6 +449,9 @@ if __name__ == "__main__":
     # TODO: touch __init__.py, oneflow/F/__init__.py
     Path(os.path.join(OUT_PATH, "oneflow/F")).mkdir(exist_ok=True)
     Path(os.path.join(OUT_PATH, "oneflow/F/__init__.py")).touch()
+    # TODO: remove these two lines later
+    Path(os.path.join(OUT_PATH, "oneflow/experimental/F")).mkdir(exist_ok=True)
+    Path(os.path.join(OUT_PATH, "oneflow/experimental/F/__init__.py")).touch()
     # step 1: extract all exports
     # step 2: merge exports into src in python/
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
@@ -459,7 +462,7 @@ if __name__ == "__main__":
     if args.skip_autoflake == False:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
-            f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --recursive .",
+            f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --exclude **/*.ast.py --recursive .",
             shell=True,
             cwd=args.out_dir,
         )
