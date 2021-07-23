@@ -201,6 +201,8 @@ class ExportVisitor(ast.NodeTransformer):
                 if target_name != node.name:
                     node.name = target_name
                 node.decorator_list = compact_decorator_list
+                # TODO: if target_module and and src_target_module is the same, no need to append there top level imports?
+                self.append_export(target_module=target_module, node=self.top_imports)
                 # TODO: insert "from origin_module import *" in exported func body
                 self.append_export(target_module=target_module, node=import_star_from_src)
                 self.append_export(target_module=target_module, node=node)
