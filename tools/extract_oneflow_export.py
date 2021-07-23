@@ -26,6 +26,7 @@ args = parser.parse_args()
 
 OUT_PATH = Path(args.out_dir)
 SAVE_AST = args.save_ast
+COMPATIBLE_MODULE = "oneflow.compatible.single_client"
 
 
 def dumpprint(node):
@@ -34,9 +35,12 @@ def dumpprint(node):
 
 def is_decorator(d, name=None):
     return (
+        (isinstance(d, ast.Name) and d.id == name) or
+        (
         isinstance(d, ast.Call)
         and isinstance(d.func, ast.Name)
         and d.func.id == name
+        )
     )
 
 def is_stable(node: ast.AST):
@@ -48,7 +52,7 @@ def is_stable(node: ast.AST):
 def is_experimental(node: ast.AST):
     for d in node.decorator_list:
         if is_decorator(d, "experimental_api"):
-            return
+            return True
     return False
 
 def get_parent_module(value):
@@ -77,6 +81,11 @@ def module_from_path(path: Path):
     else:
         return ".".join(path.parts)[0:-3]
 
+def is_compatible_root_module(module: str):
+    if module == COMPATIBLE_MODULE:
+        return True
+    assert module=="oneflow"
+    return False
 
 class ExportVisitor(ast.NodeTransformer):
     def __init__(self, root_module="oneflow") -> None:
@@ -148,10 +157,15 @@ class ExportVisitor(ast.NodeTransformer):
 
 
     def visit_FunctionDef(self, node):
+        if is_compatible_root_module(self.root_module) and is_experimental(node):
+            return None
+        if not is_compatible_root_module(self.root_module) and is_stable(node):
+            return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
         for d in node.decorator_list:
             # if @register_tensor_op, export it in __init__.py
+
             if is_decorator(d, name="oneflow_export"):
                 import_from_exports = []
                 target_module = None
@@ -213,7 +227,7 @@ class SrcFile:
                 or self.src.name == "single_client_init.py"
                 or self.src.name == "single_client_main.py"
             ):
-                root_module = "oneflow.compatible.single_client"
+                root_module = COMPATIBLE_MODULE
             self.export_visitor = ExportVisitor(root_module=root_module)
             self.export_visitor.visit(self.tree)
 
