@@ -73,6 +73,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ZeroPad2d
 .. autofunction:: oneflow.experimental.nn.ReflectionPad2d
 .. autofunction:: oneflow.experimental.nn.ReplicationPad2d
+.. autofunction:: oneflow.experimental.nn.ConstantPad1d
 .. autofunction:: oneflow.experimental.nn.ConstantPad2d
 .. autofunction:: oneflow.experimental.nn.ConstantPad3d
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d

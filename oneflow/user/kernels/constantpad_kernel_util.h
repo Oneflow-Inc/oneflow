@@ -77,9 +77,8 @@ struct ConstantPad3dGradFunctor final {
 template<typename IN_T>
 OF_DEVICE_FUNC void DoConstantPad1d(const IN_T* src, IN_T* dest,
                                     const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-                                    int64_t elem_num, int64_t n_channel,
-                                    int64_t y_width, int64_t x_width, 
-                                    int64_t pad_left, IN_T constant_value) {
+                                    int64_t elem_num, int64_t n_channel, int64_t y_width,
+                                    int64_t x_width, int64_t pad_left, IN_T constant_value) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, w;
     index_helper.OffsetToNdIndex(num, n, c, w);
@@ -99,9 +98,8 @@ OF_DEVICE_FUNC void DoConstantPad1d(const IN_T* src, IN_T* dest,
 template<typename IN_T>
 OF_DEVICE_FUNC void DoConstantPad1dGrad(const IN_T* src, IN_T* dest,
                                         const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-                                        int64_t elem_num, int64_t n_channel,
-                                        int64_t dy_width, int64_t dx_width,
-                                        int64_t pad_left) {
+                                        int64_t elem_num, int64_t n_channel, int64_t dy_width,
+                                        int64_t dx_width, int64_t pad_left) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, w;
     index_helper.OffsetToNdIndex(num, n, c, w);
@@ -166,11 +164,11 @@ OF_DEVICE_FUNC void DoConstantPad3dGrad(const IN_T* src, IN_T* dest,
   }
 }
 
-#define INSTANTIATE_CONSTANT_PAD_FUNCTOR(device_type_v, dtype_pair) \
+#define INSTANTIATE_CONSTANT_PAD_FUNCTOR(device_type_v, dtype_pair)                  \
   template struct ConstantPad1dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ConstantPad3dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
-#define INSTANTIATE_CONSTANT_PAD_GRAD_FUNCTOR(device_type_v, dtype_pair) \
+#define INSTANTIATE_CONSTANT_PAD_GRAD_FUNCTOR(device_type_v, dtype_pair)                 \
   template struct ConstantPad1dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ConstantPad3dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 

@@ -24,11 +24,10 @@ namespace user_op {
 template<typename IN_T>
 __global__ void DoCUDAConstantPad1d(const IN_T* src, IN_T* dest,
                                     const NdIndexOffsetHelper<int64_t, 3> index_helper,
-                                    int64_t elem_num, int64_t n_channel, 
-                                    int64_t y_width, int64_t x_width,
-                                    int64_t pad_left, const IN_T const_value) {
-  DoConstantPad1d<IN_T>(src, dest, index_helper, elem_num, n_channel, y_width,
-                        x_width, pad_left, const_value);
+                                    int64_t elem_num, int64_t n_channel, int64_t y_width,
+                                    int64_t x_width, int64_t pad_left, const IN_T const_value) {
+  DoConstantPad1d<IN_T>(src, dest, index_helper, elem_num, n_channel, y_width, x_width, pad_left,
+                        const_value);
 };
 
 template<typename IN_T>
@@ -45,11 +44,10 @@ __global__ void DoCUDAConstantPad3d(const IN_T* src, IN_T* dest,
 template<typename IN_T>
 __global__ void DoCUDAConstantPad1dGrad(const IN_T* src, IN_T* dest,
                                         const NdIndexOffsetHelper<int64_t, 3> index_helper,
-                                        int64_t elem_num, int64_t n_channel, 
-                                        int64_t dy_width, int64_t dx_width,
-                                        int64_t pad_left) {
-  DoConstantPad1dGrad<IN_T>(src, dest, index_helper, elem_num, n_channel,
-                            dy_width, dx_width, pad_left);
+                                        int64_t elem_num, int64_t n_channel, int64_t dy_width,
+                                        int64_t dx_width, int64_t pad_left) {
+  DoConstantPad1dGrad<IN_T>(src, dest, index_helper, elem_num, n_channel, dy_width, dx_width,
+                            pad_left);
 };
 
 template<typename IN_T>
@@ -63,7 +61,6 @@ __global__ void DoCUDAConstantPad3dGrad(const IN_T* src, IN_T* dest,
                             dy_width, dx_height, dx_depth, dx_width, pad_front, pad_left, pad_top);
 };
 
-
 template<typename IN_T>
 struct ConstantPad1dFunctor<DeviceType::kGPU, IN_T> final {
   void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
@@ -73,10 +70,10 @@ struct ConstantPad1dFunctor<DeviceType::kGPU, IN_T> final {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
 
-    DoCUDAConstantPad1d<IN_T><<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(
-        src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx), 
-        y_shape.At(w_idx), x_shape.At(w_idx), padding[0], constant_value);
+    DoCUDAConstantPad1d<IN_T>
+        <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(src, dest, index_helper, y_shape.Count(0), y_shape.At(c_idx),
+                                 y_shape.At(w_idx), x_shape.At(w_idx), padding[0], constant_value);
   }
 };
 
@@ -91,9 +88,8 @@ void ConstantPad1dFunctor<DeviceType::kGPU, float16>::operator()(
   DoCUDAConstantPad1d<half>
       <<<BlocksNum4ThreadsNum(y_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          y_shape.Count(0), y_shape.At(c_idx), 
-          y_shape.At(w_idx), x_shape.At(w_idx),
-          padding[0], static_cast<const half>(constant_value));
+          y_shape.Count(0), y_shape.At(c_idx), y_shape.At(w_idx), x_shape.At(w_idx), padding[0],
+          static_cast<const half>(constant_value));
 }
 
 template<typename IN_T>
@@ -140,10 +136,10 @@ struct ConstantPad1dGradFunctor<DeviceType::kGPU, IN_T> final {
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
-    DoCUDAConstantPad1dGrad<IN_T><<<BlocksNum4ThreadsNum(dy_shape.Count(0)),
-                                    kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx), 
-        dy_shape.At(w_idx), dx_shape.At(w_idx), padding[0]);
+    DoCUDAConstantPad1dGrad<IN_T>
+        <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx),
+                                 dy_shape.At(w_idx), dx_shape.At(w_idx), padding[0]);
   }
 };
 
@@ -158,8 +154,7 @@ void ConstantPad1dGradFunctor<DeviceType::kGPU, float16>::operator()(
   DoCUDAConstantPad1dGrad<half>
       <<<BlocksNum4ThreadsNum(dy_shape.Count(0)), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper,
-          dy_shape.Count(0), dy_shape.At(c_idx),
-          dy_shape.At(w_idx), dx_shape.At(w_idx),
+          dy_shape.Count(0), dy_shape.At(c_idx), dy_shape.At(w_idx), dx_shape.At(w_idx),
           padding[0]);
 }
 

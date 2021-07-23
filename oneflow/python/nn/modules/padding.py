@@ -190,6 +190,67 @@ class ReflectionPad2d(Module):
         return "{}".format(self.padding)
 
 
+@oneflow_export("nn.ConstantPad1d")
+@experimental_api
+class ConstantPad1d(Module):
+    r"""Pads the input tensor boundaries with a constant value.
+    The interface is consistent with PyTorch, and referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad1d.html?highlight=constantpad1d#torch.nn.ConstantPad1d
+
+    For `N`-dimensional padding, use :func:`torch.nn.functional.pad()`.
+
+    Args:
+        padding (int, tuple): the size of the padding. If is `int`, uses the same
+            padding in both boundaries. If a 2-`tuple`, uses
+            (:math:`\text{padding\_left}`, :math:`\text{padding\_right}`)
+
+    Shape:
+        - Input: :math:`(N, C, W_{in})`
+        - Output: :math:`(N, C, W_{out})` where
+
+          :math:`W_{out} = W_{in} + \text{padding\_left} + \text{padding\_right}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.arange(8).reshape(2,2,2).astype(np.float32))
+        >>> m = flow.nn.ConstantPad1d(padding=[1, 2], value=9.9999)
+        >>> output = m(input)
+        >>> output
+        tensor([[[9.9999, 0.    , 1.    , 9.9999, 9.9999],
+                 [9.9999, 2.    , 3.    , 9.9999, 9.9999]],
+        <BLANKLINE>
+                [[9.9999, 4.    , 5.    , 9.9999, 9.9999],
+                 [9.9999, 6.    , 7.    , 9.9999, 9.9999]]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
+        super().__init__()
+        if isinstance(padding, (tuple, list)):
+            assert len(padding) == 2, ValueError("Length of padding must be 4")
+            boundary = [padding[0], padding[1]]
+        elif isinstance(padding, int):
+            boundary = [padding, padding]
+        else:
+            raise ValueError("padding must be int or list or tuple!")
+
+        self.padding = boundary
+        self.value = value
+
+    def forward(self, x):
+        if x.dtype in (flow.float32, flow.float16, flow.float64):
+            self.value = float(self.value)
+        else:
+            self.value = int(self.value)
+
+        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+
+
 @oneflow_export("nn.ConstantPad2d")
 @experimental_api
 class ConstantPad2d(Module):
@@ -218,7 +279,7 @@ class ConstantPad2d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))

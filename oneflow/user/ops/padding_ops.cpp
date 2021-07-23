@@ -251,7 +251,8 @@ REGISTER_USER_OP("constant_pad1d")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x_shape = ctx->InputShape("x", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 3);
+      CHECK_EQ_OR_RETURN(padding.size(), 2);
       const int64_t n_idx = 0;
       const int64_t c_idx = 1;
       const int64_t w_idx = 2;
@@ -292,7 +293,8 @@ REGISTER_USER_OP("constant_pad1d_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 3);
+      CHECK_EQ_OR_RETURN(padding.size(), 2);
       const int64_t n_idx = 0;
       const int64_t c_idx = 1;
       const int64_t w_idx = 2;
@@ -336,7 +338,6 @@ REGISTER_USER_OP_GRAD("constant_pad1d")
       }
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_USER_OP("constant_pad2d")
     .Input("x")
