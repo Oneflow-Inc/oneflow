@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/operator/callback_notify_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -28,7 +29,12 @@ namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   CHECK_OR_RETURN(BlobDesc4BnInOp("in")->shape() == Shape({1}));
-  CHECK_OR_RETURN(IsIntegralDataType(BlobDesc4BnInOp("in")->data_type()));
+  if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    // NOTE(chengcheng):
+    //   In single-client, callback notifier need use data in blob for sepcify job_id.
+    //   In multi-client, callback notifier do NOT care data in blob, just for signal.
+    CHECK_OR_RETURN(IsIntegralDataType(BlobDesc4BnInOp("in")->data_type()));
+  }
   return Maybe<void>::Ok();
 }
 
