@@ -511,7 +511,7 @@ if __name__ == "__main__":
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
-    if args.autoflake == False:
+    if args.autoflake:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
             f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --exclude '**/*.ast.py' --recursive .",
