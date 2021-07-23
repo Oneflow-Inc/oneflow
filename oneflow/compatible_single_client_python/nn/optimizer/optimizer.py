@@ -18,12 +18,12 @@ import warnings
 from typing import Dict, Callable, Union, Any, Iterator
 import collections
 
-from oneflow.compatible_single_client_python.oneflow_export import (
+from oneflow.compatible.single_client.python.oneflow_export import (
     oneflow_export,
     experimental_api,
 )
-from oneflow.compatible_single_client_python.nn.parameter import Parameter
-from oneflow.compatible_single_client_python.framework.tensor import Tensor
+from oneflow.compatible.single_client.python.nn.parameter import Parameter
+from oneflow.compatible.single_client.python.framework.tensor import Tensor
 
 
 class ParamGroup(object):
