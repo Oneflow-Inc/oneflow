@@ -12,6 +12,7 @@ from collections import OrderedDict
 import astpretty
 import sys
 import copy
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--out_dir", type=str, default="python",
@@ -217,33 +218,42 @@ class ExportVisitor(ast.NodeTransformer):
                     )
                     self.append_export(target_module=target_moduleN, node=import_from_first_export)
 
-                # prepend imports in target module
+
                 if is_deprecated:
                     import_oneflow_deprecate = ast.ImportFrom(
                         module="oneflow", names=[ast.alias(name="oneflow_deprecate")], level=0
                     )
                     self.append_export(target_module=target_module0, node=import_oneflow_deprecate)
-                # TODO: if target_module and and src_target_module is the same, no need to append there top level imports?
-                self.append_export(target_module=target_module0, node=self.top_imports)
-                # TODO: insert "from origin_module import *" in exported func body
-                self.append_export(target_module=target_module0, node=import_star_from_src)
 
-                # save func name for src import as before modifing node.name
-                src_asname = None
-                if node.name != target_name0:
-                    src_asname = node.name
-
-                # save first export in target module
-                node.name = target_name0
                 node.decorator_list = compact_decorator_list
-                self.append_export(target_module=target_module0, node=node)
+                if has_reserved_keyword or self.src_target_module == target_module0:
+                    import_from_src = ast.ImportFrom(
+                        module=self.src_target_module,
+                        names=[ast.alias(name=node.name, asname=target_name0),],
+                        level=0,
+                    )
+                    self.append_export(target_module=target_module0, node=import_from_src)
+                    return node
+                else:
+                    # prepend imports in target module
+                    if self.src_target_module != target_module0:
+                        self.append_export(target_module=target_module0, node=self.top_imports)
+                        # TODO: insert "from origin_module import *" in exported func body no top
+                        self.append_export(target_module=target_module0, node=import_star_from_src)
+                    # save func name for src import as before modifing node.name
+                    src_asname = None
+                    if node.name != target_name0:
+                        src_asname = node.name
+                    # save first export in target module
+                    node.name = target_name0
+                    self.append_export(target_module=target_module0, node=node)
 
-                # src: import from first export
-                return ast.ImportFrom(
-                    module=target_module0,
-                    names=[ast.alias(name=target_name0, asname=src_asname),],
-                    level=0,
-                )
+                    # src: import from first export
+                    return ast.ImportFrom(
+                        module=target_module0,
+                        names=[ast.alias(name=target_name0, asname=src_asname),],
+                        level=0,
+                    )
             if is_decorator(d, name="oneflow_export_value"):
                 assert len(node.body) == 2
                 assert len(d.args) == 1
