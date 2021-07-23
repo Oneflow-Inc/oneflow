@@ -216,6 +216,7 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
                                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                   Symbol<ParallelDesc> parallel_desc) {
+  // TODO(hanbinbin): Sync data when sync_consistent_meta_info branch merged in master
   if (sbp_parallels.size() == 1) {
     const auto& sbp_parallel = sbp_parallels.at(0);
     if (sbp_parallel->has_split_parallel()) {
