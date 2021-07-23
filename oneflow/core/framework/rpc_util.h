@@ -43,19 +43,21 @@ class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare)
       : prepare_(Prepare) {}
   explicit NaiveAsyncRpcCtx(
-      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>& PrepareWithRank)
+      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
+          PrepareWithRank)
       : prepare_with_rank_(PrepareWithRank) {}
   ~NaiveAsyncRpcCtx() override = default;
 
   Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                         std::function<void()>* Callback) override {
-		if (prepare_with_rank_) { return prepare_with_rank_(rank, buffer, size, Callback); }
+    if (prepare_with_rank_) { return prepare_with_rank_(rank, buffer, size, Callback); }
     return prepare_(buffer, size, Callback);
   }
 
  private:
   std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_;
-  std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)> prepare_with_rank_;
+  std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>
+      prepare_with_rank_;
 };
 
 class RankGroup;

@@ -19,10 +19,10 @@ limitations under the License.
 
 namespace oneflow {
 
-static Maybe<FlatShape> New(const Shape& shape) {
-	const auto& flat_shape = std::make_shared<FlatShape>();
+/*static*/ Maybe<FlatShape> FlatShape::New(const Shape& shape) {
+  const auto& flat_shape = std::make_shared<FlatShape>();
   JUST(flat_shape->Init(shape));
-	return flat_shape;
+  return flat_shape;
 }
 
 Maybe<void> FlatShape::Init(const Shape& shape) {
@@ -33,15 +33,13 @@ Maybe<void> FlatShape::Init(const Shape& shape) {
 
 Maybe<void> FlatShape::Check(const Shape& shape) const {
   CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
-  for (int i = 0; i < this->dim_size(); ++i) {
-    CHECK_EQ_OR_RETURN(this->dim(i), shape.At(i));
-  }
+  for (int i = 0; i < this->dim_size(); ++i) { CHECK_EQ_OR_RETURN(this->dim(i), shape.At(i)); }
   return Maybe<void>::Ok();
 }
 
 Maybe<Shape> FlatShape::ToShape() const {
-	DimVector dim_vec;
+  DimVector dim_vec;
   for (int i = 0; i < this->dim_size(); ++i) { dim_vec.push_back(this->dim(i)); }
-	return std::make_shape<Shape>(dim_vec);
+  return std::make_shared<Shape>(dim_vec);
 }
 }  // namespace oneflow

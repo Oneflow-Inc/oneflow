@@ -40,7 +40,7 @@ enum RankGroupRpcCmd {
   kRankGroupRpcCmdSyncSymbolParallelDistribution,
   kRankGroupRpcCmdSyncSymbolConsistentTensorMeta,
   kRankGroupRpcCmdCheckRankGroupConsistency,
-	kRankGroupRpcCmdAll2AllSyncShape,
+  kRankGroupRpcCmdAll2AllSyncShape,
   // End
   kSizeOfRankGroupRpcCmd
 };
