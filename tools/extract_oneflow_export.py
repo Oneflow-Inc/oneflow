@@ -192,12 +192,12 @@ class ExportVisitor(ast.NodeTransformer):
                         names=[ast.alias(name=target_name, asname=asname),],
                         level=0,
                     )
-                    import_from_exports.append(import_star_from_src)
                     import_from_exports.append(import_from_export)
-                # TODO: insert "from origin_module import *" in exported func body
                 if target_name != node.name:
                     node.name = target_name
                 node.decorator_list = compact_decorator_list
+                # TODO: insert "from origin_module import *" in exported func body
+                self.append_export(target_module=target_module, node=import_star_from_src)
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
             if is_decorator(d, name="oneflow_export_value"):
