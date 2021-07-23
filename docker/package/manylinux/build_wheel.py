@@ -266,11 +266,12 @@ cmake --build . -j `nproc`
     if skip_wheel or enter_bash:
         pass
     else:
-        bash_cmd += f"""
-rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
-cd {oneflow_src_dir}
-rm -rf build/*
-{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+        bash_cmd = f"""
+cd {oneflow_src_dir}/python
+git reset -fd
+{bash_cmd}
+{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
+cd -
 """
     if skip_audit:
         bash_cmd += f"""
