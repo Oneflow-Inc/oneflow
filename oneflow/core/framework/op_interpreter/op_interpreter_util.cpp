@@ -101,10 +101,10 @@ template<>
 
 /* static */ Maybe<Tensor> OpInterpUtil::BuildTensor(
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-    const bool is_lazy) {
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr, const bool is_lazy,
+    const bool is_local) {
   const auto& dtype = DataType(blob_attr->get_dtype());
-  if (parallel_attr->is_mirrored()) {
+  if (is_local) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     const auto& tensor = JUST(MirroredTensor::MakeTensor(
