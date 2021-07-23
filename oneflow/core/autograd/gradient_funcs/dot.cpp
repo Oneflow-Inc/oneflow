@@ -35,13 +35,9 @@ class DotGrad : public OpExprGradFunction<DotInterpState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    if (ctx->x_requires_grad) {
-      ctx->x_offset = ctx->SaveTensorForBackward(inputs.at(1));
-    }
+    if (ctx->x_requires_grad) { ctx->x_offset = ctx->SaveTensorForBackward(inputs.at(1)); }
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
-    if (ctx->y_requires_grad) {
-      ctx->y_offset = ctx->SaveTensorForBackward(inputs.at(0));
-    }
+    if (ctx->y_requires_grad) { ctx->y_offset = ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
   }
 
@@ -53,13 +49,13 @@ class DotGrad : public OpExprGradFunction<DotInterpState> {
     if (ctx->x_requires_grad) {
       const auto& x = ctx->SavedTensors().at(ctx->x_offset);
       const auto& results = JUST(functional::ScalarMulByTensor(x, out_grads.at(0)));
-      in_grads->at(0) = results; 
+      in_grads->at(0) = results;
     }
 
     if (ctx->y_requires_grad) {
       const auto& y = ctx->SavedTensors().at(ctx->y_offset);
       const auto& results = JUST(functional::ScalarMulByTensor(y, out_grads.at(0)));
-      in_grads->at(1) = results; 
+      in_grads->at(1) = results;
     }
 
     return Maybe<void>::Ok();

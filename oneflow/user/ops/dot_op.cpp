@@ -48,63 +48,38 @@ REGISTER_USER_OP("dot")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("dot_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dout")
-    .Output("dx")
-    .Output("dy")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      const user_op::TensorDesc& dout = ctx->InputTensorDesc("dout", 0);
-      CHECK_OR_RETURN(dout.shape() == Shape({1}));
-      CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
-      CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
-      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
-      *ctx->OutputShape("dy", 0) = ctx->InputShape("y", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), 0)
-          .Split(user_op::OpArg("y", 0), 0)
-          .Broadcast(user_op::OpArg("dout", 0))
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Split(user_op::OpArg("dy", 0), 0)
+REGISTER_USER_OP_GRAD("dot").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  if (ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)) {
+    const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad_x";
+    ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+      return builder.OpTypeName("scalar_mul")
+          .InputBind("x", ctx->FwOp().input("y", 0))
+          .InputBind("scalar", ctx->FwOp().output_grad("out", 0))
+          .Output("y")
           .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      const user_op::TensorDesc& dout = ctx->InputTensorDesc("dout", 0);
-      CHECK_OR_RETURN((x.data_type() == y.data_type()) & (dout.data_type() == y.data_type()))
-          << "The input tensor type is different";
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-      *ctx->OutputDType("dy", 0) = ctx->InputDType("y", 0);
-      return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("dot").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("dot_grad")
-        .InputBind("x", ctx->FwOp().input("x", 0))
-        .InputBind("y", ctx->FwOp().input("y", 0))
-        .InputBind("dout", ctx->FwOp().output_grad("out", 0))
-        .Output("dx")
-        .Output("dy")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                            [&ctx, &dot_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(dot_grad_op_name).output("dx", 0);
-                            });
-  ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
-                            [&ctx, &dot_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(dot_grad_op_name).output("dy", 0);
-                            });
+    ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                              [&ctx, &dot_grad_op_name]() -> const std::string& {
+                                return ctx->GetOp(dot_grad_op_name).output("y", 0);
+                              });
+  }
+
+  if (ctx->FwOp().NeedGenGradTensor4OpInput("y", 0)) {
+    const auto dot_grad_op_name = ctx->FwOp().op_name() + "_grad_y";
+    ctx->DefineOp(dot_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+      return builder.OpTypeName("scalar_mul")
+          .InputBind("x", ctx->FwOp().input("x", 0))
+          .InputBind("scalar", ctx->FwOp().output_grad("out", 0))
+          .Output("y")
+          .Build();
+    });
+
+    ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
+                              [&ctx, &dot_grad_op_name]() -> const std::string& {
+                                return ctx->GetOp(dot_grad_op_name).output("y", 0);
+                              });
+  }
 });
 
 }  // namespace
