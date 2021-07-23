@@ -120,7 +120,7 @@ class ExportVisitor(ast.NodeTransformer):
             module.body.append(node)
 
     def visit_Expr(self, node):
-        if isinstance(node.value, ast.Constant):
+        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             if "Copyright 2020 The OneFlow Authors" in node.value.value:
                 return None
         return node
@@ -181,6 +181,7 @@ class ExportVisitor(ast.NodeTransformer):
         return node
 
     def visit_ClassDef(self, node):
+        node.body = [self.visit(n) for n in node.body]
         return self.visit_FunctionDef(node)
 
     def visit_FunctionDef(self, node):
@@ -190,6 +191,7 @@ class ExportVisitor(ast.NodeTransformer):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
+        node.body = [self.visit(n) for n in node.body]
         rkv = ReservedKeywordsVisitor(keywords=set({"int", "float"}))
         rkv.visit(node)
         has_reserved_keyword = rkv.has_reserved_keyword
