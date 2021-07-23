@@ -127,6 +127,13 @@ class ExportVisitor(ast.NodeTransformer):
 
     def visit_ImportFrom(self, node):
         for name in node.names:
+            if isinstance(name, ast.alias) and name.name == "oneflow_deprecate":
+                return ast.ImportFrom(
+                    module="oneflow",
+                    names=[ast.alias(name="oneflow_deprecate")],
+                    level=0,
+                )
+        for name in node.names:
             if not self.visit(name):
                 return None
         if node.module:
@@ -194,8 +201,8 @@ class ExportVisitor(ast.NodeTransformer):
             # TODO: if @register_tensor_op, export it in __init__.py
             if is_decorator(d, name="oneflow_export"):
                 is_kept_in_src = (
-                    True or
-                    has_reserved_keyword
+                    True
+                    or has_reserved_keyword
                     or self.src_target_module == target_module
                     or target_module in ["oneflow", "oneflow.scope", COMPATIBLE_MODULE]
                 )
