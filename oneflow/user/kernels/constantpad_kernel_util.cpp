@@ -23,9 +23,10 @@ namespace user_op {
 template<typename IN_T>
 struct ConstantPad1dFunctor<DeviceType::kCPU, IN_T> final {
   void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
-                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
-                  const ShapeView& y_shape, const std::vector<int64_t>& padding,
-                  IN_T constant_value) {
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, 
+                  const ShapeView& x_shape, const ShapeView& y_shape, 
+                  const std::vector<int64_t>& padding, IN_T constant_value
+                  ) {
     // for NCW format input tensor, index of n, c, w is 0, 1, 2
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
@@ -33,7 +34,7 @@ struct ConstantPad1dFunctor<DeviceType::kCPU, IN_T> final {
     DoConstantPad1d<IN_T>(src, dest, index_helper, 
                           y_shape.Count(0), y_shape.At(c_idx),
                           y_shape.At(w_idx), x_shape.At(w_idx),
-                          padding[0], padding[1], constant_value);
+                          padding[0], constant_value);
   }
 };
 
@@ -45,8 +46,7 @@ struct ConstantPad1dGradFunctor<DeviceType::kCPU, IN_T> final {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
     DoConstantPad1dGrad<IN_T>(src, dest, index_helper, dy_shape.Count(0), dy_shape.At(c_idx),
-                              dy_shape.At(w_idx), dx_shape.At(w_idx),
-                              padding[0], padding[1]
+                              dy_shape.At(w_idx), dx_shape.At(w_idx), padding[0]
                               );
   }
 };

@@ -167,9 +167,11 @@ OF_DEVICE_FUNC void DoConstantPad3dGrad(const IN_T* src, IN_T* dest,
 }
 
 #define INSTANTIATE_CONSTANT_PAD_FUNCTOR(device_type_v, dtype_pair) \
+  template struct ConstantPad1dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ConstantPad3dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
 #define INSTANTIATE_CONSTANT_PAD_GRAD_FUNCTOR(device_type_v, dtype_pair) \
+  template struct ConstantPad1dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ConstantPad3dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
 }  // namespace user_op

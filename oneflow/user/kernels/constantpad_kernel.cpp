@@ -93,8 +93,8 @@ class ConstantPad1dKernel final : public OpKernel {
 template<DeviceType device_type, typename IN_T>
 class ConstantPad1dGradKernel final : public OpKernel {
  public:
-  ConstantPad3dGradKernel() = default;
-  ~ConstantPad3dGradKernel() = default;
+  ConstantPad1dGradKernel() = default;
+  ~ConstantPad1dGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -211,7 +211,7 @@ class ConstantPad3dGradKernel final : public OpKernel {
 REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_CONSTANT_PAD_WITH_DEVICE(DeviceType::kGPU)
-// REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kGPU, float16)
+REGISTER_CONSTANT_PAD_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 }  // namespace user_op
