@@ -21,6 +21,7 @@ namespace oneflow {
 Maybe<void> SourceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_source_tick_conf());
   CHECK(op_conf().ctrl_in_op_name().empty());
+  if (op_conf().source_tick_conf().has_wait_in()) { EnrollInputBn("wait_in", false); }
   EnrollOutputBn("out", false);
   return Maybe<void>::Ok();
 }
@@ -45,7 +46,8 @@ Maybe<void> SourceTickOp::InferOutBlobDescs(
 }
 
 Maybe<void> SourceTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  auto* sbp_signature = sbp_sig_list->mutable_sbp_signature()->Add();
+  SbpSignatureBuilder().Broadcast(input_bns()).Broadcast(output_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();
 }
 
