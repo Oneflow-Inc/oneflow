@@ -21,22 +21,9 @@ class InstallPlatlib(install):
 
 parser = argparse.ArgumentParser()
 parser.register("type", "bool", lambda v: v.lower() == "true")
-parser.add_argument(
-    "--with_xla",
-    type="bool",
-    default=False,
-    help="Package xla libraries if true, otherwise not.",
-)
-parser.add_argument("--build_dir", type=str, default="build")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
-build_dir_from_env = os.getenv("ONEFLOW_CMAKE_BUILD_DIR")
-build_dir = args.build_dir
-if build_dir_from_env:
-    build_dir = build_dir_from_env
-
-print("using cmake build dir:", build_dir)
 REQUIRED_PACKAGES = [
     "numpy",
     "protobuf>=3.9.2",

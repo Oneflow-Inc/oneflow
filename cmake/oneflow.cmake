@@ -336,7 +336,7 @@ if(BUILD_TESTING)
 endif()
 
 # build include
-set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
+set(ONEFLOW_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/python/oneflow/include")
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy oneflow_internal)
