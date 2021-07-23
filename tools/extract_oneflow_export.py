@@ -242,7 +242,7 @@ class ExportVisitor(ast.NodeTransformer):
                         level=0,
                     )
                     self.append_export(
-                        target_module=target_module, node=import_from_src
+                        target_module=target_module0, node=import_from_src
                     )
                     if is_deprecated:
                         return [import_oneflow_deprecate, node]
