@@ -397,7 +397,7 @@ if __name__ == "__main__":
         ):
             assert not s.src.read_text()
             continue
-        print("[src]", target_module, s.src)
+        print("[src]", target_module, "<=", s.src)
         assert target_module not in src_module_added, {
             "target_module": target_module,
             "new": str(s.src),
