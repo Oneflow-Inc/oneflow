@@ -200,7 +200,7 @@ class ExportVisitor(ast.NodeTransformer):
                 target_module0 = join_module(
                     self.root_module, get_parent_module(arg0.value)
                 )
-                target_name0 = arg0.value.split(".")[-1]
+                target_symbol0 = arg0.value.split(".")[-1]
 
                 # nth export: import from first export
                 for argN in d.args[1::]:
@@ -229,7 +229,7 @@ class ExportVisitor(ast.NodeTransformer):
                 if has_reserved_keyword or self.src_target_module == target_module0:
                     import_from_src = ast.ImportFrom(
                         module=self.src_target_module,
-                        names=[ast.alias(name=node.name, asname=target_name0),],
+                        names=[ast.alias(name=node.name, asname=target_symbol0),],
                         level=0,
                     )
                     self.append_export(target_module=target_module0, node=import_from_src)
@@ -242,16 +242,16 @@ class ExportVisitor(ast.NodeTransformer):
                         self.append_export(target_module=target_module0, node=import_star_from_src)
                     # save func name for src import as before modifing node.name
                     src_asname = None
-                    if node.name != target_name0:
+                    if node.name != target_symbol0:
                         src_asname = node.name
                     # save first export in target module
-                    node.name = target_name0
+                    node.name = target_symbol0
                     self.append_export(target_module=target_module0, node=node)
 
                     # src: import from first export
                     return ast.ImportFrom(
                         module=target_module0,
-                        names=[ast.alias(name=target_name0, asname=src_asname),],
+                        names=[ast.alias(name=target_symbol0, asname=src_asname),],
                         level=0,
                     )
             if is_decorator(d, name="oneflow_export_value"):
