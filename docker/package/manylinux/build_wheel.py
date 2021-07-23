@@ -269,6 +269,7 @@ cmake --build . -j `nproc`
         bash_cmd = f"""
 cd {oneflow_src_dir}/python
 git clean -fd
+git clean -fX
 cd -
 {bash_cmd}
 cd {oneflow_src_dir}/python
