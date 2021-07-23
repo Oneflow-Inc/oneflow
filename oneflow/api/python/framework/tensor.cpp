@@ -393,7 +393,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<Tensor>& tensor,
               const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
               Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<Tensor> {
-             return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
              if (tensor->is_consistent()) {
                UNIMPLEMENTED();
              } else {
