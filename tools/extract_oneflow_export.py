@@ -220,18 +220,22 @@ class ExportVisitor(ast.NodeTransformer):
                     import_oneflow_deprecate = ast.ImportFrom(
                         module="oneflow", names=[ast.alias(name="oneflow_deprecate")], level=0
                     )
-                    self.append_export(target_module=target_module0, node=import_oneflow_deprecate)
 
                 node.decorator_list = compact_decorator_list
-                if has_reserved_keyword or self.src_target_module == target_module0:
+                if has_reserved_keyword or self.src_target_module == target_module0 or target_module0 in ["oneflow", COMPATIBLE_MODULE] :
                     import_from_src = ast.ImportFrom(
                         module=self.src_target_module,
                         names=[ast.alias(name=node.name, asname=target_symbol0),],
                         level=0,
                     )
                     self.append_export(target_module=target_module0, node=import_from_src)
-                    return node
+                    if is_deprecated:
+                        return [import_oneflow_deprecate, node]
+                    else:
+                        return node
                 else:
+                    if is_deprecated:
+                        self.append_export(target_module=target_module0, node=import_oneflow_deprecate)
                     # prepend imports in target module
                     self.append_export(target_module=target_module0, node=self.top_imports)
                     if target_module0 != "oneflow":
