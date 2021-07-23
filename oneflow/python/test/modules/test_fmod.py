@@ -77,15 +77,13 @@ class TestFmodModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:]) 
     
+    @autotest
     def test_flow_fmod_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, 
-                "fmod",
-                extra_annotations={"other": float},
-                extra_generators={"other": random(-100, 100)}, 
-                device=device,
-            )
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        other = random_pytorch_tensor().to(device)
+        return torch.fmod(input,other)
+
 
 if __name__ == "__main__":
     unittest.main()
