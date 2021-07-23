@@ -106,6 +106,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     OF_SESSION_BARRIER();
   }
+  // NOTE(chengcheng): recovery op_attr
+  PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
+
   NewRuntimeBuffers();
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
   runtime_inited_ = true;

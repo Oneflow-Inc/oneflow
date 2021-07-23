@@ -39,7 +39,8 @@ def graph_build_context(config_proto, session):
     device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
     new_scope = scope_util.MakeInitialScope(
         config_proto,
-        *device_tag_and_ids,
+        "cpu",
+        ["0:0"],  # *device_tag_and_ids,
         None,  # TODO(): set hierarchy from user graph config
         False,  # is_mirrored
     )
