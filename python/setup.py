@@ -85,7 +85,7 @@ def get_version():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "version", os.path.join(python_scripts_dir, "oneflow", "python", "version.py")
+        "version", os.path.join(python_scripts_dir, "oneflow", "version.py")
     )
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
