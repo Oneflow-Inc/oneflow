@@ -15,7 +15,7 @@ limitations under the License.
 """
 import math
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _single, _pair
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t

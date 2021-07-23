@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,

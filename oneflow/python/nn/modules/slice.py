@@ -16,7 +16,7 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.array_ops import check_slice_tup_list, GetSliceAttrs
 from typing import Sequence, Tuple
 

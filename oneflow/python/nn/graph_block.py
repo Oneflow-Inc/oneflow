@@ -20,7 +20,7 @@ from typing import Union, Optional, Iterator, Set
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.graph_build_util as graph_build_util
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter

@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _check_inplace_valid
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 

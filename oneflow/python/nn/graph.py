@@ -23,7 +23,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow._oneflow_internal import Tensor as InternalTensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.multi_client_session import MultiClientSession
 from oneflow.python.nn.graph_block import Block, BlockType
 from oneflow.python.nn.graph_optimizer import OptimizerConfig

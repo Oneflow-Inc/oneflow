@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.nn.modules.batchnorm import _NormBase
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class _InstanceNorm(_NormBase):

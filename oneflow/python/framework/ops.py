@@ -30,16 +30,6 @@ import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
 
-@oneflow_export("repeat")
-@stable_api
-def api_repeat(
-    input: oneflow._oneflow_internal.BlobDesc,
-    repeat_num: int,
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-    func = enable_if.unique([repeat])
-    return func(input, repeat_num, name=name)
-
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def repeat(input, repeat_num, name=None):

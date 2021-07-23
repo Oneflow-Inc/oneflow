@@ -19,7 +19,7 @@ import collections
 
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import ParamGroup, Optimizer
 

@@ -17,7 +17,7 @@ from typing import Optional
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.constant import _ConstantBase
 

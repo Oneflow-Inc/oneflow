@@ -17,7 +17,7 @@ from typing import Sequence, Optional
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class TensorBufferToTensor(Module):

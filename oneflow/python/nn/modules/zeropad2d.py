@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from typing import Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 

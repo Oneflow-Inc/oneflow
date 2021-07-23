@@ -16,7 +16,7 @@ limitations under the License.
 from typing import Optional
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
