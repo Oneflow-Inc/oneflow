@@ -161,7 +161,8 @@ class ExportVisitor(ast.NodeTransformer):
                     )
                     import_from_exports.append(import_from_export)
                 # TODO: insert "from origin_module import *" in exported func body
-                # TODO: rename function to target_name
+                if target_name != node.name:
+                    node.name = target_name
                 node.decorator_list = compact_decorator_list
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
