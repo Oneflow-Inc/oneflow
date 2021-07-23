@@ -30,14 +30,15 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
 
         m = torch.nn.CrossEntropyLoss(
             reduction=oneof("none", "sum", "mean", nothing()),
-            ignore_index=random(0, num_classes) | nothing()
+            ignore_index=random(0, num_classes) | nothing(),
         )
         m.train(random())
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape) - 1, *shape[:1] + shape[2:], low=0, high=num_classes, dtype=int).to(
-            device)
+        target = random_pytorch_tensor(
+            len(shape) - 1, *shape[:1] + shape[2:], low=0, high=num_classes, dtype=int
+        ).to(device)
         y = m(x, target)
         return y
 
