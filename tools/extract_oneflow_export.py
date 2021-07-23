@@ -109,7 +109,6 @@ class ExportVisitor(ast.NodeTransformer):
             self.export_modules[target_module] = module
         else:
             module = self.export_modules[target_module]
-        # dumpprint(module)
         if isinstance(node, list):
             module.body += node
         else:
@@ -452,8 +451,6 @@ class ModuleNode:
 def save_trees(args=None):
     dst: Path = args["dst"]
     trees = args["trees"]
-    # if len(trees) > 2:
-    # print(dst, len(trees))
     dst_full = OUT_PATH.joinpath(dst)
     dst_full.parent.mkdir(parents=True, exist_ok=True)
     dst_full.touch(exist_ok=False)
@@ -496,7 +493,6 @@ if __name__ == "__main__":
         ):
             assert not s.src.read_text()
             continue
-        print("[src]", s.target_module, "<=", s.src)
         assert s.target_module not in src_module_added, {
             "target_module": s.target_module,
             "new": str(s.src),
@@ -507,22 +503,13 @@ if __name__ == "__main__":
     for s in srcs:
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
-            print("[export]", export_path)
             append_trees(tree_dict=final_trees, module=export_path, tree=export_tree)
             ModuleNode.add_sub_module(root=root_module, module=export_path)
-    # print(root_module)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
-
-    print("leaf_modules", leaf_modules)
-
     def is_init(module: str):
         is_leaf = module in leaf_modules
         is_magic = module.endswith("__")
-        if is_magic:
-            print("[magic]", module)
-        if is_leaf == False and is_magic == False:
-            print("[init]", module)
         return is_leaf == False and is_magic == False
 
     srcs = pool.map(
