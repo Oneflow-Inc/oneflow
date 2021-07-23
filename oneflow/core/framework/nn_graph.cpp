@@ -77,6 +77,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
 
+  // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
+  if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
+
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();

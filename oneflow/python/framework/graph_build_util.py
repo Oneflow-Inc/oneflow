@@ -59,8 +59,7 @@ class JobBuildAndInferCtx(object):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(self._job_conf)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # TODO(xuxiaoyu): open job optimization pass
-        # oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
         oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
         if exc_type is None:
             return True

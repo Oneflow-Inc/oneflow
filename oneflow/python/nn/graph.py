@@ -179,12 +179,11 @@ class Graph(object):
                 state_op_names, state_tensors
             )
 
-            # Complie and init Runtime
-            self._c_nn_graph.complie_and_init_runtime()
-
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
+        # Complie and init Runtime
+        self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
         return eager_outputs
 
