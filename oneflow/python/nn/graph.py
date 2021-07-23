@@ -15,17 +15,17 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from collections import OrderedDict
+from typing import Dict
 from functools import partial
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.graph_build_util as graph_build_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.multi_client_session import MultiClientSession
-from oneflow.python.nn.graph_block import Block
+from oneflow.python.nn.graph_block import Block, BlockType
 from oneflow.python.nn.graph_optimizer import OptimizerConfig
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.optimizer.optimizer import Optimizer
@@ -42,11 +42,11 @@ class Graph(object):
         self.config = GraphConfig()
         self._generate_name()
         self.config.proto.set_job_name(self._name)
-        self._c_nn_graph = oneflow._oneflow_internal.NNGraph(self._name)
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._is_compiled = False
-        self._state_tensortuple = None
+        self._var2var_op_name = dict()
         self._job_proto = None
 
     @property
@@ -72,8 +72,14 @@ class Graph(object):
         grad_clipping_conf=None,
         weight_decay_conf=None,
     ):
+        assert name is not None, "name cannot be None"
+        assert type(name) is str, "name must be an instance of str"
+        assert optimizer is not None, "optimizer cannot be None"
+        assert isinstance(
+            optimizer, Optimizer
+        ), "optimizer must be an instance of Optimizer"
         self._optimizers[name] = OptimizerConfig(
-            optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
+            name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
 
     def _generate_name(self):
@@ -92,18 +98,34 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
+    def _preprocess_state(self):
+        state_list = list()
+        for state_block in self._state():
+            state_list.append(state_block.origin)
+            if state_block.type == BlockType.PARAMETER:
+                self._var2var_op_name[state_block.origin] = (
+                    state_block.name_prefix + state_block.name
+                )
+
+    def _complete_graph_config(self):
+        if len(self._optimizers):
+            self.config._train(True)
+        # TODO(xuxiaoyu): save variable name and it's l2 if optimizer has weight decay
+        # which means to used as l2.
+        for name, opt_config in self._optimizers.items():
+            self.config.add_optimizer_config(opt_config, self._var2var_op_name)
+
     def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        state = tuple(s.origin for s in self._state())
-        if len(state) > 0:
-            self._state_tensortuple = tensor_tuple_util.convert_to_tensor_tuple(state)
+
+        self._preprocess_state()
+        self._complete_graph_config()
 
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         session.TryInit()
-
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with input
             lazy_args = []
@@ -188,6 +210,8 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
+        # TODO(xuxiaoyu): Add dict of Parameter id to Parameter Block, for using id
+        # to query Parameter Block.
         self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
@@ -195,8 +219,8 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', \
-                 please use add_optimizer(...) instead.".format(
+                "'{}' object are not allowed to set Optimizer attribute named '{}', "
+                "please use add_optimizer(...) instead.".format(
                     type(self).__name__, name
                 )
             )
@@ -243,14 +267,22 @@ class GraphConfig(FunctionConfig):
 
     @property
     def training(self):
-        if self.function_desc.job_config_proto.has_train_conf():
+        if self.proto.has_train_conf():
             return True
-        if self.function_desc.job_config_proto.has_predict_conf():
+        if self.proto.has_predict_conf():
             return False
         raise NotImplementedError
 
     def _train(self, mode: bool = True):
         if mode:
-            self.function_desc.job_config_proto.mutable_train_conf()
+            self.proto.mutable_train_conf()
+            self.proto.mutable_train_conf().set_loss_scale_factor(1.0)
         else:
-            self.function_desc.job_config_proto.mutable_predict_conf()
+            self.proto.mutable_predict_conf()
+
+    def add_optimizer_config(
+        self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
+    ):
+        optimizer_config.optimizer.add_to_graph_train_config(
+            self.proto.mutable_train_conf(), var2var_op_name
+        )

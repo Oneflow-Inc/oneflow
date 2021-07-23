@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <string>
+#include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/register/blob.h"
@@ -23,9 +25,9 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
-  py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "NNGraph")
+  py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
       .def(py::init<const std::string&>())
       .def_property_readonly("name", &NNGraph::job_name)
       .def("register_input_op_names",
@@ -51,5 +53,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              const std::shared_ptr<NNGraph>& nn_graph) {
     return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
   });
+  m.def("AddTensorAsGraphLoss",
+        [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
 }
 }  // namespace oneflow
