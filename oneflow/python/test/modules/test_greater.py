@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_greater_normal(test_case, device):
@@ -63,7 +64,7 @@ def _test_greater_int_scalar(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_greater_int_tensor_int_scalr(test_case, device):
+def _test_greater_int_tensor_int_scalar(test_case, device):
     np_arr = np.random.randint(2, size=(2, 3, 4, 5))
     input1 = flow.Tensor(np_arr, dtype=flow.int, device=flow.device(device))
     input2 = 1
@@ -83,18 +84,37 @@ def _test_greater_float_scalar(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestGreater(flow.unittest.TestCase):
-    def test_greter(test_case):
+    def test_greater(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_greater_normal,
             _test_greater_symbol,
             _test_greater_int_scalar,
-            _test_greater_int_tensor_int_scalr,
+            _test_greater_int_tensor_int_scalar,
             _test_greater_float_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=60, auto_backward=False)
+    def test_greater_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.gt(x1, oneof(x2, random().to(int), random().to(float)))
+        return y
+
+    @autotest(n=60, auto_backward=False)
+    def test_tensor_greater_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y1 = x1.gt(oneof(x2, random().to(int), random().to(float)))
+        y2 = x1 > x2
+        return y1, y2
 
 
 if __name__ == "__main__":

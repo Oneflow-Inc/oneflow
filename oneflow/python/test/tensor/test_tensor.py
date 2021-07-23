@@ -21,6 +21,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.typing as oft
+from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -90,7 +91,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape)
         np_zeros = np.zeros(x.shape)
 
-        random_fill_val = random.uniform(-100.0, 100.0)
+        random_fill_val = np.random.uniform(-100.0, 100.0)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -114,7 +115,7 @@ class TestTensor(flow.unittest.TestCase):
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
 
-        random_fill_val = random.randint(-100, 100)
+        random_fill_val = np.random.randint(-100, 100)
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
@@ -389,33 +390,73 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    def test_asinh(test_case):
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = input.asinh()
-        np_out = np.arcsinh(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    @autotest()
+    def test_tensor_tanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.tanh()
+        return y
 
-    def test_arcsinh(test_case):
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = input.arcsinh()
-        np_out = np.arcsinh(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    @unittest.skip("asin has bug")
+    @autotest()
+    def test_flow_tensor_asin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.asin()
+        return y
 
-    def test_asin(test_case):
-        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
-        of_out = input.asin()
-        np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-        )
+    @unittest.skip("arcsin has bug")
+    @autotest()
+    def test_flow_tensor_arcsin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arcsin()
+        return y
 
-    def test_arcsin(test_case):
-        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
-        of_out = input.arcsin()
-        np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-        )
+    @autotest()
+    def test_flow_tensor_asinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.asinh()
+        return y
+
+    @autotest()
+    def test_flow_tensor_arcsinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arcsinh()
+        return y
+
+    @autotest()
+    def test_flow_tensor_sinh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sinh()
+        return y
+
+    @autotest()
+    def test_flow_tensor_atan2_with_random_data(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
+        y = x1.atan2(x2)
+        return y
+
+    @unittest.skip("arccosh has bug")
+    @autotest()
+    def test_arccosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arccosh()
+        return y
+
+    @unittest.skip("acosh has bug")
+    @autotest()
+    def test_acosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.acosh()
+        return y
 
     def test_mean(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
@@ -786,6 +827,41 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_fmod(test_case):
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        y = random.uniform(-10, 10)
+        of_out = x.fmod(y)
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
+
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((5, 5)), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_magic_fmod(test_case):
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        y = random.uniform(-10, 10)
+        of_out = x % y
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((5, 5)), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_ceil(test_case):
         x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.ceil()

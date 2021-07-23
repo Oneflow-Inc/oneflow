@@ -563,6 +563,10 @@ class Tensor:
     def __pow__(self, b):
         return flow.pow(self, b)
 
+    @register_local_tensor_method()
+    def __mod__(self, other):
+        return flow.experimental.fmod(self, other)
+
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
             self.determine(determining_initializer)

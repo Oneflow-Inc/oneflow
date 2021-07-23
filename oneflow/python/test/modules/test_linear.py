@@ -18,8 +18,9 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow as flow
+import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_linear_no_bias(test_case, device):
@@ -178,6 +179,33 @@ class TestLinear(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_linear_with_random_data(test_case):
+        input_size = random()
+        m = torch.nn.Linear(
+            in_features=input_size, out_features=random(), bias=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=2, dim1=input_size).to(device)
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_identity_with_random_data(test_case):
+        m = torch.nn.Identity(
+            x=random().to(int),
+            unused_argument1=random().to(float),
+            unused_argument2=random().to(float),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

@@ -216,7 +216,7 @@ def equality_checker(torch_type, flow_type):
     return deco
 
 
-def check_equality(dual_object: DualObject):
+def check_equality(dual_object: DualObject, rtol=1e-4, atol=1e-5):
     checker = torch_type2checker.get(
         (type(dual_object.pytorch), type(dual_object.oneflow)), None
     )
@@ -228,12 +228,12 @@ def check_equality(dual_object: DualObject):
                 checker = value
                 break
     assert checker is not None
-    return checker(dual_object.pytorch, dual_object.oneflow)
+    return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
 
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
-def check_tensor_equality(torch_tensor, flow_tensor):
+def check_tensor_equality(torch_tensor, flow_tensor, rtol=1e-4, atol=1e-5):
     # TODO: check dtype
     if torch_tensor.grad is not None:
         assert (
@@ -243,7 +243,14 @@ def check_tensor_equality(torch_tensor, flow_tensor):
             torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()
         ):
             return False
-    return np.allclose(torch_tensor.detach().cpu().numpy(), flow_tensor.numpy())
+
+    return np.allclose(
+        torch_tensor.detach().cpu().numpy(),
+        flow_tensor.numpy(),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=True,
+    )
 
 
 def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
@@ -282,7 +289,7 @@ def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
                             )
                         )
                 for x in dual_objects_to_test:
-                    test_case.assertTrue(check_equality(x))
+                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol))
                 if verbose:
                     print("test passed")
                 n -= 1
@@ -293,14 +300,25 @@ def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
 
 
 def random_pytorch_tensor(
-    ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, requires_grad=True
+    ndim=None,
+    dim0=1,
+    dim1=None,
+    dim2=None,
+    dim3=None,
+    dim4=None,
+    low=0,
+    high=1,
+    dtype=float,
+    requires_grad=True,
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4)
+        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
         .value()
-        .requires_grad_(requires_grad)
+        .requires_grad_(
+            requires_grad and dtype != int
+        )  # Only Tensors of floating point dtype can require gradients
     )
     flow_tensor = flow.tensor(pytorch_tensor.detach().cpu().numpy(), requires_grad=True)
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
