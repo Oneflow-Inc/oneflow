@@ -88,12 +88,13 @@ def is_compatible_root_module(module: str):
     return False
 
 class ExportVisitor(ast.NodeTransformer):
-    def __init__(self, root_module="oneflow") -> None:
+    def __init__(self, root_module="oneflow", src_target_module:str=None) -> None:
         super().__init__()
         self.staging_decorators = []
         self.root_module = root_module
         self.export_modules = {}
         self.top_imports = []
+        self.src_target_module = src_target_module
 
     def append_export(self, target_module=None, node=None):
         if target_module not in self.export_modules:
@@ -172,6 +173,9 @@ class ExportVisitor(ast.NodeTransformer):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
+        import_star_from_src = ast.ImportFrom(
+            module=self.src_target_module, names=[ast.alias(name='*')], level=0
+        )
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
 
@@ -194,10 +198,11 @@ class ExportVisitor(ast.NodeTransformer):
                         level=0,
                     )
                     import_from_exports.append(import_from_export)
-                # TODO: insert "from origin_module import *" in exported func body
                 if target_name != node.name:
                     node.name = target_name
                 node.decorator_list = compact_decorator_list
+                # TODO: insert "from origin_module import *" in exported func body
+                self.append_export(target_module=target_module, node=import_star_from_src)
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
             if is_decorator(d, name="oneflow_export_value"):
@@ -225,6 +230,7 @@ class SrcFile:
         self.tree = None
         self.dst = Path(spec["dst"])
         self.src: Path = spec["src"]
+        self.target_module = module_from_path(self.dst)
         if is_test and args.verbose:
             print("[skip test]", self.src)
         else:
@@ -237,7 +243,7 @@ class SrcFile:
                 or self.src.name == "single_client_main.py"
             ):
                 root_module = COMPATIBLE_MODULE
-            self.export_visitor = ExportVisitor(root_module=root_module)
+            self.export_visitor = ExportVisitor(root_module=root_module, src_target_module=self.target_module)
             self.export_visitor.visit(self.tree)
 
 
@@ -394,22 +400,21 @@ if __name__ == "__main__":
     src_module_added = {}
     for s in srcs:
         # src
-        target_module = module_from_path(s.dst)
-        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        append_trees(tree_dict=final_trees, module=s.target_module, tree=s.tree)
         if (
             str(s.src) == "oneflow/python/__init__.py"
             or str(s.src) == "oneflow/compatible_single_client_python/__init__.py"
         ):
             assert not s.src.read_text()
             continue
-        print("[src]", target_module, s.src)
-        assert target_module not in src_module_added, {
-            "target_module": target_module,
+        print("[src]", s.target_module, "<=", s.src)
+        assert s.target_module not in src_module_added, {
+            "target_module": s.target_module,
             "new": str(s.src),
-            "exist": str(src_module_added[target_module]),
+            "exist": str(src_module_added[s.target_module]),
         }
-        src_module_added[target_module] = s.src
-        ModuleNode.add_sub_module(root=root_module, module=target_module)
+        src_module_added[s.target_module] = s.src
+        ModuleNode.add_sub_module(root=root_module, module=s.target_module)
     for s in srcs:
         # exports
         for export_path, export_tree in s.export_visitor.export_modules.items():
