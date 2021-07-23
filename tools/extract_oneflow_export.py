@@ -406,10 +406,9 @@ if __name__ == "__main__":
     )
     pool.close()
     # step 1: extract all exports
-    # step 2: merge files under python/ into generated files
-    # step 3: rename all
+    # step 2: merge exports into src in python/
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
-    # step 5: save file and sort imports and format
+    # step 5: save file and post process (sort imports, format, etc)
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
