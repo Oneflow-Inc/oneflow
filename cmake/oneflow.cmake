@@ -291,7 +291,7 @@ endif()
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${ONEFLOW_PYTHON_DIR}/oneflow/core"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${ONEFLOW_PYTHON_DIR}
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR} --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py
 )
 
 # source this file to add oneflow in PYTHONPATH
