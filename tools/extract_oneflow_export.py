@@ -93,6 +93,7 @@ class ExportVisitor(ast.NodeTransformer):
         self.staging_decorators = []
         self.root_module = root_module
         self.export_modules = {}
+        self.top_imports = []
 
     def append_export(self, target_module=None, node=None):
         if target_module not in self.export_modules:
@@ -101,7 +102,10 @@ class ExportVisitor(ast.NodeTransformer):
         else:
             module = self.export_modules[target_module]
         # dumpprint(module)
-        module.body.append(node)
+        if isinstance(node, list):
+            module.body += node
+        else:
+            module.body.append(node)
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Constant):
@@ -120,13 +124,14 @@ class ExportVisitor(ast.NodeTransformer):
                 return None
             if node.module.startswith("oneflow.python."):
                 node.module = node.module.replace("oneflow.python.", "oneflow.")
-                return node
+        self.top_imports.append(node)
         return node
 
     def visit_Import(self, node):
         for name in node.names:
             if not super().visit(name):
                 return None
+        self.top_imports.append(node)
         return node
 
     def visit_alias(self, node: ast.alias) -> ast.alias:
