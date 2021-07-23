@@ -109,7 +109,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
 
   CHECK_OR_RETURN(!outputs->at(0).get());
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ true,
+                                                 /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   return Maybe<void>::Ok();
 }
@@ -163,7 +164,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
 
   CHECK_OR_RETURN(!outputs->at(0).get());
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ true,
+                                                 /* is_local */ input_tensor->is_local()));
   // NOTE(chengcheng): Record variable op output LazyTenosr
   TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
@@ -178,8 +180,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_lazy());
-  // NOTE(chengcheng): Lazy always consistent.
-  CHECK_OR_RETURN(input_tensor->is_consistent());
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
@@ -223,7 +223,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 
   CHECK_OR_RETURN(!outputs->at(0).get());
   // TODO(chengcheng): Build EagerLocalTensor if parllel attr is this rank.
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/false));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ false,
+                                                 /* is_local= */ input_tensor->is_local()));
   return Maybe<void>::Ok();
 }
 
@@ -248,10 +249,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   //   if inputs size == 0, need handle in SourceUserOp impl.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
+  const bool is_local = inputs.at(0)->is_local();
   op_conf->set_device_tag(device_tag);
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor));
+    CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     const std::string& lbn = TensorNameScope::Global()->Lookup(inputs[i]);
     if (lbn.empty()) {
@@ -300,7 +303,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
     const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
     if (!(outputs->at(i).get())) {
-      (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+      (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr,
+                                                     /* is_lazy= */ true, is_local));
     } else {
       // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
       UNIMPLEMENTED();
