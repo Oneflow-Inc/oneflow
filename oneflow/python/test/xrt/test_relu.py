@@ -17,7 +17,7 @@ import unittest
 
 import numpy as np
 from oneflow.compatible import single_client as flow
-
+from oneflow.compatible.single_client import typing as oft
 
 config = flow.function_config()
 
@@ -26,10 +26,10 @@ class TestTVM(unittest.TestCase):
     def test_add(self):
         a_shape = (64, 64)
         b_shape = (64, 64)
-        func_config.use_tvm(True)
-        func_config.use_xla_jit(False)
-        func_config.use_tensorrt(False)
-        @flow.global_function(function_config=func_config)
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+        config.use_tvm(True)
+        @flow.global_function(config)
         def AddJob(a: oft.Numpy.Placeholder(a_shape), b: oft.Numpy.Placeholder(b_shape)):
             with flow.scope.placement("cpu", "0:0"):
                 return a + b

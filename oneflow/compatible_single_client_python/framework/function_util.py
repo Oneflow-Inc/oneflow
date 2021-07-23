@@ -911,6 +911,15 @@ def set_default_placement(func_desc, value):
     assert isinstance(value, placement_ctx.EmptyPlacementScope)
     func_desc.function_attribute.default_placement_scope = value
 
+@oneflow_function_config("use_tvm")
+def set_use_tvm(func_desc, value=True):
+    r"""Whether use tvm or not
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.mutable_xrt_config().set_use_tvm(value)
 
 @oneflow_function_config("use_xla_jit")
 def set_use_xla_jit(func_desc, value=True):
