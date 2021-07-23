@@ -89,6 +89,8 @@ class TestFetchOutputTensor(unittest.TestCase):
             test_case.assertTrue(not eager_tensor.is_lazy)
             test_case.assertTrue(eager_tensor.is_local)
 
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
+
 
 if __name__ == "__main__":
     unittest.main()
