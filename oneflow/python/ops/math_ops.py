@@ -901,59 +901,6 @@ def unsorted_batch_segment_sum(
     )
 
 
-@oneflow_export("cast")
-@stable_api
-def cast(
-    x: oneflow._oneflow_internal.BlobDesc,
-    dtype: flow.dtype,
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-    r"""The op takes input x and casts it to the output with `dtype`
-
-    Args:
-        x (oneflow._oneflow_internal.BlobDesc): Input Blob
-        dtype (flow.dtype): Data type of the output
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        oneflow._oneflow_internal.BlobDesc: A Blob
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-        @flow.global_function()
-        def cast_Job(x: tp.Numpy.Placeholder((3, ), dtype=flow.float32)
-        )->tp.Numpy:
-            return flow.cast(x, dtype=flow.int32)
-
-        x = np.array([1, 2, 3]).astype(np.float32)
-        out = cast_Job(x)
-
-        # out.dtype = "int32"
-
-    """
-    if x.dtype == dtype:
-        return x
-    if name is None:
-        name = id_util.UniqueStr("Cast_")
-
-    return (
-        flow.user_op_builder(name)
-        .Op("cast")
-        .Input("in", [x])
-        .Output("out")
-        .Attr("dtype", dtype)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 @oneflow_export("math.equal")
 def equal(
     x: oneflow._oneflow_internal.BlobDesc,

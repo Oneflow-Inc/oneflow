@@ -51,7 +51,6 @@ class Gather(Module):
 
 
 @oneflow_export("gather")
-@experimental_api
 @register_tensor_op("gather")
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.

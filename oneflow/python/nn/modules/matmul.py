@@ -45,7 +45,6 @@ class MatMul(Module):
 
 
 @oneflow_export("matmul")
-@experimental_api
 @register_tensor_op("matmul")
 def matmul_op(input, other):
     r"""This operator applies matrix multiplication to two Tensor.

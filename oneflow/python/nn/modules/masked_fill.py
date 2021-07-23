@@ -32,7 +32,6 @@ class MaskedFill(Module):
 
 
 @oneflow_export("masked_fill")
-@experimental_api
 @register_tensor_op("masked_fill")
 def masked_fill_op(input, mask, value):
     r"""

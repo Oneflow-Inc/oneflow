@@ -54,7 +54,6 @@ class Flatten(Module):
 
 
 @oneflow_export("flatten")
-@experimental_api
 @register_tensor_op("flatten")
 def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     """Flattens a contiguous range of dims into a tensor.

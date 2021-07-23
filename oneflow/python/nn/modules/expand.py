@@ -32,7 +32,6 @@ class Expand(Module):
 
 
 @oneflow_export("expand")
-@experimental_api
 @register_tensor_op("expand")
 def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.

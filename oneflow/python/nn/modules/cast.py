@@ -29,7 +29,6 @@ class Cast(Module):
 
 
 @oneflow_export("cast")
-@experimental_api
 @register_tensor_op("cast")
 def cast_op(x, dtype):
     r"""The operation takes input tensor `x` and casts it to the output with `dtype`

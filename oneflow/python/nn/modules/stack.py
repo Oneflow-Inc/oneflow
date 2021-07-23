@@ -49,7 +49,6 @@ class Stack(Module):
 
 
 @oneflow_export("stack")
-@experimental_api
 @register_tensor_op("stack")
 def stack(inputs: Tensor, dim: int = 0) -> None:
     r"""Concatenates a sequence of tensors along a new dimension.

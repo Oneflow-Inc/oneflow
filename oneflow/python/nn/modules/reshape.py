@@ -30,7 +30,6 @@ class Reshape(Module):
 
 
 @oneflow_export("reshape")
-@experimental_api
 @register_tensor_op("reshape")
 def reshape_op(x, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.

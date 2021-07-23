@@ -65,7 +65,6 @@ class _InstanceNorm(_NormBase):
 
 
 @oneflow_export("nn.InstanceNorm1d")
-@experimental_api
 class InstanceNorm1d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm1d.html
@@ -156,7 +155,6 @@ class InstanceNorm1d(_InstanceNorm):
 
 
 @oneflow_export("nn.InstanceNorm2d")
-@experimental_api
 class InstanceNorm2d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm2d.html

@@ -33,7 +33,6 @@ class Squeeze(Module):
 
 
 @oneflow_export("squeeze")
-@experimental_api
 @register_tensor_op("squeeze")
 def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.

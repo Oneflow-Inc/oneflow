@@ -59,7 +59,6 @@ class Transpose(Module):
 
 
 @oneflow_export("transpose")
-@experimental_api
 @register_tensor_op("transpose")
 def transpose_op(tensor, dim0, dim1):
     r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.

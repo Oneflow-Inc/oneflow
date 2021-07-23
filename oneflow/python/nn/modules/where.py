@@ -93,7 +93,6 @@ class Where(Module):
 
 
 @oneflow_export("where")
-@experimental_api
 @register_tensor_op("where")
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.

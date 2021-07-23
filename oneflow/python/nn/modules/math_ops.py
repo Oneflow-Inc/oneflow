@@ -1234,7 +1234,6 @@ def clamp_op_tensor(tensor, min=None, max=None):
 
 
 @oneflow_export("clip")
-@experimental_api
 def clip_op(tensor, min=None, max=None):
     r"""
     Alias for :func:`oneflow.experimental.clamp`

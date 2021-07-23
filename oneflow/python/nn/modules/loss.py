@@ -23,7 +23,6 @@ from oneflow.python.nn.modules.constant import _ConstantBase
 
 
 @oneflow_export("nn.L1Loss")
-@experimental_api
 class L1Loss(Module):
     r"""This operator computes the L1 Loss between each element in `input` and `target`.
 
@@ -227,7 +226,6 @@ class CrossEntropyLoss(Module):
 
 
 @oneflow_export("nn.BCELoss")
-@experimental_api
 class BCELoss(Module):
     r"""This operator computes the binary cross entropy loss.
 
@@ -476,7 +474,6 @@ class NLLLoss(Module):
 
 
 @oneflow_export("nn.KLDivLoss")
-@experimental_api
 class KLDivLoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -600,7 +597,6 @@ class KLDivLoss(Module):
 
 
 @oneflow_export("nn.MSELoss")
-@experimental_api
 class MSELoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -696,7 +692,6 @@ class MSELoss(Module):
 
 
 @oneflow_export("nn.MarginRankingLoss")
-@experimental_api
 class MarginRankingLoss(Module):
     r"""Creates a criterion that measures the loss given
     inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
@@ -950,7 +945,6 @@ class CTCLoss(Module):
 
 
 @oneflow_export("nn.BCEWithLogitsLoss")
-@experimental_api
 class BCEWithLogitsLoss(Module):
     r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
