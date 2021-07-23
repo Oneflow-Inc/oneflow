@@ -306,6 +306,7 @@ class ExportVisitor(ast.NodeTransformer):
                 # doc = node.body[0]
                 # self.append_export(target_module=target_module, node=doc)
                 return None
+        node.decorator_list = compact_decorator_list
         return node
 
 
