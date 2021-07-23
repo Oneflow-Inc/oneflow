@@ -269,9 +269,11 @@ cmake --build . -j `nproc`
         bash_cmd = f"""
 cd {oneflow_src_dir}/python
 git reset -fd
+cd {oneflow_src_dir}
 {bash_cmd}
+cd {oneflow_src_dir}/python
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
-cd -
+cd {oneflow_src_dir}
 """
     if skip_audit:
         bash_cmd += f"""
