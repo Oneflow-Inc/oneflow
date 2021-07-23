@@ -183,9 +183,6 @@ class ExportVisitor(ast.NodeTransformer):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
-        import_star_from_src = ast.ImportFrom(
-            module=self.src_target_module, names=[ast.alias(name='*')], level=0
-        )
         rkv = ReservedKeywordsVisitor(keywords=set({"int", "float"}))
         rkv.visit(node)
         has_reserved_keyword = rkv.has_reserved_keyword
@@ -236,9 +233,12 @@ class ExportVisitor(ast.NodeTransformer):
                     return node
                 else:
                     # prepend imports in target module
-                    if self.src_target_module != target_module0:
-                        self.append_export(target_module=target_module0, node=self.top_imports)
-                        # TODO: insert "from origin_module import *" in exported func body no top
+                    self.append_export(target_module=target_module0, node=self.top_imports)
+                    if target_module0 != "oneflow":
+                        import_star_from_src = ast.ImportFrom(
+                            module=self.src_target_module, names=[ast.alias(name='*')], level=0
+                        )
+                        # node.body.insert(0, import_star_from_src)
                         self.append_export(target_module=target_module0, node=import_star_from_src)
                     # save func name for src import as before modifing node.name
                     src_asname = None
