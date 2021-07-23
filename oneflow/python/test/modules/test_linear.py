@@ -183,7 +183,9 @@ class TestLinear(flow.unittest.TestCase):
     @autotest()
     def test_linear_with_random_data(test_case):
         input_size = random()
-        m = torch.nn.Linear(in_features=input_size, out_features=random(), bias=random() | nothing())
+        m = torch.nn.Linear(
+            in_features=input_size, out_features=random(), bias=random() | nothing()
+        )
         m.train(random())
         device = random_device()
         m.to(device)
@@ -193,8 +195,11 @@ class TestLinear(flow.unittest.TestCase):
 
     @autotest()
     def test_identity_with_random_data(test_case):
-        m = torch.nn.Identity(x=random().to(int), unused_argument1=random().to(float),
-                              unused_argument2=random().to(float))
+        m = torch.nn.Identity(
+            x=random().to(int),
+            unused_argument1=random().to(float),
+            unused_argument2=random().to(float),
+        )
         m.train(random())
         device = random_device()
         m.to(device)

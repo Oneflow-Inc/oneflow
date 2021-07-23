@@ -280,7 +280,18 @@ def random_or_nothing(low, high):
 
 @data_generator(torch.Tensor)
 class random_tensor(generator):
-    def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, low=0, high=1, dtype=float):
+    def __init__(
+        self,
+        ndim=None,
+        dim0=1,
+        dim1=None,
+        dim2=None,
+        dim3=None,
+        dim4=None,
+        low=0,
+        high=1,
+        dtype=float,
+    ):
         if ndim is None:
             ndim = random(1, 6)
         if dim0 is None:
@@ -303,7 +314,17 @@ class random_tensor(generator):
         self.high = pack(high).to(float)
         self.dtype = pack(dtype)
         super().__init__(
-            [self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4, self.low, self.high, self.dtype]
+            [
+                self.ndim,
+                self.dim0,
+                self.dim1,
+                self.dim2,
+                self.dim3,
+                self.dim4,
+                self.low,
+                self.high,
+                self.dtype,
+            ]
         )
 
     def _calc_value(self):
