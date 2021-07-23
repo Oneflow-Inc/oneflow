@@ -36,10 +36,10 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 @contextmanager
 def graph_build_context(config_proto, session):
     prev_scope = oneflow._oneflow_internal.GetCurrentScope()
-    device_tag_and_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
     new_scope = scope_util.MakeInitialScope(
         config_proto,
-        *device_tag_and_ids,
+        "cpu",  # NOTE(chengcheng): graph init scope is useless, just set cpu 0:0 for test.
+        ["0:0"],
         None,  # TODO(): set hierarchy from user graph config
         False,  # is_mirrored
     )
