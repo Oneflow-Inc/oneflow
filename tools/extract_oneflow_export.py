@@ -93,6 +93,7 @@ class ExportVisitor(ast.NodeTransformer):
         self.staging_decorators = []
         self.root_module = root_module
         self.export_modules = {}
+        self.src_target_module = src_target_module
 
     def append_export(self, target_module=None, node=None):
         if target_module not in self.export_modules:
@@ -167,6 +168,9 @@ class ExportVisitor(ast.NodeTransformer):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
+        import_star_from_src = ast.ImportFrom(
+            module=self.src_target_module, names=[ast.alias(name='*')], level=0
+        )
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
 
@@ -188,6 +192,7 @@ class ExportVisitor(ast.NodeTransformer):
                         names=[ast.alias(name=target_name, asname=asname),],
                         level=0,
                     )
+                    import_from_exports.append(import_star_from_src)
                     import_from_exports.append(import_from_export)
                 # TODO: insert "from origin_module import *" in exported func body
                 if target_name != node.name:
