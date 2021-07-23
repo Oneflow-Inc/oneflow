@@ -1,23 +1,103 @@
 oneflow
 ===================================
 .. currentmodule:: oneflow
-.. automodule:: oneflow
-    :members:
-    :imported-members:
-
-Types
-----------------------------------
-
-oneflow.double
-
-oneflow.float
-
-oneflow.float32
-
-oneflow.float64
-
-oneflow.int32
-
-oneflow.int64
-
-oneflow.int8
+.. autofunction:: oneflow.tanh
+.. autofunction:: oneflow.asin
+.. autofunction:: oneflow.arcsin
+.. autofunction:: oneflow.asinh
+.. autofunction:: oneflow.sinh
+.. autofunction:: oneflow.atan2
+.. autofunction:: oneflow.softplus
+.. autofunction:: oneflow.arcsinh
+.. autofunction:: oneflow.gelu
+.. autofunction:: oneflow.sigmoid
+.. autofunction:: oneflow.softmax
+.. autofunction:: oneflow.mish
+.. autofunction:: oneflow.acosh
+.. autofunction:: oneflow.arccosh
+.. autofunction:: oneflow.arange
+.. autofunction:: oneflow.argwhere
+.. autofunction:: oneflow.argmax
+.. autofunction:: oneflow.cast
+.. autofunction:: oneflow.cat
+.. autofunction:: oneflow.ones
+.. autofunction:: oneflow.zeros
+.. autofunction:: oneflow.zeros_like
+.. autofunction:: oneflow.ones_like
+.. autofunction:: oneflow.slice
+.. autofunction:: oneflow.eq
+.. autofunction:: oneflow.ne
+.. autofunction:: oneflow.to
+.. autofunction:: oneflow.equal
+.. autofunction:: oneflow.not_equal
+.. autofunction:: oneflow.exp
+.. autofunction:: oneflow.erf
+.. autofunction:: oneflow.erfc
+.. autofunction:: oneflow.round
+.. autofunction:: oneflow.flatten
+.. autofunction:: oneflow.gt
+.. autofunction:: oneflow.ge
+.. autofunction:: oneflow.lt
+.. autofunction:: oneflow.le
+.. autofunction:: oneflow.chunk
+.. autofunction:: oneflow.masked_fill
+.. autofunction:: oneflow.masked_select
+.. autofunction:: oneflow.sum
+.. autofunction:: oneflow.min
+.. autofunction:: oneflow.max
+.. autofunction:: oneflow.mul
+.. autofunction:: oneflow.mean
+.. autofunction:: oneflow.sub
+.. autofunction:: oneflow.var
+.. autofunction:: oneflow.div
+.. autofunction:: oneflow.reciprocal
+.. autofunction:: oneflow.add
+.. autofunction:: oneflow.sign
+.. autofunction:: oneflow.sin
+.. autofunction:: oneflow.atan
+.. autofunction:: oneflow.arctan
+.. autofunction:: oneflow.cos
+.. autofunction:: oneflow.log
+.. autofunction:: oneflow.sqrt
+.. autofunction:: oneflow.square
+.. autofunction:: oneflow.std
+.. autofunction:: oneflow.pow
+.. autofunction:: oneflow.cosh
+.. autofunction:: oneflow.acos
+.. autofunction:: oneflow.matmul
+.. autofunction:: oneflow.bmm
+.. autofunction:: oneflow.negative
+.. autofunction:: oneflow.neg
+.. autofunction:: oneflow.adaptive_avg_pool1d
+.. autofunction:: oneflow.adaptive_avg_pool2d
+.. autofunction:: oneflow.adaptive_avg_pool3d
+.. autofunction:: oneflow.repeat
+.. autofunction:: oneflow.tile
+.. autofunction:: oneflow.fmod
+.. autofunction:: oneflow.view
+.. autofunction:: oneflow.reshape
+.. autofunction:: oneflow.squeeze
+.. autofunction:: oneflow.flip
+.. autofunction:: oneflow.transpose
+.. autofunction:: oneflow.unsqueeze
+.. autofunction:: oneflow.where
+.. autofunction:: oneflow.gather
+.. autofunction:: oneflow.floor
+.. autofunction:: oneflow.addmm
+.. autofunction:: oneflow.clamp
+.. autofunction:: oneflow.clip
+.. autofunction:: oneflow.atanh
+.. autofunction:: oneflow.arctanh
+.. autofunction:: oneflow.tan
+.. autofunction:: oneflow.log1p
+.. autofunction:: oneflow.ceil
+.. autofunction:: oneflow.expm1
+.. autofunction:: oneflow.meshgrid
+.. autofunction:: oneflow.topk
+.. autofunction:: oneflow.diag
+.. autofunction:: oneflow.gather_nd
+.. autofunction:: oneflow.scatter_nd
+.. autofunction:: oneflow.tensor_buffer_to_tensor
+.. autofunction:: oneflow.tensor_to_tensor_buffer
+.. autofunction:: oneflow.bernoulli
+.. autofunction:: oneflow.in_top_k
