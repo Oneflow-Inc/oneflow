@@ -39,6 +39,17 @@ def is_decorator(d, name=None):
         and d.func.id == name
     )
 
+def is_stable(node: ast.AST):
+    for d in node.decorator_list:
+        if is_decorator(d, "stable_api"):
+            return True
+    return False
+
+def is_experimental(node: ast.AST):
+    for d in node.decorator_list:
+        if is_decorator(d, "experimental_api"):
+            return
+    return False
 
 def get_parent_module(value):
     return ".".join(value.split(".")[0:-1])
