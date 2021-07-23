@@ -31,6 +31,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.nn.utils import add_indent
 from oneflow.python.framework.function_util import FunctionConfig
+from oneflow.python.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
@@ -147,7 +148,7 @@ class Graph(object):
                     partial(graph_build_util.build_graph_state, op_name, state_tensor)
                 )
 
-            self._variables = state_tensors
+            self._variables = convert_to_tensor_tuple(state_tensors)
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
@@ -172,6 +173,9 @@ class Graph(object):
             else:
                 eager_outputs = tuple(eager_outputs)
 
+            self._outputs = convert_to_tensor_tuple(eager_outputs)
+            self._eager_outputs = eager_outputs
+
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
             self._c_nn_graph.register_output_op_names(eager_output_op_names)
@@ -185,20 +189,20 @@ class Graph(object):
         # Complie and init Runtime
         self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
-        return eager_outputs
 
     def _launch(self, *args):
-        inputs = []
+        eager_inputs = []
         for idx, arg in enumerate(args):
-            inputs.append(arg)
+            eager_inputs.append(arg)
+        inputs = convert_to_tensor_tuple(eager_inputs)
         oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
             inputs, self._outputs, self._variables, self._c_nn_graph
         )
-        return self._outputs
+        return self._eager_outputs
 
     def __call__(self, *args):
         if not self._is_compiled:
-            self._outputs = self._compile(*args)
+            self._compile(*args)
         return self._launch(*args)
 
     def _add_block(self, name: str, module: Module = None) -> None:

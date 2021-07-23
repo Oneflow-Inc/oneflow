@@ -150,7 +150,7 @@ void NNGraph::CloseRuntimeBuffers() {
 namespace {
 
 Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObject>>* blob_list,
-                                    const std::vector<std::shared_ptr<one::Tensor>>& tensor_list) {
+                                    const one::TensorTuple& tensor_list) {
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
@@ -164,9 +164,8 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
 
 }  // namespace
 
-Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
