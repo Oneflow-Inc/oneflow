@@ -21,7 +21,6 @@ from oneflow.python.nn.module import Module
 
 
 @oneflow_export("scatter_nd")
-@experimental_api
 class Scatter_nd(Module):
     r"""This operator inserts the elements in `updates` according to the `index` and create a new Tensor.
 

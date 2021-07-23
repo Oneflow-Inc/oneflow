@@ -18,7 +18,6 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.ops.array_ops import argwhere, gather, gather_nd
 
 
 class MaskedSelect(Module):

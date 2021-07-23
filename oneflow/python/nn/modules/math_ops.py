@@ -1175,7 +1175,6 @@ class Clamp(Module):
 
 
 @oneflow_export("clamp")
-@experimental_api
 def clamp_op(tensor, min=None, max=None):
     r"""
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return

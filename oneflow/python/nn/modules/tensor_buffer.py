@@ -37,7 +37,6 @@ class TensorBufferToTensor(Module):
 
 
 @oneflow_export("tensor_buffer_to_tensor")
-@experimental_api
 def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[int]):
     """This operator converts the Tensor's type from TensorBuffer to original type.
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
@@ -87,7 +86,6 @@ class TensorToTensorBuffer(Module):
 
 
 @oneflow_export("tensor_to_tensor_buffer")
-@experimental_api
 def tensor_to_tensor_buffer(x, instance_dims: int):
     """This operator converts the Tensor's type to TensorBuffer.
 
@@ -137,7 +135,6 @@ class GenTensorBuffer(Module):
 
 
 @oneflow_export("gen_tensor_buffer")
-@experimental_api
 def gen_tensor_buffer(
     shape: Sequence[int],
     shape_list: Sequence[Sequence[int]],

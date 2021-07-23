@@ -30,7 +30,6 @@ class Diag(Module):
 
 
 @oneflow_export("diag")
-@experimental_api
 def diag_op(input, diagonal=0):
     r"""
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.

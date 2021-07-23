@@ -64,7 +64,6 @@ class Ones(_ConstantBase):
 
 
 @oneflow_export("ones")
-@experimental_api
 def ones_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -101,7 +100,6 @@ class Zeros(_ConstantBase):
 
 
 @oneflow_export("zeros")
-@experimental_api
 def zeros_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -141,7 +139,6 @@ class ZerosLike(Module):
 
 
 @oneflow_export("zeros_like")
-@experimental_api
 def zeros_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 0, with the same size as input.
@@ -174,7 +171,6 @@ class OnesLike(Module):
 
 
 @oneflow_export("ones_like")
-@experimental_api
 def ones_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 1, with the same size as input.

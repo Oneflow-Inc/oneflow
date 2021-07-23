@@ -21,7 +21,6 @@ from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.PixelShuffle")
-@experimental_api
 class PixelShufflev2(Module):
     r"""
     Part of the documentation is referenced from:

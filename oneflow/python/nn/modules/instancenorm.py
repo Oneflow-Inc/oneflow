@@ -240,7 +240,6 @@ class InstanceNorm2d(_InstanceNorm):
 
 
 @oneflow_export("nn.InstanceNorm3d")
-@experimental_api
 class InstanceNorm3d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm3d.html

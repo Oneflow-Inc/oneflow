@@ -265,7 +265,6 @@ class TensorBufferToListOfTensors(Module):
 
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
-@experimental_api
 def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
     return TensorBufferToListOfTensors(
         [list(out_shape) for out_shape in out_shapes], out_dtypes, len(out_shapes)

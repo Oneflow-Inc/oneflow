@@ -42,7 +42,6 @@ class InTopk(Module):
 
 
 @oneflow_export("in_top_k")
-@experimental_api
 def in_top_k_op(targets, predictions, k):
     r"""Says whether the targets are in the top K predictions.
 

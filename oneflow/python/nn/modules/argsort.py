@@ -50,7 +50,6 @@ class Argsort(Module):
 
 
 @oneflow_export("argsort")
-@experimental_api
 @register_tensor_op("argsort")
 def argsort_op(input, dim: int = -1, descending: bool = False):
     """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.

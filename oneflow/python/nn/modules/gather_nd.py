@@ -37,7 +37,6 @@ class Gather_nd(Module):
 
 
 @oneflow_export("gather_nd")
-@experimental_api
 def gather_nd_op(input, index):
     r"""This operator is a high-dimensional extension of `gather`, `index` is a K-dimensional
     tensor, which is regarded as a index of input Tensor `input`.

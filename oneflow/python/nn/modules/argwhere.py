@@ -36,7 +36,6 @@ class Argwhere(Module):
 
 
 @oneflow_export("argwhere")
-@experimental_api
 def argwhere_op(x, dtype: Optional[flow.dtype] = None):
     """This operator finds the indices of input Tensor `x` elements that are non-zero. 
 

@@ -24,7 +24,6 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 @oneflow_export("nn.GroupNorm")
-@experimental_api
 class GroupNorm(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
