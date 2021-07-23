@@ -1,0 +1,4 @@
+from oneflow.compatible.single_client.framework.distribute import get_local_rank
+from oneflow.compatible.single_client.framework.distribute import get_rank
+from oneflow.compatible.single_client.framework.distribute import get_world_size
+from oneflow.compatible.single_client.framework.distribute import is_multi_client

@@ -31,5 +31,3 @@ compile_commands.json
 /distributed-tmp
 /serving-tmp
 test_tmp_dir
-oneflow/python/version.py
-/python/oneflow

@@ -1,0 +1,7 @@
+from oneflow.experimental.name_scope import name_scope
+from oneflow.framework.scope_util import deprecated_current_scope
+from oneflow.framework.placement_util import api_placement
+from oneflow.framework.distribute import DistributeMirroredStrategy
+from oneflow.framework.distribute import MirroredStrategyEnabled
+from oneflow.framework.distribute import DistributeConsistentStrategy
+from oneflow.framework.distribute import ConsistentStrategyEnabled
