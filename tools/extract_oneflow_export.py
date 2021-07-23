@@ -32,11 +32,11 @@ def dumpprint(node):
     astpretty.pprint(node)
 
 
-def is_export_decorator(d):
+def is_decorator(d, name=None):
     return (
         isinstance(d, ast.Call)
         and isinstance(d.func, ast.Name)
-        and d.func.id == "oneflow_export"
+        and d.func.id == name
     )
 
 
@@ -141,7 +141,7 @@ class ExportVisitor(ast.NodeTransformer):
         compact_decorator_list = [d for d in compact_decorator_list if d]
         for d in node.decorator_list:
             # if @register_tensor_op, export it in __init__.py
-            if is_export_decorator(d):
+            if is_decorator(d, name="oneflow_export"):
                 import_from_exports = []
                 target_module = None
                 target_name = None
