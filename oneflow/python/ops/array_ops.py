@@ -607,7 +607,7 @@ def check_slice_tup_list(slice_tup_list, shape):
             raise ValueError("element of slice tuple must int or None")
 
         (start, stop, step) = slice_tup
-        if step is None:
+        if step is None or start == stop:
             step = 1
 
         if step == 0:
