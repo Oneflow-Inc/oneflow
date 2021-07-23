@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
@@ -51,7 +51,6 @@ class Argsort(Module):
 
 @oneflow_export("argsort")
 @register_tensor_op("argsort")
-@experimental_api
 def argsort_op(input, dim: int = -1, descending: bool = False):
     """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
 
@@ -68,9 +67,7 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = np.array([[10, 2, 9, 3, 7],
         ...               [1, 9, 4, 3, 2]]).astype("float32")
         >>> input = flow.Tensor(x)

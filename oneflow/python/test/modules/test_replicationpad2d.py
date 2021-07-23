@@ -18,8 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
-from oneflow.python.ops.array_ops import zeros
+import oneflow as flow
 from test_util import (
     GenArgList,
     FlattenArray,

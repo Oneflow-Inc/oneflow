@@ -16,12 +16,11 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
 @oneflow_export("scatter_nd")
-@experimental_api
 class Scatter_nd(Module):
     r"""This operator inserts the elements in `updates` according to the `index` and create a new Tensor.
 
@@ -34,10 +33,8 @@ class Scatter_nd(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> scatter_nd_layer = flow.scatter_nd([8])
         >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
         >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)

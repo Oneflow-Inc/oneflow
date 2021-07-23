@@ -20,13 +20,12 @@ import math
 
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
 from .optimizer import Optimizer, ParamGroup
 
 
 @oneflow_export("optim.SGD")
-@experimental_api
 class SGD(Optimizer):
     r"""Implements SGD algorithm.
 
@@ -83,9 +82,7 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if param_group["momentum"] != 0.0:
-                    self._state[param]["momentum_buf"] = flow.experimental.zeros_like(
-                        param
-                    )
+                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
 
         self._momentum_sgd = (
             flow.builtin_op("momentum_update")
