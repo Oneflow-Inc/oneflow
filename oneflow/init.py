@@ -104,9 +104,9 @@ def _SyncOnMasterFn():
     def Sync():
         if not oneflow._oneflow_internal.IsEnvInited():
             return
-        if oneflow.python.framework.distribute.is_multi_client():
+        if oneflow.framework.distribute.is_multi_client():
             oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.python.framework.distribute.get_rank() == 0:
+        elif oneflow.framework.distribute.get_rank() == 0:
             oneflow._oneflow_internal.eager.single_client.Sync()
 
     return Sync
@@ -114,7 +114,7 @@ def _SyncOnMasterFn():
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
