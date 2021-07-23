@@ -29,7 +29,7 @@
 
   ### Install with Pip Package
 
-  - Visit https://start.oneflow.org to get the command to install OneFlow
+  - Please visit https://start.oneflow.org to get the command to install OneFlow
 
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
     ```
