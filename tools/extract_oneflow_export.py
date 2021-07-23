@@ -35,14 +35,10 @@ def dumpprint(node):
 
 
 def is_decorator(d, name=None):
-    return (
-        (isinstance(d, ast.Name) and d.id == name) or
-        (
-        isinstance(d, ast.Call)
-        and isinstance(d.func, ast.Name)
-        and d.func.id == name
-        )
+    return (isinstance(d, ast.Name) and d.id == name) or (
+        isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and d.func.id == name
     )
+
 
 def is_stable(node: ast.AST):
     for d in node.decorator_list:
@@ -50,11 +46,13 @@ def is_stable(node: ast.AST):
             return True
     return False
 
+
 def is_experimental(node: ast.AST):
     for d in node.decorator_list:
         if is_decorator(d, "experimental_api"):
             return True
     return False
+
 
 def get_parent_module(value):
     return ".".join(value.split(".")[0:-1])
@@ -82,11 +80,13 @@ def module_from_path(path: Path):
     else:
         return ".".join(path.parts)[0:-3]
 
+
 def is_compatible_root_module(module: str):
     if module == COMPATIBLE_MODULE:
         return True
-    assert module=="oneflow"
+    assert module == "oneflow"
     return False
+
 
 class ReservedKeywordsVisitor(ast.NodeVisitor):
     def __init__(self, keywords=None) -> None:
@@ -97,8 +97,9 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
         if node.id in self.keywords:
             self.has_reserved_keyword = True
 
+
 class ExportVisitor(ast.NodeTransformer):
-    def __init__(self, root_module="oneflow", src_target_module:str=None) -> None:
+    def __init__(self, root_module="oneflow", src_target_module: str = None) -> None:
         super().__init__()
         self.staging_decorators = []
         self.root_module = root_module
@@ -175,7 +176,6 @@ class ExportVisitor(ast.NodeTransformer):
     def visit_ClassDef(self, node):
         return self.visit_FunctionDef(node)
 
-
     def visit_FunctionDef(self, node):
         if is_compatible_root_module(self.root_module) and is_experimental(node):
             return None
@@ -205,45 +205,60 @@ class ExportVisitor(ast.NodeTransformer):
                         self.root_module, get_parent_module(argN.value)
                     )
                     target_nameN = target_name = argN.value.split(".")[-1]
-                    assert arg0 != argN, {
-                        "arg0": arg0, "argN": argN
-                    }
+                    assert arg0 != argN, {"arg0": arg0, "argN": argN}
                     import_from_first_export = ast.ImportFrom(
                         module=target_module0,
                         names=[ast.alias(name=target_symbol0, asname=target_nameN),],
                         level=0,
                     )
-                    self.append_export(target_module=target_moduleN, node=import_from_first_export)
-
+                    self.append_export(
+                        target_module=target_moduleN, node=import_from_first_export
+                    )
 
                 if is_deprecated:
                     import_oneflow_deprecate = ast.ImportFrom(
-                        module="oneflow", names=[ast.alias(name="oneflow_deprecate")], level=0
+                        module="oneflow",
+                        names=[ast.alias(name="oneflow_deprecate")],
+                        level=0,
                     )
 
                 node.decorator_list = compact_decorator_list
-                if has_reserved_keyword or self.src_target_module == target_module0 or target_module0 in ["oneflow", COMPATIBLE_MODULE] :
+                if (
+                    has_reserved_keyword
+                    or self.src_target_module == target_module0
+                    or target_module0 in ["oneflow", "oneflow.scope", COMPATIBLE_MODULE]
+                ):
                     import_from_src = ast.ImportFrom(
                         module=self.src_target_module,
                         names=[ast.alias(name=node.name, asname=target_symbol0),],
                         level=0,
                     )
-                    self.append_export(target_module=target_module0, node=import_from_src)
+                    self.append_export(
+                        target_module=target_module0, node=import_from_src
+                    )
                     if is_deprecated:
                         return [import_oneflow_deprecate, node]
                     else:
                         return node
                 else:
                     if is_deprecated:
-                        self.append_export(target_module=target_module0, node=import_oneflow_deprecate)
+                        self.append_export(
+                            target_module=target_module0, node=import_oneflow_deprecate
+                        )
                     # prepend imports in target module
-                    self.append_export(target_module=target_module0, node=self.top_imports)
+                    self.append_export(
+                        target_module=target_module0, node=self.top_imports
+                    )
                     if target_module0 != "oneflow":
                         import_star_from_src = ast.ImportFrom(
-                            module=self.src_target_module, names=[ast.alias(name='*')], level=0
+                            module=self.src_target_module,
+                            names=[ast.alias(name="*")],
+                            level=0,
                         )
                         # node.body.insert(0, import_star_from_src)
-                        self.append_export(target_module=target_module0, node=import_star_from_src)
+                        self.append_export(
+                            target_module=target_module0, node=import_star_from_src
+                        )
                     # save func name for src import as before modifing node.name
                     src_asname = None
                     if node.name != target_symbol0:
@@ -266,7 +281,10 @@ class ExportVisitor(ast.NodeTransformer):
                 )
                 call = node.body[1].value
                 assign = ast.Assign(
-                    targets=[ast.Name(id=d.args[0].value.split(".")[-1], ctx=ast.Store())], value=call
+                    targets=[
+                        ast.Name(id=d.args[0].value.split(".")[-1], ctx=ast.Store())
+                    ],
+                    value=call,
                 )
                 self.append_export(target_module=target_module, node=assign)
                 # TODO: the doc is not dumped properly
@@ -296,7 +314,9 @@ class SrcFile:
                 or self.src.name == "single_client_main.py"
             ):
                 root_module = COMPATIBLE_MODULE
-            self.export_visitor = ExportVisitor(root_module=root_module, src_target_module=self.target_module)
+            self.export_visitor = ExportVisitor(
+                root_module=root_module, src_target_module=self.target_module
+            )
             self.export_visitor.visit(self.tree)
 
 
@@ -423,9 +443,7 @@ def save_trees(args=None):
     # TODO: append "doctest.testmod(raise_on_error=True)"
     trees = [ast.fix_missing_locations(tree) for tree in trees]
     if SAVE_AST:
-        new_txt = "\n".join(
-            [str(astpretty.pformat(tree)) for tree in trees]
-        )
+        new_txt = "\n".join([str(astpretty.pformat(tree)) for tree in trees])
         new_txt = f"""from ast import *
 {new_txt}
 """
