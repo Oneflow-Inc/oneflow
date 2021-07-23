@@ -83,7 +83,7 @@ class Interpolate(Module):
             raise ValueError("only one of size or scale_factor should be defined")
         elif self.size is not None:
             assert self.scale_factor is None
-            scale_factors = None
+            scale_factors = []
             if isinstance(self.size, (list, tuple)):
                 if len(self.size) != dim:
                     raise ValueError(
@@ -93,6 +93,8 @@ class Interpolate(Module):
                 output_size = self.size
             else:
                 output_size = [self.size for _ in range(dim)]
+            for i in range(dim):
+                scale_factors.append(output_size[i] / x.shape[i + 2])
         elif self.scale_factor is not None:
             assert self.size is None
             output_size = None
@@ -132,13 +134,15 @@ class Interpolate(Module):
         if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
 
-        if self.recompute_scale_factor is not None and self.recompute_scale_factor:
+        if self.recompute_scale_factor is True:
             assert scale_factors is not None
             output_size = [
-                int(math.floor(float(input.size(i + 2)) * scale_factors[i]))
+                int(math.floor(float(x.size(i + 2)) * scale_factors[i]))
                 for i in range(dim)
             ]
-            scale_factors = None
+            scale_factors = []
+            for i in range(dim):
+                scale_factors.append(output_size[i] / x.shape[2 + i])
 
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow.F.upsample_nearest_1d(
@@ -162,10 +166,17 @@ class Interpolate(Module):
                 data_format="channels_first",
             )
 
-        # TODO(bbuf) Add adaptive_avg_pool op
+        if len(x.shape) == 3 and self.mode == "area":
+            assert output_size is not None
+            return flow.F.adaptive_avg_pool1d(x, output_size)
 
-        if self.mode == "area":
-            raise NotImplementedError("adaptive_avg_pool1d not impleted now!")
+        if len(x.shape) == 4 and self.mode == "area":
+            assert output_size is not None
+            return flow.F.adaptive_avg_pool2d(x, output_size)
+
+        if len(x.shape) == 5 and self.mode == "area":
+            assert output_size is not None
+            return flow.F.adaptive_avg_pool3d(x, output_size)
 
         if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None

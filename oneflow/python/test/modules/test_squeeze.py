@@ -84,6 +84,7 @@ def _test_squeeze_backward(test_case, device):
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSqueeze(flow.unittest.TestCase):
     def test_squeeze(test_case):
         arg_dict = OrderedDict()

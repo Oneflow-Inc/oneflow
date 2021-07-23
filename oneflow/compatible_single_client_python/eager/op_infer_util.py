@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-from oneflow.core.operator import op_node_signature_pb2 as op_node_signature_pb
-from oneflow.compatible_single_client_python.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.core.operator import (
+    op_node_signature_pb2 as op_node_signature_pb,
+)
+from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
 from oneflow._oneflow_internal.oneflow.core.operator import (
     op_node_signature as op_node_signature_cfg,
 )

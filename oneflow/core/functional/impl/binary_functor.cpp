@@ -50,7 +50,7 @@ class PowFunctor : public BinaryFunctor {
   }
 };
 
-class BroadcastAddFunctor : public InplaceableBinaryFunctor {
+class BroadcastAddFunctor : public BinaryFunctor {
  public:
   BroadcastAddFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());

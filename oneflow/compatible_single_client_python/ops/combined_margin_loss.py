@@ -20,20 +20,22 @@ import os
 from typing import Union, Optional, Sequence
 
 from oneflow.compatible import single_client as flow
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.python.framework import (
     interpret_util as interpret_util,
 )
-from oneflow.compatible_single_client_python.framework import id_util as id_util
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import id_util as id_util
+from oneflow.compatible.single_client.python.framework import (
     remote_blob as remote_blob_util,
 )
-from oneflow.compatible_single_client_python.framework import module as module_util
-from oneflow.compatible_single_client_python.ops import (
+from oneflow.compatible.single_client.python.framework import module as module_util
+from oneflow.compatible.single_client.python.ops import (
     math_unary_elementwise_ops as math_unary_elementwise_ops,
 )
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 
 

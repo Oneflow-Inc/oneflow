@@ -44,6 +44,7 @@ def _test_ones_like_int(test_case, shape, device):
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_ones_like(test_case):
         arg_dict = OrderedDict()

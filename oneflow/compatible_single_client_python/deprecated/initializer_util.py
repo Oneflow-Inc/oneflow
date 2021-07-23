@@ -15,10 +15,14 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-from oneflow.core.common import data_type_pb2 as data_type_conf_util
-from oneflow.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
-from oneflow.compatible_single_client_python.oneflow_export import oneflow_export
+from oneflow.compatible.single_client.core.common import (
+    data_type_pb2 as data_type_conf_util,
+)
+from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
+from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("truncated_normal")

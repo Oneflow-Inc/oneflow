@@ -90,6 +90,7 @@ def _test_broadcast_like_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestBroadCastLike(flow.unittest.TestCase):
     def test_broadcast_like(test_case):
         arg_dict = OrderedDict()

@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import sys
 import traceback
 
-from oneflow.compatible_single_client_python.framework import ofblob as ofblob
+from oneflow.compatible.single_client.python.framework import ofblob as ofblob
 import oneflow._oneflow_internal
 
 
