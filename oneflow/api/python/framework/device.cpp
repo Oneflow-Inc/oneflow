@@ -35,10 +35,10 @@ struct DeviceExportUtil final {
     if (device_id == -1) {
       if (type == "cpu") {
         device_id =
-            GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum());
+            GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
       } else {
         device_id =
-            GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum());
+            GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
       }
     }
     return MakeDevice(type, device_id);

@@ -36,9 +36,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -258,19 +256,19 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
 Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                     Symbol<ParallelDesc> parallel_desc) {
-  if (tensor->is_cuda()) {
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
+  if (mirrored_tensor->is_cuda()) {
     CHECK_EQ_OR_RETURN(
-        JUST(tensor->device())->device_id(),
+        JUST(mirrored_tensor->device())->device_id(),
         GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum()))
         << "tensor must be on default device of rank!";
   }
   std::shared_ptr<Tensor> synced_tensor =
-      JUST(SyncDataAndMetaInfo(tensor, sbp_parallels, parallel_desc));
-  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(synced_tensor);
-  CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
-  CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
+      JUST(SyncDataAndMetaInfo(mirrored_tensor, sbp_parallels, parallel_desc));
   TensorTuple input_list;
-  input_list.emplace_back(mirrored_tensor);
+  input_list.emplace_back(synced_tensor);
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
   const auto& op_expr = JUST(CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent")),
                                                          sbp_parallels, parallel_desc));
@@ -285,7 +283,7 @@ Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
 // used consistent_tensor.to_local()
 Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   int64_t machine_id = 0;
   int64_t device_id = 0;
