@@ -462,7 +462,7 @@ if __name__ == "__main__":
     if args.skip_autoflake == False:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
-            f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --exclude **/*.ast.py --recursive .",
+            f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --exclude '**/*.ast.py' --recursive .",
             shell=True,
             cwd=args.out_dir,
         )
