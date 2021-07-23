@@ -36,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/functional/functional.h"
