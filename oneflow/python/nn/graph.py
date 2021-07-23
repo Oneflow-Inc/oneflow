@@ -147,6 +147,8 @@ class Graph(object):
                     partial(graph_build_util.build_graph_state, op_name, state_tensor)
                 )
 
+            self._parameters = state_tensors
+
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
 
@@ -170,8 +172,15 @@ class Graph(object):
             else:
                 eager_outputs = tuple(eager_outputs)
 
-            # TODO(): call self._c_nn_graph
-            #     register lazy_arg_op_names/state_op_names/state_tensors/eager_output_op_names
+            # Register input/output/variable to _c_nn_graph
+            self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
+            self._c_nn_graph.register_output_op_names(eager_output_op_names)
+            self._c_nn_graph.register_variable_op_names_and_tensors(
+                state_op_names, state_tensors
+            )
+
+            # Complie and init Runtime
+            self._c_nn_graph.complie_and_init_runtime()
 
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
@@ -179,16 +188,16 @@ class Graph(object):
         self._is_compiled = True
         return eager_outputs
 
-    def _launch(self):
-        # TODO(xuxiaoyu)
-        # return self._c_nn_graph.run()
-        ...
+    def _launch(self, *args):
+        oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
+            *args, self._outputs, self._parameters, self._c_nn_graph
+        )
+        return self._outputs
 
     def __call__(self, *args):
-        # if not self._is_compiled:
-        #     self._compile()
-        # return self._launch()
-        ...
+        if not self._is_compiled:
+            self._outputs = self._compile(*args)
+        return self._launch(*args)
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds a module to the current graph as a block.
