@@ -24,8 +24,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
   user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
   if (input_shape.elem_cnt() == 0) {
-    *output_desc->mut_shape() = Shape({});
-    *output_size_desc->mut_shape() = Shape({});
+    *output_desc->mut_shape() = Shape({0});
+    *output_size_desc->mut_shape() = Shape({0});
   } else {
     *output_desc->mut_shape() = Shape({input_shape.elem_cnt(), input_shape.NumAxes()});
     *output_size_desc->mut_shape() = Shape({1});
