@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/dtype.h"
@@ -176,6 +177,7 @@ Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
       || PyLong_Check(object_)       // NOLINT
       || object_ == Py_Ellipsis      // NOLINT
       || object_ == Py_None          // NOLINT
+      || PyTensorCheck(object_)      // NOLINT
       || !PySequence_Check(object_)  // NOLINT
       || PyUnicode_Check(object_)) {
     tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
@@ -230,6 +232,7 @@ Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
         }
         if (PySequence_Check(item)  // NOLINT
             || PySlice_Check(item)  // NOLINT
+            || PyTensorCheck(item)  // NOLINT
             || item == Py_Ellipsis || item == Py_None) {
           commit_to_unpack = true;
         }

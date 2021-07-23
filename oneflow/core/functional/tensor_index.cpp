@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/functional/tensor_index.h"
 
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -238,6 +239,15 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
   packed_indices = JUST(Transpose(packed_indices, permute));
+
+  if (transposed_input->is_consistent()) {
+    // TODO(hjchen2): Cast local indices to consistent.
+    UNIMPLEMENTED_THEN_RETURN() << "Not support consistent mode.";
+  }
+  Symbol<Device> device = JUST(transposed_input->device());
+  if (JUST(packed_indices->device()) != device) {
+    packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+  }
   auto result = JUST(GatherNd(transposed_input, packed_indices));
 
   int required_ndim = input->shape()->NumAxes() - valid_indices.size() + index_ndim;
