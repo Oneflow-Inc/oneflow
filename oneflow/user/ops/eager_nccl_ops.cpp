@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -64,4 +67,18 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_broadcast")
       return Maybe<void>::Ok();
     });
 
+REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
+    .Input("in")
+    .Output("out")
+    .Attr<std::string>("parallel_conf")
+    .Attr<std::string>("op_type", "sum")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 }  // namespace oneflow

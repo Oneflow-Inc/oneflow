@@ -886,6 +886,34 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
+Maybe<one::UserOpExpr> EagerNcclAllGather() {
+  return EagerNcclAllGather(UniqueOpName("eager_nccl_all_gather"));
+}
+Maybe<one::UserOpExpr> EagerNcclAllGather(const std::string& name) {
+  return one::OpBuilder("_nccl_logical_all_gather", name).Input("in").Output("out").Build();
+}
+
+Maybe<one::UserOpExpr> EagerNcclAllReduce() {
+  return EagerNcclAllReduce(UniqueOpName("eager_nccl_all_reduce"));
+}
+Maybe<one::UserOpExpr> EagerNcclAllReduce(const std::string& name) {
+  return one::OpBuilder("_nccl_logical_all_reduce", name).Input("in").Output("out").Build();
+}
+
+Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
+                                              const std::string& op_type) {
+  return EagerNcclReduceScatter(parallel_desc, op_type, UniqueOpName("eager_nccl_reduce_scatter"));
+}
+Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
+                                              const std::string& op_type, const std::string& name) {
+  return one::OpBuilder("eager_nccl_reduce_scatter", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<std::string>("op_type", op_type)
+      .Build();
+}
+
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
   return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_distribution,
