@@ -4,8 +4,8 @@ import numpy as np
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Argwhere(Module):
 
+class Argwhere(Module):
     def __init__(self, dtype) -> None:
         super().__init__()
         if dtype == None:
@@ -17,7 +17,8 @@ class Argwhere(Module):
         slice_tup_list = [[0, int(size.numpy()), 1]]
         return flow.slice(res, slice_tup_list=slice_tup_list)
 
-def argwhere_op(x, dtype: Optional[flow.dtype]=None):
+
+def argwhere_op(x, dtype: Optional[flow.dtype] = None):
     """This operator finds the indices of input Tensor `x` elements that are non-zero. 
 
     It returns a list in which each element is a coordinate that points to a non-zero element in the condition.
@@ -48,8 +49,9 @@ def argwhere_op(x, dtype: Optional[flow.dtype]=None):
     """
     return Argwhere(dtype=dtype)(x)
 
-@register_tensor_op('argwhere')
-def argwhere_tebsor_op(x, dtype: Optional[flow.dtype]=None):
+
+@register_tensor_op("argwhere")
+def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
     """
 
     argwhere() -> Tensor
@@ -58,6 +60,9 @@ def argwhere_tebsor_op(x, dtype: Optional[flow.dtype]=None):
 
     """
     return Argwhere(dtype=dtype)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

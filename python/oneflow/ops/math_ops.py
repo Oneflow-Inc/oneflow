@@ -12,7 +12,12 @@ from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
-def add(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def add(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Compute :math:`X + Y` element-wise, math.add supports broadcasting.
     The equation is:
 
@@ -61,20 +66,34 @@ def add(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, 
     else:
         return broadcast_add(x, y, name)
 
+
 def _recursive_build_add_n(inputs, name=None):
     inputs = list(inputs)
     kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]
     elif len(inputs) <= kernel_max_inputs:
-        return flow.user_op_builder(name if name is not None else id_util.UniqueStr('AddN_')).Op('add_n').Input('in', inputs).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("AddN_")
+            )
+            .Op("add_n")
+            .Input("in", inputs)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
         assert len(inputs) > kernel_max_inputs
         new_inputs = inputs[kernel_max_inputs:]
         new_inputs.append(_recursive_build_add_n(inputs[:kernel_max_inputs]))
         return _recursive_build_add_n(new_inputs)
 
-def add_n(inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def add_n(
+    inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """Add all the input tensors in element-wise.
 
     Args:
@@ -108,7 +127,12 @@ def add_n(inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[s
     """
     return _recursive_build_add_n(inputs, name)
 
-def subtract(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def subtract(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Compute :math:`X - Y` element-wise.
 
     The equation is:
@@ -156,7 +180,12 @@ def subtract(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[
     else:
         return broadcast_sub(x, y, name)
 
-def multiply(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def multiply(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Compute :math:`x \\times y` element-wise.
 
     The equation is:
@@ -206,7 +235,12 @@ def multiply(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[
     else:
         return broadcast_mul(x, y, name)
 
-def divide(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def divide(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the division of x by y.
 
     The equation is:
@@ -258,7 +292,12 @@ def divide(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[in
     else:
         return broadcast_div(x, y, name)
 
-def floor_mod(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def floor_mod(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator mods two Blobs.
 
     The equation is:
@@ -308,65 +347,156 @@ def floor_mod(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union
     else:
         return broadcast_floor_mod(x, y, name)
 
+
 def scalar_add(x, operand, name=None):
     if name is None:
-        name = id_util.UniqueStr('ScalarAdd_')
-    builder = flow.user_op_builder(name).Op('scalar_add').Input('in', [x]).Output('out')
+        name = id_util.UniqueStr("ScalarAdd_")
+    builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
-        builder = builder.Attr('has_int_operand', True).Attr('has_float_operand', False).Attr('int_operand', operand).Attr('float_operand', 0.0)
+        builder = (
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
+        )
     elif isinstance(operand, float):
-        builder = builder.Attr('has_int_operand', False).Attr('has_float_operand', True).Attr('int_operand', 0).Attr('float_operand', operand)
+        builder = (
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
+        )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
+
 def scalar_add_by_tensor(x, scalar, name=None):
-    return flow.user_op_builder(name or id_util.UniqueStr('ScalarAddByTensor_')).Op('scalar_add_by_tensor').Input('x', [x]).Input('scalar', [scalar]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
+        .Op("scalar_add_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def element_wise_add(x, y, name=None):
     return flow.math.add_n([x, y], name)
 
+
 def build_broadcast_binary_op(math_op, x, y, name=None):
     if name is None:
-        name = id_util.UniqueStr(math_op + '_')
-    return flow.user_op_builder(name).Op(math_op).Input('x', [x]).Input('y', [y]).Output('z').Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr(math_op + "_")
+    return (
+        flow.user_op_builder(name)
+        .Op(math_op)
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("z")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def broadcast_add(x, y, name=None):
-    return build_broadcast_binary_op('broadcast_add', x, y, name)
+    return build_broadcast_binary_op("broadcast_add", x, y, name)
+
 
 def broadcast_sub(x, y, name=None):
-    return build_broadcast_binary_op('broadcast_sub', x, y, name)
+    return build_broadcast_binary_op("broadcast_sub", x, y, name)
+
 
 def scalar_sub_by_tensor(x, scalar, name=None):
-    return flow.user_op_builder(name or id_util.UniqueStr('ScalarSubByTensor_')).Op('scalar_sub_by_tensor').Input('x', [x]).Input('scalar', [scalar]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
+        .Op("scalar_sub_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def element_wise_mul(x, y, name=None):
-    return flow.user_op_builder(name or id_util.UniqueStr('ElementWiseMul_')).Op('multiply').Input('x', [x]).Input('y', [y]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
+        .Op("multiply")
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def broadcast_mul(x, y, name=None):
-    return build_broadcast_binary_op('broadcast_mul', x, y, name)
+    return build_broadcast_binary_op("broadcast_mul", x, y, name)
+
 
 def scalar_mul(x, operand, name=None):
     if name is None:
-        name = id_util.UniqueStr('ScalarMul_')
-    builder = flow.user_op_builder(name).Op('scalar_mul').Input('in', [x]).Output('out')
+        name = id_util.UniqueStr("ScalarMul_")
+    builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
     if isinstance(operand, int):
-        builder = builder.Attr('has_int_operand', True).Attr('has_float_operand', False).Attr('int_operand', operand).Attr('float_operand', 0.0)
+        builder = (
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
+        )
     elif isinstance(operand, float):
-        builder = builder.Attr('has_int_operand', False).Attr('has_float_operand', True).Attr('int_operand', 0).Attr('float_operand', operand)
+        builder = (
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
+        )
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
+
 def scalar_mul_by_tensor(x, scalar, name=None):
-    return flow.user_op_builder(name or id_util.UniqueStr('ScalarMulByTensor_')).Op('scalar_mul_by_tensor').Input('x', [x]).Input('scalar', [scalar]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
+        .Op("scalar_mul_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def broadcast_div(x, y, name=None):
-    return build_broadcast_binary_op('broadcast_div', x, y, name)
+    return build_broadcast_binary_op("broadcast_div", x, y, name)
+
 
 def scalar_div_by_tensor(x, scalar, name=None):
-    return flow.user_op_builder(name or id_util.UniqueStr('ScalarDivByTensor_')).Op('scalar_div_by_tensor').Input('x', [x]).Input('scalar', [scalar]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
+        .Op("scalar_div_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 def broadcast_floor_mod(x, y, name=None):
-    return build_broadcast_binary_op('broadcast_floor_mod', x, y, name)
+    return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
-def gelu(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def gelu(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """Gelu activation operator.
 
     The equation is:
@@ -400,9 +530,20 @@ def gelu(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [-0.15426877, 0., 0.34573123]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Gelu_')).Op('gelu').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
+        .Op("gelu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def relu(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def relu(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """Relu activation
 
     The equation is:
@@ -436,9 +577,20 @@ def relu(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [0., 0., 5.]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Relu_')).Op('relu').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
+        .Op("relu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sigmoid(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """Sigmoid activation
 
     The equation is:
@@ -472,12 +624,45 @@ def sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> 
         # out [0.26894143, 0.5, 0.7310586]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Sigmoid_')).Op('sigmoid').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Sigmoid_")
+        )
+        .Op("sigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def sigmoid_grad(y: oneflow._oneflow_internal.BlobDesc, dy: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('SigmoidGrad_')).Op('sigmoid_grad').Input('y', [y]).Input('dy', [dy]).Output('dx').Build().InferAndTryRun().RemoteBlobList()[0]
 
-def unsorted_segment_sum(data: oneflow._oneflow_internal.BlobDesc, segment_ids: oneflow._oneflow_internal.BlobDesc, num_segments: int, axis: int=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def sigmoid_grad(
+    y: oneflow._oneflow_internal.BlobDesc,
+    dy: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidGrad_")
+        )
+        .Op("sigmoid_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def unsorted_segment_sum(
+    data: oneflow._oneflow_internal.BlobDesc,
+    segment_ids: oneflow._oneflow_internal.BlobDesc,
+    num_segments: int,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the sum along segments of a Blob.
 
     Args:
@@ -536,9 +721,29 @@ def unsorted_segment_sum(data: oneflow._oneflow_internal.BlobDesc, segment_ids: 
         #       [ 5.  6.  7.  8.]]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('UnsortedSegmentSum_')).Op('unsorted_segment_sum').Input('data', [data]).Input('segment_ids', [segment_ids]).Output('out').Attr('axis', int(axis)).Attr('num_segments', int(num_segments)).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
+        )
+        .Op("unsorted_segment_sum")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Output("out")
+        .Attr("axis", int(axis))
+        .Attr("num_segments", int(num_segments))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def unsorted_segment_sum_like(data: oneflow._oneflow_internal.BlobDesc, segment_ids: oneflow._oneflow_internal.BlobDesc, like: oneflow._oneflow_internal.BlobDesc, axis: int=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def unsorted_segment_sum_like(
+    data: oneflow._oneflow_internal.BlobDesc,
+    segment_ids: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the sum along segments of a Blob, the output shape is the same as the `like` Blob.
 
     Args:
@@ -578,9 +783,28 @@ def unsorted_segment_sum_like(data: oneflow._oneflow_internal.BlobDesc, segment_
         #      [ 5.  6.  7.  8.]]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('UnsortedSegmentSumLike_')).Op('unsorted_segment_sum_like').Input('data', [data]).Input('segment_ids', [segment_ids]).Input('like', [like]).Output('out').Attr('axis', int(axis)).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
+        )
+        .Op("unsorted_segment_sum_like")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Input("like", [like])
+        .Output("out")
+        .Attr("axis", int(axis))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def unsorted_batch_segment_sum(data: oneflow._oneflow_internal.BlobDesc, segment_ids: oneflow._oneflow_internal.BlobDesc, num_segments: int, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def unsorted_batch_segment_sum(
+    data: oneflow._oneflow_internal.BlobDesc,
+    segment_ids: oneflow._oneflow_internal.BlobDesc,
+    num_segments: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data.
 
     For example, the segment id is like:
@@ -626,9 +850,26 @@ def unsorted_batch_segment_sum(data: oneflow._oneflow_internal.BlobDesc, segment
         #      [8. 2.]]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('UnsortedBatchSegmentSum_')).Op('unsorted_batch_segment_sum').Input('data', [data]).Input('segment_ids', [segment_ids]).Output('out').Attr('num_segments', int(num_segments)).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
+        )
+        .Op("unsorted_batch_segment_sum")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Output("out")
+        .Attr("num_segments", int(num_segments))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def equal(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`{x}=={y}` element-wise.
 
     Args:
@@ -660,9 +901,14 @@ def equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.Bl
         # out [1 1 0]
 
     """
-    return build_broadcast_binary_op('broadcast_equal', x, y, name)
+    return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
-def not_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def not_equal(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`{x}!={y}` element-wise.
 
     Args:
@@ -694,9 +940,14 @@ def not_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_interna
         # out [0 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_not_equal', x, y, name)
+    return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
-def less(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def less(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`x < y` element-wise.
 
     Args:
@@ -728,9 +979,14 @@ def less(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.Blo
         # out [0 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_less', x, y, name)
+    return build_broadcast_binary_op("broadcast_less", x, y, name)
 
-def less_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def less_equal(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`x <= y` element-wise.
 
     Args:
@@ -762,9 +1018,14 @@ def less_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_intern
         # out [1 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_less_equal', x, y, name)
+    return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
-def greater(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def greater(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`x > y` element-wise.
 
     Args:
@@ -796,9 +1057,14 @@ def greater(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.
         # out [0 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_greater', x, y, name)
+    return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
-def greater_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def greater_equal(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the truth value of :math:`x >= y` element-wise.
 
     Args:
@@ -830,9 +1096,14 @@ def greater_equal(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_int
         # out [1 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_greater_equal', x, y, name)
+    return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
-def logical_and(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def logical_and(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Logical AND function.
 
     Each element is calculated by:
@@ -869,9 +1140,14 @@ def logical_and(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_inter
         # out [0 0 1]
 
     """
-    return build_broadcast_binary_op('broadcast_logical_and', x, y, name)
+    return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
-def minimum(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def minimum(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the min of x and y element-wise, this op supports broadcasting.
 
     Args:
@@ -904,11 +1180,25 @@ def minimum(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.
 
     """
     if x.shape == y.shape:
-        return flow.user_op_builder(name or id_util.UniqueStr('ElementWiseMinimum_')).Op('elementwise_minimum').Input('x', [x]).Input('y', [y]).Output('z').Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMinimum_"))
+            .Op("elementwise_minimum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
-        return build_broadcast_binary_op('broadcast_minimum', x, y, name)
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
-def maximum(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def maximum(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns the max of x and y element-wise, this op supports broadcasting.
 
     Args:
@@ -941,11 +1231,26 @@ def maximum(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.
 
     """
     if x.shape == y.shape:
-        return flow.user_op_builder(name or id_util.UniqueStr('ElementWiseMaximum_')).Op('elementwise_maximum').Input('x', [x]).Input('y', [y]).Output('z').Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMaximum_"))
+            .Op("elementwise_maximum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
-        return build_broadcast_binary_op('broadcast_maximum', x, y, name)
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
-def elem_cnt(input_blob: oneflow._oneflow_internal.BlobDesc, axis: Optional[Sequence[int]]=None, dtype: Optional[flow.dtype]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def elem_cnt(
+    input_blob: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[Sequence[int]] = None,
+    dtype: Optional[flow.dtype] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed.
 
     Args:
@@ -993,7 +1298,11 @@ def elem_cnt(input_blob: oneflow._oneflow_internal.BlobDesc, axis: Optional[Sequ
 
     """
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, 'name', name if name is not None else id_util.UniqueStr('ShapeElemCnt_'))
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ShapeElemCnt_"),
+    )
     op_conf.shape_elem_cnt_conf.x = input_blob.unique_name
     if axis is None:
         op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
@@ -1001,18 +1310,43 @@ def elem_cnt(input_blob: oneflow._oneflow_internal.BlobDesc, axis: Optional[Sequ
         assert isinstance(axis, (tuple, list))
         op_conf.shape_elem_cnt_conf.include_axis_conf.axis.extend(axis)
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(dtype)
-    op_conf.shape_elem_cnt_conf.y = 'y'
+        op_conf.shape_elem_cnt_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
+    op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
-    out_lbi.blob_name = 'y'
+    out_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(out_lbi)
 
-def _top_k_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, k: int=1, sorted: bool=True, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('TopK_')).Op('top_k').Input('in', [input]).Output('out').Attr('k', k).Attr('sorted', sorted).Build().InferAndTryRun().RemoteBlobList()[0]
 
-def top_k(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, k: int=1, sorted: bool=True, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def _top_k_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("k", k)
+        .Attr("sorted", sorted)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def top_k(
+    input: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices.
 
     Args:
@@ -1044,22 +1378,40 @@ def top_k(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, k: int=1, sor
         # out [2 3]
 
     """
-    name = name if name is not None else id_util.UniqueStr('TopK_')
+    name = name if name is not None else id_util.UniqueStr("TopK_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert 0 <= axis < num_axes, 'axis out of range'
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _top_k_at_last_dim(input, k, sorted, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + '_transpose')
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _top_k_at_last_dim(x, k, sorted, name)
-        return flow.transpose(x, get_inversed_perm(perm), False, True, name + '_inverse_transpose')
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
 
-def _argmax_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('ArgMax_')).Op('argmax').Input('in', [input]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
 
-def argmax(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def _argmax_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
+        .Op("argmax")
+        .Input("in", [input])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def argmax(
+    input: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """The op computes the index with the largest value of a Blob at specified axis.
 
     Args:
@@ -1091,22 +1443,29 @@ def argmax(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, name: Option
         # out [2 1]
 
     """
-    name = name if name is not None else id_util.UniqueStr('ArgMax_')
+    name = name if name is not None else id_util.UniqueStr("ArgMax_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert 0 <= axis < num_axes, 'axis out of range'
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _argmax_at_last_dim(input, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + '_transpose')
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _argmax_at_last_dim(x, name)
-        x = flow.expand_dims(x, -1, name + '_expand_dims')
-        x = flow.transpose(x, get_inversed_perm(perm), False, True, name + '_inverse_transpose')
-        x = flow.squeeze(x, [axis], name + '_squeeze')
+        x = flow.expand_dims(x, -1, name + "_expand_dims")
+        x = flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
+        x = flow.squeeze(x, [axis], name + "_squeeze")
         return x
 
-def broadcast_to_compatible_with(x: oneflow._oneflow_internal.BlobDesc, compatible: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def broadcast_to_compatible_with(
+    x: oneflow._oneflow_internal.BlobDesc,
+    compatible: Sequence[oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Returns a 'Blob' with the shape can be broadcasted by other shapes
 
     Args:
@@ -1142,19 +1501,27 @@ def broadcast_to_compatible_with(x: oneflow._oneflow_internal.BlobDesc, compatib
     """
     assert isinstance(compatible, (list, tuple))
     if name is None:
-        name = id_util.UniqueStr('BroadcastToCompatibleWith_')
+        name = id_util.UniqueStr("BroadcastToCompatibleWith_")
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, 'name', name)
-    setattr(op_conf.broadcast_to_compatible_with_conf, 'x', x.unique_name)
-    setattr(op_conf.broadcast_to_compatible_with_conf, 'y', 'y')
-    op_conf.broadcast_to_compatible_with_conf.compatible.extend([cp.unique_name for cp in compatible])
+    setattr(op_conf, "name", name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "x", x.unique_name)
+    setattr(op_conf.broadcast_to_compatible_with_conf, "y", "y")
+    op_conf.broadcast_to_compatible_with_conf.compatible.extend(
+        [cp.unique_name for cp in compatible]
+    )
     interpret_util.Forward(op_conf)
     ret_lbi = logical_blob_id_util.LogicalBlobId()
     ret_lbi.op_name = op_conf.name
-    ret_lbi.blob_name = 'y'
+    ret_lbi.blob_name = "y"
     return remote_blob_util.RemoteBlob(ret_lbi)
 
-def l2_normalize(input: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=None, epsilon: float=1e-12, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def l2_normalize(
+    input: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[int] = None,
+    epsilon: float = 1e-12,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Use L2 norm to normalizes along dimension `axis`
 
     The equation is:
@@ -1194,10 +1561,28 @@ def l2_normalize(input: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=
     if axis < 0:
         axis += len(input.shape)
     assert axis >= 0 and axis < len(input.shape)
-    (y, square_x_sum) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('L2Normalize_')).Op('l2_normalize').Input('x', [input]).Output('y').Output('square_x_sum').Attr('axis', int(axis)).Attr('epsilon', float(epsilon)).Build().InferAndTryRun().RemoteBlobList()
+    (y, square_x_sum) = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("L2Normalize_")
+        )
+        .Op("l2_normalize")
+        .Input("x", [input])
+        .Output("y")
+        .Output("square_x_sum")
+        .Attr("axis", int(axis))
+        .Attr("epsilon", float(epsilon))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return y
 
-def squared_difference(x: Union[int, float, oneflow._oneflow_internal.BlobDesc], y: Union[int, float, oneflow._oneflow_internal.BlobDesc], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def squared_difference(
+    x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    y: Union[int, float, oneflow._oneflow_internal.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This op computes :math:`(x - y)^2` element-wise.
 
     Args:
@@ -1232,14 +1617,36 @@ def squared_difference(x: Union[int, float, oneflow._oneflow_internal.BlobDesc],
     """
     (name_subtract, name_square) = (None, None)
     if name is not None:
-        name_subtract = name + '_subtract'
-        name_square = name + '_square'
+        name_subtract = name + "_subtract"
+        name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
 
-def gelu_grad(x: oneflow._oneflow_internal.BlobDesc, dy: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('GeluGrad_')).Op('gelu_grad').Input('x', [x]).Input('dy', [dy]).Output('dx').Build().InferAndTryRun().RemoteBlobList()[0]
 
-def tril(x: oneflow._oneflow_internal.BlobDesc, diagonal: int=0, fill_value: Union[int, float]=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def gelu_grad(
+    x: oneflow._oneflow_internal.BlobDesc,
+    dy: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GeluGrad_")
+        )
+        .Op("gelu_grad")
+        .Input("x", [x])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def tril(
+    x: oneflow._oneflow_internal.BlobDesc,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Compute lower triangle of an matrix.
 
     Args:
@@ -1284,9 +1691,28 @@ def tril(x: oneflow._oneflow_internal.BlobDesc, diagonal: int=0, fill_value: Uni
         is_floating_fill_value = False
         floating_fill_value = float(0)
         integer_fill_value = int(fill_value)
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Tril_')).Op('tril').Input('in', [x]).Attr('diagonal', diagonal).Attr('is_floating_fill_value', is_floating_fill_value).Attr('floating_fill_value', floating_fill_value).Attr('integer_fill_value', integer_fill_value).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
+        .Op("tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def fused_scale_tril(x: oneflow._oneflow_internal.BlobDesc, diagonal: int=0, fill_value: Union[int, float]=0, scale: Union[int, float]=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def fused_scale_tril(
+    x: oneflow._oneflow_internal.BlobDesc,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     if isinstance(fill_value, float):
         is_floating_fill_value = True
         floating_fill_value = float(fill_value)
@@ -1303,16 +1729,64 @@ def fused_scale_tril(x: oneflow._oneflow_internal.BlobDesc, diagonal: int=0, fil
         is_floating_scale_value = False
         floating_scale_value = float(1)
         integer_scale_value = int(scale)
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('FusedScaleTril_')).Op('fused_scale_tril').Input('in', [x]).Attr('diagonal', diagonal).Attr('is_floating_fill_value', is_floating_fill_value).Attr('floating_fill_value', floating_fill_value).Attr('integer_fill_value', integer_fill_value).Attr('is_floating_scale_value', is_floating_scale_value).Attr('floating_scale_value', floating_scale_value).Attr('integer_scale_value', integer_scale_value).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("FusedScaleTril_")
+        )
+        .Op("fused_scale_tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
+        .Attr("is_floating_scale_value", is_floating_scale_value)
+        .Attr("floating_scale_value", floating_scale_value)
+        .Attr("integer_scale_value", integer_scale_value)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def fused_scale_tril_softmax_dropout(x: oneflow._oneflow_internal.BlobDesc, diagonal: int=0, fill_value: Union[int, float]=0, scale: Union[int, float]=1, rate: float=0.0, noise_shape: Optional[oneflow._oneflow_internal.BlobDesc]=None, seed: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def fused_scale_tril_softmax_dropout(
+    x: oneflow._oneflow_internal.BlobDesc,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    rate: float = 0.0,
+    noise_shape: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     if name is None:
-        name = id_util.UniqueStr('FusedTrilScaleSoftmaxMaskScale_')
-    mask = flow.nn.random_mask_like(x, rate, seed, noise_shape, '%s-dropout_random_mask_like' % name)
-    (y, softmax_y) = flow.user_op_builder(name).Op('fused_tril_scale_softmax_mask_scale').Input('x', [x]).Input('mask', [mask]).Attr('diagonal', diagonal).Attr('tril_fill_value', float(fill_value)).Attr('tril_scale_value', float(scale)).Attr('mask_scale_value', float(1.0 / (1.0 - rate))).Output('y').Output('softmax_y').Build().InferAndTryRun().RemoteBlobList()
+        name = id_util.UniqueStr("FusedTrilScaleSoftmaxMaskScale_")
+    mask = flow.nn.random_mask_like(
+        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
+    (y, softmax_y) = (
+        flow.user_op_builder(name)
+        .Op("fused_tril_scale_softmax_mask_scale")
+        .Input("x", [x])
+        .Input("mask", [mask])
+        .Attr("diagonal", diagonal)
+        .Attr("tril_fill_value", float(fill_value))
+        .Attr("tril_scale_value", float(scale))
+        .Attr("mask_scale_value", float(1.0 / (1.0 - rate)))
+        .Output("y")
+        .Output("softmax_y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return y
 
-def polyval(coeffs: Union[List, Tuple], x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def polyval(
+    coeffs: Union[List, Tuple],
+    x: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the elementwise value of a polynomial.
 
     Args:
@@ -1345,9 +1819,11 @@ def polyval(coeffs: Union[List, Tuple], x: oneflow._oneflow_internal.BlobDesc, n
 
     """
     if name is None:
-        name = id_util.UniqueStr('Polyval_')
+        name = id_util.UniqueStr("Polyval_")
     if not isinstance(coeffs, (list, tuple)):
-        raise ValueError('Argument coeffs must be list type found {}'.format(type(coeffs)))
+        raise ValueError(
+            "Argument coeffs must be list type found {}".format(type(coeffs))
+        )
     if len(coeffs) < 1:
         return flow.zeros_like(x, name=name)
     p = flow.zeros_like(x, name=name)

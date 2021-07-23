@@ -3,8 +3,8 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from typing import Optional
 
-class Expand(Module):
 
+class Expand(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
         self.expand_size = list(*sizes)
@@ -14,7 +14,8 @@ class Expand(Module):
             x = flow.cast(x, flow.int32)
         return flow.F.expand(x, self.expand_size)
 
-@register_tensor_op('expand')
+
+@register_tensor_op("expand")
 def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.
 
@@ -49,6 +50,9 @@ def expand_op(x, *sizes):
 
     """
     return Expand(sizes)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

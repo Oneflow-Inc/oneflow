@@ -7,7 +7,16 @@ import oneflow.framework.distribute as distribute_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
-def prelu(inputs: oneflow._oneflow_internal.BlobDesc, alpha_initializer: Optional[initializer_conf_util.InitializerConf]=None, alpha_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, shared_axes: Optional[Sequence[int]]=None, trainable: bool=True, name: str='PRelu', model_distribute: oneflow._oneflow_internal.distribute.Distribute=oneflow._oneflow_internal.distribute.broadcast()) -> oneflow._oneflow_internal.BlobDesc:
+
+def prelu(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    alpha_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    alpha_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    shared_axes: Optional[Sequence[int]] = None,
+    trainable: bool = True,
+    name: str = "PRelu",
+    model_distribute: oneflow._oneflow_internal.distribute.Distribute = oneflow._oneflow_internal.distribute.broadcast(),
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Prelu(Parametric Rectified Linear Unit) activation.
 
     The :math:`\\alpha` is a parameter that can be trained in network
@@ -109,6 +118,22 @@ def prelu(inputs: oneflow._oneflow_internal.BlobDesc, alpha_initializer: Optiona
     if alpha_initializer is None:
         alpha_initializer = flow.constant_initializer(0)
     with flow.scope.namespace(name):
-        alpha = flow.get_variable(name='alpha', shape=alpha_shape, dtype=inputs.dtype, initializer=alpha_initializer, regularizer=alpha_regularizer, trainable=trainable, distribute=model_distribute, reuse=False)
-    op = flow.user_op_builder(name).Op('prelu').Input('x', [inputs]).Input('alpha', [alpha]).Output('y').Build()
+        alpha = flow.get_variable(
+            name="alpha",
+            shape=alpha_shape,
+            dtype=inputs.dtype,
+            initializer=alpha_initializer,
+            regularizer=alpha_regularizer,
+            trainable=trainable,
+            distribute=model_distribute,
+            reuse=False,
+        )
+    op = (
+        flow.user_op_builder(name)
+        .Op("prelu")
+        .Input("x", [inputs])
+        .Input("alpha", [alpha])
+        .Output("y")
+        .Build()
+    )
     return op.InferAndTryRun().SoleOutputBlob()

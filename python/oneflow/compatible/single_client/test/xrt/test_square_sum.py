@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(x_shape, dtype=flow.float32):
     config.use_xla_jit(False)
@@ -10,7 +12,9 @@ def make_job(x_shape, dtype=flow.float32):
     @flow.global_function(config)
     def square_sum_job(x: flow.typing.Numpy.Placeholder(x_shape, dtype=dtype)):
         return flow.experimental.square_sum(x)
+
     return square_sum_job
+
 
 def make_xla_job(x_shape, dtype=flow.float32):
     config.use_xla_jit(True)
@@ -19,17 +23,18 @@ def make_xla_job(x_shape, dtype=flow.float32):
     @flow.global_function(config)
     def xla_square_sum_job(x: flow.typing.Numpy.Placeholder(x_shape, dtype=dtype)):
         return flow.experimental.square_sum(x)
+
     return xla_square_sum_job
 
-class TestAdd(unittest.TestCase):
 
+class TestAdd(unittest.TestCase):
     def _test_body(self, x, dtype=np.float32):
         f1 = make_job(x.shape, dtype=flow.float32)
         f2 = make_xla_job(x.shape, dtype=flow.float32)
         a = f1(x).get()
         b = f2(x).get()
-        print('without xla: ', a)
-        print('with xla', b)
+        print("without xla: ", a)
+        print("with xla", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -50,5 +55,7 @@ class TestAdd(unittest.TestCase):
         self._test_random_body((1, 10))
         self._test_random_body((2, 10, 2))
         self._test_random_body((2, 5, 2, 2))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

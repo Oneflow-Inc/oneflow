@@ -9,6 +9,22 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 from typing import Optional, Tuple
 
-def indexed_slices_reduce_sum(indices: input_blob_util.ArgBlobDef, values: input_blob_util.ArgBlobDef, name: Optional[str]=None) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('IndexedSlicesReduceSum_')).Op('indexed_slices_reduce_sum').Input('x_indices', [indices]).Input('x_values', [values]).Output('y_indices').Output('y_values').Output('num_unique').Build()
+
+def indexed_slices_reduce_sum(
+    indices: input_blob_util.ArgBlobDef,
+    values: input_blob_util.ArgBlobDef,
+    name: Optional[str] = None,
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("IndexedSlicesReduceSum_")
+        )
+        .Op("indexed_slices_reduce_sum")
+        .Input("x_indices", [indices])
+        .Input("x_values", [values])
+        .Output("y_indices")
+        .Output("y_values")
+        .Output("num_unique")
+        .Build()
+    )
     return op.InferAndTryRun().RemoteBlobList()

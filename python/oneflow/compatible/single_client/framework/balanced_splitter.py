@@ -3,6 +3,7 @@ def BalancedPartNums(total, part_size):
     remainder = total % part_size
     return [base + int(i < remainder) for i in range(part_size)]
 
+
 def BalancedRanges(total, part_size):
     balanced_part_nums = BalancedPartNums(total, part_size)
     ranges = []

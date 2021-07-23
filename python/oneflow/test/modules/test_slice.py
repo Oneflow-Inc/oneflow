@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 
+
 def _test_slice(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -13,6 +14,7 @@ def _test_slice(test_case, device):
     np_out = tmp[::1, ::2, ::3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
+
 def _test_slice_1_dim(test_case, device):
     np_arr = np.random.randn(100).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -20,10 +22,12 @@ def _test_slice_1_dim(test_case, device):
     test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
 
+
 def _test_slice_3_dim(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
     test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
+
 
 def _test_slice_4_dim(test_case, device):
     np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
@@ -33,6 +37,7 @@ def _test_slice_4_dim(test_case, device):
     tmp = np_arr[0:5, 0:3, 0:5, 0:6]
     np_out = tmp[::2, ::1, ::2, ::3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
+
 
 def _test_slice_with_int_index(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
@@ -56,6 +61,7 @@ def _test_slice_with_int_index(test_case, device):
     np_out = np_arr[0, :, :, :]
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_slice_negative_index(test_case, device):
     np_arr = np.random.randn(4, 5, 6)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -63,6 +69,7 @@ def _test_slice_negative_index(test_case, device):
     test_case.assertTrue(np.allclose(x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
     test_case.assertTrue(np.allclose(x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
     test_case.assertTrue(np.allclose(x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
+
 
 def _test_slice_ellipsis_type(test_case, device):
     np_arr = np.random.randn(2, 3, 4, 5, 6, 7).astype(np.float32)
@@ -80,6 +87,7 @@ def _test_slice_ellipsis_type(test_case, device):
     np_out = np_arr[::2, ..., 1:2]
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_slice_backward(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
@@ -91,19 +99,28 @@ def _test_slice_backward(test_case, device):
     np_grad[0:3, 0:5, 0:6][::1, ::2, ::3] = 1
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSlice(flow.unittest.TestCase):
-
     def test_slice(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_slice, _test_slice_1_dim, _test_slice_3_dim, _test_slice_4_dim, _test_slice_with_int_index, _test_slice_negative_index, _test_slice_ellipsis_type, _test_slice_backward]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_fun"] = [
+            _test_slice,
+            _test_slice_1_dim,
+            _test_slice_3_dim,
+            _test_slice_4_dim,
+            _test_slice_with_int_index,
+            _test_slice_negative_index,
+            _test_slice_ellipsis_type,
+            _test_slice_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSliceUpdate(flow.unittest.TestCase):
-
     def test_slice_update(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.Tensor(x)
@@ -112,9 +129,9 @@ class TestSliceUpdate(flow.unittest.TestCase):
         y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalSliceAssign(flow.unittest.TestCase):
-
     def test_logical_slice_assign(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.Tensor(x)
@@ -136,5 +153,7 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         np_arr[0, ::1, ..., 2:3] = 1
         input[0, ::1, ..., 2:3] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

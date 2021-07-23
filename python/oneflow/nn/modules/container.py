@@ -4,8 +4,20 @@ from itertools import islice
 import operator
 import oneflow as flow
 from oneflow.nn.module import Module
-from typing import Any, Iterable, Iterator, Mapping, Optional, overload, Tuple, TypeVar, Union
-T = TypeVar('T')
+from typing import (
+    Any,
+    Iterable,
+    Iterator,
+    Mapping,
+    Optional,
+    overload,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+T = TypeVar("T")
+
 
 class Sequential(Module):
     """A sequential container.
@@ -44,7 +56,7 @@ class Sequential(Module):
         ...
 
     @overload
-    def __init__(self, arg: 'OrderedDict[str, Module]') -> None:
+    def __init__(self, arg: "OrderedDict[str, Module]") -> None:
         ...
 
     def __init__(self, *args: Any):
@@ -61,7 +73,7 @@ class Sequential(Module):
         size = len(self)
         idx = operator.index(idx)
         if not -size <= idx < size:
-            raise IndexError('index {} is out of range'.format(idx))
+            raise IndexError("index {} is out of range".format(idx))
         idx %= size
         return next(islice(iterator, idx, None))
 
@@ -99,16 +111,16 @@ class Sequential(Module):
             input = module(input)
         return input
 
-class ParameterList(Module):
 
-    def __init__(self, parameters: Optional[Iterable['Parameter']]=None) -> None:
+class ParameterList(Module):
+    def __init__(self, parameters: Optional[Iterable["Parameter"]] = None) -> None:
         super(ParameterList, self).__init__()
         self._initialized = True
         if parameters is not None:
             self += parameters
 
     def __setstate__(self, state):
-        state['_initialized'] = False
+        state["_initialized"] = False
         super(ParameterList, self).__setstate__(state)
         self._initialized = True
 
@@ -116,13 +128,13 @@ class ParameterList(Module):
         """Get the absolute index for the list of modules"""
         idx = operator.index(idx)
         if not -len(self) <= idx < len(self):
-            raise IndexError('index {} is out of range'.format(idx))
+            raise IndexError("index {} is out of range".format(idx))
         if idx < 0:
             idx += len(self)
         return str(idx)
 
     @overload
-    def __getitem__(self, idx: int) -> 'Parameter':
+    def __getitem__(self, idx: int) -> "Parameter":
         ...
 
     @overload
@@ -136,23 +148,23 @@ class ParameterList(Module):
             idx = self._get_abs_string_index(idx)
             return self._parameters[str(idx)]
 
-    def __setitem__(self, idx: int, param: 'Parameter') -> None:
+    def __setitem__(self, idx: int, param: "Parameter") -> None:
         idx = self._get_abs_string_index(idx)
         return self.register_parameter(str(idx), param)
 
     def __setattr__(self, key: Any, value: Any) -> None:
-        if getattr(self, '_initialized', False):
+        if getattr(self, "_initialized", False):
             if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
-                warnings.warn('Setting attributes on ParameterList is not supported.')
+                warnings.warn("Setting attributes on ParameterList is not supported.")
         super(ParameterList, self).__setattr__(key, value)
 
     def __len__(self) -> int:
         return len(self._parameters)
 
-    def __iter__(self) -> Iterator['Parameter']:
+    def __iter__(self) -> Iterator["Parameter"]:
         return iter(self._parameters.values())
 
-    def __iadd__(self: T, parameters: Iterable['Parameter']) -> T:
+    def __iadd__(self: T, parameters: Iterable["Parameter"]) -> T:
         return self.extend(parameters)
 
     def __dir__(self):
@@ -160,7 +172,7 @@ class ParameterList(Module):
         keys = [key for key in keys if not key.isdigit()]
         return keys
 
-    def append(self: T, parameter: 'Parameter') -> T:
+    def append(self: T, parameter: "Parameter") -> T:
         """Appends a given parameter at the end of the list.
 
         Arguments:
@@ -169,14 +181,17 @@ class ParameterList(Module):
         self.register_parameter(str(len(self)), parameter)
         return self
 
-    def extend(self: T, parameters: Iterable['Parameter']) -> T:
+    def extend(self: T, parameters: Iterable["Parameter"]) -> T:
         """Appends parameters from a Python iterable to the end of the list.
 
         Arguments:
             parameters (iterable): iterable of parameters to append
         """
         if not isinstance(parameters, collections.abc.Iterable):
-            raise TypeError('ParameterList.extend should be called with an iterable, but got ' + type(parameters).__name__)
+            raise TypeError(
+                "ParameterList.extend should be called with an iterable, but got "
+                + type(parameters).__name__
+            )
         offset = len(self)
         for (i, param) in enumerate(parameters):
             self.register_parameter(str(offset + i), param)
@@ -185,46 +200,50 @@ class ParameterList(Module):
     def extra_repr(self) -> str:
         child_lines = []
         for (k, p) in self._parameters.items():
-            size_str = 'x'.join((str(size) for size in p.size()))
-            device_str = '' if not p.is_cuda else ' (GPU {})'.format(p.get_device())
-            parastr = 'Parameter containing: [{} of size {}{}]'.format(type(p), size_str, device_str)
-            child_lines.append('  (' + str(k) + '): ' + parastr)
-        tmpstr = '\n'.join(child_lines)
+            size_str = "x".join((str(size) for size in p.size()))
+            device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
+            parastr = "Parameter containing: [{} of size {}{}]".format(
+                type(p), size_str, device_str
+            )
+            child_lines.append("  (" + str(k) + "): " + parastr)
+        tmpstr = "\n".join(child_lines)
         return tmpstr
 
     def __call__(self, input):
-        raise RuntimeError('ParameterList should not be called.')
+        raise RuntimeError("ParameterList should not be called.")
 
     def _replicate_for_data_parallel(self):
-        warnings.warn('nn.ParameterList is being used with DataParallel but this is not supported. This list will appear empty for the models replicated on each GPU except the original one.')
+        warnings.warn(
+            "nn.ParameterList is being used with DataParallel but this is not supported. This list will appear empty for the models replicated on each GPU except the original one."
+        )
         return super(ParameterList, self)._replicate_for_data_parallel()
 
-class ParameterDict(Module):
 
-    def __init__(self, parameters: Optional[Mapping[str, 'Parameter']]=None) -> None:
+class ParameterDict(Module):
+    def __init__(self, parameters: Optional[Mapping[str, "Parameter"]] = None) -> None:
         super(ParameterDict, self).__init__()
         self._initialized = True
         if parameters is not None:
             self.update(parameters)
 
     def __setstate__(self, state):
-        state['_initialized'] = False
+        state["_initialized"] = False
         super(ParameterDict, self).__setstate__(state)
         self._initialized = True
 
-    def __getitem__(self, key: str) -> 'Parameter':
+    def __getitem__(self, key: str) -> "Parameter":
         return self._parameters[key]
 
-    def __setitem__(self, key: str, parameter: 'Parameter') -> None:
+    def __setitem__(self, key: str, parameter: "Parameter") -> None:
         self.register_parameter(key, parameter)
 
     def __delitem__(self, key: str) -> None:
         del self._parameters[key]
 
     def __setattr__(self, key: Any, value: Any) -> None:
-        if getattr(self, '_initialized', False):
+        if getattr(self, "_initialized", False):
             if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
-                warnings.warn('Setting attributes on ParameterDict is not supported.')
+                warnings.warn("Setting attributes on ParameterDict is not supported.")
         super(ParameterDict, self).__setattr__(key, value)
 
     def __len__(self) -> int:
@@ -241,9 +260,9 @@ class ParameterDict(Module):
         """
         self._parameters.clear()
 
-class ModuleList(Module):
 
-    def __init__(self, modules: Optional[Iterable[Module]]=None) -> None:
+class ModuleList(Module):
+    def __init__(self, modules: Optional[Iterable[Module]] = None) -> None:
         super(ModuleList, self).__init__()
         if modules is not None:
             self += modules
@@ -252,7 +271,7 @@ class ModuleList(Module):
         """Get the absolute index for the list of modules"""
         idx = operator.index(idx)
         if not -len(self) <= idx < len(self):
-            raise IndexError('index {} is out of range'.format(idx))
+            raise IndexError("index {} is out of range".format(idx))
         if idx < 0:
             idx += len(self)
         return str(idx)
@@ -317,7 +336,10 @@ class ModuleList(Module):
             modules (iterable): iterable of modules to append
         """
         if not isinstance(modules, collections.abc.Iterable):
-            raise TypeError('ModuleList.extend should be called with an iterable, but got ' + type(modules).__name__)
+            raise TypeError(
+                "ModuleList.extend should be called with an iterable, but got "
+                + type(modules).__name__
+            )
         offset = len(self)
         for (i, module) in enumerate(modules):
             self.add_module(str(offset + i), module)
@@ -326,9 +348,9 @@ class ModuleList(Module):
     def forward(self):
         raise NotImplementedError()
 
-class ModuleDict(Module):
 
-    def __init__(self, modules: Optional[Mapping[str, Module]]=None) -> None:
+class ModuleDict(Module):
+    def __init__(self, modules: Optional[Mapping[str, Module]] = None) -> None:
         super(ModuleDict, self).__init__()
         if modules is not None:
             self.update(modules)
@@ -383,22 +405,36 @@ class ModuleDict(Module):
 
     def update(self, modules: Mapping[str, Module]) -> None:
         if not isinstance(modules, collections.abc.Iterable):
-            raise TypeError('ModuleDict.update should be called with an iterable of key/value pairs, but got ' + type(modules).__name__)
+            raise TypeError(
+                "ModuleDict.update should be called with an iterable of key/value pairs, but got "
+                + type(modules).__name__
+            )
         if isinstance(modules, (OrderedDict, ModuleDict, collections.abc.Mapping)):
             for (key, module) in modules.items():
                 self[key] = module
         else:
             for (j, m) in enumerate(modules):
                 if not isinstance(m, collections.abc.Iterable):
-                    raise TypeError('ModuleDict update sequence element #' + str(j) + ' should be Iterable; is' + type(m).__name__)
+                    raise TypeError(
+                        "ModuleDict update sequence element #"
+                        + str(j)
+                        + " should be Iterable; is"
+                        + type(m).__name__
+                    )
                 if not len(m) == 2:
-                    raise ValueError('ModuleDict update sequence element #' + str(j) + ' has length ' + str(len(m)) + '; 2 is required')
+                    raise ValueError(
+                        "ModuleDict update sequence element #"
+                        + str(j)
+                        + " has length "
+                        + str(len(m))
+                        + "; 2 is required"
+                    )
                 self[m[0]] = m[1]
 
     def forward(self):
         raise NotImplementedError()
 
-    def pop(self, key: str) -> 'Parameter':
+    def pop(self, key: str) -> "Parameter":
         """Remove key from the ParameterDict and return its parameter.
 
         Arguments:
@@ -413,19 +449,22 @@ class ModuleDict(Module):
         """
         return self._parameters.keys()
 
-    def items(self) -> Iterable[Tuple[str, 'Parameter']]:
+    def items(self) -> Iterable[Tuple[str, "Parameter"]]:
         """Return an iterable of the ParameterDict key/value pairs.
         """
         return self._parameters.items()
 
-    def values(self) -> Iterable['Parameter']:
+    def values(self) -> Iterable["Parameter"]:
         """Return an iterable of the ParameterDict values.
         """
         return self._parameters.values()
 
-    def update(self, parameters: Mapping[str, 'Parameter']) -> None:
+    def update(self, parameters: Mapping[str, "Parameter"]) -> None:
         if not isinstance(parameters, collections.abc.Iterable):
-            raise TypeError('ParametersDict.update should be called with an iterable of key/value pairs, but got ' + type(parameters).__name__)
+            raise TypeError(
+                "ParametersDict.update should be called with an iterable of key/value pairs, but got "
+                + type(parameters).__name__
+            )
         if isinstance(parameters, (OrderedDict, ParameterDict)):
             for (key, parameter) in parameters.items():
                 self[key] = parameter
@@ -435,27 +474,45 @@ class ModuleDict(Module):
         else:
             for (j, p) in enumerate(parameters):
                 if not isinstance(p, collections.abc.Iterable):
-                    raise TypeError('ParameterDict update sequence element #' + str(j) + ' should be Iterable; is' + type(p).__name__)
+                    raise TypeError(
+                        "ParameterDict update sequence element #"
+                        + str(j)
+                        + " should be Iterable; is"
+                        + type(p).__name__
+                    )
                 if not len(p) == 2:
-                    raise ValueError('ParameterDict update sequence element #' + str(j) + ' has length ' + str(len(p)) + '; 2 is required')
+                    raise ValueError(
+                        "ParameterDict update sequence element #"
+                        + str(j)
+                        + " has length "
+                        + str(len(p))
+                        + "; 2 is required"
+                    )
                 self[p[0]] = p[1]
 
     def extra_repr(self) -> str:
         child_lines = []
         for (k, p) in self._parameters.items():
-            size_str = 'x'.join((str(size) for size in p.size()))
-            device_str = '' if not p.is_cuda else ' (GPU {})'.format(p.get_device())
-            parastr = 'Parameter containing: [{} of size {}{}]'.format(type(p), size_str, device_str)
-            child_lines.append('  (' + k + '): ' + parastr)
-        tmpstr = '\n'.join(child_lines)
+            size_str = "x".join((str(size) for size in p.size()))
+            device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
+            parastr = "Parameter containing: [{} of size {}{}]".format(
+                type(p), size_str, device_str
+            )
+            child_lines.append("  (" + k + "): " + parastr)
+        tmpstr = "\n".join(child_lines)
         return tmpstr
 
     def __call__(self, input):
-        raise RuntimeError('ParameterDict should not be called.')
+        raise RuntimeError("ParameterDict should not be called.")
 
     def _replicate_for_data_parallel(self):
-        warnings.warn('nn.ParameterDict is being used with DataParallel but this is not supported. This dict will appear empty for the models replicated on each GPU except the original one.')
+        warnings.warn(
+            "nn.ParameterDict is being used with DataParallel but this is not supported. This dict will appear empty for the models replicated on each GPU except the original one."
+        )
         return super(ParameterDict, self)._replicate_for_data_parallel()
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

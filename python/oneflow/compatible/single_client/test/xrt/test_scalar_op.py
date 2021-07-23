@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 class TestScalarOp(unittest.TestCase):
     run_test = False
@@ -13,8 +15,8 @@ class TestScalarOp(unittest.TestCase):
         f2 = self.make_xla_job(x.shape, scalar, dtype=flow.float32)
         a = f1(x).get()
         b = f2(x).get()
-        print('without xla: ', a)
-        print('with xla', b)
+        print("without xla: ", a)
+        print("with xla", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -36,6 +38,7 @@ class TestScalarOp(unittest.TestCase):
         self._test_random_body((2, 10, 2), 2.0)
         self._test_random_body((2, 5, 2, 2), 2.0)
 
+
 class TestScalarAddOp(TestScalarOp):
     run_test = True
 
@@ -46,6 +49,7 @@ class TestScalarAddOp(TestScalarOp):
         @flow.global_function(config)
         def scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
+
         return scalar_add_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
@@ -55,7 +59,9 @@ class TestScalarAddOp(TestScalarOp):
         @flow.global_function(config)
         def xla_scalar_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.add(x, scalar)
+
         return xla_scalar_add_job
+
 
 class TestScalarMulOp(TestScalarOp):
     run_test = True
@@ -67,6 +73,7 @@ class TestScalarMulOp(TestScalarOp):
         @flow.global_function(config)
         def scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
+
         return scalar_mul_job
 
     def make_xla_job(self, x_shape, scalar, dtype=flow.float32):
@@ -76,6 +83,9 @@ class TestScalarMulOp(TestScalarOp):
         @flow.global_function(config)
         def xla_scalar_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
             return flow.math.multiply(x, scalar)
+
         return xla_scalar_mul_job
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

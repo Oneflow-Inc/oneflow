@@ -3,12 +3,15 @@ import six
 import hashlib
 import json
 import time
-from oneflow.compatible.single_client.core.summary import plugin_data_pb2 as plugin_data_pb2
+from oneflow.compatible.single_client.core.summary import (
+    plugin_data_pb2 as plugin_data_pb2,
+)
 from oneflow.compatible.single_client.core.summary import summary_pb2 as summary_pb2
 from oneflow.compatible.single_client.core.summary import event_pb2 as event_pb2
 from oneflow.compatible.single_client.core.summary import tensor_pb2 as tensor_pb2
 from oneflow.compatible.single_client.core.summary import projector_pb2 as projector_pb2
 from oneflow.compatible import single_client as flow
+
 
 def text(text, tag=None):
     """Add a text list to Summary
@@ -22,27 +25,39 @@ def text(text, tag=None):
     """
     if isinstance(text, (tuple, list)) and len(text) > 0:
         if not isinstance(tag, str) or tag is None:
-            tag = 'text'
+            tag = "text"
         text_size = len(text)
         tensor_shape = tensor_pb2.TensorShapeProto()
         dim = tensor_shape.dim.add()
         dim.size = text_size
-        tensor = tensor_pb2.TensorProto(dtype=tensor_pb2.DT_STRING, tensor_shape=tensor_shape)
+        tensor = tensor_pb2.TensorProto(
+            dtype=tensor_pb2.DT_STRING, tensor_shape=tensor_shape
+        )
         for idx in range(text_size):
-            tensor.string_val.append(text[idx].encode('utf-8'))
+            tensor.string_val.append(text[idx].encode("utf-8"))
         summary = summary_pb2.Summary()
-        value = summary.value.add(tag=tag, metadata=summary_pb2.SummaryMetadata(plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name='text')), tensor=tensor)
+        value = summary.value.add(
+            tag=tag,
+            metadata=summary_pb2.SummaryMetadata(
+                plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name="text")
+            ),
+            tensor=tensor,
+        )
         return summary
+
 
 def _get_tensor(values, dtype=None, shape=None):
     array = np.empty(shape, dtype=np.float)
     tensor_shape = tensor_pb2.TensorShapeProto()
     dim = tensor_shape.dim.add()
     dim.size = 0
-    tensor_proto = tensor_pb2.TensorProto(dtype=tensor_pb2.DT_FLOAT, tensor_shape=tensor_shape)
+    tensor_proto = tensor_pb2.TensorProto(
+        dtype=tensor_pb2.DT_FLOAT, tensor_shape=tensor_shape
+    )
     proto_values = array.ravel()
     tensor_proto.float_val.extend([np.asscalar(x) for x in proto_values])
     return tensor_proto
+
 
 def hparams(hparams):
     """Add hparams to Summary
@@ -58,9 +73,11 @@ def hparams(hparams):
         A protobuf message [Summary]
     """
     (hparams, metrics) = _get_hparams_dict(hparams)
-    jparams = json.dumps(hparams, sort_keys=True, separators=(',', ':'))
-    group_name = hashlib.sha256(jparams.encode('utf-8')).hexdigest()
-    session_start_info = plugin_data_pb2.SessionStartInfo(group_name=group_name, start_time_secs=time.time())
+    jparams = json.dumps(hparams, sort_keys=True, separators=(",", ":"))
+    group_name = hashlib.sha256(jparams.encode("utf-8")).hexdigest()
+    session_start_info = plugin_data_pb2.SessionStartInfo(
+        group_name=group_name, start_time_secs=time.time()
+    )
     for key in sorted(hparams):
         value = hparams[key]
         if isinstance(value, str):
@@ -70,30 +87,42 @@ def hparams(hparams):
         elif isinstance(value, bool):
             session_start_info.hparams[key].bool_value = value
         else:
-            raise TypeError('the type of value: %r is not supported!' % value)
+            raise TypeError("the type of value: %r is not supported!" % value)
     for key in metrics:
         value = metrics[key]
         if isinstance(value, (float, int)):
             session_start_info.metrics[key].number_value = value
         else:
-            raise TypeError('the type of value: %r is not supported!' % value)
+            raise TypeError("the type of value: %r is not supported!" % value)
     summary = summary_pb2.Summary()
-    summary_metadata = _get_metadata(plugin_data_pb2.HParamsPluginData(session_start_info=session_start_info))
-    summary.value.add(tag='_hparams_/session_start_info', metadata=summary_metadata, tensor=_get_tensor([], tensor_pb2.DT_FLOAT, (0,)))
+    summary_metadata = _get_metadata(
+        plugin_data_pb2.HParamsPluginData(session_start_info=session_start_info)
+    )
+    summary.value.add(
+        tag="_hparams_/session_start_info",
+        metadata=summary_metadata,
+        tensor=_get_tensor([], tensor_pb2.DT_FLOAT, (0,)),
+    )
     return summary
+
 
 def _get_metadata(hparams_plugin_data):
     plugin_data = plugin_data_pb2.HParamsPluginData()
     plugin_data.CopyFrom(hparams_plugin_data)
     plugin_data.version = 0
-    return summary_pb2.SummaryMetadata(plugin_data=summary_pb2.SummaryMetadata.PluginData(plugin_name='hparams', content=plugin_data.SerializeToString()))
+    return summary_pb2.SummaryMetadata(
+        plugin_data=summary_pb2.SummaryMetadata.PluginData(
+            plugin_name="hparams", content=plugin_data.SerializeToString()
+        )
+    )
+
 
 def _get_hparams_dict(hparams):
     hparams_dict = {}
     metrics_dict = {}
     for (key, value) in dict.items(hparams):
         if key in hparams_dict or key in metrics_dict:
-            raise ValueError('the key is already exist %r' % (key,))
+            raise ValueError("the key is already exist %r" % (key,))
         if isinstance(key, HParam):
             key = key.name
         if isinstance(key, Metric):
@@ -102,11 +131,13 @@ def _get_hparams_dict(hparams):
         hparams_dict[key] = _get_value(value)
     return (hparams_dict, metrics_dict)
 
+
 def _get_value(value):
     if isinstance(value, np.generic):
         return value.item()
     else:
         return value
+
 
 class HParam(object):
     """The class of Hparam
@@ -127,7 +158,10 @@ class HParam(object):
         self.name_ = name
         self.dtype_ = dtype
         if not isinstance(self.dtype_, (IntegerRange, RealRange, ValueSet, type(None))):
-            raise ValueError('Hparam dtype must be: (IntegerRange, RealRange, ValueSet) : %r' % (self.dtype_,))
+            raise ValueError(
+                "Hparam dtype must be: (IntegerRange, RealRange, ValueSet) : %r"
+                % (self.dtype_,)
+            )
 
     @property
     def name(self):
@@ -136,6 +170,7 @@ class HParam(object):
     @property
     def dtype(self):
         return self.dtype_
+
 
 class IntegerRange(object):
     """The class of IntegerRange
@@ -155,11 +190,13 @@ class IntegerRange(object):
             ValueError: If 'min_value' > 'max_value'
         """
         if not isinstance(max_value, int):
-            raise TypeError('max_value is not an integer value: %r' % (max_value,))
+            raise TypeError("max_value is not an integer value: %r" % (max_value,))
         if not isinstance(min_value, int):
-            raise TypeError('min_value is not an integer value: %r' % (min_value,))
+            raise TypeError("min_value is not an integer value: %r" % (min_value,))
         if min_value > max_value:
-            raise ValueError('max_value must bigger than min_value: %r > %r' % (min_value, max_value))
+            raise ValueError(
+                "max_value must bigger than min_value: %r > %r" % (min_value, max_value)
+            )
         self.min_value_ = min_value
         self.max_value_ = max_value
 
@@ -170,6 +207,7 @@ class IntegerRange(object):
     @property
     def max_value(self):
         return self.max_value_
+
 
 class RealRange(object):
     """The class of RealRange
@@ -189,11 +227,13 @@ class RealRange(object):
             ValueError: If 'min_value' > 'max_value'
         """
         if not isinstance(max_value, float):
-            raise TypeError('max_value is not an float value: %r' % (max_value,))
+            raise TypeError("max_value is not an float value: %r" % (max_value,))
         if not isinstance(min_value, float):
-            raise TypeError('min_value is not an float value: %r' % (min_value,))
+            raise TypeError("min_value is not an float value: %r" % (min_value,))
         if min_value > max_value:
-            raise ValueError('max_value must bigger than min_value: %r > %r' % (min_value, max_value))
+            raise ValueError(
+                "max_value must bigger than min_value: %r > %r" % (min_value, max_value)
+            )
         self.min_value_ = min_value
         self.max_value_ = max_value
 
@@ -204,6 +244,7 @@ class RealRange(object):
     @property
     def max_value(self):
         return self.max_value_
+
 
 class ValueSet(object):
     """The class of ValueSet
@@ -227,11 +268,17 @@ class ValueSet(object):
             if self.values_:
                 dtype = type(self.values_[0])
         if dtype not in (int, float, bool, str):
-            raise ValueError('Value type must in (int, float, bool, str), %r is not supported!' % (dtype,))
+            raise ValueError(
+                "Value type must in (int, float, bool, str), %r is not supported!"
+                % (dtype,)
+            )
         self.dtype_ = dtype
         for value in self.values_:
             if not isinstance(value, self.dtype_):
-                raise TypeError('The type of value is not supported! value: %r type: %s' % (value, self.dtype_.__name__))
+                raise TypeError(
+                    "The type of value is not supported! value: %r type: %s"
+                    % (value, self.dtype_.__name__)
+                )
         self.values_.sort()
 
     @property
@@ -241,6 +288,7 @@ class ValueSet(object):
     @property
     def values(self):
         return list(self.values_)
+
 
 class Metric(object):
     """The class of Metric
@@ -262,7 +310,9 @@ class Metric(object):
         if dtype is None:
             dtype = float
         if dtype not in (int, float):
-            raise ValueError('Value type must in (int, float), %r is not supported!' % (dtype,))
+            raise ValueError(
+                "Value type must in (int, float), %r is not supported!" % (dtype,)
+            )
         self.dtype_ = dtype
 
     @property

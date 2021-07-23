@@ -5,12 +5,27 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
+
 def build_math_binary_elementwise_op(math_op, x, y, name=None):
     if name is None:
-        name = id_util.UniqueStr(math_op + '_')
-    return flow.user_op_builder(name).Op(math_op).Input('x', [x]).Input('y', [y]).Output('z').Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr(math_op + "_")
+    return (
+        flow.user_op_builder(name)
+        .Op(math_op)
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("z")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def atan2(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def atan2(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the values of :math:`arctan(\\frac{x}{y})`.
 
     The equation is:
@@ -51,9 +66,14 @@ def atan2(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.Bl
         # (arctan(1/4) * pi) / 180 = 0.24497867
 
     """
-    return build_math_binary_elementwise_op('atan2', x, y, name)
+    return build_math_binary_elementwise_op("atan2", x, y, name)
 
-def pow(x: oneflow._oneflow_internal.BlobDesc, y: Union[oneflow._oneflow_internal.BlobDesc, float], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def pow(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: Union[oneflow._oneflow_internal.BlobDesc, float],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the Pow result.
 
     The equation is:
@@ -115,13 +135,27 @@ def pow(x: oneflow._oneflow_internal.BlobDesc, y: Union[oneflow._oneflow_interna
         # out [1. 4. 9.]
     """
     if name is None:
-        name = id_util.UniqueStr('Pow_')
+        name = id_util.UniqueStr("Pow_")
     if isinstance(y, (int, float)):
-        return flow.user_op_builder(name).Op('scalar_pow').Input('in', [x]).Attr('exponent', float(y)).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(name)
+            .Op("scalar_pow")
+            .Input("in", [x])
+            .Attr("exponent", float(y))
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
-        return build_math_binary_elementwise_op('pow', x, y, name)
+        return build_math_binary_elementwise_op("pow", x, y, name)
 
-def floordiv(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def floordiv(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x/y`, rounding toward the most negative integer value
 
     Args:
@@ -154,9 +188,14 @@ def floordiv(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal
 
         # out [1. 1. 2.]
     """
-    return build_math_binary_elementwise_op('floordiv', x, y, name)
+    return build_math_binary_elementwise_op("floordiv", x, y, name)
 
-def xdivy(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def xdivy(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x/y`
 
     Args:
@@ -190,9 +229,14 @@ def xdivy(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.Bl
         # out [1.3333334 1.5       2.5      ]
 
     """
-    return build_math_binary_elementwise_op('xdivy', x, y, name)
+    return build_math_binary_elementwise_op("xdivy", x, y, name)
 
-def xlogy(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def xlogy(
+    x: oneflow._oneflow_internal.BlobDesc,
+    y: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the result of :math:`x*log(y)`
 
     Args:
@@ -225,4 +269,4 @@ def xlogy(x: oneflow._oneflow_internal.BlobDesc, y: oneflow._oneflow_internal.Bl
 
         # out [2.7725887 4.158883  5.5451775]
     """
-    return build_math_binary_elementwise_op('xlogy', x, y, name)
+    return build_math_binary_elementwise_op("xlogy", x, y, name)

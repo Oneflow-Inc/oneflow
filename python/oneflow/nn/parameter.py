@@ -1,8 +1,8 @@
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
-class Parameter(Tensor):
 
+class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
         if not isinstance(data, Tensor):
             data = Tensor(data)

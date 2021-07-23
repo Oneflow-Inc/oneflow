@@ -3,24 +3,44 @@ import traceback
 import oneflow.framework.ofblob as ofblob
 import oneflow._oneflow_internal
 
+
 def MakeUserJobInstance(job_name, finish_cb=None):
     return MakeJobInstance(job_name, finish_cb=finish_cb)
 
+
 def MakePullJobInstance(job_name, op_name, pull_cb, finish_cb=None):
-    return MakeJobInstance(job_name, sole_output_op_name_in_user_job=op_name, pull_cb=pull_cb, finish_cb=finish_cb)
+    return MakeJobInstance(
+        job_name,
+        sole_output_op_name_in_user_job=op_name,
+        pull_cb=pull_cb,
+        finish_cb=finish_cb,
+    )
+
 
 def MakePushJobInstance(job_name, op_name, push_cb, finish_cb=None):
-    return MakeJobInstance(job_name, sole_input_op_name_in_user_job=op_name, push_cb=push_cb, finish_cb=finish_cb)
+    return MakeJobInstance(
+        job_name,
+        sole_input_op_name_in_user_job=op_name,
+        push_cb=push_cb,
+        finish_cb=finish_cb,
+    )
+
 
 def MakeArgPassJobInstance(job_name, src_op_name, dst_op_name, finish_cb=None):
-    return MakeJobInstance(job_name, sole_output_op_name_in_user_job=src_op_name, sole_input_op_name_in_user_job=dst_op_name, finish_cb=finish_cb)
+    return MakeJobInstance(
+        job_name,
+        sole_output_op_name_in_user_job=src_op_name,
+        sole_input_op_name_in_user_job=dst_op_name,
+        finish_cb=finish_cb,
+    )
+
 
 def MakeJobInstance(*arg, **kw):
-
     def _DoNothing():
         pass
-    if 'finish_cb' not in kw or kw['finish_cb'] is None:
-        kw['finish_cb'] = _DoNothing
+
+    if "finish_cb" not in kw or kw["finish_cb"] is None:
+        kw["finish_cb"] = _DoNothing
     job_instance = JobInstance(*arg, **kw)
     global _flying_job_instance
     _flying_job_instance[id(job_instance)] = job_instance
@@ -28,12 +48,21 @@ def MakeJobInstance(*arg, **kw):
     def DereferenceJobInstance(job_instance):
         global _flying_job_instance
         del _flying_job_instance[id(job_instance)]
+
     job_instance.AddPostFinishCallback(DereferenceJobInstance)
     return job_instance
 
-class JobInstance(oneflow._oneflow_internal.JobInstance):
 
-    def __init__(self, job_name, sole_input_op_name_in_user_job=None, sole_output_op_name_in_user_job=None, push_cb=None, pull_cb=None, finish_cb=None):
+class JobInstance(oneflow._oneflow_internal.JobInstance):
+    def __init__(
+        self,
+        job_name,
+        sole_input_op_name_in_user_job=None,
+        sole_output_op_name_in_user_job=None,
+        push_cb=None,
+        pull_cb=None,
+        finish_cb=None,
+    ):
         oneflow._oneflow_internal.JobInstance.__init__(self)
         self.thisown = 0
         self.job_name_ = str(job_name)
@@ -95,4 +124,6 @@ class JobInstance(oneflow._oneflow_internal.JobInstance):
 
     def AddPostFinishCallback(self, cb):
         self.post_finish_cbs_.append(cb)
+
+
 _flying_job_instance = {}

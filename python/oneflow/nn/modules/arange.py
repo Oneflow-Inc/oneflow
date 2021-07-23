@@ -3,12 +3,20 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Arange(Module):
 
-    def __init__(self, start: int=0, end: int=None, step: int=1, dtype: flow.dtype=None, device: Union[str, flow.device]='cpu', requires_grad: bool=False) -> None:
+class Arange(Module):
+    def __init__(
+        self,
+        start: int = 0,
+        end: int = None,
+        step: int = 1,
+        dtype: flow.dtype = None,
+        device: Union[str, flow.device] = "cpu",
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
-        assert end > start, 'end should be larger than start'
-        assert step <= end - start, 'step is ilegal'
+        assert end > start, "end should be larger than start"
+        assert step <= end - start, "step is ilegal"
         self.start = start
         self.end = end
         self.step = step
@@ -17,7 +25,9 @@ class Arange(Module):
         self.requires_grad = requires_grad
 
     def forward(self):
-        tmp = flow.F.range(start=self.start, limit=self.end, delta=self.step, dtype=flow.int64)
+        tmp = flow.F.range(
+            start=self.start, limit=self.end, delta=self.step, dtype=flow.int64
+        )
         tmp.requires_grad = self.requires_grad
         if isinstance(self.device, str):
             device = flow.device(self.device)
@@ -26,7 +36,15 @@ class Arange(Module):
         res = tmp.to(device, dtype=self.dtype)
         return res
 
-def arange_op(start: int=0, end: int=None, step: int=1, dtype: flow.dtype=flow.int64, device: Union[str, flow.device]='cpu', requires_grad: bool=False):
+
+def arange_op(
+    start: int = 0,
+    end: int = None,
+    step: int = 1,
+    dtype: flow.dtype = flow.int64,
+    device: Union[str, flow.device] = "cpu",
+    requires_grad: bool = False,
+):
     """
     Returns a 1-D tensor of size :math:`\\left\\lfloor \\frac{\\text{end} - \\text{start}}{\\text{step}} \\right\\rfloor + 1`
     with values from :attr:`start` to :attr:`end` with step :attr:`step`. Step is
@@ -60,6 +78,9 @@ def arange_op(start: int=0, end: int=None, step: int=1, dtype: flow.dtype=flow.i
         end = start
         start = 0
     return Arange(start, end, step, dtype, device, requires_grad)()
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

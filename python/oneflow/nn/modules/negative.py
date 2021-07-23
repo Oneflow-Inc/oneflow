@@ -2,15 +2,16 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Negative(Module):
 
+class Negative(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.negative(x)
 
-@register_tensor_op('negative')
+
+@register_tensor_op("negative")
 def negative_op(x):
     """This operator computes the negative value of Tensor.
 
@@ -36,6 +37,9 @@ def negative_op(x):
 
     """
     return Negative()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

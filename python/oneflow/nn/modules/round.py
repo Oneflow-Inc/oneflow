@@ -2,13 +2,14 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Round(Module):
 
+class Round(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.round(x)
+
 
 def round_op(x):
     """This operator rounds the value of Blob to the nearest integer.
@@ -34,7 +35,8 @@ def round_op(x):
     """
     return Round()(x)
 
-@register_tensor_op('round')
+
+@register_tensor_op("round")
 def round_op_tensor(x):
     """
     round() -> Tensor
@@ -43,6 +45,9 @@ def round_op_tensor(x):
 
     """
     return Round()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

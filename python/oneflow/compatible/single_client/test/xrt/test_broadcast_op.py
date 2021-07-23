@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 class TestBroadcastOp(unittest.TestCase):
     run_test = False
@@ -13,8 +15,8 @@ class TestBroadcastOp(unittest.TestCase):
         f2 = self.make_xla_job(x.shape, y.shape, dtype=flow.float32)
         a = f1(x, y).get()
         b = f2(x, y).get()
-        print('without xla: ', a)
-        print('with xla', b)
+        print("without xla: ", a)
+        print("with xla", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -38,6 +40,7 @@ class TestBroadcastOp(unittest.TestCase):
         self._test_random_body((2, 10, 2), (2, 1, 2))
         self._test_random_body((2, 5, 2, 2), (1, 5, 2, 2))
 
+
 class TestBroadcastAddOp(TestBroadcastOp):
     run_test = True
 
@@ -46,8 +49,12 @@ class TestBroadcastAddOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def broadcast_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def broadcast_add_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.add(x, y)
+
         return broadcast_add_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
@@ -55,9 +62,14 @@ class TestBroadcastAddOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def xla_broadcast_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def xla_broadcast_add_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.add(x, y)
+
         return xla_broadcast_add_job
+
 
 class TestBroadcastMulOp(TestBroadcastOp):
     run_test = True
@@ -67,8 +79,12 @@ class TestBroadcastMulOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def broadcast_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def broadcast_mul_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.multiply(x, y)
+
         return broadcast_mul_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
@@ -76,9 +92,14 @@ class TestBroadcastMulOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def xla_broadcast_mul_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def xla_broadcast_mul_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.multiply(x, y)
+
         return xla_broadcast_mul_job
+
 
 class TestBroadcastDivOp(TestBroadcastOp):
     run_test = True
@@ -88,8 +109,12 @@ class TestBroadcastDivOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def broadcast_div_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def broadcast_div_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.divide(x, y)
+
         return broadcast_div_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
@@ -97,9 +122,14 @@ class TestBroadcastDivOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def xla_broadcast_div_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def xla_broadcast_div_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.divide(x, y)
+
         return xla_broadcast_div_job
+
 
 class TestBroadcastMinOp(TestBroadcastOp):
     run_test = True
@@ -109,8 +139,12 @@ class TestBroadcastMinOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def broadcast_min_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def broadcast_min_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.minimum(x, y)
+
         return broadcast_min_job
 
     def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
@@ -118,8 +152,14 @@ class TestBroadcastMinOp(TestBroadcastOp):
         config.use_tensorrt(False)
 
         @flow.global_function(config)
-        def xla_broadcast_min_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+        def xla_broadcast_min_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
             return flow.math.minimum(x, y)
+
         return xla_broadcast_min_job
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

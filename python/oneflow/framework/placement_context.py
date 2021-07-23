@@ -8,11 +8,12 @@ import oneflow
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal
 
+
 class PlacementScope(object):
     pass
 
-class EmptyPlacementScope(PlacementScope):
 
+class EmptyPlacementScope(PlacementScope):
     def __init__(self, device_tag, machine_device_ids, hierarchy):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
@@ -38,8 +39,8 @@ class EmptyPlacementScope(PlacementScope):
     def __exit__(self, *args):
         pass
 
-class GlobalModePlacementScope(PlacementScope):
 
+class GlobalModePlacementScope(PlacementScope):
     def __init__(self, scope_ctx):
         self.scope_ctx_ = scope_ctx
 
@@ -49,24 +50,31 @@ class GlobalModePlacementScope(PlacementScope):
     def __exit__(self, *args):
         self.scope_ctx_.__exit__(*args)
 
+
 def MakeParallelConf4Resource(device_tag, resource):
-    if device_tag == 'gpu':
-        assert resource.HasField('gpu_device_num')
+    if device_tag == "gpu":
+        assert resource.HasField("gpu_device_num")
         machine_device_ids = GetGpuMachineDeviceIds(resource)
-    elif device_tag == 'cpu':
-        assert resource.HasField('cpu_device_num')
+    elif device_tag == "cpu":
+        assert resource.HasField("cpu_device_num")
         machine_device_ids = GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
     return oneflow._oneflow_internal.MakeParallelConf(device_tag, machine_device_ids)
 
+
 def MakeMachineId2DeviceIdList(parallel_conf):
     parallel_conf_str = str(parallel_conf)
     global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
-        ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf)
-        _parallel_conf_str2ofrecord[parallel_conf_str] = {int(k): list(v.int32_list.value) for (k, v) in ofrecord.feature.items()}
+        ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
+            parallel_conf
+        )
+        _parallel_conf_str2ofrecord[parallel_conf_str] = {
+            int(k): list(v.int32_list.value) for (k, v) in ofrecord.feature.items()
+        }
     return _parallel_conf_str2ofrecord[parallel_conf_str]
+
 
 def GetParallelSize(key2list):
     size = 0
@@ -74,13 +82,23 @@ def GetParallelSize(key2list):
         size += len(v)
     return size
 
+
 def GetGpuMachineDeviceIds(resource):
     assert resource.machine_num > 0
-    assert resource.HasField('gpu_device_num')
-    return ['%s:0-%s' % (m_id, resource.gpu_device_num - 1) for m_id in range(resource.machine_num)]
+    assert resource.HasField("gpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
+
 
 def GetCpuMachineDeviceIds(resource):
     assert resource.machine_num > 0
-    assert resource.HasField('cpu_device_num')
-    return ['%s:0-%s' % (m_id, resource.cpu_device_num - 1) for m_id in range(resource.machine_num)]
+    assert resource.HasField("cpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.cpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
+
+
 _parallel_conf_str2ofrecord = {}

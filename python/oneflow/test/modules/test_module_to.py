@@ -3,20 +3,22 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
+
 dummy_val = np.random.randn(2, 3)
 in_val = np.full((2, 3), -2)
-cpu0_device = flow.device('cpu')
-gpu0_device = flow.device('cuda')
+cpu0_device = flow.device("cpu")
+gpu0_device = flow.device("cuda")
+
 
 class DummyModule(flow.nn.Module):
-
     def __init__(self):
         super().__init__()
-        self.register_buffer('dummy_buf', flow.Tensor(dummy_val))
+        self.register_buffer("dummy_buf", flow.Tensor(dummy_val))
         self.dummy_para = flow.nn.Parameter(flow.Tensor(dummy_val))
 
     def forward(self, x):
         return self.dummy_para * x + self.dummy_buf
+
 
 def _test_dummy_module(test_case):
     m = DummyModule()
@@ -29,6 +31,7 @@ def _test_dummy_module(test_case):
     test_case.assertEqual(m.dummy_para.grad, None)
     test_case.assertEqual(input.device, cpu0_device)
     test_case.assertEqual(output.device, cpu0_device)
+
 
 def _test_dummy_module_to(test_case):
     m = DummyModule()
@@ -55,13 +58,15 @@ def _test_dummy_module_to(test_case):
     test_case.assertTrue(np.allclose(m.dummy_para.grad.numpy(), in_val, 0.0001, 0.0001))
     test_case.assertEqual(m.dummy_para.grad.device, gpu0_device)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestModuleTo(flow.unittest.TestCase):
-
     def test_module_to(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_dummy_module, _test_dummy_module_to]
+        arg_dict["test_fun"] = [_test_dummy_module, _test_dummy_module_to]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

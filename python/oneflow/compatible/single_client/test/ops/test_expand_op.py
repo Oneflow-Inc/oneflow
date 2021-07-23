@@ -6,6 +6,7 @@ import os
 from test_util import GenArgList
 import unittest
 
+
 def getExpandGrad(input_shape, expand_size):
     input = np.random.random(size=input_shape).astype(np.float32)
     input_stride = [1]
@@ -45,6 +46,7 @@ def getExpandGrad(input_shape, expand_size):
             o_offset += idx * expand_stride[i]
             remain = remain - idx * stride[i]
         return o_offset
+
     in_flatten = input.flatten()
     gout_flatten = gout.flatten()
     num_elem = np.product(new_size)
@@ -55,12 +57,15 @@ def getExpandGrad(input_shape, expand_size):
         out[i] = in_flatten[offset]
     return (input, gout, out.reshape(tuple(new_size)), gin.reshape(input_shape))
 
-def _compare_expand_op_with_np(input_shape, expand_dim, data_type, device_type, machine_ids, device_counts):
-    assert device_type in ['cpu', 'gpu']
-    if device_type == 'cpu' and data_type == flow.float16:
+
+def _compare_expand_op_with_np(
+    input_shape, expand_dim, data_type, device_type, machine_ids, device_counts
+):
+    assert device_type in ["cpu", "gpu"]
+    if device_type == "cpu" and data_type == flow.float16:
         return
     flow.clear_default_session()
-    if device_type == 'cpu':
+    if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
@@ -74,65 +79,92 @@ def _compare_expand_op_with_np(input_shape, expand_dim, data_type, device_type, 
 
     def assert_prediction_grad(gin_of: tp.Numpy):
         assert np.allclose(gin_of, gin_np, atol=1e-05)
+
     if data_type == flow.float32:
 
-        @flow.global_function(type='train', function_config=func_config)
-        def expandJob(of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=data_type), multipler: tp.Numpy.Placeholder(shape=gout.shape, dtype=data_type)) -> tp.Numpy:
-            with flow.scope.placement(device_type, '0:0'):
-                v = flow.get_variable(shape=of_input.shape, dtype=data_type, initializer=flow.constant_initializer(0), name='v')
+        @flow.global_function(type="train", function_config=func_config)
+        def expandJob(
+            of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=data_type),
+            multipler: tp.Numpy.Placeholder(shape=gout.shape, dtype=data_type),
+        ) -> tp.Numpy:
+            with flow.scope.placement(device_type, "0:0"):
+                v = flow.get_variable(
+                    shape=of_input.shape,
+                    dtype=data_type,
+                    initializer=flow.constant_initializer(0),
+                    name="v",
+                )
                 x_var = of_input + v
                 flow.watch_diff(x_var, assert_prediction_grad)
             out = flow.expand(x_var, expand_dim)
-            with flow.scope.placement(device_type, '0:0'):
-                flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0).minimize(out * multipler)
+            with flow.scope.placement(device_type, "0:0"):
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+                ).minimize(out * multipler)
             return out
+
         of_out = expandJob(input, gout)
         assert np.allclose(of_out, out_np, atol=1e-05)
     elif data_type == flow.float64:
 
-        @flow.global_function(type='train', function_config=func_config)
-        def expandJob(of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=flow.float32), multipler: tp.Numpy.Placeholder(shape=gout.shape, dtype=flow.float32, batch_axis=diff)) -> tp.Numpy:
-            with flow.scope.placement(device_type, '0:0'):
-                v = flow.get_variable(shape=of_input.shape, dtype=flow.float32, initializer=flow.constant_initializer(0), name='v')
+        @flow.global_function(type="train", function_config=func_config)
+        def expandJob(
+            of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=flow.float32),
+            multipler: tp.Numpy.Placeholder(
+                shape=gout.shape, dtype=flow.float32, batch_axis=diff
+            ),
+        ) -> tp.Numpy:
+            with flow.scope.placement(device_type, "0:0"):
+                v = flow.get_variable(
+                    shape=of_input.shape,
+                    dtype=flow.float32,
+                    initializer=flow.constant_initializer(0),
+                    name="v",
+                )
                 input_x = v + of_input
                 flow.watch_diff(input_x, assert_prediction_grad)
             x_fp32 = flow.cast(input_x, flow.float32)
             x_fp16 = flow.cast(input_x, dtype=flow.float16)
             y_fp16 = flow.expand(x_fp16, expand_dim)
             y_fp32 = flow.cast(y_fp16, dtype=flow.float32)
-            with flow.scope.placement(device_type, '0:0'):
-                flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0).minimize(y_fp32 * multipler)
+            with flow.scope.placement(device_type, "0:0"):
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+                ).minimize(y_fp32 * multipler)
             return y_fp32
+
         of_out = expandJob(input, gout)
         assert np.allclose(of_out, out_np, atol=1e-05)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestExpandOp1n1d(flow.unittest.TestCase):
-
     def test_expand(test_case):
         arg_dict = OrderedDict()
-        arg_dict['input_shape'] = [(1, 4, 1, 32)]
-        arg_dict['expand_dim'] = [[1, 4, 2, 32]]
-        arg_dict['expand_dim'] = [[2, 4, 2, 32], [2, 1, 2, 4, 2, 32]]
-        arg_dict['data_type'] = [flow.float32, flow.float16]
-        arg_dict['device_type'] = ['cpu', 'gpu']
-        arg_dict['machine_ids'] = ['0:0']
-        arg_dict['device_counts'] = [1]
+        arg_dict["input_shape"] = [(1, 4, 1, 32)]
+        arg_dict["expand_dim"] = [[1, 4, 2, 32]]
+        arg_dict["expand_dim"] = [[2, 4, 2, 32], [2, 1, 2, 4, 2, 32]]
+        arg_dict["data_type"] = [flow.float32, flow.float16]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["machine_ids"] = ["0:0"]
+        arg_dict["device_counts"] = [1]
         for arg in GenArgList(arg_dict):
             _compare_expand_op_with_np(*arg)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestExpandOp1n2d(flow.unittest.TestCase):
-
     def test_expand(test_case):
         arg_dict = OrderedDict()
-        arg_dict['input_shape'] = [(2, 4, 1, 32)]
-        arg_dict['expand_dim'] = [[2, 4, 2, 32], [2, 1, 2, 4, 2, 32]]
-        arg_dict['data_type'] = [flow.float32, flow.float16]
-        arg_dict['device_type'] = ['cpu', 'gpu']
-        arg_dict['machine_ids'] = ['0:0-1']
-        arg_dict['device_counts'] = [2]
+        arg_dict["input_shape"] = [(2, 4, 1, 32)]
+        arg_dict["expand_dim"] = [[2, 4, 2, 32], [2, 1, 2, 4, 2, 32]]
+        arg_dict["data_type"] = [flow.float32, flow.float16]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["machine_ids"] = ["0:0-1"]
+        arg_dict["device_counts"] = [2]
         for arg in GenArgList(arg_dict):
             _compare_expand_op_with_np(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

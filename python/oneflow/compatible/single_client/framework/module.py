@@ -1,10 +1,10 @@
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 
-class Module(object):
 
+class Module(object):
     def __init__(self, name=None):
         if name is None:
-            name = id_util.UniqueStr('Module_')
+            name = id_util.UniqueStr("Module_")
         self.module_name_ = name
         self.call_seq_no_ = 0
 
@@ -25,4 +25,6 @@ class Module(object):
         return ret
 
     def __del__(self):
-        assert getattr(type(self), '__call__') is Module.__call__, 'do not override __call__'
+        assert (
+            getattr(type(self), "__call__") is Module.__call__
+        ), "do not override __call__"

@@ -4,9 +4,11 @@ from oneflow.nn.module import Module
 from oneflow.ops.array_ops import check_slice_tup_list, GetSliceAttrs
 from typing import Sequence, Tuple
 
-class Slice(Module):
 
-    def __init__(self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]) -> None:
+class Slice(Module):
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self.start = start
         self.stop = stop
@@ -14,6 +16,7 @@ class Slice(Module):
 
     def forward(self, x):
         return flow.F.slice(x, start=self.start, stop=self.stop, step=self.step)
+
 
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Extracts a slice from a tensor.
@@ -39,16 +42,21 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     (start, stop, step) = check_slice_tup_list(slice_tup_list, x.shape)
     return Slice(start, stop, step)(x)
 
-class SliceUpdate(Module):
 
-    def __init__(self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]) -> None:
+class SliceUpdate(Module):
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self.start = start
         self.stop = stop
         self.step = step
 
     def forward(self, x, update):
-        return flow.F.slice_update(x, update, start=self.start, stop=self.stop, step=self.step)
+        return flow.F.slice_update(
+            x, update, start=self.start, stop=self.stop, step=self.step
+        )
+
 
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
@@ -73,9 +81,11 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     (start, stop, step) = GetSliceAttrs(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
 
-class LogicalSliceAssign(Module):
 
-    def __init__(self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]) -> None:
+class LogicalSliceAssign(Module):
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self.start = start
         self.stop = stop
@@ -84,7 +94,10 @@ class LogicalSliceAssign(Module):
     def forward(self, x, update):
         if update.dtype != x.dtype:
             update = update.to(dtype=x.dtype)
-        return flow.F.logical_slice_assign(x, update, start=self.start, stop=self.stop, step=self.step)
+        return flow.F.logical_slice_assign(
+            x, update, start=self.start, stop=self.stop, step=self.step
+        )
+
 
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
@@ -105,9 +118,12 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
     """
-    '[summary]\n\n    Returns:\n        [type]: [description]\n    '
+    "[summary]\n\n    Returns:\n        [type]: [description]\n    "
     (start, stop, step) = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

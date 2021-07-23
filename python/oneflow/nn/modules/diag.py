@@ -2,14 +2,15 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Diag(Module):
 
+class Diag(Module):
     def __init__(self, diagonal=0):
         super().__init__()
         self.diagonal = diagonal
 
     def forward(self, input):
         return flow.F.diag(input, self.diagonal)
+
 
 def diag_op(input, diagonal=0):
     """
@@ -44,7 +45,8 @@ def diag_op(input, diagonal=0):
     """
     return Diag(diagonal)(input)
 
-@register_tensor_op('diag')
+
+@register_tensor_op("diag")
 def diag_op_tensor(input, diagonal=0):
     """
     diag() -> Tensor
@@ -52,6 +54,9 @@ def diag_op_tensor(input, diagonal=0):
     
     """
     return Diag(diagonal)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

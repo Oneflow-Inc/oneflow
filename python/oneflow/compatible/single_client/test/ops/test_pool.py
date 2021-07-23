@@ -7,10 +7,97 @@ from oneflow.compatible import single_client as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 from oneflow.compatible.single_client import typing as oft
-gpus = tf.config.experimental.list_physical_devices('GPU')
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-pool_confs = [{'x_shape': (1, 1, 6, 6), 'ksize': 1, 'strides': 1, 'padding': 'VALID', 'data_format': 'NCHW'}, {'x_shape': (1, 3, 7, 7), 'ksize': 3, 'strides': 2, 'padding': 'SAME', 'data_format': 'NCHW'}, {'x_shape': (1, 7, 7, 3), 'ksize': 3, 'strides': 2, 'padding': 'SAME', 'data_format': 'NHWC'}, {'x_shape': (1, 5, 6, 6), 'ksize': 3, 'strides': 2, 'padding': 'VALID', 'data_format': 'NCHW'}, {'x_shape': (1, 7, 5, 5), 'ksize': 3, 'strides': 2, 'padding': 'SAME', 'data_format': 'NCHW'}, {'x_shape': (1, 3, 3, 3), 'ksize': 1, 'strides': 1, 'padding': 'VALID', 'data_format': 'NCHW'}, {'x_shape': (1, 1, 9, 9), 'ksize': 2, 'strides': 2, 'padding': 'VALID', 'data_format': 'NCHW'}, {'x_shape': (1, 9, 9, 1), 'ksize': 2, 'strides': 2, 'padding': 'VALID', 'data_format': 'NHWC'}, {'x_shape': (1, 1, 9, 9, 9), 'ksize': 2, 'strides': 2, 'padding': 'VALID', 'data_format': 'NCDHW'}, {'x_shape': (1, 7, 5, 5, 5), 'ksize': 3, 'strides': 2, 'padding': 'SAME', 'data_format': 'NCDHW'}, {'x_shape': (1, 5, 5, 5, 7), 'ksize': 3, 'strides': 2, 'padding': 'VALID', 'data_format': 'NDHWC'}, {'x_shape': (1, 3, 3, 3, 3), 'ksize': 1, 'strides': 1, 'padding': 'VALID', 'data_format': 'NCDHW'}]
+pool_confs = [
+    {
+        "x_shape": (1, 1, 6, 6),
+        "ksize": 1,
+        "strides": 1,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 3, 7, 7),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 7, 7, 3),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NHWC",
+    },
+    {
+        "x_shape": (1, 5, 6, 6),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 7, 5, 5),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 3, 3, 3),
+        "ksize": 1,
+        "strides": 1,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 1, 9, 9),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 9, 9, 1),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NHWC",
+    },
+    {
+        "x_shape": (1, 1, 9, 9, 9),
+        "ksize": 2,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NCDHW",
+    },
+    {
+        "x_shape": (1, 7, 5, 5, 5),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "SAME",
+        "data_format": "NCDHW",
+    },
+    {
+        "x_shape": (1, 5, 5, 5, 7),
+        "ksize": 3,
+        "strides": 2,
+        "padding": "VALID",
+        "data_format": "NDHWC",
+    },
+    {
+        "x_shape": (1, 3, 3, 3, 3),
+        "ksize": 1,
+        "strides": 1,
+        "padding": "VALID",
+        "data_format": "NCDHW",
+    },
+]
+
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
@@ -24,42 +111,44 @@ def _GetSequence(value, n, name):
     elif current_n == n:
         return list(value)
     else:
-        raise ValueError('{} should be of length 1 or {} but was {}'.format(name, n, current_n))
+        raise ValueError(
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestPool(flow.unittest.TestCase):
-
     def test_pool(_):
         arg_dict = OrderedDict()
-        arg_dict['device_type'] = ['gpu', 'cpu']
-        arg_dict['pool_conf'] = pool_confs
-        arg_dict['data_type'] = ['float32']
-        arg_dict['pooling_type'] = ['AVG', 'MAX']
-        arg_dict['is_dynamic'] = [True, False]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["pool_conf"] = pool_confs
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["pooling_type"] = ["AVG", "MAX"]
+        arg_dict["is_dynamic"] = [True, False]
         for case in GenArgList(arg_dict):
             (device_type, pool_conf, data_type, pooling_type, is_dynamic) = case
-            x_shape = pool_conf['x_shape']
-            ksize = pool_conf['ksize']
-            strides = pool_conf['strides']
-            padding = pool_conf['padding']
-            data_format = pool_conf['data_format']
-            if os.getenv('ONEFLOW_TEST_CPU_ONLY') and data_format != 'NHWC':
+            x_shape = pool_conf["x_shape"]
+            ksize = pool_conf["ksize"]
+            strides = pool_conf["strides"]
+            padding = pool_conf["padding"]
+            data_format = pool_conf["data_format"]
+            if os.getenv("ONEFLOW_TEST_CPU_ONLY") and data_format != "NHWC":
                 continue
             flow.clear_default_session()
             x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
             dim = len(x.shape) - 2
-            if dim == 3 and data_format == 'NDHWC':
+            if dim == 3 and data_format == "NDHWC":
                 continue
             with tf.GradientTape(persistent=True) as tape:
                 x_tf = tf.Variable(x)
-                strides = _GetSequence(strides, dim, 'strides')
+                strides = _GetSequence(strides, dim, "strides")
                 pooling_f = None
-                if pooling_type == 'AVG':
-                    pooling_f = getattr(tf.nn, 'avg_pool{}d'.format(dim))
-                elif pooling_type == 'MAX':
-                    pooling_f = getattr(tf.nn, 'max_pool{}d'.format(dim))
+                if pooling_type == "AVG":
+                    pooling_f = getattr(tf.nn, "avg_pool{}d".format(dim))
+                elif pooling_type == "MAX":
+                    pooling_f = getattr(tf.nn, "max_pool{}d".format(dim))
                 else:
-                    raise ValueError('pooling_type must be AVG or MAX')
+                    raise ValueError("pooling_type must be AVG or MAX")
                 y_tf = pooling_f(x_tf, ksize, strides, padding, data_format=data_format)
             dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
@@ -68,7 +157,12 @@ class TestPool(flow.unittest.TestCase):
                     b_ndarray = b.numpy_list()[0]
                 else:
                     b_ndarray = b.numpy()
-                assert np.allclose(dx_tf.numpy(), b_ndarray), (case, dx_tf.numpy(), b_ndarray)
+                assert np.allclose(dx_tf.numpy(), b_ndarray), (
+                    case,
+                    dx_tf.numpy(),
+                    b_ndarray,
+                )
+
             dtype = type_name_to_flow_type[data_type]
             func_config = flow.FunctionConfig()
             func_config.default_data_type(flow.float)
@@ -79,23 +173,38 @@ class TestPool(flow.unittest.TestCase):
             else:
                 tensor_def = oft.Numpy.Placeholder
 
-            @flow.global_function(type='train', function_config=func_config)
+            @flow.global_function(type="train", function_config=func_config)
             def pooling_job(x: tensor_def(x_shape, dtype=dtype)):
-                v = flow.get_variable('x', shape=x_shape, dtype=dtype, initializer=flow.constant_initializer(0), trainable=True)
+                v = flow.get_variable(
+                    "x",
+                    shape=x_shape,
+                    dtype=dtype,
+                    initializer=flow.constant_initializer(0),
+                    trainable=True,
+                )
                 v = flow.cast_to_current_logical_view(v)
                 flow.watch_diff(v, assert_grad)
                 x += v
-                with flow.scope.placement(device_type, '0:0'):
+                with flow.scope.placement(device_type, "0:0"):
                     pooling_f = None
-                    if pooling_type == 'AVG':
-                        pooling_f = getattr(flow.nn, 'avg_pool{}d'.format(dim))
-                    elif pooling_type == 'MAX':
-                        pooling_f = getattr(flow.nn, 'max_pool{}d'.format(dim))
+                    if pooling_type == "AVG":
+                        pooling_f = getattr(flow.nn, "avg_pool{}d".format(dim))
+                    elif pooling_type == "MAX":
+                        pooling_f = getattr(flow.nn, "max_pool{}d".format(dim))
                     else:
-                        raise ValueError('pooling_type must be AVG or MAX')
-                    y = pooling_f(x, ksize=ksize, strides=strides, padding=padding, data_format=data_format)
-                flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0).minimize(y)
+                        raise ValueError("pooling_type must be AVG or MAX")
+                    y = pooling_f(
+                        x,
+                        ksize=ksize,
+                        strides=strides,
+                        padding=padding,
+                        data_format=data_format,
+                    )
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
+                ).minimize(y)
                 return y
+
             if is_dynamic:
                 x = [x]
             y = pooling_job(x).get()
@@ -104,7 +213,15 @@ class TestPool(flow.unittest.TestCase):
                 y_ndarray = y.numpy_list()[0]
             else:
                 y_ndarray = y.numpy()
-            assert y_ndarray.shape == y_tf.numpy().shape, (y_ndarray.shape, y_tf.numpy().shape)
-            assert np.allclose(y_ndarray, y_tf.numpy(), rtol=1e-05, atol=1e-05), (case, y_ndarray - y_tf.numpy())
-if __name__ == '__main__':
+            assert y_ndarray.shape == y_tf.numpy().shape, (
+                y_ndarray.shape,
+                y_tf.numpy().shape,
+            )
+            assert np.allclose(y_ndarray, y_tf.numpy(), rtol=1e-05, atol=1e-05), (
+                case,
+                y_ndarray - y_tf.numpy(),
+            )
+
+
+if __name__ == "__main__":
     unittest.main()

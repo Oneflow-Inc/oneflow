@@ -4,7 +4,14 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
-def categorical_ordinal_encode(table: oneflow._oneflow_internal.BlobDesc, size: oneflow._oneflow_internal.BlobDesc, input_tensor: oneflow._oneflow_internal.BlobDesc, hash_precomputed: bool=True, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def categorical_ordinal_encode(
+    table: oneflow._oneflow_internal.BlobDesc,
+    size: oneflow._oneflow_internal.BlobDesc,
+    input_tensor: oneflow._oneflow_internal.BlobDesc,
+    hash_precomputed: bool = True,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator maintains a hash table to encode the categorical ordinal Blob. It converts a discrete input value into a continuous integer ID.
 
     Args:
@@ -62,9 +69,26 @@ def categorical_ordinal_encode(table: oneflow._oneflow_internal.BlobDesc, size: 
 
     """
     assert hash_precomputed is True
-    return flow.user_op_builder(name or id_util.UniqueStr('CategoricalOrdinalEncode_')).Op('CategoricalOrdinalEncode').Input('in', [input_tensor]).Input('table', [table]).Input('size', [size]).Output('out').Attr('hash_precomputed', hash_precomputed).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("CategoricalOrdinalEncode_"))
+        .Op("CategoricalOrdinalEncode")
+        .Input("in", [input_tensor])
+        .Input("table", [table])
+        .Input("size", [size])
+        .Output("out")
+        .Attr("hash_precomputed", hash_precomputed)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def categorical_ordinal_encoder(input_tensor: oneflow._oneflow_internal.BlobDesc, capacity: int, hash_precomputed: bool=True, name: str='CategoricalOrdinalEncoder') -> oneflow._oneflow_internal.BlobDesc:
+
+def categorical_ordinal_encoder(
+    input_tensor: oneflow._oneflow_internal.BlobDesc,
+    capacity: int,
+    hash_precomputed: bool = True,
+    name: str = "CategoricalOrdinalEncoder",
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator uses `oneflow.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.categorical_ordinal_encode`
 
     Args:
@@ -103,6 +127,22 @@ def categorical_ordinal_encoder(input_tensor: oneflow._oneflow_internal.BlobDesc
     assert hash_precomputed is True
     dtype = input_tensor.dtype
     with flow.scope.namespace(name):
-        table = flow.get_variable(name='Table', shape=(capacity * 2,), dtype=dtype, initializer=flow.constant_initializer(0, dtype=dtype), trainable=False, reuse=False)
-        size = flow.get_variable(name='Size', shape=(1,), dtype=dtype, initializer=flow.constant_initializer(0, dtype=dtype), trainable=False, reuse=False)
-        return categorical_ordinal_encode(table=table, size=size, input_tensor=input_tensor, name='Encode')
+        table = flow.get_variable(
+            name="Table",
+            shape=(capacity * 2,),
+            dtype=dtype,
+            initializer=flow.constant_initializer(0, dtype=dtype),
+            trainable=False,
+            reuse=False,
+        )
+        size = flow.get_variable(
+            name="Size",
+            shape=(1,),
+            dtype=dtype,
+            initializer=flow.constant_initializer(0, dtype=dtype),
+            trainable=False,
+            reuse=False,
+        )
+        return categorical_ordinal_encode(
+            table=table, size=size, input_tensor=input_tensor, name="Encode"
+        )

@@ -8,12 +8,13 @@ import oneflow.framework.typing_util as oft_util
 import oneflow._oneflow_internal
 from google.protobuf import text_format
 
+
 def BindUuidAndHandler(uuid, blob_watched, handler):
     assert isinstance(blob_watched, oneflow._oneflow_internal.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
-class _Watcher(oneflow._oneflow_internal.ForeignWatcher):
 
+class _Watcher(oneflow._oneflow_internal.ForeignWatcher):
     def __init__(self):
         oneflow._oneflow_internal.ForeignWatcher.__init__(self)
 
@@ -24,6 +25,7 @@ class _Watcher(oneflow._oneflow_internal.ForeignWatcher):
             print(traceback.format_exc())
             raise e
 
+
 def _WatcherHandler(handler_uuid, of_blob_ptr):
     uuid2handler = session_ctx.GetDefaultSession().uuid2watch_handler
     assert handler_uuid in uuid2handler
@@ -32,4 +34,6 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     ndarray = ofblob.OfBlob(of_blob_ptr).CopyToNdarray()
     local_blob = local_blob_util.LocalBlob(ndarray, blob_watched.is_dynamic)
     handler(oft_util.TransformWatchedBlob(local_blob, handler))
+
+
 _global_watcher = _Watcher()

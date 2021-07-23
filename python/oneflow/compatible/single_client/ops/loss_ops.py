@@ -1,10 +1,18 @@
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 from typing import Optional, Tuple
 
-def smooth_l1_loss(prediction: oneflow._oneflow_internal.BlobDesc, label: oneflow._oneflow_internal.BlobDesc, beta: float=1.0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def smooth_l1_loss(
+    prediction: oneflow._oneflow_internal.BlobDesc,
+    label: oneflow._oneflow_internal.BlobDesc,
+    beta: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the smooth l1 loss.
 
     The equation is:
@@ -49,11 +57,29 @@ def smooth_l1_loss(prediction: oneflow._oneflow_internal.BlobDesc, label: oneflo
         # out [0.02       0.12499999 1.7        0.005      0.17999998]
 
     """
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('SmoothL1Loss_')).Op('smooth_l1_loss').Input('prediction', [prediction]).Input('label', [label]).Output('loss')
-    op.Attr('beta', float(beta))
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SmoothL1Loss_")
+        )
+        .Op("smooth_l1_loss")
+        .Input("prediction", [prediction])
+        .Input("label", [label])
+        .Output("loss")
+    )
+    op.Attr("beta", float(beta))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def ctc_loss(log_probs: oneflow._oneflow_internal.BlobDesc, targets: oneflow._oneflow_internal.BlobDesc, input_lengths: oneflow._oneflow_internal.BlobDesc, target_lengths: oneflow._oneflow_internal.BlobDesc, blank: int=0, reduction: str='mean', zero_infinity: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def ctc_loss(
+    log_probs: oneflow._oneflow_internal.BlobDesc,
+    targets: oneflow._oneflow_internal.BlobDesc,
+    input_lengths: oneflow._oneflow_internal.BlobDesc,
+    target_lengths: oneflow._oneflow_internal.BlobDesc,
+    blank: int = 0,
+    reduction: str = "mean",
+    zero_infinity: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the CTC(Connectionist Temporal Classification) loss.
     This operator implements the CTC loss as presented in (Graves et al., 2006).
 
@@ -110,19 +136,66 @@ def ctc_loss(log_probs: oneflow._oneflow_internal.BlobDesc, targets: oneflow._on
         # loss [3.918017 2.907672]
 
     """
-    name = name if name is not None else id_util.UniqueStr('CTCLoss_')
-    (loss, _) = flow.user_op_builder(name).Op('ctc_loss').Input('log_probs', [log_probs]).Input('targets', [targets]).Input('input_lengths', [input_lengths]).Input('target_lengths', [target_lengths]).Output('loss').Output('alpha').Attr('blank', int(blank)).Attr('zero_infinity', zero_infinity).Build().InferAndTryRun().RemoteBlobList()
+    name = name if name is not None else id_util.UniqueStr("CTCLoss_")
+    (loss, _) = (
+        flow.user_op_builder(name)
+        .Op("ctc_loss")
+        .Input("log_probs", [log_probs])
+        .Input("targets", [targets])
+        .Input("input_lengths", [input_lengths])
+        .Input("target_lengths", [target_lengths])
+        .Output("loss")
+        .Output("alpha")
+        .Attr("blank", int(blank))
+        .Attr("zero_infinity", zero_infinity)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     if zero_infinity:
-        cond = flow.math.equal(loss, flow.constant(float('inf'), dtype=loss.dtype, shape=loss.shape, name=name + '_constant'), name=name + '_equal')
-        loss = flow.where(cond, flow.zeros(dtype=loss.dtype, shape=loss.shape, name=name + '_zeros'), loss, name=name + '_where')
-    if reduction == 'mean':
-        return flow.math.reduce_mean(flow.math.xdivy(loss, flow.cast(flow.math.clip_by_value(target_lengths, min_value=1, name=name + '_clip_by_value'), dtype=log_probs.dtype, name=name + '_cast'), name=name + '_xdivy'), name=name + '_reduce_mean')
-    elif reduction == 'sum':
-        return flow.math.reduce_sum(loss, name=name + '_reduce_sum')
+        cond = flow.math.equal(
+            loss,
+            flow.constant(
+                float("inf"),
+                dtype=loss.dtype,
+                shape=loss.shape,
+                name=name + "_constant",
+            ),
+            name=name + "_equal",
+        )
+        loss = flow.where(
+            cond,
+            flow.zeros(dtype=loss.dtype, shape=loss.shape, name=name + "_zeros"),
+            loss,
+            name=name + "_where",
+        )
+    if reduction == "mean":
+        return flow.math.reduce_mean(
+            flow.math.xdivy(
+                loss,
+                flow.cast(
+                    flow.math.clip_by_value(
+                        target_lengths, min_value=1, name=name + "_clip_by_value"
+                    ),
+                    dtype=log_probs.dtype,
+                    name=name + "_cast",
+                ),
+                name=name + "_xdivy",
+            ),
+            name=name + "_reduce_mean",
+        )
+    elif reduction == "sum":
+        return flow.math.reduce_sum(loss, name=name + "_reduce_sum")
     else:
         return loss
 
-def ctc_greedy_decoder(log_probs: oneflow._oneflow_internal.BlobDesc, input_lengths: oneflow._oneflow_internal.BlobDesc, merge_repeated: bool=True, name: Optional[str]=None) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
+
+def ctc_greedy_decoder(
+    log_probs: oneflow._oneflow_internal.BlobDesc,
+    input_lengths: oneflow._oneflow_internal.BlobDesc,
+    merge_repeated: bool = True,
+    name: Optional[str] = None,
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     """Performs greedy decoding on the logits given in input (best path).
 
     Args:
@@ -172,6 +245,17 @@ def ctc_greedy_decoder(log_probs: oneflow._oneflow_internal.BlobDesc, input_leng
 
 
     """
-    name = name if name is not None else id_util.UniqueStr('CTCGreedyDecode_')
-    (decoded, neg_sum_logits) = flow.user_op_builder(name).Op('ctc_greedy_decoder').Input('log_probs', [log_probs]).Input('input_lengths', [input_lengths]).Output('decoded').Output('neg_sum_logits').Attr('merge_repeated', merge_repeated).Build().InferAndTryRun().RemoteBlobList()
+    name = name if name is not None else id_util.UniqueStr("CTCGreedyDecode_")
+    (decoded, neg_sum_logits) = (
+        flow.user_op_builder(name)
+        .Op("ctc_greedy_decoder")
+        .Input("log_probs", [log_probs])
+        .Input("input_lengths", [input_lengths])
+        .Output("decoded")
+        .Output("neg_sum_logits")
+        .Attr("merge_repeated", merge_repeated)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return (decoded, neg_sum_logits)

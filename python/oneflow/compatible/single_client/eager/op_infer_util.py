@@ -1,8 +1,13 @@
-from oneflow.compatible.single_client.core.operator import op_node_signature_pb2 as op_node_signature_pb
+from oneflow.compatible.single_client.core.operator import (
+    op_node_signature_pb2 as op_node_signature_pb,
+)
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow._oneflow_internal.oneflow.core.operator import op_node_signature as op_node_signature_cfg
+from oneflow._oneflow_internal.oneflow.core.operator import (
+    op_node_signature as op_node_signature_cfg,
+)
 from oneflow.compatible import single_client as flow
 from google.protobuf import text_format
+
 
 def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):
     if scope_symbol_id is None:
@@ -11,9 +16,14 @@ def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):
     upstream_signature = MakeUpstreamSignature(ibn2blob_object)
     return c_api_util.InferOpConf(op_conf, upstream_signature)
 
+
 def MakeUpstreamSignature(ibn2blob_object):
     upstream_signature_cfg = op_node_signature_cfg.OpNodeSignature()
     for (ibn, blob_object) in ibn2blob_object.items():
         blob_object.op_arg_blob_attr.DumpToOpNodeSignature(ibn, upstream_signature_cfg)
-        blob_object.op_arg_parallel_attr.DumpToOpNodeSignature(ibn, upstream_signature_cfg)
-    return text_format.Parse(str(upstream_signature_cfg), op_node_signature_pb.OpNodeSignature())
+        blob_object.op_arg_parallel_attr.DumpToOpNodeSignature(
+            ibn, upstream_signature_cfg
+        )
+    return text_format.Parse(
+        str(upstream_signature_cfg), op_node_signature_pb.OpNodeSignature()
+    )

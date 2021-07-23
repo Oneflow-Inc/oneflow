@@ -8,12 +8,14 @@ import oneflow._oneflow_internal
 from oneflow.framework.multi_client_session import MultiClientSession
 import oneflow.framework.c_api_util as c_api_util
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestUserOpGraph(unittest.TestCase):
-
     def test_user_op_graph(test_case):
         test_case.assertTrue(oneflow.distributed.is_multi_client())
-        test_case.assertTrue(oneflow.python.framework.env_util.HasAllMultiClientEnvVars())
+        test_case.assertTrue(
+            oneflow.python.framework.env_util.HasAllMultiClientEnvVars()
+        )
         x0 = flow.Tensor(20, 30)
         weight0 = flow.Tensor(30, 50)
         x1 = flow.Tensor(50, 70)
@@ -24,19 +26,39 @@ class TestUserOpGraph(unittest.TestCase):
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
         with oneflow._oneflow_internal.lazy_mode.gard(True):
-            oneflow._oneflow_internal.JobBuildAndInferCtx_Open('cc_test_user_op_expr_job')
-            job_conf = oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-            job_conf.set_job_name('cc_test_user_op_expr_job')
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
+                "cc_test_user_op_expr_job"
+            )
+            job_conf = (
+                oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
+            )
+            job_conf.set_job_name("cc_test_user_op_expr_job")
             job_conf.mutable_predict_conf()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-            x0_conf = oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-            x0_op = oneflow._oneflow_internal.one.FeedInputOpExpr('cc_Input_0', x0_conf, ['in_0'], ['out_0'])
-            x1_conf = oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-            x1_op = oneflow._oneflow_internal.one.FeedInputOpExpr('cc_Input_1', x1_conf, ['in_0'], ['out_0'])
-            weight0_conf = oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
-            weight0_op = oneflow._oneflow_internal.one.FeedVariableOpExpr('cc_Variable_0', weight0_conf, ['in_0'], ['out_0'])
-            output_conf = oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
-            output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr('cc_Output_0', output_conf, ['in_0'], ['out_0'])
+            x0_conf = (
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+            )
+            x0_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+                "cc_Input_0", x0_conf, ["in_0"], ["out_0"]
+            )
+            x1_conf = (
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
+            )
+            x1_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
+                "cc_Input_1", x1_conf, ["in_0"], ["out_0"]
+            )
+            weight0_conf = (
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
+            )
+            weight0_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
+                "cc_Variable_0", weight0_conf, ["in_0"], ["out_0"]
+            )
+            output_conf = (
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
+            )
+            output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
+                "cc_Output_0", output_conf, ["in_0"], ["out_0"]
+            )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
             if not x0.is_determined:
                 x0.determine()
@@ -71,5 +93,7 @@ class TestUserOpGraph(unittest.TestCase):
             eager_output = output_op.apply([y1], attrs)[0]
             test_case.assertEqual(eager_output.shape, (20, 70))
             test_case.assertTrue(not eager_output.is_lazy)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

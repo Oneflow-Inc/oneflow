@@ -5,11 +5,19 @@ import oneflow._oneflow_internal
 import traceback
 from oneflow import oneflow_deprecate
 
+
 @oneflow_deprecate()
 def deprecated_mirrored_strategy():
-    print('WARNING:', 'oneflow.distribute.mirrored_strategy', 'will be removed in the future, use {} instead.'.format('oneflow.scope.mirrored_view'))
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view"
+        ),
+    )
     print(traceback.format_stack()[-2])
     return DistributeMirroredStrategy()
+
 
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
     """Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
@@ -22,13 +30,23 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
 
     def __init__(self):
         distribute_ctx.DistributeStrategy.__init__(self, True)
+
+
 from oneflow import oneflow_deprecate
+
 
 @oneflow_deprecate()
 def deprecated_mirrored_strategy_enabled():
-    print('WARNING:', 'oneflow.distribute.mirrored_strategy_enabled', 'will be removed in the future, use {} instead.'.format('oneflow.scope.mirrored_view_enabled'))
+    print(
+        "WARNING:",
+        "oneflow.distribute.mirrored_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.mirrored_view_enabled"
+        ),
+    )
     print(traceback.format_stack()[-2])
     return MirroredStrategyEnabled()
+
 
 def MirroredStrategyEnabled() -> bool:
     """
@@ -38,13 +56,23 @@ def MirroredStrategyEnabled() -> bool:
 
     """
     return distribute_ctx.IsMirroredStrategyEnabled()
+
+
 from oneflow import oneflow_deprecate
+
 
 @oneflow_deprecate()
 def deprecated_consistent_strategy():
-    print('WARNING:', 'oneflow.distribute.consistent_strategy', 'will be removed in the future, use {} instead.'.format('oneflow.scope.consistent_view'))
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view"
+        ),
+    )
     print(traceback.format_stack()[-2])
     return DistributeConsistentStrategy()
+
 
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     """Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
@@ -58,13 +86,23 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
 
     def __init__(self):
         distribute_ctx.DistributeStrategy.__init__(self, False)
+
+
 from oneflow import oneflow_deprecate
+
 
 @oneflow_deprecate()
 def deprecated_consistent_strategy_enabled():
-    print('WARNING:', 'oneflow.distribute.consistent_strategy_enabled', 'will be removed in the future, use {} instead.'.format('oneflow.scope.consistent_view_enabled'))
+    print(
+        "WARNING:",
+        "oneflow.distribute.consistent_strategy_enabled",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.consistent_view_enabled"
+        ),
+    )
     print(traceback.format_stack()[-2])
     return ConsistentStrategyEnabled()
+
 
 def ConsistentStrategyEnabled() -> bool:
     """
@@ -74,6 +112,7 @@ def ConsistentStrategyEnabled() -> bool:
 
     """
     return distribute_ctx.IsConsistentStrategyEnabled()
+
 
 def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     """Generate a split scheme in which op will be splitted at `axis`.
@@ -91,6 +130,7 @@ def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     assert type(axis) is int
     return oneflow._oneflow_internal.distribute.split(axis)
 
+
 def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     """Generate a broadcast scheme.
 
@@ -103,6 +143,7 @@ def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     """
     return oneflow._oneflow_internal.distribute.broadcast()
 
+
 def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     """Generate a broadcast scheme.
 
@@ -112,11 +153,18 @@ def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     """
     return oneflow._oneflow_internal.distribute.auto()
 
-def assert_is_valid_distribute(distribute: oneflow._oneflow_internal.distribute.Distribute) -> None:
-    assert isinstance(distribute, oneflow._oneflow_internal.distribute.Distribute), 'not a valid distribute policy.\n           expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()'
+
+def assert_is_valid_distribute(
+    distribute: oneflow._oneflow_internal.distribute.Distribute,
+) -> None:
+    assert isinstance(
+        distribute, oneflow._oneflow_internal.distribute.Distribute
+    ), "not a valid distribute policy.\n           expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"
+
 
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
+
 
 def get_rank():
     """Returns the rank of current process group.
@@ -127,6 +175,7 @@ def get_rank():
     """
     return oneflow._oneflow_internal.GetRank()
 
+
 def get_world_size():
     """Returns the number of processes in the current process group.
 
@@ -136,10 +185,14 @@ def get_world_size():
     """
     return oneflow._oneflow_internal.GetWorldSize()
 
+
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
 
-def split_sbp(axis: int) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+
+def split_sbp(
+    axis: int,
+) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
     """Generate a split scheme in which op will be splitted at `axis`.
 
     Args:

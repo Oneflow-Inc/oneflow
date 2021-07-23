@@ -3,7 +3,10 @@ from typing import Union, Sequence, Tuple, Optional
 from oneflow.compatible.single_client.python.framework.tensor import Tensor as PyTensor
 from oneflow._oneflow_internal import TensorTuple, Tensor
 
-def convert_to_tensor_tuple(args: Optional[Union[PyTensor, Sequence[PyTensor], Tensor, Sequence[Tensor]]]):
+
+def convert_to_tensor_tuple(
+    args: Optional[Union[PyTensor, Sequence[PyTensor], Tensor, Sequence[Tensor]]]
+):
     if args is None:
         return TensorTuple()
     elif isinstance(args, collections.abc.Sequence):

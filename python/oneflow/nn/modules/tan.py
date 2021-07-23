@@ -2,14 +2,15 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Tan(Module):
 
+class Tan(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op('tan').Input('x').Output('y').Build()
+        self._op = flow.builtin_op("tan").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 def tan_op(input):
     """Returns  the tan value of the elements of :attr:`input`.
@@ -35,7 +36,8 @@ def tan_op(input):
     """
     return Tan()(input)
 
-@register_tensor_op('tan')
+
+@register_tensor_op("tan")
 def tan_op_tensor(input):
     """
     tan() -> Tensor
@@ -43,6 +45,9 @@ def tan_op_tensor(input):
 
     """
     return Tan()(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

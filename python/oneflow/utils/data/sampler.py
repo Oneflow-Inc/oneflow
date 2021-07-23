@@ -3,7 +3,9 @@ from typing import Iterator, Union, Optional, Sequence, List, TypeVar, Generic, 
 import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-T_co = TypeVar('T_co', covariant=True)
+
+T_co = TypeVar("T_co", covariant=True)
+
 
 class Sampler(Generic[T_co]):
     """Base class for all Samplers.
@@ -23,12 +25,14 @@ class Sampler(Generic[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         raise NotImplementedError
 
+
 class SequentialSampler(Sampler[int]):
     """Samples elements sequentially, always in the same order.
 
     Args:
         data_source (Dataset): dataset to sample from
     """
+
     data_source: Sized
 
     def __init__(self, data_source):
@@ -39,6 +43,7 @@ class SequentialSampler(Sampler[int]):
 
     def __len__(self) -> int:
         return len(self.data_source)
+
 
 class RandomSampler(Sampler[int]):
     """Samples elements randomly. If without replacement, then sample from a shuffled dataset.
@@ -51,20 +56,37 @@ class RandomSampler(Sampler[int]):
             is supposed to be specified only when `replacement` is ``True``.
         generator (Generator): Generator used in sampling.
     """
+
     data_source: Sized
     replacement: bool
 
-    def __init__(self, data_source: Sized, replacement: bool=False, num_samples: Optional[int]=None, generator=None) -> None:
+    def __init__(
+        self,
+        data_source: Sized,
+        replacement: bool = False,
+        num_samples: Optional[int] = None,
+        generator=None,
+    ) -> None:
         self.data_source = data_source
         self.replacement = replacement
         self._num_samples = num_samples
         self.generator = generator
         if not isinstance(self.replacement, bool):
-            raise TypeError('replacement should be a boolean value, but got replacement={}'.format(self.replacement))
+            raise TypeError(
+                "replacement should be a boolean value, but got replacement={}".format(
+                    self.replacement
+                )
+            )
         if self._num_samples is not None and (not replacement):
-            raise ValueError('With replacement=False, num_samples should not be specified, since a random permute will be performed.')
+            raise ValueError(
+                "With replacement=False, num_samples should not be specified, since a random permute will be performed."
+            )
         if not isinstance(self.num_samples, int) or self.num_samples <= 0:
-            raise ValueError('num_samples should be a positive integer value, but got num_samples={}'.format(self.num_samples))
+            raise ValueError(
+                "num_samples should be a positive integer value, but got num_samples={}".format(
+                    self.num_samples
+                )
+            )
 
     @property
     def num_samples(self) -> int:
@@ -76,16 +98,19 @@ class RandomSampler(Sampler[int]):
         n = len(self.data_source)
         if self.generator is None:
             generator = flow.Generator()
-            generator.manual_seed(int(flow.Tensor(1, dtype=flow.int64).xavier_uniform_().numpy()[0]))
+            generator.manual_seed(
+                int(flow.Tensor(1, dtype=flow.int64).xavier_uniform_().numpy()[0])
+            )
         else:
             generator = self.generator
         if self.replacement:
-            raise NotImplementedError('Not support replacement yet!')
+            raise NotImplementedError("Not support replacement yet!")
         else:
             yield from np.random.permutation(n).tolist()
 
     def __len__(self):
         return self.num_samples
+
 
 class SubsetRandomSampler(Sampler[int]):
     """Samples elements randomly from a given list of indices, without replacement.
@@ -94,6 +119,7 @@ class SubsetRandomSampler(Sampler[int]):
         indices (sequence): a sequence of indices
         generator (Generator): Generator used in sampling.
     """
+
     indices: Sequence[int]
 
     def __init__(self, indices: Sequence[int], generator=None) -> None:
@@ -101,10 +127,14 @@ class SubsetRandomSampler(Sampler[int]):
         self.generator = generator
 
     def __iter__(self):
-        return (self.indices[i] for i in flow.randperm(len(self.indices), generator=self.generator))
+        return (
+            self.indices[i]
+            for i in flow.randperm(len(self.indices), generator=self.generator)
+        )
 
     def __len__(self):
         return len(self.indices)
+
 
 class BatchSampler(Sampler[List[int]]):
     """Wraps another sampler to yield a mini-batch of indices.
@@ -123,10 +153,22 @@ class BatchSampler(Sampler[List[int]]):
     """
 
     def __init__(self, sampler: Sampler[int], batch_size: int, drop_last: bool) -> None:
-        if not isinstance(batch_size, int) or isinstance(batch_size, bool) or batch_size <= 0:
-            raise ValueError('batch_size should be a positive integer value, but got batch_size={}'.format(batch_size))
+        if (
+            not isinstance(batch_size, int)
+            or isinstance(batch_size, bool)
+            or batch_size <= 0
+        ):
+            raise ValueError(
+                "batch_size should be a positive integer value, but got batch_size={}".format(
+                    batch_size
+                )
+            )
         if not isinstance(drop_last, bool):
-            raise ValueError('drop_last should be a boolean value, but got drop_last={}'.format(drop_last))
+            raise ValueError(
+                "drop_last should be a boolean value, but got drop_last={}".format(
+                    drop_last
+                )
+            )
         self.sampler = sampler
         self.batch_size = batch_size
         self.drop_last = drop_last

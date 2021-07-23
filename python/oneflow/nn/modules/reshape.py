@@ -3,8 +3,8 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from typing import Sequence
 
-class Reshape(Module):
 
+class Reshape(Module):
     def __init__(self, shape: Sequence[int]) -> None:
         super().__init__()
         self.shape = shape
@@ -12,8 +12,9 @@ class Reshape(Module):
     def forward(self, x):
         return flow.F.reshape(x, shape=self.shape)
 
-@register_tensor_op('reshape')
-def reshape_op(x, shape: Sequence[int]=None):
+
+@register_tensor_op("reshape")
+def reshape_op(x, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.
 
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
@@ -42,8 +43,9 @@ def reshape_op(x, shape: Sequence[int]=None):
     """
     return Reshape(shape=shape)(x)
 
-@register_tensor_op('view')
-def view_op(x, shape: Sequence[int]=None):
+
+@register_tensor_op("view")
+def view_op(x, shape: Sequence[int] = None):
     """
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
@@ -92,6 +94,9 @@ def view_op(x, shape: Sequence[int]=None):
 
     """
     return Reshape(shape=shape)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

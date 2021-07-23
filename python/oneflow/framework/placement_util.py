@@ -10,13 +10,23 @@ import traceback
 import oneflow._oneflow_internal
 from oneflow import oneflow_deprecate
 
+
 @oneflow_deprecate()
 def deprecated_placement(*args, **kwargs):
-    print('WARNING:', 'oneflow.device_prior_placement/oneflow.fixed_placement', 'will be removed in the future, use {} instead.'.format('oneflow.scope.placement'))
+    print(
+        "WARNING:",
+        "oneflow.device_prior_placement/oneflow.fixed_placement",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.scope.placement"
+        ),
+    )
     print(traceback.format_stack()[-2])
     return api_placement(*args, **kwargs)
 
-def api_placement(device_tag: str, machine_device_ids: str, hierarchy=None) -> placement_ctx.PlacementScope:
+
+def api_placement(
+    device_tag: str, machine_device_ids: str, hierarchy=None
+) -> placement_ctx.PlacementScope:
     """Create a scope. All ops within the scope will run on specified device that placed by  "device_tag" and "machine_device_ids".
 
     Args:
@@ -48,15 +58,28 @@ def api_placement(device_tag: str, machine_device_ids: str, hierarchy=None) -> p
             flow.losses.add_loss(loss)
 
     """
-    if oneflow._oneflow_internal.flags.with_cuda() == False and device_tag == 'gpu':
-        device_tag = 'cpu'
-    assert isinstance(hierarchy, (list, tuple, oneflow._oneflow_internal.Size)) or hierarchy is None
-    func = enable_if.unique([GetEmptyPlacementScope, GetNormalModePlacementScope, GetGlobalModePlacementScope])
+    if oneflow._oneflow_internal.flags.with_cuda() == False and device_tag == "gpu":
+        device_tag = "cpu"
+    assert (
+        isinstance(hierarchy, (list, tuple, oneflow._oneflow_internal.Size))
+        or hierarchy is None
+    )
+    func = enable_if.unique(
+        [
+            GetEmptyPlacementScope,
+            GetNormalModePlacementScope,
+            GetGlobalModePlacementScope,
+        ]
+    )
     return func(device_tag, machine_device_ids, hierarchy)
 
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
+
+@enable_if.condition(
+    hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized
+)
 def GetEmptyPlacementScope(device_tag, machine_device_ids, hierarchy=None):
     return placement_ctx.EmptyPlacementScope(device_tag, machine_device_ids, hierarchy)
+
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
@@ -67,8 +90,13 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     sess = session_ctx.GetDefaultSession()
     if hierarchy is not None:
         hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
-    scope = scope_util.MakeScope(lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(old_scope, device_tag, machine_device_ids, hierarchy))
+    scope = scope_util.MakeScope(
+        lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids, hierarchy
+        )
+    )
     return scope_util.ScopeContext(scope)
+
 
 @enable_if.condition(hob.in_global_mode)
 def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
@@ -79,14 +107,18 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
         hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
 
     def BuildScope(old_scope, builder):
-        return builder.BuildScopeWithNewParallelDesc(old_scope, device_tag, machine_device_ids, hierarchy)
+        return builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids, hierarchy
+        )
+
     scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))
     return placement_ctx.GlobalModePlacementScope(scope_ctx)
 
+
 def GetDefaultMachineDeviceIds(resource):
-    if resource.HasField('gpu_device_num') and resource.gpu_device_num > 0:
-        return ('gpu', placement_ctx.GetGpuMachineDeviceIds(resource))
-    elif resource.HasField('cpu_device_num'):
-        return ('cpu', placement_ctx.GetCpuMachineDeviceIds(resource))
+    if resource.HasField("gpu_device_num") and resource.gpu_device_num > 0:
+        return ("gpu", placement_ctx.GetGpuMachineDeviceIds(resource))
+    elif resource.HasField("cpu_device_num"):
+        return ("cpu", placement_ctx.GetCpuMachineDeviceIds(resource))
     else:
         raise NotImplementedError

@@ -1,6 +1,7 @@
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 
+
 def RecursveDetermine(arg):
     if isinstance(arg, flow.Tensor):
         if not arg.is_determined:
@@ -17,8 +18,8 @@ def RecursveDetermine(arg):
     else:
         return arg
 
-class Function:
 
+class Function:
     def __init__(self, func_name, handle):
         self.func_name = func_name
         self.handle = handle
@@ -31,10 +32,12 @@ class Function:
             kwargs[k] = RecursveDetermine(v)
         return self.handle(*args, **kwargs)
 
+
 def RegisterFunctionalApis():
     import inspect
     from oneflow.compatible.single_client import F
     from oneflow.compatible.single_client.experimental import F as expr_F
+
     for s in dir(oneflow._oneflow_internal.F):
         f = getattr(oneflow._oneflow_internal.F, s)
         if inspect.isbuiltin(f):
@@ -46,4 +49,6 @@ def RegisterFunctionalApis():
             setattr(F, s, Function(func_name, f))
             setattr(expr_F, s, Function(func_name, f))
     del inspect
-_function_name_aliases = {'add_scalar': 'scalar_add'}
+
+
+_function_name_aliases = {"add_scalar": "scalar_add"}

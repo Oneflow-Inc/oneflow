@@ -1,37 +1,53 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return add_job
+
 
 def make_xla_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def xla_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def xla_add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return xla_add_job
+
 
 def make_trt_job(x_shape, y_shape, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(True)
 
     @flow.global_function(config)
-    def trt_add_job(x=flow.FixedTensorDef(x_shape, dtype=dtype), y=flow.FixedTensorDef(y_shape, dtype=dtype)):
+    def trt_add_job(
+        x=flow.FixedTensorDef(x_shape, dtype=dtype),
+        y=flow.FixedTensorDef(y_shape, dtype=dtype),
+    ):
         return x + y + x
+
     return trt_add_job
 
-class TestAdd(unittest.TestCase):
 
+class TestAdd(unittest.TestCase):
     def _test_body(self, x, y, dtype=np.float32):
         f1 = make_job(x.shape, y.shape, dtype=flow.float32)
         f2 = make_xla_job(x.shape, y.shape, dtype=flow.float32)
@@ -39,9 +55,9 @@ class TestAdd(unittest.TestCase):
         a = f1(x, y).get()
         b = f2(x, y).get()
         c = f3(x, y).get()
-        print('without xla: ', a)
-        print('with xla', b)
-        print('with tensorrt', c)
+        print("without xla: ", a)
+        print("with xla", b)
+        print("with tensorrt", c)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
@@ -65,5 +81,7 @@ class TestAdd(unittest.TestCase):
         self._test_random_body((1, 10), (1, 10))
         self._test_random_body((2, 10, 2), (2, 10, 2))
         self._test_random_body((2, 5, 2, 2), (2, 5, 2, 2))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

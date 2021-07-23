@@ -1,10 +1,12 @@
 from oneflow.compatible import single_client as flow
 import oneflow._oneflow_internal
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework.attr_util import convert_to_user_attr_value
+from oneflow.compatible.single_client.python.framework.attr_util import (
+    convert_to_user_attr_value,
+)
+
 
 class BuiltinOp(object):
-
     def __init__(self, op_type_name, op_name=None):
         if op_name is None:
             op_name = id_util.UniqueStr(op_type_name)
@@ -65,10 +67,15 @@ class BuiltinOp(object):
             [type]: [description]
         """
         if attr_type_name is not None:
-            print('WARNING: Argument \'attr_type_name\' of UserOpConfBuilder.Attr has been deprecated. Please remove it.\n\n            For instance:\n                -     .Attr("out_num", out_num, "AttrTypeInt64")\n                +     .Attr("out_num", out_num)\n                        ')
+            print(
+                'WARNING: Argument \'attr_type_name\' of UserOpConfBuilder.Attr has been deprecated. Please remove it.\n\n            For instance:\n                -     .Attr("out_num", out_num, "AttrTypeInt64")\n                +     .Attr("out_num", out_num)\n                        '
+            )
             print(traceback.format_stack()[-2])
         assert self._op_type_name is not None
-        self._builder.attr(attr_name, convert_to_user_attr_value(self._op_type_name, attr_name, attr_value))
+        self._builder.attr(
+            attr_name,
+            convert_to_user_attr_value(self._op_type_name, attr_name, attr_value),
+        )
         return self
 
     def Build(self):

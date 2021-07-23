@@ -7,14 +7,23 @@ from collections import OrderedDict
 from typing import Dict
 import os
 
-def _compare_bce_with_logits_loss_np(input_shape, target_shape, weight_shape, pos_weight_shape, device_type, machine_ids, device_counts):
+
+def _compare_bce_with_logits_loss_np(
+    input_shape,
+    target_shape,
+    weight_shape,
+    pos_weight_shape,
+    device_type,
+    machine_ids,
+    device_counts,
+):
     input = np.random.random(size=input_shape).astype(np.float32) - 0.5
     target = np.random.random(size=target_shape).astype(np.float32) - 0.5
     pos_weight = np.random.random(size=pos_weight_shape).astype(np.float32)
     weight = np.random.random(size=weight_shape).astype(np.float32)
-    assert device_type in ['cpu', 'gpu']
+    assert device_type in ["cpu", "gpu"]
     flow.clear_default_session()
-    if device_type == 'cpu':
+    if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
@@ -35,67 +44,135 @@ def _compare_bce_with_logits_loss_np(input_shape, target_shape, weight_shape, po
         np_bce = loss * np_weight
         np_bce_mean = np.mean(np_bce)
         np_bce_sum = np.sum(np_bce)
-        return {'np_bce_with_logits_loss': np_bce, 'np_bce_with_logits_loss_mean': np_bce_mean, 'np_bce_with_logits_loss_sum': np_bce_sum}
+        return {
+            "np_bce_with_logits_loss": np_bce,
+            "np_bce_with_logits_loss_mean": np_bce_mean,
+            "np_bce_with_logits_loss_sum": np_bce_sum,
+        }
 
     def np_bce_with_logits_loss_diff(np_input, np_target, np_weight, np_pos_weight):
         elemcnt = np_target.size
-        np_bce_with_logits_grad_mean = -(np_weight / elemcnt) * (np_target - 1 + ((1 - np_pos_weight) * np_target - 1) * (-np.exp(-np_input) / (1 + np.exp(-np_input))))
-        return {'np_bce_with_logits_grad_mean': np_bce_with_logits_grad_mean}
+        np_bce_with_logits_grad_mean = -(np_weight / elemcnt) * (
+            np_target
+            - 1
+            + ((1 - np_pos_weight) * np_target - 1)
+            * (-np.exp(-np_input) / (1 + np.exp(-np_input)))
+        )
+        return {"np_bce_with_logits_grad_mean": np_bce_with_logits_grad_mean}
+
     np_out_bceloss_dict = np_bce_with_logits_loss(input, target, weight, pos_weight)
     np_grad_dict = np_bce_with_logits_loss_diff(input, target, weight, pos_weight)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, np_grad_dict['np_bce_with_logits_grad_mean'])
+        assert np.allclose(blob, np_grad_dict["np_bce_with_logits_grad_mean"])
 
-    @flow.global_function(type='train', function_config=func_config)
-    def oneflow_bce_with_logits_loss(of_input: tp.Numpy.Placeholder(shape=input.shape), of_target: tp.Numpy.Placeholder(shape=target.shape), of_weight: tp.Numpy.Placeholder(shape=weight.shape), of_pos_weight: tp.Numpy.Placeholder(shape=pos_weight.shape)) -> Dict[str, tp.Numpy]:
-        with flow.scope.placement(device_type, '0:0'):
-            v = flow.get_variable(shape=input.shape, dtype=flow.float32, initializer=flow.zeros_initializer(), name='v')
+    @flow.global_function(type="train", function_config=func_config)
+    def oneflow_bce_with_logits_loss(
+        of_input: tp.Numpy.Placeholder(shape=input.shape),
+        of_target: tp.Numpy.Placeholder(shape=target.shape),
+        of_weight: tp.Numpy.Placeholder(shape=weight.shape),
+        of_pos_weight: tp.Numpy.Placeholder(shape=pos_weight.shape),
+    ) -> Dict[str, tp.Numpy]:
+        with flow.scope.placement(device_type, "0:0"):
+            v = flow.get_variable(
+                shape=input.shape,
+                dtype=flow.float32,
+                initializer=flow.zeros_initializer(),
+                name="v",
+            )
             x_var = of_input + v
         flow.watch_diff(x_var, assert_prediction_grad)
-        bceloss = flow.nn.BCEWithLogitsLoss(x_var, of_target, of_weight, of_pos_weight, reduction='none', name='of_mseloss')
-        bceloss_mean = flow.nn.BCEWithLogitsLoss(x_var, of_target, of_weight, of_pos_weight, reduction='mean', name='of_mseloss_reduce_mean')
-        bceloss_sum = flow.nn.BCEWithLogitsLoss(x_var, of_target, of_weight, of_pos_weight, reduction='sum', name='of_mseloss_reduce_sum')
-        with flow.scope.placement(device_type, '0:0'):
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0).minimize(bceloss_mean)
-        return {'of_bce_with_logits_loss': bceloss, 'of_bce_with_logits_loss_mean': bceloss_mean, 'of_bce_with_logits_loss_sum': bceloss_sum}
-    of_out_bceloss_dict = oneflow_bce_with_logits_loss(input, target, weight, pos_weight)
-    assert np.allclose(of_out_bceloss_dict['of_bce_with_logits_loss'], np_out_bceloss_dict['np_bce_with_logits_loss'])
-    assert np.allclose(of_out_bceloss_dict['of_bce_with_logits_loss_mean'][0], np_out_bceloss_dict['np_bce_with_logits_loss_mean'])
-    assert np.allclose(of_out_bceloss_dict['of_bce_with_logits_loss_sum'][0], np_out_bceloss_dict['np_bce_with_logits_loss_sum'])
+        bceloss = flow.nn.BCEWithLogitsLoss(
+            x_var,
+            of_target,
+            of_weight,
+            of_pos_weight,
+            reduction="none",
+            name="of_mseloss",
+        )
+        bceloss_mean = flow.nn.BCEWithLogitsLoss(
+            x_var,
+            of_target,
+            of_weight,
+            of_pos_weight,
+            reduction="mean",
+            name="of_mseloss_reduce_mean",
+        )
+        bceloss_sum = flow.nn.BCEWithLogitsLoss(
+            x_var,
+            of_target,
+            of_weight,
+            of_pos_weight,
+            reduction="sum",
+            name="of_mseloss_reduce_sum",
+        )
+        with flow.scope.placement(device_type, "0:0"):
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+            ).minimize(bceloss_mean)
+        return {
+            "of_bce_with_logits_loss": bceloss,
+            "of_bce_with_logits_loss_mean": bceloss_mean,
+            "of_bce_with_logits_loss_sum": bceloss_sum,
+        }
+
+    of_out_bceloss_dict = oneflow_bce_with_logits_loss(
+        input, target, weight, pos_weight
+    )
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_with_logits_loss"],
+        np_out_bceloss_dict["np_bce_with_logits_loss"],
+    )
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_with_logits_loss_mean"][0],
+        np_out_bceloss_dict["np_bce_with_logits_loss_mean"],
+    )
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_with_logits_loss_sum"][0],
+        np_out_bceloss_dict["np_bce_with_logits_loss_sum"],
+    )
+
 
 def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
     arg_dict = OrderedDict()
-    arg_dict['input_shape'] = [shape]
-    arg_dict['target_shape'] = [shape]
-    arg_dict['weight_shape'] = [shape]
-    arg_dict['pos_weight_shape'] = [shape[-1]]
-    arg_dict['device_type'] = [device_type]
-    arg_dict['machine_ids'] = [machine_ids]
-    arg_dict['device_counts'] = [device_counts]
+    arg_dict["input_shape"] = [shape]
+    arg_dict["target_shape"] = [shape]
+    arg_dict["weight_shape"] = [shape]
+    arg_dict["pos_weight_shape"] = [shape[-1]]
+    arg_dict["device_type"] = [device_type]
+    arg_dict["machine_ids"] = [machine_ids]
+    arg_dict["device_counts"] = [device_counts]
     return arg_dict
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestBCEWithLogitsLoss1n1d(flow.unittest.TestCase):
-
     def test_bce_with_logits_loss_cpu(test_case):
-        arg_dict = _gen_arg_dict(shape=(3, 3), device_type='cpu', machine_ids='0:0', device_counts=1)
+        arg_dict = _gen_arg_dict(
+            shape=(3, 3), device_type="cpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_bce_with_logits_loss_np(*arg)
 
-    @unittest.skipIf(os.getenv('ONEFLOW_TEST_CPU_ONLY'), 'only test cpu cases')
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_bce_with_logits_loss_gpu(test_case):
-        arg_dict = _gen_arg_dict(shape=(4, 16), device_type='gpu', machine_ids='0:0', device_counts=1)
+        arg_dict = _gen_arg_dict(
+            shape=(4, 16), device_type="gpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_bce_with_logits_loss_np(*arg)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestBCEWithLogits1n2d(flow.unittest.TestCase):
-
-    @unittest.skipIf(os.getenv('ONEFLOW_TEST_CPU_ONLY'), 'only test cpu cases')
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_bce_with_logits_gpu_1n2d(test_case):
-        arg_dict = _gen_arg_dict(shape=(4, 8), device_type='gpu', machine_ids='0:0-1', device_counts=2)
+        arg_dict = _gen_arg_dict(
+            shape=(4, 8), device_type="gpu", machine_ids="0:0-1", device_counts=2
+        )
         for arg in GenArgList(arg_dict):
             _compare_bce_with_logits_loss_np(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

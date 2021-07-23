@@ -1,8 +1,8 @@
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 
-class BroadCastLike(Module):
 
+class BroadCastLike(Module):
     def __init__(self, broadcast_axes: None) -> None:
         super().__init__()
         self.broadcast_axes = broadcast_axes

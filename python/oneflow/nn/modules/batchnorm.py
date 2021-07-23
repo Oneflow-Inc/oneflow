@@ -2,10 +2,18 @@ from typing import Union
 import oneflow as flow
 from oneflow.nn.module import Module
 
+
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm"""
 
-    def __init__(self, num_features: int, eps: float=1e-05, momentum: float=0.1, affine: bool=True, track_running_stats: bool=True) -> None:
+    def __init__(
+        self,
+        num_features: int,
+        eps: float = 1e-05,
+        momentum: float = 0.1,
+        affine: bool = True,
+        track_running_stats: bool = True,
+    ) -> None:
         super().__init__()
         self.num_features = num_features
         self.eps = eps
@@ -16,14 +24,14 @@ class _NormBase(Module):
             self.weight = flow.nn.Parameter(flow.Tensor(num_features))
             self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer('running_mean', flow.Tensor(num_features))
-            self.register_buffer('running_var', flow.Tensor(num_features))
+            self.register_buffer("running_mean", flow.Tensor(num_features))
+            self.register_buffer("running_var", flow.Tensor(num_features))
         else:
-            self.register_parameter('running_mean', None)
-            self.register_parameter('running_var', None)
+            self.register_parameter("running_mean", None)
+            self.register_parameter("running_var", None)
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
@@ -40,20 +48,46 @@ class _NormBase(Module):
     def _check_input_dim(self, input):
         raise NotImplementedError
 
-    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        super(_NormBase, self)._load_from_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        super(_NormBase, self)._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
 
     def extra_repr(self):
-        return '{num_features}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}'.format(**self.__dict__)
+        return "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
+            **self.__dict__
+        )
+
 
 class _BatchNorm(_NormBase):
-
-    def __init__(self, num_features, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True):
+    def __init__(
+        self,
+        num_features,
+        eps=1e-05,
+        momentum=0.1,
+        affine=True,
+        track_running_stats=True,
+    ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
     def forward(self, x):
         self._check_input_dim(x)
-        if x.device == flow.device('cpu'):
+        if x.device == flow.device("cpu"):
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim != 1:
@@ -61,10 +95,14 @@ class _BatchNorm(_NormBase):
             mean = x.mean(dim=reduce_axis, keepdim=False)
             variance = x.var(dim=reduce_axis, keepdim=False)
             if self.training and self.track_running_stats:
-                running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mean
-                running_var = self.momentum * self.running_var + (1 - self.momentum) * variance
-                self.__setattr__('running_mean', flow.Tensor(running_mean))
-                self.__setattr__('running_var', flow.Tensor(running_var))
+                running_mean = (
+                    self.momentum * self.running_mean + (1 - self.momentum) * mean
+                )
+                running_var = (
+                    self.momentum * self.running_var + (1 - self.momentum) * variance
+                )
+                self.__setattr__("running_mean", flow.Tensor(running_mean))
+                self.__setattr__("running_var", flow.Tensor(running_var))
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -84,7 +122,9 @@ class _BatchNorm(_NormBase):
             elif len(mean.shape) == len(x.shape):
                 pass
             else:
-                raise ValueError("shape of mean and variance should be 1D or has number of axes and x's")
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
             variance += self.eps
             normalized = (x - mean) * variance.rsqrt()
             affined = normalized
@@ -94,13 +134,34 @@ class _BatchNorm(_NormBase):
                 affined = affined + bias
             return affined
         elif self.track_running_stats:
-            return flow.F.normalization(x, self.running_mean, self.running_var, self.weight, self.bias, axis=1, epsilon=self.eps, momentum=self.momentum, is_training=self.training)
+            return flow.F.normalization(
+                x,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias,
+                axis=1,
+                epsilon=self.eps,
+                momentum=self.momentum,
+                is_training=self.training,
+            )
         else:
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim != 1:
                     reduce_axis.append(dim)
-            return flow.F.normalization(x, x.mean(dim=reduce_axis, keepdim=False), x.var(dim=reduce_axis, keepdim=False), self.weight, self.bias, axis=1, epsilon=self.eps, momentum=self.momentum, is_training=self.training)
+            return flow.F.normalization(
+                x,
+                x.mean(dim=reduce_axis, keepdim=False),
+                x.var(dim=reduce_axis, keepdim=False),
+                self.weight,
+                self.bias,
+                axis=1,
+                epsilon=self.eps,
+                momentum=self.momentum,
+                is_training=self.training,
+            )
+
 
 class BatchNorm1d(_BatchNorm):
     """Applies Batch Normalization over a 2D or 3D input (a mini-batch of 1D
@@ -174,7 +235,10 @@ class BatchNorm1d(_BatchNorm):
 
     def _check_input_dim(self, input):
         if input.ndim != 2 and input.ndim != 3:
-            raise ValueError('expected 2D or 3D input (got {}D input)'.format(input.ndim))
+            raise ValueError(
+                "expected 2D or 3D input (got {}D input)".format(input.ndim)
+            )
+
 
 class BatchNorm2d(_BatchNorm):
     """Applies Batch Normalization over a 4D input (a mini-batch of 2D inputs
@@ -248,7 +312,10 @@ class BatchNorm2d(_BatchNorm):
 
     def _check_input_dim(self, input):
         if input.ndim != 4:
-            raise ValueError('expected 4D input (got {}D input)'.format(input.ndim()))
-if __name__ == '__main__':
+            raise ValueError("expected 4D input (got {}D input)".format(input.ndim()))
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

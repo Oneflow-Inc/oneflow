@@ -5,17 +5,26 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from typing import Optional, Union, Tuple
 
-class Interpolate(Module):
 
-    def __init__(self, size: Optional[Union[int, Tuple[int, ...]]]=None, scale_factor: Optional[Union[float, Tuple[float, ...]]]=None, mode: str='nearest', align_corners: Optional[bool]=None, recompute_scale_factor: Optional[bool]=None):
+class Interpolate(Module):
+    def __init__(
+        self,
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
+        mode: str = "nearest",
+        align_corners: Optional[bool] = None,
+        recompute_scale_factor: Optional[bool] = None,
+    ):
         super().__init__()
         self.size = size
         if isinstance(scale_factor, tuple):
             self.scale_factor = tuple((float(factor) for factor in scale_factor))
         else:
             self.scale_factor = float(scale_factor) if scale_factor else None
-        if mode in ('nearest', 'area') and align_corners is not None:
-            raise ValueError('align_corners option can only be set with the interpolating modes: linear | bilinear | bicubic | trilinear')
+        if mode in ("nearest", "area") and align_corners is not None:
+            raise ValueError(
+                "align_corners option can only be set with the interpolating modes: linear | bilinear | bicubic | trilinear"
+            )
         self.mode = mode
         self.recompute_scale_factor = recompute_scale_factor
         if align_corners == None:
@@ -31,21 +40,34 @@ class Interpolate(Module):
             self.width_scale = self.scale_factor[1]
         else:
             pass
-        if self.mode not in ('nearest', 'bilinear', 'linear', 'area', 'bicubic', 'trilinear'):
-            raise ValueError('interpolation must be "nearest" or "bilinear" or "linear" or "area" or "bicubic" or "trilinear".')
-        if self.mode == 'nearest' and self.align_corners:
+        if self.mode not in (
+            "nearest",
+            "bilinear",
+            "linear",
+            "area",
+            "bicubic",
+            "trilinear",
+        ):
+            raise ValueError(
+                'interpolation must be "nearest" or "bilinear" or "linear" or "area" or "bicubic" or "trilinear".'
+            )
+        if self.mode == "nearest" and self.align_corners:
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
     def forward(self, x):
         dim = len(x.shape) - 2
         if self.size is not None and self.scale_factor is not None:
-            raise ValueError('only one of size or scale_factor should be defined')
+            raise ValueError("only one of size or scale_factor should be defined")
         elif self.size is not None:
             assert self.scale_factor is None
             scale_factors = []
             if isinstance(self.size, (list, tuple)):
                 if len(self.size) != dim:
-                    raise ValueError('size shape must match input shape. Input is {}D, size is {}'.format(dim, len(self.size)))
+                    raise ValueError(
+                        "size shape must match input shape. Input is {}D, size is {}".format(
+                            dim, len(self.size)
+                        )
+                    )
                 output_size = self.size
             else:
                 output_size = [self.size for _ in range(dim)]
@@ -56,57 +78,113 @@ class Interpolate(Module):
             output_size = None
             if isinstance(self.scale_factor, (list, tuple)):
                 if len(self.scale_factor) != dim:
-                    raise ValueError('scale_factor shape must match input shape. Input is {}D, scale_factor is {}'.format(dim, len(self.scale_factor)))
+                    raise ValueError(
+                        "scale_factor shape must match input shape. Input is {}D, scale_factor is {}".format(
+                            dim, len(self.scale_factor)
+                        )
+                    )
                 scale_factors = self.scale_factor
             else:
                 scale_factors = [self.scale_factor for _ in range(dim)]
         else:
-            raise ValueError('either size or scale_factor should be defined')
+            raise ValueError("either size or scale_factor should be defined")
         if self.recompute_scale_factor is None:
             if scale_factors is not None:
                 for scale in scale_factors:
                     if math.floor(scale) != scale:
-                        warnings.warn('The default behavior for interpolate/upsample with float scale_factor changed in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, instead of relying on the computed output size. If you wish to restore the old behavior, please set recompute_scale_factor=True. See the documentation of nn.Upsample for details. ')
+                        warnings.warn(
+                            "The default behavior for interpolate/upsample with float scale_factor changed in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, instead of relying on the computed output size. If you wish to restore the old behavior, please set recompute_scale_factor=True. See the documentation of nn.Upsample for details. "
+                        )
                     break
         elif self.recompute_scale_factor and self.size is not None:
-            raise ValueError('recompute_scale_factor is not meaningful with an explicit size.')
-        if self.mode == 'area' and output_size is None:
+            raise ValueError(
+                "recompute_scale_factor is not meaningful with an explicit size."
+            )
+        if self.mode == "area" and output_size is None:
             self.recompute_scale_factor = True
         if self.recompute_scale_factor is True:
             assert scale_factors is not None
-            output_size = [int(math.floor(float(x.size(i + 2)) * scale_factors[i])) for i in range(dim)]
+            output_size = [
+                int(math.floor(float(x.size(i + 2)) * scale_factors[i]))
+                for i in range(dim)
+            ]
             scale_factors = []
             for i in range(dim):
                 scale_factors.append(output_size[i] / x.shape[2 + i])
-        if len(x.shape) == 3 and self.mode == 'nearest':
-            return flow.F.upsample_nearest_1d(x, scale_factor=scale_factors[0], data_format='channels_first')
-        if len(x.shape) == 4 and self.mode == 'nearest':
-            return flow.F.upsample_nearest_2d(x, height_scale=scale_factors[0], width_scale=scale_factors[1], data_format='channels_first')
-        if len(x.shape) == 5 and self.mode == 'nearest':
-            return flow.F.upsample_nearest_3d(x, depth_scale=scale_factors[0], height_scale=scale_factors[1], width_scale=scale_factors[2], data_format='channels_first')
-        if len(x.shape) == 3 and self.mode == 'area':
+        if len(x.shape) == 3 and self.mode == "nearest":
+            return flow.F.upsample_nearest_1d(
+                x, scale_factor=scale_factors[0], data_format="channels_first"
+            )
+        if len(x.shape) == 4 and self.mode == "nearest":
+            return flow.F.upsample_nearest_2d(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                data_format="channels_first",
+            )
+        if len(x.shape) == 5 and self.mode == "nearest":
+            return flow.F.upsample_nearest_3d(
+                x,
+                depth_scale=scale_factors[0],
+                height_scale=scale_factors[1],
+                width_scale=scale_factors[2],
+                data_format="channels_first",
+            )
+        if len(x.shape) == 3 and self.mode == "area":
             assert output_size is not None
             return flow.F.adaptive_avg_pool1d(x, output_size)
-        if len(x.shape) == 4 and self.mode == 'area':
+        if len(x.shape) == 4 and self.mode == "area":
             assert output_size is not None
             return flow.F.adaptive_avg_pool2d(x, output_size)
-        if len(x.shape) == 5 and self.mode == 'area':
+        if len(x.shape) == 5 and self.mode == "area":
             assert output_size is not None
             return flow.F.adaptive_avg_pool3d(x, output_size)
-        if len(x.shape) == 3 and self.mode == 'linear':
+        if len(x.shape) == 3 and self.mode == "linear":
             assert self.align_corners is not None
-            return flow.F.upsample_linear_1d(x, scale_factor=scale_factors[0], align_corners=self.align_corners, data_format='channels_first')
-        if len(x.shape) == 4 and self.mode == 'bilinear':
+            return flow.F.upsample_linear_1d(
+                x,
+                scale_factor=scale_factors[0],
+                align_corners=self.align_corners,
+                data_format="channels_first",
+            )
+        if len(x.shape) == 4 and self.mode == "bilinear":
             assert self.align_corners is not None
-            return flow.F.upsample_bilinear_2d(x, height_scale=scale_factors[0], width_scale=scale_factors[1], align_corners=self.align_corners, data_format='channels_first')
-        if len(x.shape) == 4 and self.mode == 'bicubic':
+            return flow.F.upsample_bilinear_2d(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                align_corners=self.align_corners,
+                data_format="channels_first",
+            )
+        if len(x.shape) == 4 and self.mode == "bicubic":
             assert self.align_corners is not None
-            return flow.F.upsample_bicubic_2d(x, height_scale=scale_factors[0], width_scale=scale_factors[1], align_corners=self.align_corners, data_format='channels_first')
-        if len(x.shape) == 5 and self.mode == 'trilinear':
+            return flow.F.upsample_bicubic_2d(
+                x,
+                height_scale=scale_factors[0],
+                width_scale=scale_factors[1],
+                align_corners=self.align_corners,
+                data_format="channels_first",
+            )
+        if len(x.shape) == 5 and self.mode == "trilinear":
             assert self.align_corners is not None
-            return flow.F.upsample_trilinear_3d(x, depth_scale=scale_factors[0], height_scale=scale_factors[1], width_scale=scale_factors[2], align_corners=self.align_corners, data_format='channels_first')
+            return flow.F.upsample_trilinear_3d(
+                x,
+                depth_scale=scale_factors[0],
+                height_scale=scale_factors[1],
+                width_scale=scale_factors[2],
+                align_corners=self.align_corners,
+                data_format="channels_first",
+            )
 
-def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corners=None, recompute_scale_factor=None):
+
+def interpolate(
+    input,
+    size=None,
+    scale_factor=None,
+    mode="nearest",
+    align_corners=None,
+    recompute_scale_factor=None,
+):
     """The interface is consistent with PyTorch.    
     
     The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/functional.html#interpolate
@@ -191,7 +269,16 @@ def interpolate(input, size=None, scale_factor=None, mode='nearest', align_corne
                dtype=oneflow.float32)
 
     """
-    return Interpolate(size=size, scale_factor=scale_factor, mode=mode, align_corners=align_corners, recompute_scale_factor=recompute_scale_factor)(input)
-if __name__ == '__main__':
+    return Interpolate(
+        size=size,
+        scale_factor=scale_factor,
+        mode=mode,
+        align_corners=align_corners,
+        recompute_scale_factor=recompute_scale_factor,
+    )(input)
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

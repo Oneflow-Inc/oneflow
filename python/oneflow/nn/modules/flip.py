@@ -5,23 +5,28 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.utils import _check_axis
 
-class Flip(Module):
 
+class Flip(Module):
     def __init__(self, dims) -> None:
         super().__init__()
-        assert isinstance(dims, (list, tuple)), f'dims must be list or tuple'
+        assert isinstance(dims, (list, tuple)), f"dims must be list or tuple"
         self.dims = dims
 
     def forward(self, x):
         input_len = len(x.shape)
-        assert len(self.dims) <= input_len, f'len of dims must less than len of input tensor'
+        assert (
+            len(self.dims) <= input_len
+        ), f"len of dims must less than len of input tensor"
         new_dims = []
         for i in self.dims:
             if i < 0:
                 i += input_len
-            assert i < input_len, f'IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})'
+            assert (
+                i < input_len
+            ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
             new_dims.append(i)
         return flow.F.flip(x, new_dims)
+
 
 def flip_op(input, dims):
     """
@@ -57,12 +62,16 @@ def flip_op(input, dims):
     """
     return Flip(dims)(input)
 
-@register_tensor_op('flip')
+
+@register_tensor_op("flip")
 def flip_op_tensor(input, dims):
     """
     See :func:`oneflow.flip`
     """
     return Flip(dims)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

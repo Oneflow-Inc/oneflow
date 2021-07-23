@@ -1,45 +1,53 @@
-
 import collections
 import oneflow._oneflow_internal
+
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 no_grad = oneflow._oneflow_internal.autograd.no_grad
-locals()['dtype'] = oneflow._oneflow_internal.dtype
-locals()['char'] = oneflow._oneflow_internal.char
-locals()['float16'] = oneflow._oneflow_internal.float16
-locals()['half'] = oneflow._oneflow_internal.float16
-locals()['float32'] = oneflow._oneflow_internal.float32
-locals()['float'] = oneflow._oneflow_internal.float
-locals()['double'] = oneflow._oneflow_internal.double
-locals()['float64'] = oneflow._oneflow_internal.float64
-locals()['int8'] = oneflow._oneflow_internal.int8
-locals()['int'] = oneflow._oneflow_internal.int32
-locals()['int32'] = oneflow._oneflow_internal.int32
-locals()['int64'] = oneflow._oneflow_internal.int64
-locals()['long'] = oneflow._oneflow_internal.int64
-locals()['uint8'] = oneflow._oneflow_internal.uint8
-locals()['record'] = oneflow._oneflow_internal.record
-locals()['tensor_buffer'] = oneflow._oneflow_internal.tensor_buffer
+locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["char"] = oneflow._oneflow_internal.char
+locals()["float16"] = oneflow._oneflow_internal.float16
+locals()["half"] = oneflow._oneflow_internal.float16
+locals()["float32"] = oneflow._oneflow_internal.float32
+locals()["float"] = oneflow._oneflow_internal.float
+locals()["double"] = oneflow._oneflow_internal.double
+locals()["float64"] = oneflow._oneflow_internal.float64
+locals()["int8"] = oneflow._oneflow_internal.int8
+locals()["int"] = oneflow._oneflow_internal.int32
+locals()["int32"] = oneflow._oneflow_internal.int32
+locals()["int64"] = oneflow._oneflow_internal.int64
+locals()["long"] = oneflow._oneflow_internal.int64
+locals()["uint8"] = oneflow._oneflow_internal.uint8
+locals()["record"] = oneflow._oneflow_internal.record
+locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 from oneflow.version import __version__
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
+
 _DEPRECATED = set()
 
-def oneflow_deprecate(*api_names, **kwargs):
 
+def oneflow_deprecate(*api_names, **kwargs):
     def Decorator(func_or_class):
         _DEPRECATED.add(func_or_class)
         return func_or_class
+
     return Decorator
 
+
 def is_deprecated(func_or_class):
-    return isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    return (
+        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    )
+
+
 import oneflow.framework.register_python_callback
 import atexit
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
+
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
@@ -48,14 +56,18 @@ import oneflow.framework.session_context as session_ctx
 import oneflow.framework.scope_util as scope_util
 from oneflow.framework.session_util import Session
 from oneflow.framework.multi_client_session import MultiClientSession
+
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
-session_ctx.OpenDefaultSession(MultiClientSession(oneflow._oneflow_internal.NewSessionId()))
+session_ctx.OpenDefaultSession(
+    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+)
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
+
 
 def _SyncOnMasterFn():
     import oneflow
@@ -67,7 +79,10 @@ def _SyncOnMasterFn():
             oneflow._oneflow_internal.eager.multi_client.Sync()
         elif oneflow.framework.distribute.get_rank() == 0:
             oneflow._oneflow_internal.eager.single_client.Sync()
+
     return Sync
+
+
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
@@ -76,6 +91,7 @@ del atexit
 del oneflow
 import oneflow.framework.docstr as docstr
 from oneflow.framework.docstr.utils import register_docstr
+
 register_docstr()
 del register_docstr
 del docstr
@@ -115,16 +131,24 @@ from oneflow.ops.initializer_util import ones_initializer
 from oneflow.ops.initializer_util import random_uniform_initializer
 from oneflow.ops.initializer_util import random_normal_initializer
 from oneflow.ops.initializer_util import truncated_normal_initializer
-from oneflow.ops.initializer_util import glorot_uniform_initializer as xavier_uniform_initializer
+from oneflow.ops.initializer_util import (
+    glorot_uniform_initializer as xavier_uniform_initializer,
+)
 from oneflow.ops.initializer_util import glorot_uniform_initializer
-from oneflow.ops.initializer_util import glorot_normal_initializer as xavier_normal_initializer
+from oneflow.ops.initializer_util import (
+    glorot_normal_initializer as xavier_normal_initializer,
+)
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import variance_scaling_initializer
 from oneflow.ops.initializer_util import kaiming_initializer
 from oneflow.ops.math_ops import unsorted_segment_sum as unsorted_segment_sum
 from oneflow.ops.math_ops import unsorted_segment_sum_like as unsorted_segment_sum_like
-from oneflow.ops.math_ops import unsorted_batch_segment_sum as unsorted_batch_segment_sum
-from oneflow.ops.math_ops import broadcast_to_compatible_with as broadcast_to_compatible_with
+from oneflow.ops.math_ops import (
+    unsorted_batch_segment_sum as unsorted_batch_segment_sum,
+)
+from oneflow.ops.math_ops import (
+    broadcast_to_compatible_with as broadcast_to_compatible_with,
+)
 from oneflow.ops.user_data_ops import api_image_resize as image_resize
 from oneflow.ops.user_data_ops import api_image_target_resize as image_target_resize
 from oneflow.ops.user_data_ops import api_image_random_crop as image_random_crop
@@ -134,9 +158,15 @@ from oneflow.ops.user_data_ops import image_normalize as image_normalize
 from oneflow.ops.user_data_ops import image_flip as image_flip
 from oneflow.ops.user_data_ops import object_bbox_flip as object_bbox_flip
 from oneflow.ops.user_data_ops import object_bbox_scale as object_bbox_scale
-from oneflow.ops.user_data_ops import object_segm_poly_flip as object_segmentation_polygon_flip
-from oneflow.ops.user_data_ops import object_segm_poly_scale as object_segmentation_polygon_scale
-from oneflow.ops.user_data_ops import object_segm_poly_to_mask as object_segmentation_polygon_to_mask
+from oneflow.ops.user_data_ops import (
+    object_segm_poly_flip as object_segmentation_polygon_flip,
+)
+from oneflow.ops.user_data_ops import (
+    object_segm_poly_scale as object_segmentation_polygon_scale,
+)
+from oneflow.ops.user_data_ops import (
+    object_segm_poly_to_mask as object_segmentation_polygon_to_mask,
+)
 from oneflow.ops.watch import Watch
 from oneflow.ops.watch import WatchDiff
 from oneflow.ops.user_op_builder import api_user_op_builder

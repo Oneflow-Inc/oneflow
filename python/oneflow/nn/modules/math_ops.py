@@ -4,44 +4,48 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.utils import _check_axis, _check_inplace_valid
-from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim, get_inversed_perm
+from oneflow.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
+
 
 class ScalarMul(Module):
-
     def __init__(self, alpha) -> None:
         super().__init__()
         if not isinstance(alpha, (int, float)):
-            raise ValueError('alpha type can only be int or float')
+            raise ValueError("alpha type can only be int or float")
         self.alpha = alpha
 
     def forward(self, x):
         return flow.F.mul_scalar(x, self.alpha)
 
-class ScalarMulByTensor(Module):
 
+class ScalarMulByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.mul_scalar_by_tensor(x, y)
 
-class ElementwiseMul(Module):
 
+class ElementwiseMul(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.mul(x, y)
 
-class BroadcastMul(Module):
 
+class BroadcastMul(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_mul(x, y)
 
-@register_tensor_op('mul')
+
+@register_tensor_op("mul")
 def _mul(input, other):
     """Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
     
@@ -92,9 +96,9 @@ def _mul(input, other):
     else:
         return BroadcastMul()(input, other)
 
-class Variance(Module):
 
-    def __init__(self, dim: int=None, keepdim: bool=False) -> None:
+class Variance(Module):
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self.dim = dim
         self.keepdim = keepdim
@@ -104,9 +108,13 @@ class Variance(Module):
         if isinstance(axis, list) and len(axis) == 0:
             return flow.zeros(size=input.shape)
         else:
-            return flow.sub(flow.mean(flow.square(input), axis, self.keepdim), flow.square(flow.mean(input, axis, self.keepdim)))
+            return flow.sub(
+                flow.mean(flow.square(input), axis, self.keepdim),
+                flow.square(flow.mean(input, axis, self.keepdim)),
+            )
 
-@register_tensor_op('var')
+
+@register_tensor_op("var")
 def variance_op(input, dim=None, keepdim=False):
     """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
@@ -136,28 +144,28 @@ def variance_op(input, dim=None, keepdim=False):
     """
     return Variance(dim, keepdim)(input)
 
-class ScalarSubByTensor(Module):
 
+class ScalarSubByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.sub_scalar_by_tensor(x, y)
 
-class BroadcastSub(Module):
 
+class BroadcastSub(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_sub(x, y)
 
-class ScalarAdd(Module):
 
-    def __init__(self, alpha, inplace: bool=False) -> None:
+class ScalarAdd(Module):
+    def __init__(self, alpha, inplace: bool = False) -> None:
         super().__init__()
         if not isinstance(alpha, int) and (not isinstance(alpha, float)):
-            raise ValueError('scalar type can only be int or float')
+            raise ValueError("scalar type can only be int or float")
         self.alpha = alpha
         self.inplace = inplace
 
@@ -166,7 +174,8 @@ class ScalarAdd(Module):
             _check_inplace_valid(x)
         return flow.F.add_scalar(x, self.alpha, self.inplace)
 
-@register_tensor_op('sub')
+
+@register_tensor_op("sub")
 def _sub(input, other):
     """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -214,23 +223,24 @@ def _sub(input, other):
     else:
         return BroadcastSub()(input, other)
 
-class BroadcastDiv(Module):
 
+class BroadcastDiv(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_div(x, y)
 
-class ScalarDivByTensor(Module):
 
+class ScalarDivByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, scalar):
         return flow.F.div_scalar_by_tensor(x, scalar)
 
-@register_tensor_op('div')
+
+@register_tensor_op("div")
 def _div(input, other):
     """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -286,15 +296,16 @@ def _div(input, other):
     else:
         return BroadcastDiv()(input, other)
 
-class Reciprocal(Module):
 
+class Reciprocal(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.reciprocal_no_nan(x)
 
-@register_tensor_op('reciprocal')
+
+@register_tensor_op("reciprocal")
 def _reciprocal(x):
     """Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
@@ -314,9 +325,9 @@ def _reciprocal(x):
     """
     return Reciprocal()(x)
 
-class ScalarAddByTensor(Module):
 
-    def __init__(self, inplace: bool=False) -> None:
+class ScalarAddByTensor(Module):
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
         self.inplace = inplace
 
@@ -325,9 +336,9 @@ class ScalarAddByTensor(Module):
             _check_inplace_valid(x)
         return flow.F.add_scalar_by_tensor(x, y, self.inplace)
 
-class ElementwiseAdd(Module):
 
-    def __init__(self, inplace: bool=False) -> None:
+class ElementwiseAdd(Module):
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
         self.inplace = inplace
 
@@ -336,15 +347,16 @@ class ElementwiseAdd(Module):
             _check_inplace_valid(x)
         return flow.F.add(x, y, self.inplace)
 
-class BroadcastAdd(Module):
 
+class BroadcastAdd(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_add(x, y)
 
-@register_tensor_op('add')
+
+@register_tensor_op("add")
 def _add(x, y):
     """Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -394,7 +406,8 @@ def _add(x, y):
     else:
         return BroadcastAdd()(x, y)
 
-@register_tensor_op('add_')
+
+@register_tensor_op("add_")
 def _add_inplace(x, y):
     """
     In-place version of :func:`oneflow.Tensor.add`.
@@ -404,20 +417,23 @@ def _add_inplace(x, y):
     elif x.shape == y.shape:
         return ElementwiseAdd(inplace=True)(x, y)
     elif x.shape == (1,):
-        raise RuntimeError(f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}")
+        raise RuntimeError(
+            f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
+        )
     elif y.shape == (1,):
         return ScalarAddByTensor(inplace=True)(x, y)
     else:
         y = flow.broadcast_like(y, x)
         return ElementwiseAdd(inplace=True)(x, y)
 
-class Asin(Module):
 
+class Asin(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.asin(x)
+
 
 def asin_op(input):
     """
@@ -451,13 +467,15 @@ def asin_op(input):
     """
     return Asin()(input)
 
-@register_tensor_op('asin')
+
+@register_tensor_op("asin")
 def asin_op_tensor(input):
     """
 
     See :func:`oneflow.asin`
     """
     return Asin()(input)
+
 
 def arcsin_op(input):
     """
@@ -466,7 +484,8 @@ def arcsin_op(input):
     """
     return Asin()(input)
 
-@register_tensor_op('arcsin')
+
+@register_tensor_op("arcsin")
 def arcsin_op_tensor(input):
     """
 
@@ -474,13 +493,14 @@ def arcsin_op_tensor(input):
     """
     return Asin()(input)
 
-class Asinh(Module):
 
+class Asinh(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.asinh(x)
+
 
 def asinh_op(input):
     """
@@ -516,6 +536,7 @@ def asinh_op(input):
     """
     return Asinh()(input)
 
+
 def arcsinh_op(input):
     """
   
@@ -523,7 +544,8 @@ def arcsinh_op(input):
     """
     return Asinh()(input)
 
-@register_tensor_op('asinh')
+
+@register_tensor_op("asinh")
 def asinh_op_tensor(input):
     """
 
@@ -531,7 +553,8 @@ def asinh_op_tensor(input):
     """
     return Asinh()(input)
 
-@register_tensor_op('arcsinh')
+
+@register_tensor_op("arcsinh")
 def arcsinh_op_tensor(input):
     """
 
@@ -539,9 +562,9 @@ def arcsinh_op_tensor(input):
     """
     return Asinh()(input)
 
-class Sin(Module):
 
-    def __init__(self, inplace: bool=False) -> None:
+class Sin(Module):
+    def __init__(self, inplace: bool = False) -> None:
         super().__init__()
         self.inplace = inplace
 
@@ -549,6 +572,7 @@ class Sin(Module):
         if self.inplace:
             _check_inplace_valid(x)
         return flow.F.sin(x, self.inplace)
+
 
 def sin_op(tensor):
     """
@@ -579,7 +603,8 @@ def sin_op(tensor):
     """
     return Sin(inplace=False)(tensor)
 
-@register_tensor_op('sin')
+
+@register_tensor_op("sin")
 def sin_op_tensor(tensor):
     """
 
@@ -590,7 +615,8 @@ def sin_op_tensor(tensor):
     """
     return Sin(inplace=False)(tensor)
 
-@register_tensor_op('sin_')
+
+@register_tensor_op("sin_")
 def inplace_sin_op_tensor(x):
     """
     In-place version of :func:`oneflow.sin`
@@ -598,15 +624,16 @@ def inplace_sin_op_tensor(x):
     """
     return Sin(inplace=True)(x)
 
-class Cos(Module):
 
+class Cos(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.cos(x)
 
-@register_tensor_op('cos')
+
+@register_tensor_op("cos")
 def cos_op(tensor):
     """
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
@@ -630,13 +657,14 @@ def cos_op(tensor):
     """
     return Cos()(tensor)
 
-class Atan(Module):
 
+class Atan(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.atan(x)
+
 
 def atan_op(tensor):
     """
@@ -662,7 +690,8 @@ def atan_op(tensor):
     """
     return Atan()(tensor)
 
-@register_tensor_op('atan')
+
+@register_tensor_op("atan")
 def atan_op_tensor(tensor):
     """
 
@@ -671,6 +700,7 @@ def atan_op_tensor(tensor):
     """
     return Atan()(tensor)
 
+
 def arctan_op(tensor):
     """
     Alias for :func:`oneflow.atan`
@@ -678,7 +708,8 @@ def arctan_op(tensor):
     """
     return Atan()(tensor)
 
-@register_tensor_op('arctan')
+
+@register_tensor_op("arctan")
 def arctan_op_tensor(tensor):
     """
 
@@ -687,14 +718,14 @@ def arctan_op_tensor(tensor):
     """
     return Atan()(tensor)
 
-class FMod(Module):
 
+class FMod(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         if not isinstance(x, (flow.Tensor, flow._oneflow_internal.Tensor)):
-            raise ValueError('Expected type of input is Tensor')
+            raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
             y = flow.tensor([y], dtype=flow.float32, device=x.device)
@@ -703,8 +734,9 @@ class FMod(Module):
                 x = flow.F.cast(x, flow.float32)
                 y = flow.F.cast(y, flow.float32)
         else:
-            raise ValueError('Expected type of other is Tensor or Scalar')
+            raise ValueError("Expected type of other is Tensor or Scalar")
         return flow.F.fmod(x, y)
+
 
 def fmod_op(input, other):
     """
@@ -739,7 +771,8 @@ def fmod_op(input, other):
     """
     return FMod()(input, other)
 
-@register_tensor_op('fmod')
+
+@register_tensor_op("fmod")
 def fmod_op_tensor(input, other):
     """
 
@@ -748,15 +781,16 @@ def fmod_op_tensor(input, other):
     """
     return FMod()(input, other)
 
-class Log(Module):
 
+class Log(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.log(x)
 
-@register_tensor_op('log')
+
+@register_tensor_op("log")
 def log_op(tensor):
     """
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
@@ -781,8 +815,8 @@ def log_op(tensor):
     """
     return Log()(tensor)
 
-class Subtract(Module):
 
+class Subtract(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -800,15 +834,16 @@ class Subtract(Module):
         else:
             return BroadcastSub()(x, y)
 
-class Sqrt(Module):
 
+class Sqrt(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.sqrt(input)
 
-@register_tensor_op('rsqrt')
+
+@register_tensor_op("rsqrt")
 def rsqrt_op(input):
     """Returns a new tensor with the reciprocal of the square-root of each of
         the elements of :attr:`input`.
@@ -833,15 +868,16 @@ def rsqrt_op(input):
     """
     return Rsqrt()(input)
 
-class Rsqrt(Module):
 
+class Rsqrt(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.rsqrt(input)
 
-@register_tensor_op('sqrt')
+
+@register_tensor_op("sqrt")
 def sqrt_op(input):
     """Returns a new tensor with the square-root of the elements of :attr:`input`.
 
@@ -866,15 +902,16 @@ def sqrt_op(input):
         """
     return Sqrt()(input)
 
-class Square(Module):
 
+class Square(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.square(input)
 
-@register_tensor_op('square')
+
+@register_tensor_op("square")
 def square_op(input):
     """Returns a new tensor with the square of the elements of :attr:`input`.
 
@@ -899,8 +936,8 @@ def square_op(input):
         """
     return Square()(input)
 
-class Std(Module):
 
+class Std(Module):
     def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
         super().__init__()
         assert unbiased == True, "Only support 'unbiased=True' for now!"
@@ -922,13 +959,18 @@ class Std(Module):
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
-            sum = flow.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
-            square = self.square_op(flow.sum(x, self.axis, self.keepdim) / self.reduce_count)
+            sum = (
+                flow.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
+            )
+            square = self.square_op(
+                flow.sum(x, self.axis, self.keepdim) / self.reduce_count
+            )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
             return res
 
-@register_tensor_op('std')
+
+@register_tensor_op("std")
 def std_op(tensor, dim, unbiased=True, keepdim=False):
     """
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
@@ -964,8 +1006,8 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     """
     return Std(dim, unbiased, keepdim)(tensor)
 
-class Pow(Module):
 
+class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -975,7 +1017,8 @@ class Pow(Module):
         else:
             return flow.F.pow(x, y)
 
-@register_tensor_op('pow')
+
+@register_tensor_op("pow")
 def pow_op(tensor, exponent):
     """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
@@ -1016,16 +1059,17 @@ def pow_op(tensor, exponent):
     """
     return Pow()(tensor, exponent)
 
-class Addmm(Module):
 
+class Addmm(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, mat1, mat2, alpha=1, beta=1):
         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
-            raise ValueError('input matrixes shape can not be greater than 2')
+            raise ValueError("input matrixes shape can not be greater than 2")
         else:
             return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
+
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     """addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
@@ -1082,15 +1126,16 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     """
     return Addmm()(input, mat1, mat2, alpha, beta)
 
-@register_tensor_op('addmm')
+
+@register_tensor_op("addmm")
 def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     """
     See :func:`oneflow.addmm`
     """
     return Addmm()(input, mat1, mat2, alpha, beta)
 
-class Clamp(Module):
 
+class Clamp(Module):
     def __init__(self, min_value=None, max_value=None) -> None:
         super().__init__()
         if min_value is not None:
@@ -1100,16 +1145,40 @@ class Clamp(Module):
             floating_max_value = float(max_value)
             integral_max_value = int(max_value)
         if min_value is not None and max_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar').Input('x').Output('y').Attr('floating_min', floating_min_value).Attr('integral_min', integral_min_value).Attr('floating_max', floating_max_value).Attr('integral_max', integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         elif min_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar_min').Input('x').Output('y').Attr('floating_min', floating_min_value).Attr('integral_min', integral_min_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_min")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Build()
+            )
         elif max_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar_max').Input('x').Output('y').Attr('floating_max', floating_max_value).Attr('integral_max', integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_max")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         else:
-            raise ValueError('min_value and max_value cannot be None at the same time')
+            raise ValueError("min_value and max_value cannot be None at the same time")
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 def clamp_op(tensor, min=None, max=None):
     """
@@ -1160,12 +1229,14 @@ def clamp_op(tensor, min=None, max=None):
     """
     return Clamp(min, max)(tensor)
 
-@register_tensor_op('clamp')
+
+@register_tensor_op("clamp")
 def clamp_op_tensor(tensor, min=None, max=None):
     """
     See :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
+
 
 def clip_op(tensor, min=None, max=None):
     """
@@ -1173,22 +1244,24 @@ def clip_op(tensor, min=None, max=None):
     """
     return Clamp(min, max)(tensor)
 
-@register_tensor_op('clip')
+
+@register_tensor_op("clip")
 def clip_op_tensor(tensor, min=None, max=None):
     """
     See :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
 
-class Cosh(Module):
 
+class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.cosh(x)
 
-@register_tensor_op('cosh')
+
+@register_tensor_op("cosh")
 def cosh_op(tensor):
     """
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
@@ -1215,15 +1288,16 @@ def cosh_op(tensor):
     """
     return Cosh()(tensor)
 
-class Erf(Module):
 
+class Erf(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.erf(input)
 
-@register_tensor_op('erf')
+
+@register_tensor_op("erf")
 def erf_op(input):
     """Computes the error function of each element. The error function is defined as follows:
 
@@ -1270,23 +1344,25 @@ def erf_op(input):
     """
     return Erf()(input)
 
-@register_tensor_op('erf')
+
+@register_tensor_op("erf")
 def erf_op_tensor(input):
     """
     See :func:`oneflow.erf`
     """
     return Erf()(input)
 
-class Erfc(Module):
 
+class Erfc(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.erfc_op = flow.builtin_op('erfc').Input('x').Output('y').Build()
+        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
 
     def forward(self, input):
         return self.erfc_op(input)[0]
 
-@register_tensor_op('erfc')
+
+@register_tensor_op("erfc")
 def erfc_op(input):
     """Computes the complementary error function of each element of input. The complementary error 
     function is defined as follows:
@@ -1334,20 +1410,22 @@ def erfc_op(input):
     """
     return Erfc()(input)
 
-@register_tensor_op('erfc')
+
+@register_tensor_op("erfc")
 def erfc_op_tensor(input):
     """
     See :func:`oneflow.erfc`
     """
     return Erfc()(input)
 
-class Ceil(Module):
 
+class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.ceil(x)
+
 
 def ceil_op(x):
     """Returns a new tensor with the ceil of the elements of :attr:`x`,
@@ -1404,20 +1482,22 @@ def ceil_op(x):
     """
     return Ceil()(x)
 
-@register_tensor_op('ceil')
+
+@register_tensor_op("ceil")
 def ceil_op_tensor(x):
     """
     See :func:`oneflow.ceil`
     """
     return Ceil()(x)
 
-class Expm1(Module):
 
+class Expm1(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.expm1(x)
+
 
 def expm1_op(x):
     """Returns a new tensor with the exponential of the elements minus 1
@@ -1474,18 +1554,28 @@ def expm1_op(x):
     """
     return Expm1()(x)
 
-@register_tensor_op('expm1')
+
+@register_tensor_op("expm1")
 def expm1_op_tensor(x):
     """
     See :func:`oneflow.expm1`
     """
     return Expm1()(x)
 
-class Topk(Module):
 
-    def __init__(self, k, dim: int=None, largest: bool=True, sorted: bool=True) -> None:
+class Topk(Module):
+    def __init__(
+        self, k, dim: int = None, largest: bool = True, sorted: bool = True
+    ) -> None:
         super().__init__()
-        self._op_topk_last_dim = flow.builtin_op('top_k').Input('in').Output('out').Attr('k', k).Attr('sorted', sorted).Build()
+        self._op_topk_last_dim = (
+            flow.builtin_op("top_k")
+            .Input("in")
+            .Output("out")
+            .Attr("k", k)
+            .Attr("sorted", sorted)
+            .Build()
+        )
         self.dim = dim
         self.largest = largest
 
@@ -1494,7 +1584,7 @@ class Topk(Module):
             self.dim = -1
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
-        assert 0 <= axis < num_axes, 'axis out of range'
+        assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:
                 indices = self._op_topk_last_dim(input)[0]
@@ -1513,8 +1603,9 @@ class Topk(Module):
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, indices, dim=axis), indices)
 
-@register_tensor_op('topk')
-def topk_op(input, k, dim: int=None, largest: bool=True, sorted: bool=True):
+
+@register_tensor_op("topk")
+def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
     """Finds the values and indices of the k largest entries at specified axis.
 
     Args:
@@ -1559,6 +1650,9 @@ def topk_op(input, k, dim: int=None, largest: bool=True, sorted: bool=True):
 
     """
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

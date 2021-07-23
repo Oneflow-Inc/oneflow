@@ -1,5 +1,6 @@
 from .lr_scheduler import LrScheduler
 
+
 class StepLR(LrScheduler):
     """
     Decays the learning rate of each parameter group by gamma every step_size steps.
@@ -27,15 +28,17 @@ class StepLR(LrScheduler):
 
     """
 
-    def __init__(self, optimizer, step_size: int, gamma: float=0.1, last_step=-1, verbose=False):
-        assert step_size > 0, f'step_size must greater than zero, but got {step_size}'
-        assert gamma > 0.0, f'gamma must greater than zero, but got {gamma}'
+    def __init__(
+        self, optimizer, step_size: int, gamma: float = 0.1, last_step=-1, verbose=False
+    ):
+        assert step_size > 0, f"step_size must greater than zero, but got {step_size}"
+        assert gamma > 0.0, f"gamma must greater than zero, but got {gamma}"
         self.step_size = step_size
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
     def get_lr(self):
         if self.last_step == 0 or self.last_step % self.step_size != 0:
-            return [group['lr'] for group in self._optimizer.param_groups]
+            return [group["lr"] for group in self._optimizer.param_groups]
         else:
-            return [group['lr'] * self.gamma for group in self._optimizer.param_groups]
+            return [group["lr"] * self.gamma for group in self._optimizer.param_groups]

@@ -1,22 +1,28 @@
 import oneflow as flow
 from oneflow.nn.module import Module
 
+
 def _generate_output_size(input_size, output_size):
     new_output_size = []
     if isinstance(output_size, int):
         for _ in range(len(input_size) - 2):
             new_output_size.append(output_size)
     elif isinstance(output_size, tuple):
-        assert len(input_size) - 2 == len(output_size), f"The length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
+        assert len(input_size) - 2 == len(
+            output_size
+        ), f"The length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
         for i in range(len(output_size)):
             if output_size[i] is None:
                 new_output_size.append(input_size[i + 2])
             else:
-                assert isinstance(output_size[i], int), "numbers in 'output_size' should be integer"
+                assert isinstance(
+                    output_size[i], int
+                ), "numbers in 'output_size' should be integer"
                 new_output_size.append(output_size[i])
     else:
         raise ValueError("invalid 'output_size', 'int' or 'tuple' expected")
     return tuple(new_output_size)
+
 
 class AdaptiveAvgPool1d(Module):
     """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
@@ -57,6 +63,7 @@ class AdaptiveAvgPool1d(Module):
             raise ValueError("'output_size' should be integer or tuple")
         return flow.F.adaptive_avg_pool1d(x, output_size=(new_output_size,))
 
+
 def adaptive_avg_pool1d(input, output_size):
     """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
@@ -67,6 +74,7 @@ def adaptive_avg_pool1d(input, output_size):
         output_size: the target output size (single integer)
     """
     return AdaptiveAvgPool1d(output_size)(input)
+
 
 class AdaptiveAvgPool2d(Module):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
@@ -117,6 +125,7 @@ class AdaptiveAvgPool2d(Module):
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
+
 def adaptive_avg_pool2d(input, output_size):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
@@ -127,6 +136,7 @@ def adaptive_avg_pool2d(input, output_size):
         output_size: the target output size (single integer or double-integer tuple)
     """
     return AdaptiveAvgPool2d(output_size)(input)
+
 
 class AdaptiveAvgPool3d(Module):
     """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
@@ -177,6 +187,7 @@ class AdaptiveAvgPool3d(Module):
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
 
+
 def adaptive_avg_pool3d(input, output_size):
     """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
@@ -187,6 +198,9 @@ def adaptive_avg_pool3d(input, output_size):
         output_size: the target output size (single integer or triple-integer tuple)
     """
     return AdaptiveAvgPool3d(output_size)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

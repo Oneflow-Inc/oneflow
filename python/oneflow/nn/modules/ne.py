@@ -2,24 +2,31 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Ne(Module):
 
+class Ne(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input, other):
-        if isinstance(other, flow.Tensor) or isinstance(other, flow._oneflow_internal.Tensor):
+        if isinstance(other, flow.Tensor) or isinstance(
+            other, flow._oneflow_internal.Tensor
+        ):
             for i in range(len(input.size())):
-                assert input.shape[i] >= other.shape[i], "The second tensor's shape should broadcastable with the first argument."
+                assert (
+                    input.shape[i] >= other.shape[i]
+                ), "The second tensor's shape should broadcastable with the first argument."
                 if input.dtype != other.dtype:
                     other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
             other = flow.Tensor([other], dtype=input.dtype, device=input.device)
         else:
-            raise NotImplementedError('Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument.')
+            raise NotImplementedError(
+                "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
+            )
         return flow.F.broadcast_not_equal(input, other)
 
-@register_tensor_op('ne')
+
+@register_tensor_op("ne")
 def ne_op(input, other):
     """
     Computes element-wise not equality.
@@ -49,6 +56,9 @@ def ne_op(input, other):
 
     """
     return Ne()(input, other)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

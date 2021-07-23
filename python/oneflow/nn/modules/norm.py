@@ -2,6 +2,7 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
+
 def check_dim(num_dims, input_dim):
     if input_dim == None:
         dim = input_dim
@@ -9,17 +10,22 @@ def check_dim(num_dims, input_dim):
         if isinstance(input_dim, int):
             dim = input_dim if input_dim >= 0 else input_dim + num_dims
             if dim >= num_dims or dim < 0:
-                raise IndexError('Dimension out of range')
+                raise IndexError("Dimension out of range")
         else:
             temp = list(input_dim)
             for i in range(len(temp)):
                 temp[i] = temp[i] if temp[i] >= 0 else temp[i] + num_dims
                 if temp[i] >= num_dims or temp[i] < 0:
-                    raise IndexError('Dimension out of range')
+                    raise IndexError("Dimension out of range")
             dim = temp
     else:
-        raise TypeError("linalg_vector_norm(): argument 'dim' must be tuple of ints, not {}".format(type(input_dim)))
+        raise TypeError(
+            "linalg_vector_norm(): argument 'dim' must be tuple of ints, not {}".format(
+                type(input_dim)
+            )
+        )
     return dim
+
 
 def _norm_min_max(input, ord, dim, keepdim):
     if ord > 0:
@@ -27,8 +33,8 @@ def _norm_min_max(input, ord, dim, keepdim):
     else:
         return flow.min(input, dim=dim, keepdim=keepdim)
 
-class Vector_Norm(Module):
 
+class Vector_Norm(Module):
     def __init__(self, ord=2, dim=None, keepdim=False) -> None:
         super().__init__()
         if ord == None:
@@ -36,57 +42,79 @@ class Vector_Norm(Module):
         elif isinstance(ord, (int, float)):
             self.ord = float(ord)
         else:
-            raise TypeError("linalg_vector_norm(): argument 'ord' must be Number, not {}".format(type(ord)))
+            raise TypeError(
+                "linalg_vector_norm(): argument 'ord' must be Number, not {}".format(
+                    type(ord)
+                )
+            )
         self.dim = dim
         self.keepdim = keepdim
 
     def _vector_norm(self, x, ord, dim, keepdim=False):
         if ord == 0:
             return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
-        elif ord == float('inf'):
+        elif ord == float("inf"):
             return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
-        elif ord == float('-inf'):
+        elif ord == float("-inf"):
             return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
         else:
-            return flow.pow(flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim), 1.0 / ord)
+            return flow.pow(
+                flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim),
+                1.0 / ord,
+            )
 
     def forward(self, x):
         num_dims = len(x.shape)
         dim = check_dim(num_dims, self.dim)
         if dim == None:
-            return self._vector_norm(x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim)
+            return self._vector_norm(
+                x.flatten(), ord=self.ord, dim=self.dim, keepdim=self.keepdim
+            )
         else:
             return self._vector_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim)
 
-class Matrix_Norm(Module):
 
-    def __init__(self, ord='fro', dim=(-2, -1), keepdim=False) -> None:
+class Matrix_Norm(Module):
+    def __init__(self, ord="fro", dim=(-2, -1), keepdim=False) -> None:
         super().__init__()
         if isinstance(ord, str):
-            assert ord in ['fro', 'nuc'], '{} are not supported in matrix norm'.format(ord)
+            assert ord in ["fro", "nuc"], "{} are not supported in matrix norm".format(
+                ord
+            )
             self.ord = ord
         elif isinstance(ord, float):
-            assert ord in [float('inf'), float('-inf')], '{} are not supported in matrix norm'.format(ord)
+            assert ord in [
+                float("inf"),
+                float("-inf"),
+            ], "{} are not supported in matrix norm".format(ord)
             self.ord = ord
         elif isinstance(ord, int):
-            assert ord in [1, -1, 2, -2], '{} are not supported in matrix norm'.format(ord)
+            assert ord in [1, -1, 2, -2], "{} are not supported in matrix norm".format(
+                ord
+            )
             self.ord = ord
         elif ord == None:
-            self.ord = 'fro'
+            self.ord = "fro"
         else:
-            raise TypeError("linalg_matrix_norm(): argument 'ord' must be Number, not {}".format(type(ord)))
+            raise TypeError(
+                "linalg_matrix_norm(): argument 'ord' must be Number, not {}".format(
+                    type(ord)
+                )
+            )
         if isinstance(dim, tuple) and len(dim) == 2 and (dim[0] != dim[1]):
             self.dim = dim
         else:
-            raise TypeError('linalg.matrix_norm(): dim must be a 2-tuple of ints with different elements')
+            raise TypeError(
+                "linalg.matrix_norm(): dim must be a 2-tuple of ints with different elements"
+            )
         self.keepdim = keepdim
 
     def _matrix_norm(self, x, ord, dim, keepdim):
-        if ord == 'nuc':
+        if ord == "nuc":
             raise NotImplementedError
-        elif ord == 'fro':
+        elif ord == "fro":
             return flow.sqrt(flow.sum(flow.square(x), dim=dim, keepdim=keepdim))
-        elif ord in [float('inf'), float('-inf')]:
+        elif ord in [float("inf"), float("-inf")]:
             (dim_0, dim_1) = (dim[0], dim[1])
             (dim_0, dim_1) = (dim_1, dim_0)
             if dim_1 > dim_0 and (not keepdim):
@@ -102,17 +130,19 @@ class Matrix_Norm(Module):
         elif ord in [2, -2]:
             raise NotImplementedError
         else:
-            raise ValueError('Invalid norm order: {}'.format(ord))
+            raise ValueError("Invalid norm order: {}".format(ord))
 
     def forward(self, x):
         num_dims = len(x.shape)
         if num_dims < 2:
-            raise RuntimeError('linalg.matrix_norm(): input tensor must be a matrix or batch of matrices')
+            raise RuntimeError(
+                "linalg.matrix_norm(): input tensor must be a matrix or batch of matrices"
+            )
         dim = check_dim(num_dims, self.dim)
         return self._matrix_norm(x, ord=self.ord, dim=dim, keepdim=self.keepdim)
 
-class Norm(Module):
 
+class Norm(Module):
     def __init__(self, ord=None, dim=None, keepdim=False) -> None:
         super().__init__()
         self.ord = ord
@@ -125,7 +155,9 @@ class Norm(Module):
         elif isinstance(self.dim, tuple):
             res = Matrix_Norm(ord=self.ord, dim=self.dim, keepdim=self.keepdim)(x)
         elif self.dim == None and self.ord != None:
-            assert len(x.shape) <= 2, 'input must be 1-D or 2-D when dim is None and ord is not None'
+            assert (
+                len(x.shape) <= 2
+            ), "input must be 1-D or 2-D when dim is None and ord is not None"
             if len(x.shape) == 1:
                 res = Vector_Norm(ord=self.ord, keepdim=self.keepdim)(x)
             else:
@@ -133,6 +165,7 @@ class Norm(Module):
         elif self.dim == None and self.ord == None:
             res = Vector_Norm(keepdim=self.keepdim)(x)
         return res
+
 
 def norm_op(input, ord=None, dim=None, keepdim=False):
     """linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
@@ -251,12 +284,14 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
     """
     return Norm(ord, dim, keepdim)(input)
 
-@register_tensor_op('norm')
+
+@register_tensor_op("norm")
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     """
     See :func:`oneflow.linalg.norm`
     """
     return Norm(ord, dim, keepdim)(input)
+
 
 def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     """
@@ -322,7 +357,8 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     """
     return Vector_Norm(ord, dim, keepdim)(input)
 
-def matrix_norm_tensor_op(input, ord='fro', dim=(-2, -1), keepdim=False):
+
+def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     """
     linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
 
@@ -392,6 +428,9 @@ def matrix_norm_tensor_op(input, ord='fro', dim=(-2, -1), keepdim=False):
         tensor([ 3.1623, 10.    , 17.2627], dtype=oneflow.float32)
     """
     return Matrix_Norm(ord, dim, keepdim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

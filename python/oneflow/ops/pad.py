@@ -4,7 +4,13 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
-def pad(x: oneflow._oneflow_internal.BlobDesc, paddings: Sequence[int], constant_value: Union[int, float]=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def pad(
+    x: oneflow._oneflow_internal.BlobDesc,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
@@ -53,35 +59,84 @@ def pad(x: oneflow._oneflow_internal.BlobDesc, paddings: Sequence[int], constant
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.shape), ValueError('paddings must be the same size of input dims')
+        assert len(paddings) == len(x.shape), ValueError(
+            "paddings must be the same size of input dims"
+        )
         for p in paddings:
-            assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError('the elem of paddings must be a tuple or a list with length of 2')
+            assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError(
+                "the elem of paddings must be a tuple or a list with length of 2"
+            )
             padding_before.append(p[0])
             padding_after.append(p[1])
     else:
-        raise ValueError('paddings must be a tuple or a list.')
+        raise ValueError("paddings must be a tuple or a list.")
     if x.dtype in [oneflow.float32, oneflow.float16, oneflow.float64]:
         floating_constant_value = float(constant_value)
         integral_constant_value = int(0)
     else:
         floating_constant_value = float(0)
         integral_constant_value = int(constant_value)
-    return oneflow.user_op_builder(name if name is not None else id_util.UniqueStr('Pad_')).Op('pad').Input('x', [x]).Output('y').Attr('padding_before', padding_before).Attr('padding_after', padding_after).Attr('floating_constant_value', floating_constant_value).Attr('integral_constant_value', integral_constant_value).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
+        .Op("pad")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("floating_constant_value", floating_constant_value)
+        .Attr("integral_constant_value", integral_constant_value)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def pad_grad(x: oneflow._oneflow_internal.BlobDesc, paddings: Sequence[int], constant_value: Union[int, float]=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def pad_grad(
+    x: oneflow._oneflow_internal.BlobDesc,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.shape), ValueError('paddings must be the same size of input dims')
+        assert len(paddings) == len(x.shape), ValueError(
+            "paddings must be the same size of input dims"
+        )
         for p in paddings:
-            assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError('the elem of paddings must be a tuple or a list with length of 2')
+            assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError(
+                "the elem of paddings must be a tuple or a list with length of 2"
+            )
             padding_before.append(p[0])
             padding_after.append(p[1])
     else:
-        raise ValueError('paddings must be a tuple or a list.')
-    return oneflow.user_op_builder(name if name is not None else id_util.UniqueStr('PadGrad_')).Op('pad_grad').Input('dy', [x]).Output('dx').Attr('padding_before', padding_before).Attr('padding_after', padding_after).Attr('floating_constant_value', float(constant_value)).Attr('integral_constant_value', int(constant_value)).Build().InferAndTryRun().RemoteBlobList()[0]
+        raise ValueError("paddings must be a tuple or a list.")
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("PadGrad_")
+        )
+        .Op("pad_grad")
+        .Input("dy", [x])
+        .Output("dx")
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("floating_constant_value", float(constant_value))
+        .Attr("integral_constant_value", int(constant_value))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def same_padding(x: oneflow._oneflow_internal.BlobDesc, padding: Sequence[int], data_format: str, kernel_size: Sequence[int], strides: Sequence[int], dilation_rate: Sequence[int], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def same_padding(
+    x: oneflow._oneflow_internal.BlobDesc,
+    padding: Sequence[int],
+    data_format: str,
+    kernel_size: Sequence[int],
+    strides: Sequence[int],
+    dilation_rate: Sequence[int],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations.
 
     Args:
@@ -126,8 +181,10 @@ def same_padding(x: oneflow._oneflow_internal.BlobDesc, padding: Sequence[int], 
         #        [0. 0. 0. 0. 0.]]]]
 
     """
-    assert isinstance(padding, str) and (padding.upper() == 'SAME_LOWER' or padding.upper() == 'SAME_UPPER'), 'padding must be "SAME_LOWER" or "SAME_UPPER".'
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    assert isinstance(padding, str) and (
+        padding.upper() == "SAME_LOWER" or padding.upper() == "SAME_UPPER"
+    ), 'padding must be "SAME_LOWER" or "SAME_UPPER".'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     assert isinstance(kernel_size, (list, tuple))
     assert isinstance(strides, (list, tuple))
     assert isinstance(dilation_rate, (list, tuple))
@@ -135,9 +192,29 @@ def same_padding(x: oneflow._oneflow_internal.BlobDesc, padding: Sequence[int], 
     assert len(kernel_size) == num_spatial_dims
     assert len(strides) == num_spatial_dims
     assert len(dilation_rate) == num_spatial_dims
-    return oneflow.user_op_builder(name if name is not None else id_util.UniqueStr('SamePadding_')).Op('same_padding').Input('x', [x]).Output('y').Attr('padding', padding.lower()).Attr('data_format', channel_pos).Attr('kernel_size', kernel_size).Attr('strides', strides).Attr('dilation_rate', dilation_rate).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SamePadding_")
+        )
+        .Op("same_padding")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding", padding.lower())
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilation_rate)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def replication_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int, tuple, list], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def replication_pad2d(
+    x: oneflow._oneflow_internal.BlobDesc,
+    padding: Union[int, tuple, list],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Pads the input tensor using the replication of the input boundary.
 
     Args:
@@ -182,15 +259,34 @@ def replication_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int,
     """
     (H, W) = (x.shape[2], x.shape[3])
     if isinstance(padding, (tuple, list)):
-        assert len(padding) == len(x.shape), ValueError('padding boundry must be the same size of input dims')
+        assert len(padding) == len(x.shape), ValueError(
+            "padding boundry must be the same size of input dims"
+        )
         boundry = [padding[0], padding[1], padding[2], padding[3]]
     elif isinstance(padding, int):
         boundry = [padding, padding, padding, padding]
     else:
-        raise ValueError('padding must be in or list or tuple!')
-    return oneflow.user_op_builder(name if name is not None else id_util.UniqueStr('Replication_Pad2d_')).Op('replication_pad2d').Input('x', [x]).Output('y').Attr('padding', list(boundry)).Build().InferAndTryRun().RemoteBlobList()[0]
+        raise ValueError("padding must be in or list or tuple!")
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Replication_Pad2d_")
+        )
+        .Op("replication_pad2d")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding", list(boundry))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def constant_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int, tuple, list], constant_value: Union[int, float]=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def constant_pad2d(
+    x: oneflow._oneflow_internal.BlobDesc,
+    padding: Union[int, tuple, list],
+    constant_value: Union[int, float] = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Pads the input tensor using an input constant value.
 
     Args:
@@ -237,21 +333,41 @@ def constant_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int, tu
     """
     (H, W) = (x.shape[2], x.shape[3])
     if isinstance(padding, (tuple, list)):
-        assert len(padding) == len(x.shape), ValueError('padding boundry must be the same size of input dims')
+        assert len(padding) == len(x.shape), ValueError(
+            "padding boundry must be the same size of input dims"
+        )
         boundry = [padding[0], padding[1], padding[2], padding[3]]
     elif isinstance(padding, int):
         boundry = [padding, padding, padding, padding]
     else:
-        raise ValueError('padding must be in or list or tuple!')
+        raise ValueError("padding must be in or list or tuple!")
     if x.dtype in [oneflow.float32, oneflow.float16, oneflow.float64]:
         floating_value = float(constant_value)
         integral_value = int(0)
     else:
         floating_value = float(0)
         integral_value = int(constant_value)
-    return oneflow.user_op_builder(name if name is not None else id_util.UniqueStr('Constant_Pad2d_')).Op('constant_pad2d').Input('x', [x]).Output('y').Attr('padding', list(boundry)).Attr('floating_value', floating_value).Attr('integral_value', integral_value).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Constant_Pad2d_")
+        )
+        .Op("constant_pad2d")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding", list(boundry))
+        .Attr("floating_value", floating_value)
+        .Attr("integral_value", integral_value)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def zero_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int, tuple, list], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def zero_pad2d(
+    x: oneflow._oneflow_internal.BlobDesc,
+    padding: Union[int, tuple, list],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Pads the input tensor using zeros.
 
     Args:
@@ -296,5 +412,5 @@ def zero_pad2d(x: oneflow._oneflow_internal.BlobDesc, padding: Union[int, tuple,
 
     """
     if name is None:
-        name = id_util.UniqueStr('Zero_Pad2d_')
+        name = id_util.UniqueStr("Zero_Pad2d_")
     return constant_pad2d(x, padding, 0.0, name)

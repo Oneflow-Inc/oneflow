@@ -1,6 +1,7 @@
 import math
 from .lr_scheduler import LrScheduler
 
+
 class CosineAnnealingLR(LrScheduler):
     """This operator creates a Cosine decayed learning rate scheduler.
 
@@ -47,8 +48,10 @@ class CosineAnnealingLR(LrScheduler):
         https://arxiv.org/abs/1608.03983
     """
 
-    def __init__(self, optimizer, steps: int, alpha: float=0.0, last_step=-1, verbose=False):
-        assert steps > 0, f'steps must greater than zero, but got {steps}'
+    def __init__(
+        self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
+    ):
+        assert steps > 0, f"steps must greater than zero, but got {steps}"
         self.steps = steps
         self.alpha = alpha
         super().__init__(optimizer, last_step, verbose)

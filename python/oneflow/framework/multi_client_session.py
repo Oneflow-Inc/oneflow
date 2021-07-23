@@ -5,8 +5,8 @@ import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
 
-class MultiClientSession(object):
 
+class MultiClientSession(object):
     class Status(enum.Enum):
         CREATED = 1
         INITED = 2
@@ -78,8 +78,12 @@ class MultiClientSession(object):
                 break
         if check_success is False:
             caller_func_name = inspect.stack()[1].function
-            allowed_status = ' or '.join([str(stat) for stat in status])
-            raise ValueError('The calling to {} is only allowed when status is {}, but current status is {}'.format(caller_func_name, allowed_status, self.status_))
+            allowed_status = " or ".join([str(stat) for stat in status])
+            raise ValueError(
+                "The calling to {} is only allowed when status is {}, but current status is {}".format(
+                    caller_func_name, allowed_status, self.status_
+                )
+            )
 
     def _make_config_proto(self):
         config_proto = job_set_util.ConfigProto()

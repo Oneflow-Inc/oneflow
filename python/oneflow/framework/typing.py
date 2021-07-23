@@ -5,8 +5,10 @@ import typing
 import inspect
 import sys
 
+
 class PyStructCompatibleToBlob(object):
     pass
+
 
 class Numpy(PyStructCompatibleToBlob):
     """`Numpy` is a type hint for numpy output of a OneFlow global function
@@ -37,8 +39,9 @@ class Numpy(PyStructCompatibleToBlob):
             foo(np.random.randn(2, 255, 255, 3).astype(np.float32))
 
         """
-        assert type(shape) is tuple, 'shape should be a tuple. %s found' % shape
-        return type('Numpy.Placeholder', (NumpyDef,), dict(shape=shape, dtype=dtype))
+        assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
+        return type("Numpy.Placeholder", (NumpyDef,), dict(shape=shape, dtype=dtype))
+
 
 class ListNumpy(PyStructCompatibleToBlob):
     """`ListNumpy` is a type hint for numpy output of a OneFlow global function
@@ -73,36 +76,42 @@ class ListNumpy(PyStructCompatibleToBlob):
             foo([input2])
 
         """
-        assert type(shape) is tuple, 'shape should be a tuple. %s found' % shape
-        return type('ListNumpy.Placeholder', (ListOfNumpyDef,), dict(shape=shape, dtype=dtype))
+        assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
+        return type(
+            "ListNumpy.Placeholder", (ListOfNumpyDef,), dict(shape=shape, dtype=dtype)
+        )
+
 
 class OneflowNumpyDef(object):
-
     @classmethod
     def NewInputBlobDef(subclass):
         raise NotImplementedError
 
-class NumpyDef(OneflowNumpyDef):
 
+class NumpyDef(OneflowNumpyDef):
     @classmethod
     def NewInputBlobDef(subclass):
         return input_blob_def.FixedTensorDef(subclass.shape, dtype=subclass.dtype)
 
-class ListOfNumpyDef(OneflowNumpyDef):
 
+class ListOfNumpyDef(OneflowNumpyDef):
     @classmethod
     def NewInputBlobDef(subclass):
         return input_blob_def.MirroredTensorDef(subclass.shape, dtype=subclass.dtype)
 
-class Callback(typing.Generic[typing.TypeVar('T')]):
+
+class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
 
-class Bundle(typing.Generic[typing.TypeVar('T')]):
+
+class Bundle(typing.Generic[typing.TypeVar("T")]):
     """
     One or a collection of  typing.Numpy/typing.ListNumpy,
     such as x, [x], (x,), {"key": x} and the mixed form of them.
     """
+
     pass
+
 
 def OriginFrom(parameterised, generic):
     if inspect.isclass(parameterised) and inspect.isclass(generic):
@@ -111,7 +120,7 @@ def OriginFrom(parameterised, generic):
         assert not inspect.isclass(parameterised)
         return False
     if (sys.version_info.major, sys.version_info.minor) >= (3, 7):
-        if not hasattr(parameterised, '__origin__'):
+        if not hasattr(parameterised, "__origin__"):
             return False
         if generic == typing.Dict:
             return parameterised.__origin__ is dict
@@ -123,4 +132,4 @@ def OriginFrom(parameterised, generic):
             return parameterised.__origin__ is Callback
         if generic == Bundle:
             return parameterised.__origin__ is Bundle
-    raise NotImplementedError('python typing is a monster torturing everyone.')
+    raise NotImplementedError("python typing is a monster torturing everyone.")

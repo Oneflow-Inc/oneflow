@@ -5,6 +5,7 @@ import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
+
 def _test_flatten(test_case, device):
     m = flow.nn.Flatten()
     x = flow.Tensor(32, 2, 5, 5, device=flow.device(device))
@@ -25,6 +26,7 @@ def _test_flatten(test_case, device):
     test_case.assertTrue(y5.shape == flow.Size((1600,)))
     test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
 
+
 def _test_flatten_backward(test_case, device):
     m = flow.nn.Flatten().to(flow.device(device))
     x = flow.Tensor(2, 3, 4, 5, device=flow.device(device), requires_grad=True)
@@ -34,19 +36,21 @@ def _test_flatten_backward(test_case, device):
     z.backward()
     test_case.assertTrue(np.array_equal(np.ones(shape=(2, 3, 4, 5)), x.grad.numpy()))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestFlattenModule(flow.unittest.TestCase):
-
     def test_cast(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_flatten, _test_flatten_backward]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     @autotest(auto_backward=False)
     def test_against_pytorch(test_case):
-        m = torch.nn.Flatten(start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing())
+        m = torch.nn.Flatten(
+            start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
+        )
         m.train(random())
         device = random_device()
         m.to(device)
@@ -58,7 +62,12 @@ class TestFlattenModule(flow.unittest.TestCase):
     def test_tensor_against_pytorch(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = x.flatten(start_dim=random(1, 6).to(int) | nothing(), end_dim=random(1, 6).to(int) | nothing())
+        y = x.flatten(
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
         return y
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -3,8 +3,8 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
 
-class Permute(Module):
 
+class Permute(Module):
     def __init__(self, *dims) -> None:
         super().__init__()
         self.perm = list(*dims)
@@ -15,11 +15,14 @@ class Permute(Module):
         for dim in self.perm:
             if dim < 0:
                 dim += len(self.perm)
-            assert dim >= 0 and dim < len(x.shape), 'Invalid dim0 {}, len(shape): {}'.format(dim, len(x.shape))
+            assert dim >= 0 and dim < len(
+                x.shape
+            ), "Invalid dim0 {}, len(shape): {}".format(dim, len(x.shape))
             new_perm.append(dim)
         return flow.F.transpose(x, perm=new_perm)
 
-@register_tensor_op('permute')
+
+@register_tensor_op("permute")
 def permute_op(tensor, *dims):
     """Returns a view of the original tensor with its dimensions permuted.
 
@@ -40,6 +43,9 @@ def permute_op(tensor, *dims):
 
     """
     return Permute(dims)(tensor)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

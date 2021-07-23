@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class MaskedFill(Module):
 
+class MaskedFill(Module):
     def __init__(self, value) -> None:
         super().__init__()
         self.value = value
@@ -14,7 +14,8 @@ class MaskedFill(Module):
         value_like_x.fill_(self.value)
         return flow.F.where(mask, value_like_x, input)
 
-@register_tensor_op('masked_fill')
+
+@register_tensor_op("masked_fill")
 def masked_fill_op(input, mask, value):
     """
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
@@ -53,6 +54,9 @@ def masked_fill_op(input, mask, value):
 
     """
     return MaskedFill(value)(input, mask)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

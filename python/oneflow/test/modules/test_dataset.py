@@ -5,31 +5,55 @@ import cv2
 import numpy as np
 import oneflow as flow
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestOFRecordModule(flow.unittest.TestCase):
-
     def test_record(test_case):
         batch_size = 1
-        color_space = 'RGB'
+        color_space = "RGB"
         height = 224
         width = 224
-        output_layout = 'NCHW'
+        output_layout = "NCHW"
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
-        record_reader = flow.nn.OfrecordReader('/dataset/imagenette/ofrecord', batch_size=batch_size, data_part_num=1, part_name_suffix_length=5, shuffle_after_epoch=False)
-        record_image_decoder = flow.nn.OFRecordImageDecoder('encoded', color_space=color_space)
-        record_label_decoder = flow.nn.OfrecordRawDecoder('class/label', shape=(), dtype=flow.int32)
-        resize = flow.nn.image.Resize(resize_side='shorter', keep_aspect_ratio=True, target_size=256)
-        crop_mirror_normal = flow.nn.CropMirrorNormalize(color_space=color_space, output_layout=output_layout, crop_h=height, crop_w=width, crop_pos_y=0.5, crop_pos_x=0.5, mean=rgb_mean, std=rgb_std, output_dtype=flow.float)
+        record_reader = flow.nn.OfrecordReader(
+            "/dataset/imagenette/ofrecord",
+            batch_size=batch_size,
+            data_part_num=1,
+            part_name_suffix_length=5,
+            shuffle_after_epoch=False,
+        )
+        record_image_decoder = flow.nn.OFRecordImageDecoder(
+            "encoded", color_space=color_space
+        )
+        record_label_decoder = flow.nn.OfrecordRawDecoder(
+            "class/label", shape=(), dtype=flow.int32
+        )
+        resize = flow.nn.image.Resize(
+            resize_side="shorter", keep_aspect_ratio=True, target_size=256
+        )
+        crop_mirror_normal = flow.nn.CropMirrorNormalize(
+            color_space=color_space,
+            output_layout=output_layout,
+            crop_h=height,
+            crop_w=width,
+            crop_pos_y=0.5,
+            crop_pos_x=0.5,
+            mean=rgb_mean,
+            std=rgb_std,
+            output_dtype=flow.float,
+        )
         val_record = record_reader()
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
         image_raw_buffer_nd = image_raw_buffer.numpy()[0]
-        gt_np = cv2.imread('/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png')
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd, gt_np))
         image = resize(image_raw_buffer)[0]
         resized_image_raw_buffer_nd = image.numpy()[0]
-        gt_np = cv2.imread('/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png')
+        gt_np = cv2.imread(
+            "/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
+        )
         test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd, gt_np))
         image = crop_mirror_normal(image)
         image_np = image.numpy()
@@ -38,17 +62,22 @@ class TestOFRecordModule(flow.unittest.TestCase):
         image_np = image_np * rgb_std + rgb_mean
         image_np = cv2.cvtColor(np.float32(image_np), cv2.COLOR_RGB2BGR)
         image_np = image_np.astype(np.uint8)
-        gt_np = cv2.imread('/dataset/imagenette/ofrecord/gt_val_image.png')
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_val_image.png")
         test_case.assertEqual(label.numpy()[0], 5)
         test_case.assertTrue(np.array_equal(image_np, gt_np))
+
+
 coco_dict = dict()
+
 
 def _coco(anno_file):
     global coco_dict
     if anno_file not in coco_dict:
         from pycocotools.coco import COCO
+
         coco_dict[anno_file] = COCO(anno_file)
     return coco_dict[anno_file]
+
 
 def _get_coco_image_samples(anno_file, image_dir, image_ids):
     coco = _coco(anno_file)
@@ -60,16 +89,29 @@ def _get_coco_image_samples(anno_file, image_dir, image_ids):
     (poly, poly_index) = _segm_poly_list_to_tensor(img_segm_poly_list)
     samples = []
     for (im, ims, b, l, p, pi) in zip(image, image_size, bbox, label, poly, poly_index):
-        samples.append(dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi))
+        samples.append(
+            dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi)
+        )
     return samples
+
 
 def _get_category_id_to_contiguous_id_map(coco):
     return {v: i + 1 for (i, v) in enumerate(coco.getCatIds())}
 
+
 def _read_images_with_cv(coco, image_dir, image_ids):
-    image_files = [os.path.join(image_dir, coco.imgs[img_id]['file_name']) for img_id in image_ids]
-    image_size = [(coco.imgs[img_id]['height'], coco.imgs[img_id]['width']) for img_id in image_ids]
-    return ([cv2.imread(image_file).astype(np.single) for image_file in image_files], image_size)
+    image_files = [
+        os.path.join(image_dir, coco.imgs[img_id]["file_name"]) for img_id in image_ids
+    ]
+    image_size = [
+        (coco.imgs[img_id]["height"], coco.imgs[img_id]["width"])
+        for img_id in image_ids
+    ]
+    return (
+        [cv2.imread(image_file).astype(np.single) for image_file in image_files],
+        image_size,
+    )
+
 
 def _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w):
     (x, y, w, h) = bbox
@@ -84,19 +126,20 @@ def _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w):
         return None
     return [x1, y1, x2, y2]
 
+
 def _read_bbox(coco, image_ids):
     img_bbox_list = []
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
-        assert len(anno_ids) > 0, 'image with id {} has no anno'.format(img_id)
-        image_h = coco.imgs[img_id]['height']
-        image_w = coco.imgs[img_id]['width']
+        assert len(anno_ids) > 0, "image with id {} has no anno".format(img_id)
+        image_h = coco.imgs[img_id]["height"]
+        image_w = coco.imgs[img_id]["width"]
         bbox_list = []
         for anno_id in anno_ids:
             anno = coco.anns[anno_id]
-            if anno['iscrowd'] != 0:
+            if anno["iscrowd"] != 0:
                 continue
-            bbox = anno['bbox']
+            bbox = anno["bbox"]
             assert isinstance(bbox, list)
             bbox_ = _bbox_convert_from_xywh_to_xyxy(bbox, image_h, image_w)
             if bbox_ is not None:
@@ -105,40 +148,45 @@ def _read_bbox(coco, image_ids):
         img_bbox_list.append(bbox_array)
     return img_bbox_list
 
+
 def _read_label(coco, image_ids, category_id_to_contiguous_id_map):
     img_label_list = []
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
-        assert len(anno_ids) > 0, 'image with id {} has no anno'.format(img_id)
+        assert len(anno_ids) > 0, "image with id {} has no anno".format(img_id)
         label_list = []
         for anno_id in anno_ids:
             anno = coco.anns[anno_id]
-            if anno['iscrowd'] != 0:
+            if anno["iscrowd"] != 0:
                 continue
-            cate_id = anno['category_id']
+            cate_id = anno["category_id"]
             isinstance(cate_id, int)
             label_list.append(category_id_to_contiguous_id_map[cate_id])
         label_array = np.array(label_list, dtype=np.int32)
         img_label_list.append(label_array)
     return img_label_list
 
+
 def _read_segm_poly(coco, image_ids):
     img_segm_poly_list = []
     for img_id in image_ids:
         anno_ids = coco.getAnnIds(imgIds=[img_id])
-        assert len(anno_ids) > 0, 'img {} has no anno'.format(img_id)
+        assert len(anno_ids) > 0, "img {} has no anno".format(img_id)
         segm_poly_list = []
         for anno_id in anno_ids:
             anno = coco.anns[anno_id]
-            if anno['iscrowd'] != 0:
+            if anno["iscrowd"] != 0:
                 continue
-            segm = anno['segmentation']
+            segm = anno["segmentation"]
             assert isinstance(segm, list)
             assert len(segm) > 0, str(len(segm))
-            assert all([len(poly) > 0 for poly in segm]), str([len(poly) for poly in segm])
+            assert all([len(poly) > 0 for poly in segm]), str(
+                [len(poly) for poly in segm]
+            )
             segm_poly_list.append(segm)
         img_segm_poly_list.append(segm_poly_list)
     return img_segm_poly_list
+
 
 def _segm_poly_list_to_tensor(img_segm_poly_list):
     poly_array_list = []
@@ -160,18 +208,32 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
         poly_index_array_list.append(img_poly_index_array)
     return (poly_array_list, poly_index_array_list)
 
+
 @flow.unittest.skip_unless_1n1d()
 @flow.unittest.skip_unless_1n1d()
 class TestCocoReader(flow.unittest.TestCase):
-
     def test_coco_reader(test_case):
-        anno_file = '/dataset/mscoco_2017/annotations/instances_val2017.json'
-        image_dir = '/dataset/mscoco_2017/val2017'
+        anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+        image_dir = "/dataset/mscoco_2017/val2017"
         num_iterations = 100
-        coco_reader = flow.nn.COCOReader(annotation_file=anno_file, image_dir=image_dir, batch_size=2, shuffle=True, stride_partition=True)
+        coco_reader = flow.nn.COCOReader(
+            annotation_file=anno_file,
+            image_dir=image_dir,
+            batch_size=2,
+            shuffle=True,
+            stride_partition=True,
+        )
         image_decoder = flow.nn.image.decode(dtype=flow.float)
         for i in range(num_iterations):
-            (image, image_id, image_size, gt_bbox, gt_label, gt_segm, gt_segm_index) = coco_reader()
+            (
+                image,
+                image_id,
+                image_size,
+                gt_bbox,
+                gt_label,
+                gt_segm,
+                gt_segm_index,
+            ) = coco_reader()
             decoded_image = image_decoder(image)
             image_list = decoded_image.numpy()
             image_id = image_id.numpy()
@@ -182,14 +244,20 @@ class TestCocoReader(flow.unittest.TestCase):
             segm_index_list = gt_segm_index.numpy()
             samples = _get_coco_image_samples(anno_file, image_dir, image_id)
             for (i, sample) in enumerate(samples):
-                test_case.assertTrue(np.array_equal(image_list[i], sample['image']))
-                test_case.assertTrue(np.array_equal(image_size[i], sample['image_size']))
-                test_case.assertTrue(np.allclose(bbox_list[i], sample['bbox']))
+                test_case.assertTrue(np.array_equal(image_list[i], sample["image"]))
+                test_case.assertTrue(
+                    np.array_equal(image_size[i], sample["image_size"])
+                )
+                test_case.assertTrue(np.allclose(bbox_list[i], sample["bbox"]))
                 cur_label = label_list[i]
                 if len(cur_label.shape) == 0:
                     cur_label = np.array([cur_label])
-                test_case.assertTrue(np.array_equal(cur_label, sample['label']))
-                test_case.assertTrue(np.allclose(segm_list[i], sample['poly']))
-                test_case.assertTrue(np.array_equal(segm_index_list[i], sample['poly_index']))
-if __name__ == '__main__':
+                test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
+                test_case.assertTrue(np.allclose(segm_list[i], sample["poly"]))
+                test_case.assertTrue(
+                    np.array_equal(segm_index_list[i], sample["poly_index"])
+                )
+
+
+if __name__ == "__main__":
     unittest.main()

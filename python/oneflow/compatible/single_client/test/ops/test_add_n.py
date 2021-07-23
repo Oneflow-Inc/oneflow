@@ -3,26 +3,30 @@ import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 from typing import Tuple
+
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
-def GenerateTest(test_case, shape, num_inputs):
 
+def GenerateTest(test_case, shape, num_inputs):
     @flow.global_function(function_config=func_config)
     def AddJob(xs: Tuple[(oft.Numpy.Placeholder(shape),) * num_inputs]):
         return flow.math.add_n(xs)
-    inputs = tuple((np.random.rand(*shape).astype(np.float32) for i in range(num_inputs)))
+
+    inputs = tuple(
+        (np.random.rand(*shape).astype(np.float32) for i in range(num_inputs))
+    )
     r = AddJob(inputs).get().numpy()
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestAddN(flow.unittest.TestCase):
-
     def test_naive(test_case):
-
         @flow.global_function(function_config=func_config)
         def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 3]):
             return flow.math.add_n(xs)
+
         inputs = tuple((np.random.rand(5, 2).astype(np.float32) for i in range(3)))
         r = AddJob(inputs).get().numpy()
         test_case.assertTrue(np.allclose(r, sum(inputs)))
@@ -74,5 +78,7 @@ class TestAddN(flow.unittest.TestCase):
 
     def test_100_inputs(test_case):
         GenerateTest(test_case, (64, 64), 100)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

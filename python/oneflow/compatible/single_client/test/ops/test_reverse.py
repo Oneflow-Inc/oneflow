@@ -3,13 +3,18 @@ import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as tp
 
+
 def _of_reverse(input, axis, dtype):
     flow.clear_default_session()
 
     @flow.global_function()
-    def reverse(input: tp.Numpy.Placeholder(shape=input.shape, dtype=dtype)) -> tp.Numpy:
+    def reverse(
+        input: tp.Numpy.Placeholder(shape=input.shape, dtype=dtype)
+    ) -> tp.Numpy:
         return flow.reverse(input, axis)
+
     return reverse(input)
+
 
 def _test_reverse(test_case, input, axis, dtype, verbose=False):
     assert isinstance(input, np.ndarray)
@@ -23,13 +28,13 @@ def _test_reverse(test_case, input, axis, dtype, verbose=False):
     output = input[tuple(slice_list)]
     of_output = _of_reverse(input, axis, dtype)
     if verbose:
-        print('input: {}\n{}\n'.format(input.shape, input))
-        print('comparing output:\n{}\nvs.\n{}'.format(output, of_output))
+        print("input: {}\n{}\n".format(input.shape, input))
+        print("comparing output:\n{}\nvs.\n{}".format(output, of_output))
     test_case.assertTrue(np.array_equal(output, of_output))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestReverse(flow.unittest.TestCase):
-
     def test_reverse_case_1(test_case):
         input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
         _test_reverse(test_case, input, [3], flow.int32)
@@ -53,5 +58,7 @@ class TestReverse(flow.unittest.TestCase):
     def test_reverse_case_6(test_case):
         input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
         _test_reverse(test_case, input, [-2], flow.float32)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

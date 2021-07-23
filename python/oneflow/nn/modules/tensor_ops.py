@@ -2,15 +2,16 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class TypeAs(Module):
 
+class TypeAs(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, input, target):
         return input.to(dtype=target.dtype)
 
-@register_tensor_op('type_as')
+
+@register_tensor_op("type_as")
 def type_as_op(input, target):
     """Returns this tensor cast to the type of the given tensor.
         This is a no-op if the tensor is already of the correct type.
@@ -35,15 +36,16 @@ def type_as_op(input, target):
     """
     return TypeAs()(input, target)
 
-class Long(Module):
 
+class Long(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, input):
         return input.to(dtype=flow.int64)
 
-@register_tensor_op('long')
+
+@register_tensor_op("long")
 def long_op(input):
     """`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
 
@@ -64,6 +66,9 @@ def long_op(input):
 
     """
     return Long()(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

@@ -5,19 +5,25 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.ops.array_ops import check_slice_tup_list
 
-class Chunk(Module):
 
+class Chunk(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input, chunks, dim):
         if dim is not None:
-            assert input.shape[dim] > 0, 'chunk expects at least a 1-dimensional tensor'
-            assert chunks > 0, 'chunk expects `chunks` to be greater than 0'
+            assert input.shape[dim] > 0, "chunk expects at least a 1-dimensional tensor"
+            assert chunks > 0, "chunk expects `chunks` to be greater than 0"
             channel = input.dim()
             dim_size = input.shape[dim]
-            chunk_size = dim_size / chunks if dim_size % chunks == 0 else int(dim_size / chunks)
-            last_chunk_size = dim_size / chunks if dim_size % chunks == 0 else dim_size - chunk_size * (chunks - 1)
+            chunk_size = (
+                dim_size / chunks if dim_size % chunks == 0 else int(dim_size / chunks)
+            )
+            last_chunk_size = (
+                dim_size / chunks
+                if dim_size % chunks == 0
+                else dim_size - chunk_size * (chunks - 1)
+            )
             chunk_dim_dict = {}
             tup_ndim = []
             splits = []
@@ -26,10 +32,16 @@ class Chunk(Module):
                     start = chunk * chunk_size
                     stop = (chunk + 1) * chunk_size
                 else:
-                    start = chunk * chunk_size if chunk < chunks - 1 else chunk_size * (chunks - 1)
+                    start = (
+                        chunk * chunk_size
+                        if chunk < chunks - 1
+                        else chunk_size * (chunks - 1)
+                    )
                     stop = (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size
                 step = 1
-                chunk_dim_dict.setdefault(dim, []).append([int(start), int(stop), int(step)])
+                chunk_dim_dict.setdefault(dim, []).append(
+                    [int(start), int(stop), int(step)]
+                )
             for (k, v) in chunk_dim_dict.items():
                 for v_chunk in v:
                     tup_list = []
@@ -38,11 +50,18 @@ class Chunk(Module):
                             tup_list.append([None, None, None])
                         else:
                             tup_list.append(v_chunk)
-                    (start_tup, stop_tup, step_tup) = check_slice_tup_list(tup_list, input.shape)
-                    splits.append(flow.F.slice(input, start=start_tup, stop=stop_tup, step=step_tup))
+                    (start_tup, stop_tup, step_tup) = check_slice_tup_list(
+                        tup_list, input.shape
+                    )
+                    splits.append(
+                        flow.F.slice(
+                            input, start=start_tup, stop=stop_tup, step=step_tup
+                        )
+                    )
             return splits
 
-@register_tensor_op('chunk')
+
+@register_tensor_op("chunk")
 def chunk_op(input, chunks, dim):
     """Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
@@ -85,6 +104,9 @@ def chunk_op(input, chunks, dim):
 
     """
     return Chunk()(input, chunks, dim)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

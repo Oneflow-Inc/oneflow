@@ -2,15 +2,16 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Acos(Module):
 
+class Acos(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.acos(x)
 
-@register_tensor_op('acos')
+
+@register_tensor_op("acos")
 def acos_op(tensor):
     """
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
@@ -36,6 +37,9 @@ def acos_op(tensor):
 
     """
     return Acos()(tensor)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

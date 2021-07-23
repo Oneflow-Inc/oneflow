@@ -1,15 +1,25 @@
 from oneflow.compatible.single_client.python.eager import symbol as symbol_util
-from oneflow.compatible.single_client.core.job import sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.compatible.single_client.core.job import (
+    sbp_parallel_pb2 as sbp_parallel_pb,
+)
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
 import oneflow._oneflow_internal
 import random
 
-class BoxingToMiddle(object):
 
-    def __init__(self, boxing_method, get_middle_parallel_desc_symbol, get_middle_sbp_parallel, verbose=False):
+class BoxingToMiddle(object):
+    def __init__(
+        self,
+        boxing_method,
+        get_middle_parallel_desc_symbol,
+        get_middle_sbp_parallel,
+        verbose=False,
+    ):
         self.boxing_method_ = boxing_method
-        self.get_middle_op_arg_parallel_attr_ = MiddleOpArgParallelAttr(get_middle_parallel_desc_symbol, get_middle_sbp_parallel)
+        self.get_middle_op_arg_parallel_attr_ = MiddleOpArgParallelAttr(
+            get_middle_parallel_desc_symbol, get_middle_sbp_parallel
+        )
         self.verbose_ = verbose
 
     @property
@@ -24,60 +34,94 @@ class BoxingToMiddle(object):
     def verbose(self):
         return self.verbose_
 
-def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
 
-    def GetOpArgParallelAttr(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-        return oneflow._oneflow_internal.OpArgParallelAttribute(get_parallel_desc_symbol(builder, produced_blob_object, consumer_op_arg_parallel_attr), str(get_sbp_parallel(builder, produced_blob_object, consumer_op_arg_parallel_attr)), str(produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel))
+def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
+    def GetOpArgParallelAttr(
+        builder, produced_blob_object, consumer_op_arg_parallel_attr
+    ):
+        return oneflow._oneflow_internal.OpArgParallelAttribute(
+            get_parallel_desc_symbol(
+                builder, produced_blob_object, consumer_op_arg_parallel_attr
+            ),
+            str(
+                get_sbp_parallel(
+                    builder, produced_blob_object, consumer_op_arg_parallel_attr
+                )
+            ),
+            str(produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
+        )
+
     return GetOpArgParallelAttr
 
-def ReplaceProducerDeviceTag(new_device_tag):
 
+def ReplaceProducerDeviceTag(new_device_tag):
     def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
         x_parallel_attr = produced_blob_object.op_arg_parallel_attr
-        return TryReplaceDeviceTag(builder, x_parallel_attr.parallel_desc_symbol, new_device_tag)
+        return TryReplaceDeviceTag(
+            builder, x_parallel_attr.parallel_desc_symbol, new_device_tag
+        )
+
     return Getter
+
 
 def ProducerRandomParallelIdPerMachine(device_tag=None):
-
     def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-        return RandomParallelIdPerMachine(produced_blob_object.parallel_desc_symbol, device_tag=device_tag, builder=builder)
+        return RandomParallelIdPerMachine(
+            produced_blob_object.parallel_desc_symbol,
+            device_tag=device_tag,
+            builder=builder,
+        )
+
     return Getter
+
 
 def ConsumerRandomParallelIdPerMachine(device_tag=None):
-
     def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-        return RandomParallelIdPerMachine(consumer_op_arg_parallel_attr.parallel_desc_symbol, device_tag=device_tag, builder=builder)
+        return RandomParallelIdPerMachine(
+            consumer_op_arg_parallel_attr.parallel_desc_symbol,
+            device_tag=device_tag,
+            builder=builder,
+        )
+
     return Getter
+
 
 def ProducerParallelDesc(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return produced_blob_object.parallel_desc_symbol
 
+
 def ConsumerParallelDesc(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return consumer_op_arg_parallel_attr.parallel_desc_symbol
 
-def ReplaceConsumerDeviceTag(new_device_tag):
 
+def ReplaceConsumerDeviceTag(new_device_tag):
     def Getter(builder, produced_blob_object, consumer_op_arg_parallel_attr):
         parallel_desc_sym = consumer_op_arg_parallel_attr.parallel_desc_symbol
         return TryReplaceDeviceTag(builder, parallel_desc_sym, new_device_tag)
+
     return Getter
+
 
 def BroadcastParallel(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     sbp_parallel = sbp_parallel_pb.SbpParallel()
     sbp_parallel.broadcast_parallel.SetInParent()
     return sbp_parallel
 
+
 def ProducerSbpParallel(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return produced_blob_object.op_arg_parallel_attr.sbp_parallel
 
+
 def ConsumerSbpParallel(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return consumer_op_arg_parallel_attr.sbp_parallel
+
 
 def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
     if parallel_desc_symbol.device_tag == device_tag:
         return parallel_desc_symbol
     else:
         return ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=builder)
+
 
 def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert parallel_desc_symbol.device_tag != device_tag
@@ -91,9 +135,12 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert hierarchy.dim_size() > 0
     parallel_conf.mutable_hierarchy().CopyFrom(hierarchy)
     if builder is None:
-        return oneflow._oneflow_internal.PlacementSymbol(parallel_desc_symbol.symbol_id, parallel_conf)
+        return oneflow._oneflow_internal.PlacementSymbol(
+            parallel_desc_symbol.symbol_id, parallel_conf
+        )
     else:
         return builder.GetParallelDescSymbol(parallel_conf)
+
 
 def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=None):
     if device_tag is None:
@@ -103,8 +150,10 @@ def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=No
     parallel_conf.set_device_tag(device_tag)
     for (machine_id, dev_ids) in parallel_desc_symbol.machine_id2device_id_list.items():
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
-        parallel_conf.add_device_name('@%s:%s' % (machine_id, dev_id))
+        parallel_conf.add_device_name("@%s:%s" % (machine_id, dev_id))
     if builder is None:
-        return oneflow._oneflow_internal.PlacementSymbol(parallel_desc_symbol.symbol_id, parallel_conf)
+        return oneflow._oneflow_internal.PlacementSymbol(
+            parallel_desc_symbol.symbol_id, parallel_conf
+        )
     else:
         return builder.GetParallelDescSymbol(parallel_conf)

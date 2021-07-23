@@ -3,6 +3,7 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from typing import Optional, Union, Tuple
 
+
 class Upsample(Module):
     """The interface is consistent with PyTorch.    
     
@@ -79,7 +80,13 @@ class Upsample(Module):
 
     """
 
-    def __init__(self, size: Optional[Union[int, Tuple[int, ...]]]=None, scale_factor: Optional[Union[float, Tuple[float, ...]]]=None, mode: str='nearest', align_corners: Optional[bool]=None):
+    def __init__(
+        self,
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
+        scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
+        mode: str = "nearest",
+        align_corners: Optional[bool] = None,
+    ):
         super().__init__()
         self.size = size
         self.scale_factor = scale_factor
@@ -87,15 +94,22 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, mode=self.mode, align_corners=self.align_corners)
+        return flow.nn.functional.interpolate(
+            x,
+            size=self.size,
+            scale_factor=self.scale_factor,
+            mode=self.mode,
+            align_corners=self.align_corners,
+        )
 
     def extra_repr(self) -> str:
         if self.scale_factor is not None:
-            info = 'scale_factor=' + str(self.scale_factor)
+            info = "scale_factor=" + str(self.scale_factor)
         else:
-            info = 'size=' + str(self.size)
-        info += ', mode=' + self.mode
+            info = "size=" + str(self.size)
+        info += ", mode=" + self.mode
         return info
+
 
 class UpsamplingNearest2d(Upsample):
     """Applies a 2D nearest neighbor upsampling to an input signal composed of several input
@@ -142,8 +156,13 @@ class UpsamplingNearest2d(Upsample):
 
     """
 
-    def __init__(self, size: Optional[Tuple[int, int]]=None, scale_factor: Optional[Tuple[float, float]]=None) -> None:
-        super(UpsamplingNearest2d, self).__init__(size, scale_factor, mode='nearest')
+    def __init__(
+        self,
+        size: Optional[Tuple[int, int]] = None,
+        scale_factor: Optional[Tuple[float, float]] = None,
+    ) -> None:
+        super(UpsamplingNearest2d, self).__init__(size, scale_factor, mode="nearest")
+
 
 class UpsamplingBilinear2d(Upsample):
     """Applies a 2D bilinear upsampling to an input signal composed of several input
@@ -192,8 +211,17 @@ class UpsamplingBilinear2d(Upsample):
 
     """
 
-    def __init__(self, size: Optional[Tuple[int, int]]=None, scale_factor: Optional[Tuple[float, float]]=None) -> None:
-        super(UpsamplingBilinear2d, self).__init__(size, scale_factor, mode='bilinear', align_corners=True)
-if __name__ == '__main__':
+    def __init__(
+        self,
+        size: Optional[Tuple[int, int]] = None,
+        scale_factor: Optional[Tuple[float, float]] = None,
+    ) -> None:
+        super(UpsamplingBilinear2d, self).__init__(
+            size, scale_factor, mode="bilinear", align_corners=True
+        )
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

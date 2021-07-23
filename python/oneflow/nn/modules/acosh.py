@@ -2,13 +2,14 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
-class Acosh(Module):
 
+class Acosh(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
         return flow.F.acosh(x)
+
 
 def acosh_op(x):
     """Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
@@ -38,7 +39,8 @@ def acosh_op(x):
     """
     return Acosh()(x)
 
-@register_tensor_op('acosh')
+
+@register_tensor_op("acosh")
 def acosh_op_tensor(x):
     """
 
@@ -49,6 +51,7 @@ def acosh_op_tensor(x):
     """
     return Acosh()(x)
 
+
 def arccosh_op(x):
     """
 
@@ -57,7 +60,8 @@ def arccosh_op(x):
     """
     return Acosh()(x)
 
-@register_tensor_op('arccosh')
+
+@register_tensor_op("arccosh")
 def arccosh_op_tensor(x):
     """
 
@@ -67,6 +71,9 @@ def arccosh_op_tensor(x):
 
     """
     return Acosh()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

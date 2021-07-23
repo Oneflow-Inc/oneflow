@@ -3,6 +3,7 @@ import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 
+
 def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     assert isinstance(compatible_shape, (list, tuple))
     if x_shape is None:
@@ -13,12 +14,27 @@ def _of_broadcast_to_compatible_with(x, compatible_shape, x_shape=None):
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def broadcast_to_compatible_with_fn(x_def: oft.ListNumpy.Placeholder(shape=x_shape, dtype=flow.float)):
-        compatible_var = [flow.get_variable('compatible_var_{}'.format(i), shape=cp_shape, dtype=flow.float, initializer=flow.random_normal_initializer(), trainable=False) for (i, cp_shape) in enumerate(compatible_shape)]
+    def broadcast_to_compatible_with_fn(
+        x_def: oft.ListNumpy.Placeholder(shape=x_shape, dtype=flow.float)
+    ):
+        compatible_var = [
+            flow.get_variable(
+                "compatible_var_{}".format(i),
+                shape=cp_shape,
+                dtype=flow.float,
+                initializer=flow.random_normal_initializer(),
+                trainable=False,
+            )
+            for (i, cp_shape) in enumerate(compatible_shape)
+        ]
         return flow.broadcast_to_compatible_with(x_def, compatible_var)
+
     return broadcast_to_compatible_with_fn([x]).get().numpy_list()[0]
 
-def _of_broadcast_to_compatible_with_dynamic(x, a, b, x_shape=None, a_shape=None, b_shape=None):
+
+def _of_broadcast_to_compatible_with_dynamic(
+    x, a, b, x_shape=None, a_shape=None, b_shape=None
+):
     if x_shape is None:
         x_shape = x.shape
     if a_shape is None:
@@ -31,9 +47,17 @@ def _of_broadcast_to_compatible_with_dynamic(x, a, b, x_shape=None, a_shape=None
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     @flow.global_function(function_config=func_config)
-    def broadcast_to_compatible_with_fn(x_def: oft.ListNumpy.Placeholder(x_shape, dtype=flow.float), a_def: oft.ListNumpy.Placeholder(a_shape, dtype=flow.float), b_def: oft.ListNumpy.Placeholder(b_shape, dtype=flow.float)):
-        return flow.broadcast_to_compatible_with(x_def, [flow.identity(a_def), flow.identity(b_def)])
+    def broadcast_to_compatible_with_fn(
+        x_def: oft.ListNumpy.Placeholder(x_shape, dtype=flow.float),
+        a_def: oft.ListNumpy.Placeholder(a_shape, dtype=flow.float),
+        b_def: oft.ListNumpy.Placeholder(b_shape, dtype=flow.float),
+    ):
+        return flow.broadcast_to_compatible_with(
+            x_def, [flow.identity(a_def), flow.identity(b_def)]
+        )
+
     return broadcast_to_compatible_with_fn([x], [a], [b]).get().numpy_list()[0]
+
 
 def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     assert isinstance(compatible_shape, (list, tuple))
@@ -43,20 +67,40 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(type='train', function_config=func_config)
-    def broadcast_to_compatible_with_fn(x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float)):
-        x_var = flow.get_variable('x_var', shape=x.shape, dtype=flow.float, initializer=flow.constant_initializer(0), trainable=True)
-        compatible_var = [flow.get_variable('compatible_var_{}'.format(i), shape=cp_shape, dtype=flow.float, initializer=flow.random_normal_initializer(), trainable=False) for (i, cp_shape) in enumerate(compatible_shape)]
+    @flow.global_function(type="train", function_config=func_config)
+    def broadcast_to_compatible_with_fn(
+        x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float)
+    ):
+        x_var = flow.get_variable(
+            "x_var",
+            shape=x.shape,
+            dtype=flow.float,
+            initializer=flow.constant_initializer(0),
+            trainable=True,
+        )
+        compatible_var = [
+            flow.get_variable(
+                "compatible_var_{}".format(i),
+                shape=cp_shape,
+                dtype=flow.float,
+                initializer=flow.random_normal_initializer(),
+                trainable=False,
+            )
+            for (i, cp_shape) in enumerate(compatible_shape)
+        ]
         x_var = x_var + x_def
         y = flow.broadcast_to_compatible_with(x_var, compatible_var)
-        flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0).minimize(y)
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(y)
         flow.watch_diff(x_var, dx_watcher)
         return y
+
     return broadcast_to_compatible_with_fn(x).get().numpy()
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
-
     def test_broadcast_to_compatible_with(test_case):
         x = np.random.standard_normal((5, 2)).astype(np.float32)
         compatible_shape = [[4, 5, 2], [4, 5, 1]]
@@ -71,7 +115,9 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         a_static_shape = (3, 15, 6)
         b = np.random.standard_normal((3, 10, 1)).astype(np.float32)
         b_static_shape = (3, 15, 1)
-        ret = _of_broadcast_to_compatible_with_dynamic(x, a, b, x_static_shape, a_static_shape, b_static_shape)
+        ret = _of_broadcast_to_compatible_with_dynamic(
+            x, a, b, x_static_shape, a_static_shape, b_static_shape
+        )
         expected_ret = np.broadcast_to(x, [3, 10, 6])
         test_case.assertTrue(np.array_equal(expected_ret, ret))
 
@@ -82,7 +128,9 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         a_static_shape = (15, 1)
         b = np.random.standard_normal((7,)).astype(np.float32)
         b_static_shape = (8,)
-        ret = _of_broadcast_to_compatible_with_dynamic(x, a, b, x_static_shape, a_static_shape, b_static_shape)
+        ret = _of_broadcast_to_compatible_with_dynamic(
+            x, a, b, x_static_shape, a_static_shape, b_static_shape
+        )
         expected_ret = np.broadcast_to(x, [20, 11, 7])
         test_case.assertTrue(np.array_equal(expected_ret, ret))
 
@@ -93,6 +141,7 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         def compare_dy(dx_blob):
             dx = np.ones([7, 5, 4], dtype=np.float32).sum(axis=1).reshape(x.shape)
             test_case.assertTrue(np.array_equal(dx, dx_blob.numpy()))
+
         ret = _of_broadcast_to_compatible_with_grad(x, compatible_shape, compare_dy)
         exp_ret = np.broadcast_to(x, [7, 5, 4])
         test_case.assertTrue(np.array_equal(exp_ret, ret))
@@ -104,6 +153,7 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         def compare_dy(dx_blob):
             dx = np.ones([7, 5, 4], dtype=np.float32).sum(axis=1).reshape(x.shape)
             test_case.assertTrue(np.array_equal(dx, dx_blob.numpy()))
+
         ret = _of_broadcast_to_compatible_with_grad(x, compatible_shape, compare_dy)
         exp_ret = np.broadcast_to(x, [1, 7, 5, 4])
         test_case.assertTrue(np.array_equal(exp_ret, ret))
@@ -114,5 +164,7 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         compatible_shape = [[6], [9, 1]]
         ret = _of_broadcast_to_compatible_with(x, compatible_shape, x_static_shape)
         test_case.assertTrue(np.array_equal(x, ret))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

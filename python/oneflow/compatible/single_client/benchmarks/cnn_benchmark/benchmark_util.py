@@ -1,8 +1,8 @@
 import time
 import numpy as np
 
-class StopWatch:
 
+class StopWatch:
     def __init__(self):
         pass
 
@@ -26,38 +26,60 @@ class StopWatch:
     def duration(self):
         return self.stop_time - self.start_time
 
-class CNNSpeedometer:
 
+class CNNSpeedometer:
     def __init__(self):
         self.watch = StopWatch()
         self.throughoutput_list = []
 
-    def speedometer_cb(self, step, start_time, total_batch_size, skip_iter_num, iter_num, loss_print_every_n_iter):
-
+    def speedometer_cb(
+        self,
+        step,
+        start_time,
+        total_batch_size,
+        skip_iter_num,
+        iter_num,
+        loss_print_every_n_iter,
+    ):
         def callback(train_loss):
             assert skip_iter_num >= 0
             if skip_iter_num == 0 and step == 0:
                 self.watch.set_start(start_time)
-                print('Start trainning without any skipping iteration.')
+                print("Start trainning without any skipping iteration.")
             if step < skip_iter_num:
                 if step == 0:
-                    print('Skipping {} iterations for benchmark purpose.'.format(skip_iter_num))
+                    print(
+                        "Skipping {} iterations for benchmark purpose.".format(
+                            skip_iter_num
+                        )
+                    )
                 if step + 1 == skip_iter_num:
                     self.watch.start()
-                    print('Start trainning.')
+                    print("Start trainning.")
             else:
                 train_step = step - skip_iter_num
                 if (train_step + 1) % loss_print_every_n_iter == 0:
                     loss = train_loss.mean()
-                    avg_elapse_time_per_iter = self.watch.split() / loss_print_every_n_iter
+                    avg_elapse_time_per_iter = (
+                        self.watch.split() / loss_print_every_n_iter
+                    )
                     samples_per_sec = total_batch_size / avg_elapse_time_per_iter
-                    print('iter {}, loss: {:.3f}, speed: {:.3f}(sec/batch), {:.3f}(images/sec)'.format(train_step, loss, avg_elapse_time_per_iter, samples_per_sec))
+                    print(
+                        "iter {}, loss: {:.3f}, speed: {:.3f}(sec/batch), {:.3f}(images/sec)".format(
+                            train_step, loss, avg_elapse_time_per_iter, samples_per_sec
+                        )
+                    )
                     self.throughoutput_list.append(samples_per_sec)
                 if train_step + 1 == iter_num:
                     self.watch.stop()
                     totoal_duration = self.watch.duration()
                     avg_samples_per_sec = total_batch_size * iter_num / totoal_duration
-                    print('-'.ljust(66, '-'))
-                    print('average speed: {:.3f}(images/sec), new_cal_method: {:.3f}(images/sec)'.format(avg_samples_per_sec, np.mean(self.throughoutput_list)))
-                    print('-'.ljust(66, '-'))
+                    print("-".ljust(66, "-"))
+                    print(
+                        "average speed: {:.3f}(images/sec), new_cal_method: {:.3f}(images/sec)".format(
+                            avg_samples_per_sec, np.mean(self.throughoutput_list)
+                        )
+                    )
+                    print("-".ljust(66, "-"))
+
         return callback

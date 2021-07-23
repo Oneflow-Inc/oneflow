@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class LessEqual(Module):
 
+class LessEqual(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -11,12 +11,15 @@ class LessEqual(Module):
         if x.dtype != flow.float32:
             x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32, device=flow.device(x.device.type))
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
         if y.dtype != flow.float32:
             y = flow.cast(y, flow.float32)
         return flow.F.broadcast_less_equal(x, y)
 
-@register_tensor_op('le')
+
+@register_tensor_op("le")
 def less_equal_op(x, y):
     """Returns the truth value of :math:`x <= y` element-wise.
 
@@ -43,6 +46,9 @@ def less_equal_op(x, y):
 
     """
     return LessEqual()(x, y)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

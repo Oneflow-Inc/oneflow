@@ -1,4 +1,3 @@
-
 from oneflow.ops.nn_ops import conv1d
 from oneflow.ops.nn_ops import conv2d
 from oneflow.ops.nn_ops import conv3d
@@ -40,7 +39,9 @@ from oneflow.ops.domain_ops import api_fused_self_attention_query_mul_key_and_va
 from oneflow.ops.math_ops import relu as relu
 from oneflow.ops.math_ops import tril as tril
 from oneflow.ops.math_ops import fused_scale_tril as fused_scale_tril
-from oneflow.ops.math_ops import fused_scale_tril_softmax_dropout as fused_scale_tril_softmax_dropout
+from oneflow.ops.math_ops import (
+    fused_scale_tril_softmax_dropout as fused_scale_tril_softmax_dropout,
+)
 from oneflow.ops.loss_ops import ctc_greedy_decoder
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.module import Module

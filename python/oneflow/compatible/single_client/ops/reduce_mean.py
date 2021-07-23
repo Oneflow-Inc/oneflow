@@ -2,12 +2,22 @@ import collections
 from typing import Optional, Union
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 
-def reduce_mean(input_blob: oneflow._oneflow_internal.BlobDesc, axis: Optional[Union[collections.Sized, int]]=None, keepdims: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def reduce_mean(
+    input_blob: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[Union[collections.Sized, int]] = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the mean of input Blob along the specified axis
 
     Args:
@@ -42,9 +52,13 @@ def reduce_mean(input_blob: oneflow._oneflow_internal.BlobDesc, axis: Optional[U
         #      [8.]]
 
     """
-    reduce_sum = flow.math.reduce_sum(input_blob, axis=axis, keepdims=keepdims, name=name)
+    reduce_sum = flow.math.reduce_sum(
+        input_blob, axis=axis, keepdims=keepdims, name=name
+    )
     if input_blob.is_dynamic:
-        reduce_count = flow.math.reduced_shape_elem_cnt(input_blob, axis=axis, dtype=input_blob.dtype)
+        reduce_count = flow.math.reduced_shape_elem_cnt(
+            input_blob, axis=axis, dtype=input_blob.dtype
+        )
         return reduce_sum / reduce_count
     else:
         if axis is None:

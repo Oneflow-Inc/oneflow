@@ -2,13 +2,14 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Sinh(Module):
 
+class Sinh(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.sinh(x)
+
 
 def sinh_op(x):
     """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
@@ -40,7 +41,8 @@ def sinh_op(x):
     """
     return Sinh()(x)
 
-@register_tensor_op('sinh')
+
+@register_tensor_op("sinh")
 def sinh_op_tensor(x):
     """
 
@@ -50,6 +52,9 @@ def sinh_op_tensor(x):
 
     """
     return Sinh()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

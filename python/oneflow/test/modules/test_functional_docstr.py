@@ -5,11 +5,21 @@ import oneflow as flow
 from oneflow.framework.functional import Function
 from test_util import GenArgList
 
+
 def _is_oneflow_functional(object):
     return isinstance(object, Function)
 
-def _run_functional_doctest(test_case, globs=None, verbose=None, optionflags=0, raise_on_error=True, module=flow.F):
+
+def _run_functional_doctest(
+    test_case,
+    globs=None,
+    verbose=None,
+    optionflags=0,
+    raise_on_error=True,
+    module=flow.F,
+):
     import doctest
+
     parser = doctest.DocTestParser()
     if raise_on_error:
         runner = doctest.DebugRunner(verbose=verbose, optionflags=optionflags)
@@ -18,17 +28,21 @@ def _run_functional_doctest(test_case, globs=None, verbose=None, optionflags=0, 
     r = inspect.getmembers(flow.F, _is_oneflow_functional)
     for (name, fun) in r:
         if fun.__doc__ is not None:
-            print('test on docstr of: ', '.'.join([module.__name__, name]))
+            print("test on docstr of: ", ".".join([module.__name__, name]))
             test = parser.get_doctest(fun.__doc__, {}, __name__, __file__, 0)
             runner.run(test)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
-
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()
-        arg_dict['module'] = [flow.F]
+        arg_dict["module"] = [flow.F]
         for arg in GenArgList(arg_dict):
-            _run_functional_doctest(test_case, raise_on_error=True, verbose=None, module=arg[0])
-if __name__ == '__main__':
+            _run_functional_doctest(
+                test_case, raise_on_error=True, verbose=None, module=arg[0]
+            )
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -5,12 +5,21 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.utils import _check_axis
 
+
 def _build_reduce_op(op_type_name, keepdims):
-    return flow.builtin_op(op_type_name).Input('input_tensor').Output('output_tensor').Attr('keepdims', keepdims).Build()
+    return (
+        flow.builtin_op(op_type_name)
+        .Input("input_tensor")
+        .Output("output_tensor")
+        .Attr("keepdims", keepdims)
+        .Build()
+    )
+
 
 class Sum(Module):
-
-    def __init__(self, axis: Optional[Union[int, Sequence[int]]]=None, keepdims: bool=False) -> None:
+    def __init__(
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
+    ) -> None:
         super().__init__()
         self.axis = axis
         self.keepdims = keepdims
@@ -21,7 +30,8 @@ class Sum(Module):
             return input
         return flow.F.reduce_sum(input, axis=axis_checked, keepdims=self.keepdims)
 
-@register_tensor_op('sum')
+
+@register_tensor_op("sum")
 def _sum(input, dim=None, keepdim=False):
     """Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
@@ -41,9 +51,11 @@ def _sum(input, dim=None, keepdim=False):
     """
     return Sum(dim, keepdim)(input)
 
-class Mean(Module):
 
-    def __init__(self, axis: Optional[Union[int, Sequence[int]]]=None, keepdims: bool=False) -> None:
+class Mean(Module):
+    def __init__(
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
+    ) -> None:
         super().__init__()
         self.axis = axis
         self.keepdims = keepdims
@@ -54,7 +66,8 @@ class Mean(Module):
             return input
         return flow.F.reduce_mean(input, axis=axis_checked, keepdims=self.keepdims)
 
-@register_tensor_op('mean')
+
+@register_tensor_op("mean")
 def _mean(input, dim=None, keepdim=False):
     """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
@@ -74,13 +87,15 @@ def _mean(input, dim=None, keepdim=False):
     """
     return Mean(dim, keepdim)(input)
 
-class Min(Module):
 
-    def __init__(self, axis: Optional[Union[int, Sequence[int]]]=None, keepdims: bool=False) -> None:
+class Min(Module):
+    def __init__(
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
+    ) -> None:
         super().__init__()
         self.axis = axis
         self.keepdims = keepdims
-        self._op = _build_reduce_op('reduce_min', keepdims)
+        self._op = _build_reduce_op("reduce_min", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
@@ -88,7 +103,8 @@ class Min(Module):
             return input
         return self._op(input, axis=axis_checked)[0]
 
-@register_tensor_op('min')
+
+@register_tensor_op("min")
 def _min(input, dim=None, keepdim=False):
     """Computes the minimum value of all elements in the input tensor.
     
@@ -108,13 +124,15 @@ def _min(input, dim=None, keepdim=False):
     """
     return Min(dim, keepdim)(input)
 
-class Max(Module):
 
-    def __init__(self, axis: Optional[Union[int, Sequence[int]]]=None, keepdims: bool=False) -> None:
+class Max(Module):
+    def __init__(
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
+    ) -> None:
         super().__init__()
         self.axis = axis
         self.keepdims = keepdims
-        self._op = _build_reduce_op('reduce_max', keepdims)
+        self._op = _build_reduce_op("reduce_max", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
@@ -122,7 +140,8 @@ class Max(Module):
             return input
         return self._op(input, axis=axis_checked)[0]
 
-@register_tensor_op('max')
+
+@register_tensor_op("max")
 def _max(input, dim=None, keepdim=False):
     """Computes the maximum value of all elements in the input tensor.
     
@@ -141,6 +160,9 @@ def _max(input, dim=None, keepdim=False):
 
     """
     return Max(dim, keepdim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

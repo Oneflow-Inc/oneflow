@@ -1,9 +1,16 @@
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.modules.batchnorm import _NormBase
 
-class _InstanceNorm(_NormBase):
 
-    def __init__(self, num_features: int, eps: float=1e-05, momentum: float=0.1, affine: bool=False, track_running_stats: bool=False):
+class _InstanceNorm(_NormBase):
+    def __init__(
+        self,
+        num_features: int,
+        eps: float = 1e-05,
+        momentum: float = 0.1,
+        affine: bool = False,
+        track_running_stats: bool = False,
+    ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
     def _forward(self, x):
@@ -32,6 +39,9 @@ class _InstanceNorm(_NormBase):
         normalized_1d_out = self._forward(reshape_to_1d)
         reshape_back_to_nd = normalized_1d_out.reshape(list(x.shape))
         return reshape_back_to_nd
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

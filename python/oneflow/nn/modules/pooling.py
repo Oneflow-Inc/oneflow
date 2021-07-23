@@ -5,6 +5,7 @@ from oneflow.nn.modules.utils import _getint, _single, _pair, _triple
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSequence
 
+
 class AvgPool1d(Module):
     """Applies a 1D average pooling over an input signal composed of several input planes.
 
@@ -36,8 +37,16 @@ class AvgPool1d(Module):
     
     """
 
-    def __init__(self, kernel_size: _size_1_t, stride: Optional[_size_1_t]=None, padding: _size_1_t=0, ceil_mode: bool=False, count_include_pad: Optional[bool]=None):
+    def __init__(
+        self,
+        kernel_size: _size_1_t,
+        stride: Optional[_size_1_t] = None,
+        padding: _size_1_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: Optional[bool] = None,
+    ):
         raise NotImplementedError
+
 
 class AvgPool2d(Module):
     """Performs the 2d-average pooling on the input.
@@ -75,27 +84,51 @@ class AvgPool2d(Module):
         
     """
 
-    def __init__(self, kernel_size: _size_2_t, stride: Optional[_size_2_t]=None, padding: _size_2_t=0, ceil_mode: bool=False, count_include_pad: Optional[bool]=None, divisor_override: Optional[int]=None):
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: Optional[bool] = None,
+        divisor_override: Optional[int] = None,
+    ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride) if stride is not None else _pair(kernel_size)
-        assert isinstance(padding, int) or isinstance(padding, tuple), 'padding can only int int or tuple of 2 ints.'
+        assert isinstance(padding, int) or isinstance(
+            padding, tuple
+        ), "padding can only int int or tuple of 2 ints."
         padding = _pair(padding)
         self.padding = padding
         padding = [0, 0, *padding]
-        assert count_include_pad is None, 'count_include_pad not supported yet'
-        assert divisor_override is None, 'divisor_override not supported yet'
-        self._channel_pos = 'channels_first'
-        (self._padding_type, _pads_list) = calc_pool_padding(padding, get_dhw_offset(self._channel_pos), 2)
+        assert count_include_pad is None, "count_include_pad not supported yet"
+        assert divisor_override is None, "divisor_override not supported yet"
+        self._channel_pos = "channels_first"
+        (self._padding_type, _pads_list) = calc_pool_padding(
+            padding, get_dhw_offset(self._channel_pos), 2
+        )
         self._padding_before = [pad[0] for pad in _pads_list]
         self._padding_after = [pad[1] for pad in _pads_list]
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        return flow.F.avg_pool_2d(x, kernel_size=self.kernel_size, stride=self.stride, padding=self._padding_type, padding_before=self._padding_before, padding_after=self._padding_after, ceil_mode=self.ceil_mode, data_format=self._channel_pos)
+        return flow.F.avg_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self._padding_type,
+            padding_before=self._padding_before,
+            padding_after=self._padding_after,
+            ceil_mode=self.ceil_mode,
+            data_format=self._channel_pos,
+        )
 
     def extra_repr(self) -> str:
-        return 'kernel_size={kernel_size}, stride={stride}, padding={padding}, ceil_mode={ceil_mode}'.format(**self.__dict__)
+        return "kernel_size={kernel_size}, stride={stride}, padding={padding}, ceil_mode={ceil_mode}".format(
+            **self.__dict__
+        )
+
 
 class AvgPool3d(Module):
     """Applies a 3D average pooling over an input signal composed of several input planes.
@@ -151,24 +184,49 @@ class AvgPool3d(Module):
 
     """
 
-    def __init__(self, kernel_size: _size_3_t, stride: Optional[_size_3_t]=None, padding: _size_3_t=0, ceil_mode: bool=False, count_include_pad: Optional[bool]=None, divisor_override: Optional[int]=None):
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: _size_3_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: Optional[bool] = None,
+        divisor_override: Optional[int] = None,
+    ):
         super().__init__()
         kernel_size = _triple(kernel_size)
         stride = _triple(stride) if stride is not None else _triple(kernel_size)
-        assert padding == (0, 0, 0), 'padding>0 not supported yet'
-        assert isinstance(padding, int) or isinstance(padding, tuple), 'padding can only int int or tuple of 3 ints.'
+        assert padding == (0, 0, 0), "padding>0 not supported yet"
+        assert isinstance(padding, int) or isinstance(
+            padding, tuple
+        ), "padding can only int int or tuple of 3 ints."
         padding = _triple(padding)
         padding = [0, 0, *padding]
-        assert count_include_pad is None, 'count_include_pad not supported yet'
-        assert divisor_override is None, 'divisor_override not supported yet'
-        _channel_pos = 'channels_first'
-        (_padding_type, _pads_list) = calc_pool_padding(padding, get_dhw_offset(_channel_pos), 3)
+        assert count_include_pad is None, "count_include_pad not supported yet"
+        assert divisor_override is None, "divisor_override not supported yet"
+        _channel_pos = "channels_first"
+        (_padding_type, _pads_list) = calc_pool_padding(
+            padding, get_dhw_offset(_channel_pos), 3
+        )
         _padding_before = [pad[0] for pad in _pads_list]
         _padding_after = [pad[1] for pad in _pads_list]
-        self._op = flow.builtin_op('avg_pool_3d').Attr('data_format', _channel_pos).Attr('pool_size', kernel_size).Attr('strides', stride).Attr('ceil_mode', ceil_mode).Attr('padding', _padding_type).Attr('padding_before', _padding_before).Attr('padding_after', _padding_after).Input('x').Output('y').Build()
+        self._op = (
+            flow.builtin_op("avg_pool_3d")
+            .Attr("data_format", _channel_pos)
+            .Attr("pool_size", kernel_size)
+            .Attr("strides", stride)
+            .Attr("ceil_mode", ceil_mode)
+            .Attr("padding", _padding_type)
+            .Attr("padding_before", _padding_before)
+            .Attr("padding_after", _padding_after)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 class MaxPool1d(Module):
     """The interface is consistent with PyTorch.
@@ -211,26 +269,46 @@ class MaxPool1d(Module):
 
     """
 
-    def __init__(self, kernel_size: _size_1_t, stride: Optional[_size_1_t]=None, padding: _size_1_t=0, dilation: _size_1_t=1, return_indices: bool=False, ceil_mode: bool=False):
+    def __init__(
+        self,
+        kernel_size: _size_1_t,
+        stride: Optional[_size_1_t] = None,
+        padding: _size_1_t = 0,
+        dilation: _size_1_t = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False,
+    ):
         super().__init__()
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride) if stride is not None else self.kernel_size
-        data_format = 'NCL'
-        self.channel_pos = 'channels_first' if data_format == 'NCL' else 'channels_last'
+        data_format = "NCL"
+        self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
         self.dilation = _single(dilation)
         self.padding = _single(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        (y, indice) = flow.F.maxpool_1d(x, data_format=self.channel_pos, padding=self.padding, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation, return_indices=True, ceil_mode=self.ceil_mode)
+        (y, indice) = flow.F.maxpool_1d(
+            x,
+            data_format=self.channel_pos,
+            padding=self.padding,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
         if self.return_indices:
             return (y, indice)
         else:
             return y
 
     def extra_repr(self) -> str:
-        return 'kernel_size={}, stride={}, padding={}'.format(self.kernel_size, self.stride, self.padding)
+        return "kernel_size={}, stride={}, padding={}".format(
+            self.kernel_size, self.stride, self.padding
+        )
+
 
 class MaxPool2d(Module):
     """The interface is consistent with PyTorch.
@@ -306,26 +384,48 @@ class MaxPool2d(Module):
 
     """
 
-    def __init__(self, kernel_size: _size_2_t, stride: Optional[_size_2_t]=None, padding: _size_2_t=0, dilation: _size_2_t=1, return_indices: bool=False, ceil_mode: bool=False):
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        dilation: _size_2_t = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False,
+    ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        data_format = 'NCHW'
-        self.channel_pos = 'channels_first' if data_format == 'NCHW' else 'channels_last'
+        data_format = "NCHW"
+        self.channel_pos = (
+            "channels_first" if data_format == "NCHW" else "channels_last"
+        )
         self.stride = _pair(stride) if stride is not None else _pair(kernel_size)
-        self.dilation = _GetSequence(dilation, 2, 'dilation')
+        self.dilation = _GetSequence(dilation, 2, "dilation")
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
         self.padding = _pair(padding)
 
     def forward(self, x):
-        (y, indice) = flow.F.maxpool_2d(x, data_format=self.channel_pos, padding=self.padding, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation, return_indices=True, ceil_mode=self.ceil_mode)
+        (y, indice) = flow.F.maxpool_2d(
+            x,
+            data_format=self.channel_pos,
+            padding=self.padding,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
         if self.return_indices:
             return (y, indice)
         else:
             return y
 
     def extra_repr(self) -> str:
-        return 'kernel_size={}, stride={}, padding={}, dilation={}'.format(self.kernel_size, self.stride, self.padding, self.dilation)
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
+
 
 class MaxPool3d(Module):
     """The interface is consistent with PyTorch.
@@ -407,26 +507,50 @@ class MaxPool3d(Module):
 
     """
 
-    def __init__(self, kernel_size: _size_3_t, stride: Optional[_size_3_t]=None, padding: _size_3_t=0, dilation: _size_3_t=1, return_indices: bool=False, ceil_mode: bool=False):
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: _size_3_t = 0,
+        dilation: _size_3_t = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False,
+    ):
         super().__init__()
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride) if stride is not None else _triple(kernel_size)
-        data_format = 'NCDHW'
-        self.channel_pos = 'channels_last' if data_format == 'NDHWC' else 'channels_first'
-        self.dilation = _GetSequence(dilation, 3, 'dilation')
+        data_format = "NCDHW"
+        self.channel_pos = (
+            "channels_last" if data_format == "NDHWC" else "channels_first"
+        )
+        self.dilation = _GetSequence(dilation, 3, "dilation")
         self.padding = _triple(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        (y, indice) = flow.F.maxpool_3d(x, data_format=self.channel_pos, padding=self.padding, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation, return_indices=True, ceil_mode=self.ceil_mode)
+        (y, indice) = flow.F.maxpool_3d(
+            x,
+            data_format=self.channel_pos,
+            padding=self.padding,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
         if self.return_indices:
             return (y, indice)
         else:
             return y
 
     def extra_repr(self) -> str:
-        return 'kernel_size={}, stride={}, padding={}, dilation={}'.format(self.kernel_size, self.stride, self.padding, self.dilation)
-if __name__ == '__main__':
+        return "kernel_size={}, stride={}, padding={}, dilation={}".format(
+            self.kernel_size, self.stride, self.padding, self.dilation
+        )
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

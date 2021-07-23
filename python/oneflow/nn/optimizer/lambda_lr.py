@@ -1,6 +1,7 @@
 import types
 from .lr_scheduler import LrScheduler
 
+
 class LambdaLR(LrScheduler):
     """
     Sets the learning rate of each parameter group to the initial lr times a given function.
@@ -37,7 +38,9 @@ class LambdaLR(LrScheduler):
         if not isinstance(lr_lambda, (list, tuple)):
             self.lr_lambdas = [lr_lambda] * len(optimizer.param_groups)
         else:
-            assert len(lr_lambda) == len(optimizer.param_groups), f'Expected {len(optimizer.param_groups)} lr_lambdas, but got {len(lr_lambda)}'
+            assert len(lr_lambda) == len(
+                optimizer.param_groups
+            ), f"Expected {len(optimizer.param_groups)} lr_lambdas, but got {len(lr_lambda)}"
             self.lr_lambdas = list(lr_lambda)
         super().__init__(optimizer, last_step, verbose)
 
@@ -49,11 +52,15 @@ class LambdaLR(LrScheduler):
         The learning rate lambda functions will only be saved if they are callable objects
         and not if they are functions or lambdas.
         """
-        state_dict = {key: value for (key, value) in self.__dict__.items() if key not in ('optimizer', 'lr_lambdas')}
-        state_dict['lr_lambdas'] = [None] * len(self.lr_lambdas)
+        state_dict = {
+            key: value
+            for (key, value) in self.__dict__.items()
+            if key not in ("optimizer", "lr_lambdas")
+        }
+        state_dict["lr_lambdas"] = [None] * len(self.lr_lambdas)
         for (idx, fn) in enumerate(self.lr_lambdas):
             if not isinstance(fn, types.FunctionType):
-                state_dict['lr_lambdas'][idx] = fn.__dict__.copy()
+                state_dict["lr_lambdas"][idx] = fn.__dict__.copy()
         return state_dict
 
     def load_state_dict(self, state_dict):
@@ -63,12 +70,15 @@ class LambdaLR(LrScheduler):
             state_dict (dict): scheduler state. Should be an object returned
                 from a call to :meth:`state_dict`.
         """
-        lr_lambdas = state_dict.pop('lr_lambdas')
+        lr_lambdas = state_dict.pop("lr_lambdas")
         self.__dict__.update(state_dict)
-        state_dict['lr_lambdas'] = lr_lambdas
+        state_dict["lr_lambdas"] = lr_lambdas
         for (idx, fn) in enumerate(lr_lambdas):
             if fn is not None:
                 self.lr_lambdas[idx].__dict__.update(fn)
 
     def get_lr(self):
-        return [base_lr * lmbda(self.last_step) for (lmbda, base_lr) in zip(self.lr_lambdas, self.base_lrs)]
+        return [
+            base_lr * lmbda(self.last_step)
+            for (lmbda, base_lr) in zip(self.lr_lambdas, self.base_lrs)
+        ]

@@ -3,24 +3,32 @@ import traceback
 from typing import Optional, Union, Sequence, List, Text, Callable
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import session_context as session_ctx
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
 from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
 from oneflow import oneflow_deprecate
 from oneflow._oneflow_internal.oneflow.core.job import job_conf as job_conf_cfg
-from oneflow._oneflow_internal.oneflow.core.job import learning_rate_schedule_conf as learning_rate_schedule_conf_cfg
+from oneflow._oneflow_internal.oneflow.core.job import (
+    learning_rate_schedule_conf as learning_rate_schedule_conf_cfg,
+)
 import oneflow._oneflow_internal
+
 
 def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
-    assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE, "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
+    assert (
+        rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+    ), "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
 
-class ClipGradientConf:
 
+class ClipGradientConf:
     @property
     def clip_conf(self) -> job_conf_cfg.ClipConf:
         raise NotImplementedError()
+
 
 class by_global_norm(ClipGradientConf):
     """This operator limits the norm of `Input` with `clip_norm`.
@@ -79,11 +87,12 @@ class by_global_norm(ClipGradientConf):
         clip_conf.mutable_clip_by_global_norm().set_clip_norm(self.clip_norm)
         return clip_conf
 
-class WarmupConf:
 
+class WarmupConf:
     @property
     def warmup_conf(self) -> learning_rate_schedule_conf_cfg.WarmupConf:
         raise NotImplementedError()
+
 
 class constant(WarmupConf):
     """This operator use the constant warmup strategy to adjust the learning rate.
@@ -143,6 +152,7 @@ class constant(WarmupConf):
         warmup_conf.mutable_constant_conf().set_multiplier(self.multiplier)
         return warmup_conf
 
+
 class linear(WarmupConf):
     """This operator uses the linear warmup strategy to adjust the learning rate.
 
@@ -196,9 +206,14 @@ class linear(WarmupConf):
         warmup_conf.mutable_linear_conf().set_start_multiplier(self.start_multiplier)
         return warmup_conf
 
-class LrScheduler:
 
-    def __init__(self, base_lr: Optional[float]=None, lr_lbn: Optional[Text]=None, warmup: Optional[WarmupConf]=None):
+class LrScheduler:
+    def __init__(
+        self,
+        base_lr: Optional[float] = None,
+        lr_lbn: Optional[Text] = None,
+        warmup: Optional[WarmupConf] = None,
+    ):
         self.base_lr = base_lr
         self.lr_lbn = lr_lbn
         self.warmup = warmup
@@ -210,7 +225,9 @@ class LrScheduler:
         return self.warmup.warmup_conf
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         raise NotImplementedError()
 
     def SetLrFieldsInOptimizerConf(self, optimizer_conf) -> None:
@@ -225,7 +242,10 @@ class LrScheduler:
             if self.warmup_conf is not None:
                 optimizer_conf.mutable_warmup_conf().CopyFrom(self.warmup_conf)
             if self.learning_rate_decay_conf is not None:
-                optimizer_conf.mutable_learning_rate_decay().CopyFrom(self.learning_rate_decay_conf)
+                optimizer_conf.mutable_learning_rate_decay().CopyFrom(
+                    self.learning_rate_decay_conf
+                )
+
 
 class CosineScheduler(LrScheduler):
     """This operator creates a Cosine decayed learning rate scheduler.
@@ -279,26 +299,39 @@ class CosineScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, alpha: float=0.0, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        alpha: float = 0.0,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.alpha = alpha
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.mutable_cosine_conf().set_decay_batches(self.steps)
         learning_rate_decay_conf.mutable_cosine_conf().set_alpha(self.alpha)
         return learning_rate_decay_conf
 
-class CustomScheduler(LrScheduler):
 
+class CustomScheduler(LrScheduler):
     def __init__(self, lbn: Text):
         super().__init__(lr_lbn=lbn)
 
     @property
-    def learning_rate_decay_conf(self) -> learning_rate_schedule_conf_cfg.LearningRateDecayConf:
+    def learning_rate_decay_conf(
+        self,
+    ) -> learning_rate_schedule_conf_cfg.LearningRateDecayConf:
         return None
+
 
 class PiecewiseConstantScheduler(LrScheduler):
     """This operator creates a piecewise constant learning rate scheduler.
@@ -348,20 +381,32 @@ class PiecewiseConstantScheduler(LrScheduler):
 
     """
 
-    def __init__(self, boundaries: Sequence[int], values: Sequence[float], warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        boundaries: Sequence[int],
+        values: Sequence[float],
+        warmup: Optional[WarmupConf] = None,
+    ):
         assert len(boundaries) + 1 == len(values)
         super().__init__(base_lr=values[0], warmup=warmup)
         self.boundaries = boundaries
         self.values = values
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
         for boundary in self.boundaries:
-            learning_rate_decay_conf.mutable_piecewise_constant_conf().add_boundaries(boundary)
+            learning_rate_decay_conf.mutable_piecewise_constant_conf().add_boundaries(
+                boundary
+            )
         for value in self.values:
             learning_rate_decay_conf.mutable_piecewise_constant_conf().add_values(value)
         return learning_rate_decay_conf
+
 
 class PiecewiseScalingScheduler(LrScheduler):
     """This operator creates a piecewise scaled decayed learning rate scheduler.
@@ -414,7 +459,13 @@ class PiecewiseScalingScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, boundaries: Sequence[int], scale: Union[float, Sequence[float]], warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        boundaries: Sequence[int],
+        scale: Union[float, Sequence[float]],
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.boundaries = boundaries
         if not isinstance(scale, collections.abc.Sequence):
@@ -423,13 +474,20 @@ class PiecewiseScalingScheduler(LrScheduler):
         self.scales = [1] + list(scale)
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
         for boundary in self.boundaries:
-            learning_rate_decay_conf.mutable_piecewise_scaling_conf().add_boundaries(boundary)
+            learning_rate_decay_conf.mutable_piecewise_scaling_conf().add_boundaries(
+                boundary
+            )
         for scale in self.scales:
             learning_rate_decay_conf.mutable_piecewise_scaling_conf().add_scales(scale)
         return learning_rate_decay_conf
+
 
 class PolynomialScheduler(LrScheduler):
     """This operator creates a polynomial decayed learning rate scheduler.
@@ -488,7 +546,15 @@ class PolynomialScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, end_learning_rate: float=0.0001, power: float=1.0, cycle: bool=False, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        end_learning_rate: float = 0.0001,
+        power: float = 1.0,
+        cycle: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.end_learning_rate = end_learning_rate
@@ -496,22 +562,52 @@ class PolynomialScheduler(LrScheduler):
         self.cycle = cycle
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.mutable_polynomial_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate(self.end_learning_rate)
+        learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate(
+            self.end_learning_rate
+        )
         learning_rate_decay_conf.mutable_polynomial_conf().set_power(self.power)
         learning_rate_decay_conf.mutable_polynomial_conf().set_cycle(self.cycle)
         return learning_rate_decay_conf
+
+
 from oneflow import oneflow_deprecate
+
 
 @oneflow_deprecate()
 class PolynomialSchduler(PolynomialScheduler):
-
-    def __init__(self, base_lr: float, steps: int, end_learning_rate: float=0.0001, power: float=1.0, cycle: bool=False, warmup: Optional[WarmupConf]=None):
-        print('WARNING:', 'oneflow.compatible.single_client.optimizer.PolynomialSchduler', 'will be removed in the future, use {} instead.'.format('oneflow.compatible.single_client.optimizer.PolynomialScheduler'))
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        end_learning_rate: float = 0.0001,
+        power: float = 1.0,
+        cycle: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
+        print(
+            "WARNING:",
+            "oneflow.compatible.single_client.optimizer.PolynomialSchduler",
+            "will be removed in the future, use {} instead.".format(
+                "oneflow.compatible.single_client.optimizer.PolynomialScheduler"
+            ),
+        )
         print(traceback.format_stack()[-2])
-        super().__init__(base_lr=base_lr, steps=steps, end_learning_rate=end_learning_rate, power=power, cycle=cycle, warmup=warmup)
+        super().__init__(
+            base_lr=base_lr,
+            steps=steps,
+            end_learning_rate=end_learning_rate,
+            power=power,
+            cycle=cycle,
+            warmup=warmup,
+        )
+
 
 class LinearCosineScheduler(LrScheduler):
     """This operator creates a linear cosine decayed learning rate scheduler.
@@ -564,7 +660,15 @@ class LinearCosineScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, num_periods: float=0.5, alpha: float=0.0, beta: float=0.001, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        num_periods: float = 0.5,
+        alpha: float = 0.0,
+        beta: float = 0.001,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.num_periods = num_periods
@@ -572,13 +676,22 @@ class LinearCosineScheduler(LrScheduler):
         self.beta = beta
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
-        learning_rate_decay_conf.mutable_linear_cosine_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_linear_cosine_conf().set_num_periods(self.num_periods)
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_num_periods(
+            self.num_periods
+        )
         learning_rate_decay_conf.mutable_linear_cosine_conf().set_alpha(self.alpha)
         learning_rate_decay_conf.mutable_linear_cosine_conf().set_beta(self.beta)
         return learning_rate_decay_conf
+
 
 class ExponentialScheduler(LrScheduler):
     """This operator creates a exponential decayed learning rate scheduler.
@@ -635,19 +748,37 @@ class ExponentialScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, decay_rate: float, staircase=False, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        decay_rate: float,
+        staircase=False,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
-        learning_rate_decay_conf.mutable_exponential_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_exponential_conf().set_decay_rate(self.decay_rate)
-        learning_rate_decay_conf.mutable_exponential_conf().set_staircase(self.staircase)
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
+
 
 class InverseTimeScheduler(LrScheduler):
     """This operator creates a inverse time decayed learning rate scheduler.
@@ -704,19 +835,37 @@ class InverseTimeScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, decay_rate: float, staircase: bool=False, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        decay_rate: float,
+        staircase: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_rate(self.decay_rate)
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_staircase(self.staircase)
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
+
 
 class NaturalExpScheduler(LrScheduler):
     """This operator creates a natural exponential decayed learning rate scheduler.
@@ -773,27 +922,40 @@ class NaturalExpScheduler(LrScheduler):
 
     """
 
-    def __init__(self, base_lr: float, steps: int, decay_rate: float, staircase: bool=False, warmup: Optional[WarmupConf]=None):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        decay_rate: float,
+        staircase: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
-        learning_rate_decay_conf = learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_rate(self.decay_rate)
+        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_rate(
+            self.decay_rate
+        )
         learning_rate_decay_conf.mutable_natural_exp_conf.set_staircase(self.staircase)
         return learning_rate_decay_conf
 
-class LossScalePolicy:
 
+class LossScalePolicy:
     def SetLossScaleFieldsInTrainConf(self, train_conf):
         raise NotImplementedError()
 
-class StaticLossScalePolicy(LossScalePolicy):
 
+class StaticLossScalePolicy(LossScalePolicy):
     def __init__(self, loss_scale_factor: float):
         super().__init__()
         self.loss_scale_factor = loss_scale_factor
@@ -801,22 +963,33 @@ class StaticLossScalePolicy(LossScalePolicy):
     def SetLossScaleFieldsInTrainConf(self, train_conf):
         train_conf.loss_scale_factor = self.loss_scale_factor
 
-class DynamicLossScalePolicy(LossScalePolicy):
 
-    def __init__(self, initial_loss_scale=2 ** 30, increment_period=2000, multiplier=2.0):
+class DynamicLossScalePolicy(LossScalePolicy):
+    def __init__(
+        self, initial_loss_scale=2 ** 30, increment_period=2000, multiplier=2.0
+    ):
         super().__init__()
         self.initial_loss_scale = initial_loss_scale
         self.increment_period = increment_period
         self.multiplier = multiplier
 
     def SetLossScaleFieldsInTrainConf(self, train_conf):
-        train_conf.mutable_dynamic_loss_scale_policy().set_initial_loss_scale(self.initial_loss_scale)
-        train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(self.increment_period)
+        train_conf.mutable_dynamic_loss_scale_policy().set_initial_loss_scale(
+            self.initial_loss_scale
+        )
+        train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(
+            self.increment_period
+        )
         train_conf.mutable_dynamic_loss_scale_policy().set_multiplier(self.multiplier)
 
-class Optimizer:
 
-    def __init__(self, loss_scale_factor: Optional[int]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None):
+class Optimizer:
+    def __init__(
+        self,
+        loss_scale_factor: Optional[int] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+    ):
         self.train_step_lbn = train_step_lbn
         if loss_scale_factor is not None:
             assert loss_scale_policy is None
@@ -849,12 +1022,19 @@ class Optimizer:
         self._AddOptimizerConfInTrainConf(train_conf)
         return train_conf
 
-    def minimize(self, loss: Union[Sequence[oneflow._oneflow_internal.BlobDesc], oneflow._oneflow_internal.BlobDesc]) -> None:
+    def minimize(
+        self,
+        loss: Union[
+            Sequence[oneflow._oneflow_internal.BlobDesc],
+            oneflow._oneflow_internal.BlobDesc,
+        ],
+    ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
         c_api_util.CurJobBuildAndInferCtx_SetTrainConf(self.train_conf)
         for x in loss:
             flow.losses.add_loss(x)
+
 
 class SGD(Optimizer):
     """The optimizer of the stochastic gradient descent algorithm.
@@ -912,7 +1092,18 @@ class SGD(Optimizer):
             return loss
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, loss_scale_factor: Optional[float]=None, momentum: float=0.9, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        loss_scale_factor: Optional[float] = None,
+        momentum: float = 0.9,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -930,6 +1121,7 @@ class SGD(Optimizer):
             optimizer_conf.mutable_momentum_conf().set_beta(self.momentum)
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class SGDW(Optimizer):
     """The optimizer of the stochastic-gradient-descent-weight-decay algorithm.
@@ -995,7 +1187,21 @@ class SGDW(Optimizer):
             return loss
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, loss_scale_factor: Optional[float]=None, momentum: float=0.9, weight_decay: Optional[float]=None, weight_decay_includes: Optional[Union[Sequence[Text], Text]]=None, weight_decay_excludes: Optional[Union[Sequence[Text], Text]]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        loss_scale_factor: Optional[float] = None,
+        momentum: float = 0.9,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1019,16 +1225,26 @@ class SGDW(Optimizer):
         else:
             optimizer_conf.mutable_momentum_conf().set_beta(self.momentum)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
-            assert not (self.weight_decay_excludes is not None and self.weight_decay_includes is not None)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
             if self.weight_decay_includes is not None:
                 for weight_decay_include in self.weight_decay_includes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(weight_decay_include)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
                 for weight_decay_exclude in self.weight_decay_excludes:
-                    optimizer_conf.weight_decay_conf().mutable_excludes().add_pattern(weight_decay_exclude)
+                    optimizer_conf.weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class Adam(Optimizer):
     """The optimizer of the Adam algorithm.
@@ -1107,7 +1323,21 @@ class Adam(Optimizer):
             return loss
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, beta1=0.9, beta2=0.999, epsilon=1e-08, do_bias_correction=False, loss_scale_factor: Optional[float]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-08,
+        do_bias_correction=False,
+        loss_scale_factor: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1125,9 +1355,12 @@ class Adam(Optimizer):
         optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
         optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
-        optimizer_conf.mutable_adam_conf().set_do_bias_correction(self.do_bias_correction)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class AdamW(Optimizer):
     """The optimizer of the Adam-weight-decay algorithm.
@@ -1218,7 +1451,24 @@ class AdamW(Optimizer):
 
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, beta1=0.9, beta2=0.999, epsilon=1e-08, do_bias_correction=False, loss_scale_factor: Optional[float]=None, weight_decay: Optional[float]=None, weight_decay_includes: Optional[Union[Sequence[Text], Text]]=None, weight_decay_excludes: Optional[Union[Sequence[Text], Text]]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1=0.9,
+        beta2=0.999,
+        epsilon=1e-08,
+        do_bias_correction=False,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1243,18 +1493,30 @@ class AdamW(Optimizer):
         optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
         optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
-        optimizer_conf.mutable_adam_conf().set_do_bias_correction(self.do_bias_correction)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
-            assert not (self.weight_decay_excludes is not None and self.weight_decay_includes is not None)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
             if self.weight_decay_includes is not None:
                 for weight_decay_include in self.weight_decay_includes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(weight_decay_include)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
                 for weight_decay_exclude in self.weight_decay_excludes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(weight_decay_exclude)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class RMSProp(Optimizer):
     """The optimizer of the RMSProp algorithm.
@@ -1323,7 +1585,20 @@ class RMSProp(Optimizer):
 
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, decay_rate: float=0.99, epsilon: float=1e-08, centered: bool=False, loss_scale_factor: Optional[float]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        decay_rate: float = 0.99,
+        epsilon: float = 1e-08,
+        centered: bool = False,
+        loss_scale_factor: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1342,6 +1617,7 @@ class RMSProp(Optimizer):
         optimizer_conf.mutable_rmsprop_conf().set_epsilon(self.epsilon)
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class LARS(Optimizer):
     """The optimizer of the LARS algorithm.
@@ -1400,7 +1676,23 @@ class LARS(Optimizer):
 
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, momentum_beta: float=0.9, epsilon: float=1e-09, lars_coefficient: float=0.0001, loss_scale_factor: Optional[float]=None, weight_decay: Optional[float]=None, weight_decay_includes: Optional[Union[Sequence[Text], Text]]=None, weight_decay_excludes: Optional[Union[Sequence[Text], Text]]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        momentum_beta: float = 0.9,
+        epsilon: float = 1e-09,
+        lars_coefficient: float = 0.0001,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1425,16 +1717,26 @@ class LARS(Optimizer):
         optimizer_conf.mutable_lars_conf().set_epsilon(self.epsilon)
         optimizer_conf.mutable_lars_conf().set_lars_coefficient(self.lars_coefficient)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
-            assert not (self.weight_decay_excludes is not None and self.weight_decay_includes is not None)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
             if self.weight_decay_includes is not None:
                 for weight_decay_include in self.weight_decay_includes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(weight_decay_include)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
                 for weight_decay_exclude in self.weight_decay_excludes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(weight_decay_exclude)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class LazyAdam(Optimizer):
     """
@@ -1493,7 +1795,20 @@ class LazyAdam(Optimizer):
 
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, beta1: float=0.9, beta2: float=0.999, epsilon: float=1e-08, loss_scale_factor: Optional[float]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-08,
+        loss_scale_factor: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1512,6 +1827,7 @@ class LazyAdam(Optimizer):
         optimizer_conf.mutable_lazy_adam_conf().set_epsilon(self.epsilon)
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class LAMB(Optimizer):
     """
@@ -1539,7 +1855,23 @@ class LAMB(Optimizer):
 
     """
 
-    def __init__(self, lr_scheduler: LrScheduler, beta1: float=0.9, beta2: float=0.999, epsilon: float=1e-06, loss_scale_factor: Optional[float]=None, weight_decay: Optional[float]=None, weight_decay_includes: Optional[Union[Sequence[Text], Text]]=None, weight_decay_excludes: Optional[Union[Sequence[Text], Text]]=None, grad_clipping: Optional[ClipGradientConf]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None, variables: Optional[Union[Sequence[Text], Callable[[], Sequence[Text]]]]=GetVariablesForCurrentJob):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-06,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ] = GetVariablesForCurrentJob,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
@@ -1564,16 +1896,26 @@ class LAMB(Optimizer):
         optimizer_conf.mutable_lamb_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_lamb_conf().set_epsilon(self.epsilon)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
-            assert not (self.weight_decay_excludes is not None and self.weight_decay_includes is not None)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
             if self.weight_decay_includes is not None:
                 for weight_decay_include in self.weight_decay_includes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(weight_decay_include)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
                 for weight_decay_exclude in self.weight_decay_excludes:
-                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(weight_decay_exclude)
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 class CombinedOptimizer(Optimizer):
     """
@@ -1588,12 +1930,24 @@ class CombinedOptimizer(Optimizer):
         Example: see test_multi_optimizer.py
     """
 
-    def __init__(self, optimizers: Sequence[Optimizer], loss_scale_factor: Optional[float]=None, train_step_lbn: Optional[Text]=None, loss_scale_policy: Optional[LossScalePolicy]=None):
+    def __init__(
+        self,
+        optimizers: Sequence[Optimizer],
+        loss_scale_factor: Optional[float] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+    ):
         super().__init__(loss_scale_factor, train_step_lbn, loss_scale_policy)
         for optimizer in optimizers:
-            assert not isinstance(optimizer, CombinedOptimizer), 'Forbid constructing CombinedOptimizer recursively'
-            assert optimizer.train_step_lbn is None, 'Only one train step lbn among multi optimizers, please set thisparameter in CombinedOptimizer'
-            assert optimizer.loss_scale_policy is None, 'Only one loss scale policy among multi optimizers, please set thisparameter in CombinedOptimizer'
+            assert not isinstance(
+                optimizer, CombinedOptimizer
+            ), "Forbid constructing CombinedOptimizer recursively"
+            assert (
+                optimizer.train_step_lbn is None
+            ), "Only one train step lbn among multi optimizers, please set thisparameter in CombinedOptimizer"
+            assert (
+                optimizer.loss_scale_policy is None
+            ), "Only one loss scale policy among multi optimizers, please set thisparameter in CombinedOptimizer"
         self.optimizers = optimizers
 
     def Variables(self) -> List[Text]:
@@ -1613,7 +1967,9 @@ class CombinedOptimizer(Optimizer):
             union_set.union(s)
             inter_set = inter_set.intersection(s)
         assert union_set.issubset(all_variables)
-        assert len(inter_set) == 0, 'Do not allow overlap of variables between multi optimizers'
+        assert (
+            len(inter_set) == 0
+        ), "Do not allow overlap of variables between multi optimizers"
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         self._SanityCheck()

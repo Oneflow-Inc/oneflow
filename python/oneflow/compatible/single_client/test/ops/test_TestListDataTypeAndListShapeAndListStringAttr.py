@@ -5,10 +5,25 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
-def TestListDataTypeAndListShapeAndListStringAttr(input, out_shapes, out_types, string_list):
+
+def TestListDataTypeAndListShapeAndListStringAttr(
+    input, out_shapes, out_types, string_list
+):
     assert isinstance(out_shapes, list)
     assert isinstance(out_types, list)
-    return flow.user_op_builder('TestListDataTypeAndListShapeAndListStringAttr').Op('TestListDataTypeAndListShapeAndListStringAttr').Input('in', [input]).Output('out', 3).Attr('out_shapes', out_shapes).Attr('out_types', out_types).Attr('string_list', string_list).Build().InferAndTryRun().RemoteBlobList()
+    return (
+        flow.user_op_builder("TestListDataTypeAndListShapeAndListStringAttr")
+        .Op("TestListDataTypeAndListShapeAndListStringAttr")
+        .Input("in", [input])
+        .Output("out", 3)
+        .Attr("out_shapes", out_shapes)
+        .Attr("out_types", out_types)
+        .Attr("string_list", string_list)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+
 
 def RunTest(out_shapes, out_types):
     flow.clear_default_session()
@@ -16,25 +31,38 @@ def RunTest(out_shapes, out_types):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(function_config=func_config)
-    def TestListDataTypeAndListShapeAndListStringAttrJob(input: oft.Numpy.Placeholder((10, 10), dtype=flow.float)):
-        return TestListDataTypeAndListShapeAndListStringAttr(input, out_shapes, [type_name_to_flow_type[data_type] for data_type in out_types], ['string1', 'string2', 'string3'])
+    def TestListDataTypeAndListShapeAndListStringAttrJob(
+        input: oft.Numpy.Placeholder((10, 10), dtype=flow.float)
+    ):
+        return TestListDataTypeAndListShapeAndListStringAttr(
+            input,
+            out_shapes,
+            [type_name_to_flow_type[data_type] for data_type in out_types],
+            ["string1", "string2", "string3"],
+        )
+
     input = np.random.random_sample((10, 10)).astype(np.float32)
-    outputs = [x.numpy() for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()]
+    outputs = [
+        x.numpy() for x in TestListDataTypeAndListShapeAndListStringAttrJob(input).get()
+    ]
     for i in range(len(outputs)):
         assert outputs[i].shape == out_shapes[i]
         assert outputs[i].dtype == type_name_to_np_type[out_types[i]]
 
+
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict['out_shapes'] = [[(4, 4), (6, 6), (8, 8)]]
-    arg_dict['out_types'] = [['float32', 'double', 'int8'], ['int32', 'int64', 'uint8']]
+    arg_dict["out_shapes"] = [[(4, 4), (6, 6), (8, 8)]]
+    arg_dict["out_types"] = [["float32", "double", "int8"], ["int32", "int64", "uint8"]]
     return GenArgList(arg_dict)
+
 
 @flow.unittest.skip_unless_1n1d()
 class Test_TestListDataTypeAndListShapeAndListStringAttr(flow.unittest.TestCase):
-
     def test_data_type_attr(test_case):
         for arg in gen_arg_list():
             RunTest(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

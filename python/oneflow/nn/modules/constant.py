@@ -5,19 +5,28 @@ from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.modules.utils import _single
 from typing import Optional, Union
 
-class _ConstantBase(Module):
 
-    def __init__(self, size: Union[_size_any_t, flow.Size], value: Union[float, int], dtype: Optional[flow.dtype], device: Union[flow.device, str]=None, requires_grad: bool=False) -> None:
+class _ConstantBase(Module):
+    def __init__(
+        self,
+        size: Union[_size_any_t, flow.Size],
+        value: Union[float, int],
+        dtype: Optional[flow.dtype],
+        device: Union[flow.device, str] = None,
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
-        assert size is not None, 'shape must not be None!'
-        assert isinstance(size, (int, tuple, flow.Size)), 'shape should be int or tuple int!'
+        assert size is not None, "shape must not be None!"
+        assert isinstance(
+            size, (int, tuple, flow.Size)
+        ), "shape should be int or tuple int!"
         self.device = device
         self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
         if device is None:
-            self.device = flow.device('cpu')
+            self.device = flow.device("cpu")
         self.shape = size
         self.value = value
         self.dtype = dtype
@@ -28,12 +37,18 @@ class _ConstantBase(Module):
         res.requires_grad = self.requires_grad
         return res
 
-class Ones(_ConstantBase):
 
+class Ones(_ConstantBase):
     def __init__(self, size, dtype=None, device=None, requires_grad=False):
         super().__init__(size, 1, dtype, device, requires_grad)
 
-def ones_op(size: Union[_size_any_t, flow.Size], dtype: Optional[flow.dtype]=None, device: Union[flow.device, str, None]=None, requires_grad: bool=False):
+
+def ones_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
     """
     Returns a tensor filled with the scalar value 1,
     with the shape defined by the variable argument `size`.
@@ -57,12 +72,18 @@ def ones_op(size: Union[_size_any_t, flow.Size], dtype: Optional[flow.dtype]=Non
     """
     return Ones(size, dtype, device, requires_grad)()
 
-class Zeros(_ConstantBase):
 
+class Zeros(_ConstantBase):
     def __init__(self, size, dtype=None, device=None, requires_grad=False):
         super().__init__(size, 0, dtype, device, requires_grad)
 
-def zeros_op(size: Union[_size_any_t, flow.Size], dtype: Optional[flow.dtype]=None, device: Union[flow.device, str, None]=None, requires_grad: bool=False):
+
+def zeros_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
     """
     Returns a tensor filled with the scalar value 0,
     with the shape defined by the variable argument `size`.
@@ -86,13 +107,14 @@ def zeros_op(size: Union[_size_any_t, flow.Size], dtype: Optional[flow.dtype]=No
     """
     return Zeros(size, dtype, device, requires_grad)()
 
-class ZerosLike(Module):
 
+class ZerosLike(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, other):
         return flow.F.zeros_like(other)
+
 
 def zeros_like_op(other):
     """
@@ -116,13 +138,14 @@ def zeros_like_op(other):
     """
     return ZerosLike()(other)
 
-class OnesLike(Module):
 
+class OnesLike(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, other):
         return flow.F.ones_like(other)
+
 
 def ones_like_op(other):
     """
@@ -146,9 +169,15 @@ def ones_like_op(other):
     """
     return OnesLike()(other)
 
-class NewOnes(Module):
 
-    def __init__(self, size: Union[_size_any_t, flow.Size]=None, dtype: Optional[flow.dtype]=None, device: Union[flow.device, str]=None, requires_grad: bool=False):
+class NewOnes(Module):
+    def __init__(
+        self,
+        size: Union[_size_any_t, flow.Size] = None,
+        dtype: Optional[flow.dtype] = None,
+        device: Union[flow.device, str] = None,
+        requires_grad: bool = False,
+    ):
         super().__init__()
         self.device = device
         self.requires_grad = requires_grad
@@ -168,16 +197,25 @@ class NewOnes(Module):
             new_dtype = x.dtype
         if self.device is None:
             new_device = x.device
-        assert isinstance(new_size, (int, tuple, flow.Size)), f'size parameter not correct, please check!'
-        assert isinstance(new_dtype, flow.dtype), f'dtype parameter not correct, please check!'
-        assert isinstance(new_device, (str, flow.device)), f'device parameter not correct, please check!'
-        assert isinstance(new_requires_grad, bool), f'requires_grad parameter not correct, please check!'
+        assert isinstance(
+            new_size, (int, tuple, flow.Size)
+        ), f"size parameter not correct, please check!"
+        assert isinstance(
+            new_dtype, flow.dtype
+        ), f"dtype parameter not correct, please check!"
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_requires_grad, bool
+        ), f"requires_grad parameter not correct, please check!"
         res = flow.F.constant(new_size, 1.0, new_dtype)
         res = res.to(new_device)
         res.requires_grad = new_requires_grad
         return res
 
-@register_tensor_op('new_ones')
+
+@register_tensor_op("new_ones")
 def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     """
     
@@ -202,7 +240,12 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
     """
-    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(x)
-if __name__ == '__main__':
+    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
+        x
+    )
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

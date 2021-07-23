@@ -4,27 +4,45 @@ from typing import Any, Optional, Sequence, Union
 import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.operator import interface_blob_conf_pb2 as inter_face_blob_conf_util
-from oneflow.compatible.single_client.core.job import sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.compatible.single_client.core.operator import (
+    interface_blob_conf_pb2 as inter_face_blob_conf_util,
+)
+from oneflow.compatible.single_client.core.job import (
+    sbp_parallel_pb2 as sbp_parallel_pb,
+)
 from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import compile_context as compile_context
-from oneflow.compatible.single_client.python.framework import distribute as distribute_util
+from oneflow.compatible.single_client.python.framework import (
+    compile_context as compile_context,
+)
+from oneflow.compatible.single_client.python.framework import (
+    distribute as distribute_util,
+)
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import placement_context as placement_ctx
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    placement_context as placement_ctx,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 from functools import reduce
 import traceback
 
-class ArgBlobDef(object):
 
-    def __init__(self, shape, dtype, name=None, distribute=oneflow._oneflow_internal.distribute.auto()):
+class ArgBlobDef(object):
+    def __init__(
+        self,
+        shape,
+        dtype,
+        name=None,
+        distribute=oneflow._oneflow_internal.distribute.auto(),
+    ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
-            name = id_util.UniqueStr('Input_')
+            name = id_util.UniqueStr("Input_")
         lbi.set_op_name(name)
-        lbi.set_blob_name('out')
+        lbi.set_blob_name("out")
         self.lbi_ = lbi
         assert type(shape) is tuple
         for dim in shape:
@@ -48,7 +66,7 @@ class ArgBlobDef(object):
 
     @property
     def unique_name(self):
-        return self.op_name + '/' + self.blob_name + self._Distribute2Str()
+        return self.op_name + "/" + self.blob_name + self._Distribute2Str()
 
     @property
     def shape(self):
@@ -87,7 +105,9 @@ class ArgBlobDef(object):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(self.dtype_)
+        interface_blob_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            self.dtype_
+        )
         interface_blob_conf.is_dynamic = self.is_dynamic
         sbp_parallel = sbp_parallel_pb.SbpParallel()
         sbp_parallel.split_parallel.axis = 0
@@ -95,18 +115,32 @@ class ArgBlobDef(object):
         return interface_blob_conf
 
     def _Distribute2Str(self):
-        if type(self.distribute_) is oneflow._oneflow_internal.distribute.AutoDistribute:
-            return ''
-        elif type(self.distribute_) is oneflow._oneflow_internal.distribute.SplitDistribute:
-            return ':S' + str(self.distribute_.axis)
-        elif type(self.distribute_) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
-            return ':B'
+        if (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.AutoDistribute
+        ):
+            return ""
+        elif (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.SplitDistribute
+        ):
+            return ":S" + str(self.distribute_.axis)
+        elif (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.BroadcastDistribute
+        ):
+            return ":B"
         else:
             raise NotImplementedError
 
-class FixedTensorDef(ArgBlobDef):
 
-    def __init__(self, shape: Sequence[int], dtype: flow.dtype=flow.float, name: Optional[str]=None) -> None:
+class FixedTensorDef(ArgBlobDef):
+    def __init__(
+        self,
+        shape: Sequence[int],
+        dtype: flow.dtype = flow.float,
+        name: Optional[str] = None,
+    ) -> None:
         ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
 
     @property
@@ -118,12 +152,16 @@ class FixedTensorDef(ArgBlobDef):
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         parallel_symbol = flow.current_scope().device_parallel_desc_symbol
-        if parallel_symbol.device_tag == 'gpu' and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0] and (parallel_symbol.parallel_num == 1):
-            device_tag = 'gpu'
-            device_ids = '@0:%s' % parallel_symbol.machine_id2device_id_list[0][0]
+        if (
+            parallel_symbol.device_tag == "gpu"
+            and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
+            and (parallel_symbol.parallel_num == 1)
+        ):
+            device_tag = "gpu"
+            device_ids = "@0:%s" % parallel_symbol.machine_id2device_id_list[0][0]
         else:
-            device_tag = 'cpu'
-            device_ids = '@0:0'
+            device_tag = "cpu"
+            device_ids = "@0:0"
         with flow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
@@ -134,9 +172,14 @@ class FixedTensorDef(ArgBlobDef):
     def _AsyncPush(self, session: object, arg_ndarray: np.ndarray) -> None:
         session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
 
-class MirroredTensorDef(ArgBlobDef):
 
-    def __init__(self, shape: Sequence[int], dtype: flow.dtype=flow.float, name: Optional[str]=None) -> None:
+class MirroredTensorDef(ArgBlobDef):
+    def __init__(
+        self,
+        shape: Sequence[int],
+        dtype: flow.dtype = flow.float,
+        name: Optional[str] = None,
+    ) -> None:
         assert type(shape) is tuple
         ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
         self.sub_consistent_blob_list_ = []
@@ -146,7 +189,9 @@ class MirroredTensorDef(ArgBlobDef):
         return True
 
     def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
-        _AddAndInferMirroredOp(self.unique_name, op_conf, self.sub_consistent_blob_list_)
+        _AddAndInferMirroredOp(
+            self.unique_name, op_conf, self.sub_consistent_blob_list_
+        )
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         return compile_context.CurJobAddMirroredOp(op_conf)
@@ -157,7 +202,10 @@ class MirroredTensorDef(ArgBlobDef):
 
         def GetElemCnt(shape):
             return reduce(lambda x, y: x * y, shape, 1)
-        for (consistent_blob, ndarray) in zip(self.sub_consistent_blob_list_, ndarray_list):
+
+        for (consistent_blob, ndarray) in zip(
+            self.sub_consistent_blob_list_, ndarray_list
+        ):
             assert type(ndarray) is np.ndarray
             assert len(ndarray.shape) == len(self.shape)
             assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
@@ -165,45 +213,66 @@ class MirroredTensorDef(ArgBlobDef):
     def _AsyncPush(self, session: object, ndarray_list: Sequence[np.ndarray]) -> None:
         for i in range(len(ndarray_list)):
             sub_blob = self.sub_consistent_blob_list_[i]
-            session.AsyncPush(sub_blob.op_name, _MakePushNdarrayCallback(ndarray_list[i]))
+            session.AsyncPush(
+                sub_blob.op_name, _MakePushNdarrayCallback(ndarray_list[i])
+            )
+
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, mirrored_lbn)
+    num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
+        job_name, mirrored_lbn
+    )
     for i in range(num_sub_lbi):
-        sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, mirrored_lbn, i)
+        sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
+            job_name, mirrored_lbn, i
+        )
         lbi = lbi_util.LogicalBlobId()
         lbi.set_op_name(sub_lbi.op_name)
         lbi.set_blob_name(sub_lbi.blob_name)
-        sub_consistent_blob_list.append(oneflow._oneflow_internal.ConsistentBlob(lbi, '', oneflow._oneflow_internal.distribute.auto()))
+        sub_consistent_blob_list.append(
+            oneflow._oneflow_internal.ConsistentBlob(
+                lbi, "", oneflow._oneflow_internal.distribute.auto()
+            )
+        )
+
 
 def _MakePushNdarrayCallback(ndarray):
-    copied = np.copy(ndarray, order='C')
+    copied = np.copy(ndarray, order="C")
 
     def Copy(ofblob):
         capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)
         elem_cnt = reduce(lambda x, y: x * y, copied.shape, 1)
-        assert elem_cnt <= capacity, '%s v.s. %s' % (copied.shape, ofblob.static_shape)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (copied.shape, ofblob.static_shape)
         ofblob.CopyFromNdarray(copied)
+
     return Copy
 
-class DeprecatedFixedTensorDef(FixedTensorDef):
 
+class DeprecatedFixedTensorDef(FixedTensorDef):
     def __init__(self, *args, **kwargs):
-        running_script = traceback.format_stack()[-2].split(',')[0].split(' ')[3]
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
         if not running_script.endswith('input_blob_def.py"'):
-            print('WARNING: oneflow.compatible.single_client.FixedTensorDef has been deprecated. Please use oneflow.compatible.single_client.typing.Numpy.Placeholder instead.')
-            print('For instance:\n            - def job_func(images=oneflow.compatible.single_client.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.compatible.single_client.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))')
+            print(
+                "WARNING: oneflow.compatible.single_client.FixedTensorDef has been deprecated. Please use oneflow.compatible.single_client.typing.Numpy.Placeholder instead."
+            )
+            print(
+                "For instance:\n            - def job_func(images=oneflow.compatible.single_client.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.compatible.single_client.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"
+            )
             print(traceback.format_stack()[-2])
         super().__init__(*args, **kwargs)
 
-class DeprecatedMirroredTensorDef(MirroredTensorDef):
 
+class DeprecatedMirroredTensorDef(MirroredTensorDef):
     def __init__(self, *args, **kwargs):
-        running_script = traceback.format_stack()[-2].split(',')[0].split(' ')[3]
+        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
         if not running_script.endswith('input_blob_def.py"'):
-            print('WARNING: oneflow.compatible.single_client.MirroredTensorDef has been deprecated. Please use oneflow.compatible.single_client.typing.ListNumpy.Placeholder instead.')
-            print('For instance:\n            - def job_func(images=oneflow.compatible.single_client.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.compatible.single_client.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))')
+            print(
+                "WARNING: oneflow.compatible.single_client.MirroredTensorDef has been deprecated. Please use oneflow.compatible.single_client.typing.ListNumpy.Placeholder instead."
+            )
+            print(
+                "For instance:\n            - def job_func(images=oneflow.compatible.single_client.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.compatible.single_client.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"
+            )
             print(traceback.format_stack()[-2])
         super().__init__(*args, **kwargs)

@@ -4,13 +4,22 @@ from oneflow.compatible.single_client import typing as oft
 import unittest
 import os
 
+
 def ccrelu(x, name):
-    return flow.user_op_builder(name).Op('ccrelu').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("ccrelu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-@unittest.skipIf(True, 'skip for now because of single-client tensor_list removed')
+
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
-
-    @unittest.skipIf(os.getenv('ONEFLOW_TEST_CPU_ONLY'), 'only test cpu cases')
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_node_comm_net(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -19,13 +28,14 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
 
         @flow.global_function(function_config=func_config)
         def ReluJob(x: oft.Numpy.Placeholder((10, 2))):
-            with flow.scope.placement('gpu', '0:0'):
-                out0 = ccrelu(x, 'my_op_0_0')
-            with flow.scope.placement('gpu', '1:0'):
-                out1 = ccrelu(out0, 'my_op_1_0')
-            with flow.scope.placement('gpu', '0:0'):
-                out2 = ccrelu(out1, 'my_op_print')
+            with flow.scope.placement("gpu", "0:0"):
+                out0 = ccrelu(x, "my_op_0_0")
+            with flow.scope.placement("gpu", "1:0"):
+                out1 = ccrelu(out0, "my_op_1_0")
+            with flow.scope.placement("gpu", "0:0"):
+                out2 = ccrelu(out1, "my_op_print")
             return out2
+
         index = [-2, -1, 0, 1, 2]
         data = []
         for i in index:
@@ -34,28 +44,33 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
             ret = ReluJob(data[i]).get().numpy()
             print(ret)
             if index[i] > 0:
-                test_case.assertTrue(np.array_equal(ret, np.ones((10, 2), dtype=np.float32) * index[i]))
+                test_case.assertTrue(
+                    np.array_equal(ret, np.ones((10, 2), dtype=np.float32) * index[i])
+                )
             else:
-                test_case.assertTrue(np.array_equal(ret, np.zeros((10, 2), dtype=np.float32)))
+                test_case.assertTrue(
+                    np.array_equal(ret, np.zeros((10, 2), dtype=np.float32))
+                )
 
-    @unittest.skipIf(os.getenv('ONEFLOW_TEST_CPU_ONLY'), 'only test cpu cases')
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_node_comm_net_dynamic(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
-        func_config.default_placement_scope(flow.scope.placement('gpu', '0:0'))
+        func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
         func_config.default_data_type(flow.float)
         flow.config.machine_num(2)
         flow.config.gpu_device_num(1)
 
         @flow.global_function(function_config=func_config)
         def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
-            with flow.scope.placement('gpu', '0:0'):
+            with flow.scope.placement("gpu", "0:0"):
                 out0 = flow.math.relu(x)
-            with flow.scope.placement('gpu', '1:0'):
+            with flow.scope.placement("gpu", "1:0"):
                 out1 = flow.math.relu(out0)
-            with flow.scope.placement('gpu', '0:0'):
+            with flow.scope.placement("gpu", "0:0"):
                 out2 = flow.math.relu(out1)
             return out2
+
         index = [-2, -1, 0, 1, 2]
         data = []
         for i in index:
@@ -64,27 +79,32 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
             ret = ReluJob([data[i]]).get().numpy_list()[0]
             print(ret)
             if index[i] > 0:
-                test_case.assertTrue(np.array_equal(ret, np.ones((5, 2), dtype=np.float32) * index[i]))
+                test_case.assertTrue(
+                    np.array_equal(ret, np.ones((5, 2), dtype=np.float32) * index[i])
+                )
             else:
-                test_case.assertTrue(np.array_equal(ret, np.zeros((5, 2), dtype=np.float32)))
+                test_case.assertTrue(
+                    np.array_equal(ret, np.zeros((5, 2), dtype=np.float32))
+                )
 
     def test_multi_node_comm_net_dynamic_empty(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
-        func_config.default_placement_scope(flow.scope.placement('cpu', '0:0'))
+        func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
         func_config.default_data_type(flow.float)
         flow.config.machine_num(2)
         flow.config.gpu_device_num(1)
 
         @flow.global_function(function_config=func_config)
         def ReluJob(x: oft.ListNumpy.Placeholder((10, 2))):
-            with flow.scope.placement('cpu', '0:0'):
+            with flow.scope.placement("cpu", "0:0"):
                 out0 = flow.math.relu(x)
-            with flow.scope.placement('cpu', '1:0'):
+            with flow.scope.placement("cpu", "1:0"):
                 out1 = flow.math.relu(out0)
-            with flow.scope.placement('cpu', '0:0'):
+            with flow.scope.placement("cpu", "0:0"):
                 out2 = flow.math.relu(out1)
             return out2
+
         index = [-2, -1, 0, 1, 2]
         data = []
         for i in index:
@@ -93,8 +113,14 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
             ret = ReluJob([data[i]]).get().numpy_list()[0]
             print(ret)
             if index[i] > 0:
-                test_case.assertTrue(np.array_equal(ret, np.ones((0, 0), dtype=np.float32) * index[i]))
+                test_case.assertTrue(
+                    np.array_equal(ret, np.ones((0, 0), dtype=np.float32) * index[i])
+                )
             else:
-                test_case.assertTrue(np.array_equal(ret, np.zeros((0, 0), dtype=np.float32)))
-if __name__ == '__main__':
+                test_case.assertTrue(
+                    np.array_equal(ret, np.zeros((0, 0), dtype=np.float32))
+                )
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -4,20 +4,24 @@ import oneflow as flow
 from oneflow.nn.module import Module
 import oneflow.framework.id_util as id_util
 
+
 class _DropoutNd(Module):
-    __constants__ = ['p', 'inplace']
+    __constants__ = ["p", "inplace"]
     p: float
     inplace: bool
 
-    def __init__(self, p: float=0.5, inplace: bool=False) -> None:
+    def __init__(self, p: float = 0.5, inplace: bool = False) -> None:
         super(_DropoutNd, self).__init__()
         if p < 0 or p > 1:
-            raise ValueError('dropout probability has to be between 0 and 1, but got {}'.format(p))
+            raise ValueError(
+                "dropout probability has to be between 0 and 1, but got {}".format(p)
+            )
         self.p = p
         self.inplace = inplace
 
     def extra_repr(self) -> str:
-        return 'p={}, inplace={}'.format(self.p, self.inplace)
+        return "p={}, inplace={}".format(self.p, self.inplace)
+
 
 class Dropout(_DropoutNd):
     """During training, randomly zeroes some of the elements of the input
@@ -67,7 +71,7 @@ class Dropout(_DropoutNd):
 
     """
 
-    def __init__(self, p: float=0.5, inplace: bool=False, generator=None):
+    def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
         _DropoutNd.__init__(self, p, inplace)
         self.p = p
         if generator is None:
@@ -78,6 +82,9 @@ class Dropout(_DropoutNd):
         if self.p == 0.0 or not self.training:
             return x
         return flow.F.dropout(x, self.p, self.generator)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

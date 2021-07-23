@@ -2,15 +2,16 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Softplus(Module):
 
+class Softplus(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.softplus(x)
 
-@register_tensor_op('softplus')
+
+@register_tensor_op("softplus")
 def softplus_op(x):
     """Applies the element-wise function:
 
@@ -46,6 +47,9 @@ def softplus_op(x):
 
     """
     return Softplus()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

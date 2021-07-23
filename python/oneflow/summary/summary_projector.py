@@ -3,6 +3,7 @@ import oneflow.core.summary.projector_pb2 as projector_pb2
 import time
 import oneflow as flow
 
+
 class Projector(object):
     """The class of Projector
 
@@ -19,8 +20,8 @@ class Projector(object):
             Exception: If 'logdir' is None or illegal
         """
         if logdir is None:
-            raise Exception('logdir should not be None!')
-        logdir += '/projector'
+            raise Exception("logdir should not be None!")
+        logdir += "/projector"
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         self.logdir_ = logdir
@@ -28,14 +29,22 @@ class Projector(object):
         self.exception_filename_ = None
 
     def create_embedding_projector(self):
-        if self.embedding_filename_ is not None and os.path.exists(self.embedding_filename_):
-            raise OSError('You must create only one embedding projector!')
-        self.embedding_filename_ = self.logdir_ + '/projector.' + str(int(time.time())) + '.log'
+        if self.embedding_filename_ is not None and os.path.exists(
+            self.embedding_filename_
+        ):
+            raise OSError("You must create only one embedding projector!")
+        self.embedding_filename_ = (
+            self.logdir_ + "/projector." + str(int(time.time())) + ".log"
+        )
 
     def create_exception_projector(self):
-        if self.exception_filename_ is not None and os.path.exists(self.exception_filename_):
-            raise OSError('You must create only one embedding projector!')
-        self.exception_filename_ = self.logdir_ + '/projector.gradit.' + str(int(time.time())) + '.log'
+        if self.exception_filename_ is not None and os.path.exists(
+            self.exception_filename_
+        ):
+            raise OSError("You must create only one embedding projector!")
+        self.exception_filename_ = (
+            self.logdir_ + "/projector.gradit." + str(int(time.time())) + ".log"
+        )
 
     @property
     def logdir(self):
@@ -50,7 +59,7 @@ class Projector(object):
         return self.embedding_filename_
 
     def write_projector(self, filename=None, projector=None):
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             f.write(projector.SerializeToString())
             f.flush()
 
@@ -72,35 +81,62 @@ class Projector(object):
     def set_sample(self, sample, name, x, sample_type):
         if name is not None:
             sample.name = name
-        if sample_type == 'image' or sample_type == 'IMAGE':
+        if sample_type == "image" or sample_type == "IMAGE":
             sample.type = projector_pb2.Sample.SampleType.IMAGE
-        elif sample_type == 'audio' or sample_type == 'AUDIO':
+        elif sample_type == "audio" or sample_type == "AUDIO":
             sample.type = projector_pb2.Sample.SampleType.AUDIO
-        elif sample_type == 'text' or sample_type == 'TEXT':
+        elif sample_type == "text" or sample_type == "TEXT":
             sample.type = projector_pb2.Sample.SampleType.TEXT
         else:
             raise NotImplementedError
         if x is not None:
             self.set_tensor(sample.X, x)
 
-    def embedding_projector(self, value=None, label=None, tag=None, step=None, sample_name=None, sample_type=None, x=None):
+    def embedding_projector(
+        self,
+        value=None,
+        label=None,
+        tag=None,
+        step=None,
+        sample_name=None,
+        sample_type=None,
+        x=None,
+    ):
         if tag is None:
-            tag = 'embedding_projector'
+            tag = "embedding_projector"
         summary_projector = projector_pb2.SummaryProjector()
         summary_projector.metadata.type = projector_pb2.MetaData.ProjectorType.EMBEDDING
         projector = summary_projector.projector.add()
         self.set_projector(pro=projector, tag=tag, step=step, value=value, label=label)
         if sample_name is not None and sample_type is not None:
-            self.set_sample(sample=summary_projector.sample, name=sample_name, x=x, sample_type=sample_type)
+            self.set_sample(
+                sample=summary_projector.sample,
+                name=sample_name,
+                x=x,
+                sample_type=sample_type,
+            )
         self.write_projector(self.embedding_filename_, summary_projector)
 
-    def exception_projector(self, value=None, tag=None, step=None, sample_name=None, sample_type=None, x=None):
+    def exception_projector(
+        self,
+        value=None,
+        tag=None,
+        step=None,
+        sample_name=None,
+        sample_type=None,
+        x=None,
+    ):
         if tag is None:
-            tag = 'exception_projector'
+            tag = "exception_projector"
         summary_projector = projector_pb2.SummaryProjector()
         summary_projector.metadata.type = projector_pb2.MetaData.ProjectorType.EXCEPTION
         projector = summary_projector.projector.add()
         self.set_projector(pro=projector, tag=tag, step=step, value=value)
         if sample_name is not None and sample_type is not None:
-            self.set_sample(sample=summary_projector.sample, name=sample_name, x=x, sample_type=sample_type)
+            self.set_sample(
+                sample=summary_projector.sample,
+                name=sample_name,
+                x=x,
+                sample_type=sample_type,
+            )
         self.write_projector(self.exception_filename_, summary_projector)

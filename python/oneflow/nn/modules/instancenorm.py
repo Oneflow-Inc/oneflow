@@ -1,9 +1,16 @@
 import oneflow as flow
 from oneflow.nn.modules.batchnorm import _NormBase
 
-class _InstanceNorm(_NormBase):
 
-    def __init__(self, num_features: int, eps: float=1e-05, momentum: float=0.1, affine: bool=False, track_running_stats: bool=False):
+class _InstanceNorm(_NormBase):
+    def __init__(
+        self,
+        num_features: int,
+        eps: float = 1e-05,
+        momentum: float = 0.1,
+        affine: bool = False,
+        track_running_stats: bool = False,
+    ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
     def _forward(self, x):
@@ -32,6 +39,7 @@ class _InstanceNorm(_NormBase):
         normalized_1d_out = self._forward(reshape_to_1d)
         reshape_back_to_nd = normalized_1d_out.reshape(list(x.shape))
         return reshape_back_to_nd
+
 
 class InstanceNorm1d(_InstanceNorm):
     """The interface is consistent with PyTorch.
@@ -112,9 +120,12 @@ class InstanceNorm1d(_InstanceNorm):
 
     def _check_input_dim(self, input):
         if input.dim() == 2:
-            raise ValueError('InstanceNorm1d returns 0-filled tensor to 2D tensor.This is because InstanceNorm1d reshapes inputs to(1, N * C, ...) from (N, C,...) and this makesvariances 0.')
+            raise ValueError(
+                "InstanceNorm1d returns 0-filled tensor to 2D tensor.This is because InstanceNorm1d reshapes inputs to(1, N * C, ...) from (N, C,...) and this makesvariances 0."
+            )
         if input.dim() != 3:
-            raise ValueError('expected 3D input (got {}D input)'.format(input.dim()))
+            raise ValueError("expected 3D input (got {}D input)".format(input.dim()))
+
 
 class InstanceNorm2d(_InstanceNorm):
     """The interface is consistent with PyTorch.
@@ -195,7 +206,8 @@ class InstanceNorm2d(_InstanceNorm):
 
     def _check_input_dim(self, input):
         if input.dim() != 4:
-            raise ValueError('expected 4D input (got {}D input)'.format(input.dim()))
+            raise ValueError("expected 4D input (got {}D input)".format(input.dim()))
+
 
 class InstanceNorm3d(_InstanceNorm):
     """The interface is consistent with PyTorch.
@@ -275,7 +287,10 @@ class InstanceNorm3d(_InstanceNorm):
 
     def _check_input_dim(self, input):
         if input.dim() != 5:
-            raise ValueError('expected 5D input (got {}D input)'.format(input.dim()))
-if __name__ == '__main__':
+            raise ValueError("expected 5D input (got {}D input)".format(input.dim()))
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

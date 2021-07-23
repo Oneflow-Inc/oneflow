@@ -5,7 +5,13 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.module as module_util
 import oneflow._oneflow_internal
 
-def Bernoulli(x: oneflow._oneflow_internal.BlobDesc, seed: Optional[int]=None, dtype: Optional[flow.dtype]=None, name: str='Bernoulli') -> oneflow._oneflow_internal.BlobDesc:
+
+def Bernoulli(
+    x: oneflow._oneflow_internal.BlobDesc,
+    seed: Optional[int] = None,
+    dtype: Optional[flow.dtype] = None,
+    name: str = "Bernoulli",
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns a Blob with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
@@ -49,20 +55,36 @@ def Bernoulli(x: oneflow._oneflow_internal.BlobDesc, seed: Optional[int]=None, d
         dtype = x.dtype
     if seed is not None:
         assert name is not None
-    module = flow.find_or_create_module(name, lambda : BernoulliModule(dtype=dtype, random_seed=seed, name=name))
+    module = flow.find_or_create_module(
+        name, lambda: BernoulliModule(dtype=dtype, random_seed=seed, name=name)
+    )
     return module(x)
 
-class BernoulliModule(module_util.Module):
 
+class BernoulliModule(module_util.Module):
     def __init__(self, dtype: flow.dtype, random_seed: Optional[int], name: str):
         module_util.Module.__init__(self, name)
         (seed, has_seed) = flow.random.gen_seed(random_seed)
-        self.op_module_builder = flow.user_op_module_builder('bernoulli').InputSize('in', 1).Output('out').Attr('dtype', dtype).Attr('has_seed', has_seed).Attr('seed', seed).CheckAndComplete()
+        self.op_module_builder = (
+            flow.user_op_module_builder("bernoulli")
+            .InputSize("in", 1)
+            .Output("out")
+            .Attr("dtype", dtype)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
         self.op_module_builder.user_op_module.InitOpKernel()
 
     def forward(self, x: oneflow._oneflow_internal.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
-            name = id_util.UniqueStr('Bernoulli_')
-        return self.op_module_builder.OpName(name).Input('in', [x]).Build().InferAndTryRun().SoleOutputBlob()
+            name = id_util.UniqueStr("Bernoulli_")
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("in", [x])
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )

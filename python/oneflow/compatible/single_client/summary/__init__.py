@@ -1,4 +1,3 @@
-
 from oneflow.compatible.single_client.ops.summary_ops import write_scalar
 from oneflow.compatible.single_client.ops.summary_ops import create_summary_writer
 from oneflow.compatible.single_client.ops.summary_ops import flush_summary_writer

@@ -5,10 +5,13 @@ import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
+
 def _test_min(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.min(x, dim, keepdims)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -22,10 +25,13 @@ def _test_min(test_case, device, shape, dim, keepdims):
         np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
 
+
 def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = x.min(dim, keepdims)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -39,30 +45,33 @@ def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
         np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestMinModule(flow.unittest.TestCase):
-
     def test_min(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_min, _test_min_tensor_function]
-        arg_dict['device'] = ['cpu', 'cuda']
-        arg_dict['shape'] = [(2,), (2, 3), (2, 3, 4, 5)]
-        arg_dict['dim'] = [None, 0, -1]
-        arg_dict['keepdims'] = [False, True]
+        arg_dict["test_fun"] = [_test_min, _test_min_tensor_function]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
+        arg_dict["dim"] = [None, 0, -1]
+        arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     def test_min_against_pytorch(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_type'] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, 'min', device=arg[1])
+            arg[0](test_case, "min", device=arg[1])
+
 
 def _test_max(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.max(x, dim, keepdims)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -76,10 +85,13 @@ def _test_max(test_case, device, shape, dim, keepdims):
         np.put_along_axis(np_out_grad, arg_max, 1, axis=dim)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
 
+
 def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = x.max(dim, keepdims)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -93,24 +105,26 @@ def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
         np.put_along_axis(np_out_grad, arg_max, 1, axis=dim)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
-
     def test_max(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_max, _test_max_tensor_function]
-        arg_dict['device'] = ['cpu', 'cuda']
-        arg_dict['shape'] = [(2,), (2, 3), (2, 3, 4, 5)]
-        arg_dict['dim'] = [None, 0, -1]
-        arg_dict['keepdims'] = [False, True]
+        arg_dict["test_fun"] = [_test_max, _test_max_tensor_function]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
+        arg_dict["dim"] = [None, 0, -1]
+        arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     def test_max_against_pytorch(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_type'] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, 'max', device=arg[1])
-if __name__ == '__main__':
+            arg[0](test_case, "max", device=arg[1])
+
+
+if __name__ == "__main__":
     unittest.main()

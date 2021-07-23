@@ -4,8 +4,8 @@ from oneflow.compatible.single_client.python.framework.tensor import register_te
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from typing import Optional, Sequence
 
-class MatMul(Module):
 
+class MatMul(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -18,9 +18,14 @@ class MatMul(Module):
             else:
                 res = flow.F.batch_matmul(a, b)
         else:
-            assert len(b.shape) == 2, 'Not support number of dimensions of a being less than number of dimensions of b!'
+            assert (
+                len(b.shape) == 2
+            ), "Not support number of dimensions of a being less than number of dimensions of b!"
             res = flow.F.broadcast_matmul(a, b)
         return res
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

@@ -5,7 +5,13 @@ import oneflow._oneflow_internal
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from typing import Optional, Sequence, List
 
-def tensor_buffer_to_tensor(x: oneflow._oneflow_internal.BlobDesc, dtype: flow.dtype, instance_shape: Sequence[int], name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tensor_buffer_to_tensor(
+    x: oneflow._oneflow_internal.BlobDesc,
+    dtype: flow.dtype,
+    instance_shape: Sequence[int],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator converts the Blob's type from TensorBuffer to Tensor.
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
     to `Tensor`.
@@ -48,10 +54,25 @@ def tensor_buffer_to_tensor(x: oneflow._oneflow_internal.BlobDesc, dtype: flow.d
 
     """
     if name is None:
-        name = id_util.UniqueStr('TensorBufferToTensor_')
-    return flow.user_op_builder(name).Op('tensor_buffer_to_tensor').Input('in', [x]).Output('out').Attr('dtype', dtype).Attr('instance_shape', instance_shape).Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr("TensorBufferToTensor_")
+    return (
+        flow.user_op_builder(name)
+        .Op("tensor_buffer_to_tensor")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("dtype", dtype)
+        .Attr("instance_shape", instance_shape)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def tensor_to_tensor_buffer(x: oneflow._oneflow_internal.BlobDesc, instance_dims: int, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tensor_to_tensor_buffer(
+    x: oneflow._oneflow_internal.BlobDesc,
+    instance_dims: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator converts the Blob's type from Tensor to TensorBuffer.
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_
@@ -91,10 +112,27 @@ def tensor_to_tensor_buffer(x: oneflow._oneflow_internal.BlobDesc, instance_dims
 
     """
     if name is None:
-        name = id_util.UniqueStr('TensorToTensorBuffer_')
-    return flow.user_op_builder(name).Op('tensor_to_tensor_buffer').Input('in', [x]).Output('out').Attr('instance_dims', instance_dims).Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr("TensorToTensorBuffer_")
+    return (
+        flow.user_op_builder(name)
+        .Op("tensor_to_tensor_buffer")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("instance_dims", instance_dims)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def gen_tensor_buffer(shape: Sequence[int], shape_list: Sequence[Sequence[int]], value_list: Sequence[float], data_type: Optional[flow.dtype]=flow.float32, dynamic_out: Optional[bool]=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def gen_tensor_buffer(
+    shape: Sequence[int],
+    shape_list: Sequence[Sequence[int]],
+    value_list: Sequence[float],
+    data_type: Optional[flow.dtype] = flow.float32,
+    dynamic_out: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator generates a tensor buffer blob.
 
     Args:
@@ -124,9 +162,30 @@ def gen_tensor_buffer(shape: Sequence[int], shape_list: Sequence[Sequence[int]],
         # y_0.shape (2, 1), y_1.shape (1. 2)
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('GenTensorBuffer_')).Op('gen_tensor_buffer').Output('out').Attr('shape', shape).Attr('shape_list', shape_list).Attr('value_list', value_list).Attr('data_type', data_type).Attr('dynamic_out', dynamic_out).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GenTensorBuffer_")
+        )
+        .Op("gen_tensor_buffer")
+        .Output("out")
+        .Attr("shape", shape)
+        .Attr("shape_list", shape_list)
+        .Attr("value_list", value_list)
+        .Attr("data_type", data_type)
+        .Attr("dynamic_out", dynamic_out)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def tensor_buffer_to_list_of_tensors(x: oneflow._oneflow_internal.BlobDesc, out_shape: Sequence[int], out_dtype: flow.dtype, dynamic_out: Optional[bool]=False, name: Optional[str]=None) -> List[oneflow._oneflow_internal.BlobDesc]:
+
+def tensor_buffer_to_list_of_tensors(
+    x: oneflow._oneflow_internal.BlobDesc,
+    out_shape: Sequence[int],
+    out_dtype: flow.dtype,
+    dynamic_out: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> List[oneflow._oneflow_internal.BlobDesc]:
     """This operator converts the Blob of TensorBuffer to list of Tensors. Every element in x will be converted
     to a Tensor and output will be flatten to a list.
 
@@ -147,4 +206,19 @@ def tensor_buffer_to_list_of_tensors(x: oneflow._oneflow_internal.BlobDesc, out_
         # the same with `gen_tensor_buffer` op
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('TensorBufferToListOfTensors_')).Op('tensor_buffer_to_list_of_tensors').Input('in', [x]).Output('out', functools.reduce(operator.mul, x.shape, 1)).Attr('out_dtype', out_dtype).Attr('out_shape', out_shape).Attr('dynamic_out', dynamic_out).Build().InferAndTryRun().RemoteBlobList()
+    return (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("TensorBufferToListOfTensors_")
+        )
+        .Op("tensor_buffer_to_list_of_tensors")
+        .Input("in", [x])
+        .Output("out", functools.reduce(operator.mul, x.shape, 1))
+        .Attr("out_dtype", out_dtype)
+        .Attr("out_shape", out_shape)
+        .Attr("dynamic_out", dynamic_out)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )

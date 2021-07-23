@@ -2,13 +2,14 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
-class Sign(Module):
 
+class Sign(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.sign(x)
+
 
 def sign_op(x):
     """Computes the sign of Tensor.
@@ -38,7 +39,8 @@ def sign_op(x):
     """
     return Sign()(x)
 
-@register_tensor_op('sign')
+
+@register_tensor_op("sign")
 def sign_op_tensor(x):
     """
 
@@ -48,6 +50,9 @@ def sign_op_tensor(x):
 
     """
     return Sign()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

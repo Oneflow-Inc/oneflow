@@ -4,9 +4,9 @@ from oneflow.framework.tensor import register_tensor_op
 import oneflow.framework.id_util as id_util
 from typing import Optional, Sequence
 
-class Squeeze(Module):
 
-    def __init__(self, dim: Optional[Sequence[int]]=None) -> None:
+class Squeeze(Module):
+    def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
         self.dim = dim
 
@@ -15,8 +15,9 @@ class Squeeze(Module):
             return x
         return flow.F.squeeze(x, dim=self.dim)
 
-@register_tensor_op('squeeze')
-def squeeze_op(input, dim: Optional[Sequence[int]]=None):
+
+@register_tensor_op("squeeze")
+def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
@@ -47,6 +48,9 @@ def squeeze_op(input, dim: Optional[Sequence[int]]=None):
         dim = range(input.ndim)
     dim = list(filter(lambda i: input.size(i) == 1, dim))
     return Squeeze(dim=dim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

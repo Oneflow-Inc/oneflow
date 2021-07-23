@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class GreaterEqual(Module):
 
+class GreaterEqual(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -11,10 +11,13 @@ class GreaterEqual(Module):
         if x.dtype != flow.float32:
             x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32, device=flow.device(x.device.type))
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
         if y.dtype != flow.float32:
             y = flow.cast(y, flow.float32)
         return flow.F.broadcast_greater_equal(x, y)
+
 
 def greater_equal_op(x, y):
     """Returns the truth value of :math:`x >= y` element-wise.
@@ -43,7 +46,8 @@ def greater_equal_op(x, y):
     """
     return GreaterEqual()(x, y)
 
-@register_tensor_op('ge')
+
+@register_tensor_op("ge")
 def greater_equal_op_tensor(x, y):
     """
 
@@ -53,6 +57,9 @@ def greater_equal_op_tensor(x, y):
 
     """
     return GreaterEqual()(x, y)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

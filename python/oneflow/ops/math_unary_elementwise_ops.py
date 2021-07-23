@@ -10,12 +10,24 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.ops.user_op_builder as user_op_builder
 import oneflow._oneflow_internal
 
+
 def build_unary_elemwise_math_op(math_op, x, name=None):
     if name is None:
-        name = id_util.UniqueStr(math_op + '_')
-    return flow.user_op_builder(name).Op(math_op).Input('x', [x]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr(math_op + "_")
+    return (
+        flow.user_op_builder(name)
+        .Op(math_op)
+        .Input("x", [x])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def abs(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def abs(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the absolute value of Blob.
 
     Args:
@@ -46,9 +58,12 @@ def abs(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [1. 2. 3.]
 
     """
-    return build_unary_elemwise_math_op('abs', x, name)
+    return build_unary_elemwise_math_op("abs", x, name)
 
-def acos(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def acos(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the acos value of Blob.
 
     Args:
@@ -81,9 +96,12 @@ def acos(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # (arccos(0.5) * pi) / 180 = 1.0471976
 
     """
-    return build_unary_elemwise_math_op('acos', x, name)
+    return build_unary_elemwise_math_op("acos", x, name)
 
-def acosh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def acosh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the inverse hyperbolic cosine value of Blob.
 
     The equation is:
@@ -120,9 +138,12 @@ def acosh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [1.316958  1.7627473 2.063437 ]
 
     """
-    return build_unary_elemwise_math_op('acosh', x, name)
+    return build_unary_elemwise_math_op("acosh", x, name)
 
-def asin(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def asin(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the arcsin value of Blob.
 
     Args:
@@ -155,9 +176,12 @@ def asin(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # (arcsin(0.5) * pi) / 180 = 0.5235988
 
     """
-    return build_unary_elemwise_math_op('asin', x, name)
+    return build_unary_elemwise_math_op("asin", x, name)
 
-def asinh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def asinh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the inverse hyperbolic sine value of Blob.
 
     The equation is:
@@ -194,9 +218,12 @@ def asinh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [1.4436355 1.8184464 2.0947125]
 
     """
-    return build_unary_elemwise_math_op('asinh', x, name)
+    return build_unary_elemwise_math_op("asinh", x, name)
 
-def atan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def atan(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the arctan value of Blob.
 
     Args:
@@ -228,9 +255,12 @@ def atan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # (arctan(0.5) * pi) / 180 = 0.4636476
 
     """
-    return build_unary_elemwise_math_op('atan', x, name)
+    return build_unary_elemwise_math_op("atan", x, name)
 
-def atanh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def atanh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the inverse hyperbolic tangent value of Blob.
 
     The equation is:
@@ -267,9 +297,12 @@ def atanh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [0.54930615 0.6931472  0.8673005 ]
 
     """
-    return build_unary_elemwise_math_op('atanh', x, name)
+    return build_unary_elemwise_math_op("atanh", x, name)
 
-def ceil(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def ceil(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the ceiling value of Blob.
 
     Args:
@@ -300,9 +333,12 @@ def ceil(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [2. 2. 3.]
 
     """
-    return build_unary_elemwise_math_op('ceil', x, name)
+    return build_unary_elemwise_math_op("ceil", x, name)
 
-def cos(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def cos(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the cosine value of Blob.
 
     Args:
@@ -332,9 +368,12 @@ def cos(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [ 0.49999997  0.70710677 -0.7071068 ]
 
     """
-    return build_unary_elemwise_math_op('cos', x, name)
+    return build_unary_elemwise_math_op("cos", x, name)
 
-def cosh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def cosh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes hyperbolic cosine value of Blob.
 
     The equation is:
@@ -371,9 +410,12 @@ def cosh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [ 1.5430806  3.7621958 10.067662 ]
 
     """
-    return build_unary_elemwise_math_op('cosh', x, name)
+    return build_unary_elemwise_math_op("cosh", x, name)
 
-def erf(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def erf(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the Gauss error value of Blob.
 
     The equation is:
@@ -410,9 +452,12 @@ def erf(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [0.8427008 0.9953223 0.9999779]
 
     """
-    return build_unary_elemwise_math_op('erf', x, name)
+    return build_unary_elemwise_math_op("erf", x, name)
 
-def erfc(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def erfc(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the :math:`1-erf(x)`, for more details of `erf` function
     please refer to `math.erf`.
 
@@ -444,9 +489,12 @@ def erfc(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [1.5729921e-01 4.6777353e-03 2.2090495e-05]
 
     """
-    return build_unary_elemwise_math_op('erfc', x, name)
+    return build_unary_elemwise_math_op("erfc", x, name)
 
-def exp(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def exp(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the exponential of Blob.
 
     The equation is:
@@ -482,9 +530,12 @@ def exp(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [ 2.7182817  7.389056  20.085537 ]
 
     """
-    return build_unary_elemwise_math_op('exp', x, name)
+    return build_unary_elemwise_math_op("exp", x, name)
 
-def expm1(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def expm1(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes :math:`y=e^x-1`.
 
     Args:
@@ -515,9 +566,12 @@ def expm1(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [ 1.7182819  6.389056  19.085537 ]
 
     """
-    return build_unary_elemwise_math_op('expm1', x, name)
+    return build_unary_elemwise_math_op("expm1", x, name)
 
-def floor(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def floor(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the largest integer not greater than input Blob.
 
     Args:
@@ -548,9 +602,12 @@ def floor(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [1. 1. 2.]
 
     """
-    return build_unary_elemwise_math_op('floor', x, name)
+    return build_unary_elemwise_math_op("floor", x, name)
 
-def lgamma(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def lgamma(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the :math:`Gamma(x)` value.
 
     The equation is:
@@ -587,9 +644,12 @@ def lgamma(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> o
         # out [-0.1081748  -0.12078223  0.4348206 ]
 
     """
-    return build_unary_elemwise_math_op('lgamma', x, name)
+    return build_unary_elemwise_math_op("lgamma", x, name)
 
-def log(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def log(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the log value of input Blob.
 
     Args:
@@ -620,9 +680,12 @@ def log(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [0.26236424 0.40546513 0.9932518 ]
 
     """
-    return build_unary_elemwise_math_op('log', x, name)
+    return build_unary_elemwise_math_op("log", x, name)
 
-def log1p(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def log1p(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the :math:`log(x)+1` value of input Blob.
 
     Args:
@@ -653,9 +716,12 @@ def log1p(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [0.8329091  0.91629076 1.3083328 ]
 
     """
-    return build_unary_elemwise_math_op('log1p', x, name)
+    return build_unary_elemwise_math_op("log1p", x, name)
 
-def log_sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def log_sigmoid(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the log sigmoid value of input Blob.
 
     The equation is:
@@ -692,9 +758,12 @@ def log_sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None)
         # out [-0.24100842 -0.20141333 -0.0650436 ]
 
     """
-    return build_unary_elemwise_math_op('log_sigmoid', x, name)
+    return build_unary_elemwise_math_op("log_sigmoid", x, name)
 
-def negative(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def negative(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the negative value of Blob.
 
     Args:
@@ -725,9 +794,12 @@ def negative(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) ->
         # out [-1.3 -1.5 -2.7]
 
     """
-    return build_unary_elemwise_math_op('negative', x, name)
+    return build_unary_elemwise_math_op("negative", x, name)
 
-def reciprocal(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def reciprocal(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the reciprocal of x.
 
     The equation is:
@@ -764,9 +836,12 @@ def reciprocal(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) 
         # out [1.   0.5  0.25]
 
     """
-    return build_unary_elemwise_math_op('reciprocal', x, name)
+    return build_unary_elemwise_math_op("reciprocal", x, name)
 
-def reciprocal_no_nan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def reciprocal_no_nan(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
 
@@ -798,9 +873,12 @@ def reciprocal_no_nan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]
         # out [0.   0.5  0.25]
 
     """
-    return build_unary_elemwise_math_op('reciprocal_no_nan', x, name)
+    return build_unary_elemwise_math_op("reciprocal_no_nan", x, name)
 
-def rint(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def rint(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the closest integer to Blob.
 
     Args:
@@ -831,9 +909,12 @@ def rint(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [1. 2. 3.]
 
     """
-    return build_unary_elemwise_math_op('rint', x, name)
+    return build_unary_elemwise_math_op("rint", x, name)
 
-def round(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def round(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator rounds the value of Blob to the nearest integer.
 
     Args:
@@ -864,9 +945,12 @@ def round(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [1. 2. 3.]
 
     """
-    return build_unary_elemwise_math_op('round', x, name)
+    return build_unary_elemwise_math_op("round", x, name)
 
-def rsqrt(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def rsqrt(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the reciprocal of square root value of Blob.
 
     The equation is:
@@ -903,9 +987,12 @@ def rsqrt(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         # out [0.5  0.25 0.2 ]
 
     """
-    return build_unary_elemwise_math_op('rsqrt', x, name)
+    return build_unary_elemwise_math_op("rsqrt", x, name)
 
-def sigmoid_v2(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sigmoid_v2(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the sigmoid value of Blob.
 
     The equation is:
@@ -941,9 +1028,12 @@ def sigmoid_v2(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) 
         # out [0.37754068 0.5        0.62245935]
 
     """
-    return build_unary_elemwise_math_op('sigmoid_v2', x, name)
+    return build_unary_elemwise_math_op("sigmoid_v2", x, name)
 
-def sign(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sign(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the sign of Blob.
 
     Args:
@@ -974,9 +1064,12 @@ def sign(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [-1.  0.  1.]
 
     """
-    return build_unary_elemwise_math_op('sign', x, name)
+    return build_unary_elemwise_math_op("sign", x, name)
 
-def sin(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sin(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the sin value of Blob.
 
     Args:
@@ -1007,9 +1100,12 @@ def sin(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [-0.5  0.   0.5]
 
     """
-    return build_unary_elemwise_math_op('sin', x, name)
+    return build_unary_elemwise_math_op("sin", x, name)
 
-def sinh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sinh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the hyperbolic sine value of Blob.
 
     The equation is:
@@ -1046,9 +1142,12 @@ def sinh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [-1.1752012  0.         1.1752012]
 
     """
-    return build_unary_elemwise_math_op('sinh', x, name)
+    return build_unary_elemwise_math_op("sinh", x, name)
 
-def softplus(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def softplus(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the softplus value of Blob.
 
     The equation is:
@@ -1085,9 +1184,12 @@ def softplus(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) ->
         # out [0.31326166 0.6931472  1.3132616 ]
 
     """
-    return build_unary_elemwise_math_op('softplus', x, name)
+    return build_unary_elemwise_math_op("softplus", x, name)
 
-def sqrt(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sqrt(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the sqrt root value of Blob.
 
     Args:
@@ -1118,9 +1220,12 @@ def sqrt(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [2. 4. 5.]
 
     """
-    return build_unary_elemwise_math_op('sqrt', x, name)
+    return build_unary_elemwise_math_op("sqrt", x, name)
 
-def square(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def square(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the square value of Blob.
 
     Args:
@@ -1151,9 +1256,12 @@ def square(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> o
         # out [ 4.  9. 16.]
 
     """
-    return build_unary_elemwise_math_op('square', x, name)
+    return build_unary_elemwise_math_op("square", x, name)
 
-def tan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tan(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the tan value of Blob.
 
     Args:
@@ -1184,9 +1292,12 @@ def tan(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> onef
         # out [-1.  0.  1.]
 
     """
-    return build_unary_elemwise_math_op('tan', x, name)
+    return build_unary_elemwise_math_op("tan", x, name)
 
-def tanh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tanh(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the hyperbolic tangent value of Blob.
 
     The equation is:
@@ -1223,9 +1334,12 @@ def tanh(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         # out [-0.7615942  0.         0.7615942]
 
     """
-    return build_unary_elemwise_math_op('tanh', x, name)
+    return build_unary_elemwise_math_op("tanh", x, name)
 
-def tanh_v2(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tanh_v2(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the hyperbolic tangent value of Blob.
 
     The equation is:
@@ -1241,6 +1355,8 @@ def tanh_v2(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> 
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result Blob
     """
-    print('WARNING: flow.math.tanh_v2 has been deprecated. Please replace it by flow.math.tanh.\n        ')
+    print(
+        "WARNING: flow.math.tanh_v2 has been deprecated. Please replace it by flow.math.tanh.\n        "
+    )
     print(traceback.format_stack()[-2])
     return flow.math.tanh(x, name)

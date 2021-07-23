@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(False)
@@ -10,7 +12,9 @@ def make_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     @flow.global_function(config)
     def cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
+
     return cast_job
+
 
 def make_xla_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     config.use_xla_jit(True)
@@ -19,17 +23,18 @@ def make_xla_job(input_shape, dtype=flow.float32, target_dtype=flow.float32):
     @flow.global_function(config)
     def xla_cast_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.cast(x, dtype=target_dtype)
+
     return xla_cast_job
 
-class TestCast(unittest.TestCase):
 
+class TestCast(unittest.TestCase):
     def _test_body(self, x, dtype=flow.float32, target_dtype=flow.float32):
         f1 = make_job(x.shape, dtype=dtype, target_dtype=target_dtype)
         f2 = make_xla_job(x.shape, dtype=dtype, target_dtype=target_dtype)
         a = f1(x).get()
         b = f2(x).get()
-        print('without xla: ', a)
-        print('with xla', b)
+        print("without xla: ", a)
+        print("with xla", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -50,5 +55,7 @@ class TestCast(unittest.TestCase):
     def test_random_input(self):
         self._test_random_body(1, flow.float32, flow.int32)
         self._test_random_body((1, 10), flow.int32, flow.float32)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -2,13 +2,15 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class MaskedSelect(Module):
 
+class MaskedSelect(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x, mask):
-        assert len(x.shape) == len(mask.shape), f"The dim of masked_select module's inputs can not match, please check!"
+        assert len(x.shape) == len(
+            mask.shape
+        ), f"The dim of masked_select module's inputs can not match, please check!"
         broadcast_like_shape = []
         broadcast_x_axes = []
         broadcast_mask_axes = []
@@ -19,17 +21,24 @@ class MaskedSelect(Module):
                 broadcast_x_axes.append(i)
             if max_dim != mask.shape[i]:
                 broadcast_mask_axes.append(i)
-        broadcast_like_tensor = flow.zeros(tuple(broadcast_like_shape), dtype=flow.float32, device=x.device)
+        broadcast_like_tensor = flow.zeros(
+            tuple(broadcast_like_shape), dtype=flow.float32, device=x.device
+        )
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
-            x = flow.broadcast_like(x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes))
+            x = flow.broadcast_like(
+                x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
+            )
         if len(broadcast_mask_axes) != 0:
-            mask = flow.broadcast_like(mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes))
+            mask = flow.broadcast_like(
+                mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
+            )
         mask = mask.to(dtype=x.dtype)
         res = flow.F.mul(x, mask)
         indices = flow.argwhere(res)
         gather_res = flow.F.gather_nd(res, indices)
         return gather_res.flatten()
+
 
 def masked_select_op(x, mask):
     """
@@ -57,7 +66,8 @@ def masked_select_op(x, mask):
     """
     return MaskedSelect()(x, mask)
 
-@register_tensor_op('masked_select')
+
+@register_tensor_op("masked_select")
 def tensor_masked_select_op(x, mask):
     """
 
@@ -65,6 +75,9 @@ def tensor_masked_select_op(x, mask):
 
     """
     return MaskedSelect()(x, mask)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

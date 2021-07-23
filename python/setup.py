@@ -40,22 +40,15 @@ class BinaryDistribution(Distribution):
         return True
 
 
-include_files = glob.glob(
-    "oneflow/include/**/*", recursive=True
-)
-include_files = [
-    os.path.relpath(p, "oneflow")
-    for p in include_files
-]
+include_files = glob.glob("oneflow/include/**/*", recursive=True)
+include_files = [os.path.relpath(p, "oneflow") for p in include_files]
 assert len(include_files) > 0
 
 
 def get_oneflow_internal_so_path():
     import imp
 
-    fp, pathname, description = imp.find_module(
-        "_oneflow_internal", ["oneflow"]
-    )
+    fp, pathname, description = imp.find_module("_oneflow_internal", ["oneflow"])
     assert os.path.isfile(pathname)
     return os.path.relpath(pathname, "oneflow")
 

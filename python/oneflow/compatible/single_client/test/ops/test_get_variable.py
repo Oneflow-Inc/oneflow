@@ -3,16 +3,21 @@ import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestGetVariable(flow.unittest.TestCase):
-
     def test_get_variable_with_same_name(test_case):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
 
         def get_v():
-            return flow.get_variable(name='var', shape=(5, 2), dtype=flow.float32, initializer=flow.random_uniform_initializer())
+            return flow.get_variable(
+                name="var",
+                shape=(5, 2),
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(),
+            )
 
         @flow.global_function(function_config=func_config)
         def TestJob0():
@@ -23,6 +28,7 @@ class TestGetVariable(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def TestJob1():
             return get_v()
+
         (j0_v1, j0_v2) = TestJob0().get()
         j1_v = TestJob1().get()
         test_case.assertTrue(np.array_equal(j0_v1.numpy(), j0_v2.numpy()))
@@ -32,19 +38,30 @@ class TestGetVariable(flow.unittest.TestCase):
         flow.clear_default_session()
 
         def get_var(name, shape=(2, 5), dtype=flow.float, trainable=False):
-            return flow.get_variable(name=name, shape=shape, dtype=dtype, trainable=trainable, initializer=flow.random_uniform_initializer())
+            return flow.get_variable(
+                name=name,
+                shape=shape,
+                dtype=dtype,
+                trainable=trainable,
+                initializer=flow.random_uniform_initializer(),
+            )
+
         learning_rate = 0.01
 
-        @flow.global_function(type='train', function_config=flow.FunctionConfig())
+        @flow.global_function(type="train", function_config=flow.FunctionConfig())
         def train(x_def: oft.Numpy.Placeholder(shape=(2, 5), dtype=flow.float)):
-            var = get_var('var', trainable=True)
+            var = get_var("var", trainable=True)
             loss = var + x_def
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum=0,
+            ).minimize(loss)
             return var
 
         @flow.global_function()
         def eval():
-            return get_var('var')
+            return get_var("var")
+
         variables = []
         for i in range(10):
             input = np.random.rand(2, 5).astype(np.single)
@@ -52,7 +69,11 @@ class TestGetVariable(flow.unittest.TestCase):
             train_var = train(input).get()
             test_case.assertTrue(np.array_equal(eval_var.numpy(), train_var.numpy()))
             if i > 0:
-                test_case.assertTrue(np.allclose(eval_var.numpy(), variables[-1] - learning_rate / eval_var.size))
+                test_case.assertTrue(
+                    np.allclose(
+                        eval_var.numpy(), variables[-1] - learning_rate / eval_var.size
+                    )
+                )
             variables.append(eval_var.numpy())
 
     def test_get_job_inter_and_intra_shared_variable(test_case):
@@ -60,21 +81,32 @@ class TestGetVariable(flow.unittest.TestCase):
         variable_shape = (2, 5)
 
         def get_var(name, shape=variable_shape, dtype=flow.float, trainable=False):
-            return flow.get_variable(name=name, shape=shape, dtype=dtype, trainable=trainable, initializer=flow.random_uniform_initializer())
+            return flow.get_variable(
+                name=name,
+                shape=shape,
+                dtype=dtype,
+                trainable=trainable,
+                initializer=flow.random_uniform_initializer(),
+            )
+
         learning_rate = 0.01
 
-        @flow.global_function(type='train', function_config=flow.FunctionConfig())
+        @flow.global_function(type="train", function_config=flow.FunctionConfig())
         def train(x_def: oft.Numpy.Placeholder(shape=variable_shape, dtype=flow.float)):
-            var = get_var('var', trainable=True)
+            var = get_var("var", trainable=True)
             loss = var + x_def
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]), momentum=0).minimize(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum=0,
+            ).minimize(loss)
             return var
 
         @flow.global_function()
         def eval():
-            v1 = get_var('var')
-            v2 = get_var('var')
+            v1 = get_var("var")
+            v2 = get_var("var")
             return (v1, v2)
+
         variables = []
         for i in range(10):
             input = np.random.rand(*variable_shape).astype(np.single)
@@ -83,7 +115,11 @@ class TestGetVariable(flow.unittest.TestCase):
             test_case.assertTrue(np.array_equal(var1.numpy(), var2.numpy()))
             test_case.assertTrue(np.array_equal(var1.numpy(), train_var.numpy()))
             if i > 0:
-                test_case.assertTrue(np.allclose(var1.numpy(), variables[-1] - learning_rate / var1.size))
+                test_case.assertTrue(
+                    np.allclose(var1.numpy(), variables[-1] - learning_rate / var1.size)
+                )
             variables.append(var1.numpy())
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

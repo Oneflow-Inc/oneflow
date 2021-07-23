@@ -5,6 +5,7 @@ import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
+
 def _test_div_impl(test_case, shape, device):
     x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
@@ -31,7 +32,9 @@ def _test_div_impl(test_case, shape, device):
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
     y = flow.Tensor(np.array([5.0]), device=flow.device(device), requires_grad=True)
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y.numpy())
@@ -41,23 +44,43 @@ def _test_div_impl(test_case, shape, device):
     np_grad_x = np.full(shape, 0.2)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 0.0001, 0.0001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestDiv(flow.unittest.TestCase):
-
     def test_div(test_case):
         arg_dict = OrderedDict()
-        arg_dict['shape'] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_div_impl(test_case, *arg)
 
     def test_sub_against_pytorch(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_type'] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict['device'] = ['cpu', 'cuda']
-        arg_dict['op'] = ['div']
+        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["op"] = ["div"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, arg[2], extra_annotations={'other': flow.Tensor}, extra_generators={'input': random_tensor(ndim=2, dim0=2, dim1=3), 'other': random_tensor(ndim=2, dim0=2, dim1=3)}, device=arg[1])
-            arg[0](test_case, arg[2], extra_annotations={'other': float}, extra_generators={'input': random_tensor(ndim=2, dim0=2, dim1=3), 'other': random(0, 5)}, device=arg[1])
-if __name__ == '__main__':
+            arg[0](
+                test_case,
+                arg[2],
+                extra_annotations={"other": flow.Tensor},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random_tensor(ndim=2, dim0=2, dim1=3),
+                },
+                device=arg[1],
+            )
+            arg[0](
+                test_case,
+                arg[2],
+                extra_annotations={"other": float},
+                extra_generators={
+                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
+                    "other": random(0, 5),
+                },
+                device=arg[1],
+            )
+
+
+if __name__ == "__main__":
     unittest.main()

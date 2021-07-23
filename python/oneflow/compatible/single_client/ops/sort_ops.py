@@ -1,16 +1,40 @@
 from typing import Optional
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
-from oneflow.compatible.single_client.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
+from oneflow.compatible.single_client.python.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+)
 from oneflow.compatible.single_client.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
-def _sort_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    assert direction in ['ASCENDING', 'DESCENDING']
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Sort_')).Op('sort').Input('in', [input]).Output('out').Attr('direction', direction).Build().InferAndTryRun().RemoteBlobList()[0]
 
-def sort(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def _sort_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    assert direction in ["ASCENDING", "DESCENDING"]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
+        .Op("sort")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("direction", direction)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def sort(
+    input: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator sorts the input Blob at specified axis.
 
     Args:
@@ -42,24 +66,48 @@ def sort(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, direction: str
         # out [ 2.  3.  7.  9. 10.]
 
     """
-    assert direction in ['ASCENDING', 'DESCENDING']
-    name = name if name is not None else id_util.UniqueStr('Sort_')
+    assert direction in ["ASCENDING", "DESCENDING"]
+    name = name if name is not None else id_util.UniqueStr("Sort_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert 0 <= axis < num_axes, 'axis out of range'
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _sort_at_last_dim(input, direction, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + '_transpose')
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _sort_at_last_dim(x, direction, name)
-        return flow.transpose(x, get_inversed_perm(perm), False, True, name + '_inverse_transpose')
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
 
-def _argsort_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    assert direction in ['ASCENDING', 'DESCENDING']
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('ArgSort_')).Op('arg_sort').Input('in', [input]).Output('out').Attr('direction', direction).Build().InferAndTryRun().RemoteBlobList()[0]
 
-def argsort(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+def _argsort_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    assert direction in ["ASCENDING", "DESCENDING"]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("ArgSort_")
+        )
+        .Op("arg_sort")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("direction", direction)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def argsort(
+    input: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator sorts the input Blob at specified axis and return the indices of the sorted Blob.
 
     Args:
@@ -91,15 +139,17 @@ def argsort(input: oneflow._oneflow_internal.BlobDesc, axis: int=-1, direction: 
         # out [1 3 4 2 0]
 
     """
-    assert direction in ['ASCENDING', 'DESCENDING']
-    name = name if name is not None else id_util.UniqueStr('ArgSort_')
+    assert direction in ["ASCENDING", "DESCENDING"]
+    name = name if name is not None else id_util.UniqueStr("ArgSort_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert 0 <= axis < num_axes, 'axis out of range'
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _argsort_at_last_dim(input, direction, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + '_transpose')
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _argsort_at_last_dim(x, direction, name)
-        return flow.transpose(x, get_inversed_perm(perm), False, True, name + '_inverse_transpose')
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )

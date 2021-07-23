@@ -4,46 +4,49 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 from oneflow.compatible.single_client.python.nn.modules.utils import _check_axis
-from oneflow.compatible.single_client.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim, get_inversed_perm
+from oneflow.compatible.single_client.python.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
+
 
 class ScalarMul(Module):
-
     def __init__(self, alpha) -> None:
         super().__init__()
         if not isinstance(alpha, (int, float)):
-            raise ValueError('alpha type can only be int or float')
+            raise ValueError("alpha type can only be int or float")
         self.alpha = alpha
 
     def forward(self, x):
         return flow.F.mul_scalar(x, self.alpha)
 
-class ScalarMulByTensor(Module):
 
+class ScalarMulByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.mul_scalar_by_tensor(x, y)
 
-class ElementwiseMul(Module):
 
+class ElementwiseMul(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.mul(x, y)
 
-class BroadcastMul(Module):
 
+class BroadcastMul(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_mul(x, y)
 
-class Variance(Module):
 
-    def __init__(self, dim: int=None, keepdim: bool=False) -> None:
+class Variance(Module):
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self.dim = dim
         self.keepdim = keepdim
@@ -53,133 +56,140 @@ class Variance(Module):
         if isinstance(axis, list) and len(axis) == 0:
             return flow.experimental.zeros(size=input.shape)
         else:
-            return flow.experimental.sub(flow.experimental.mean(flow.experimental.square(input), axis, self.keepdim), flow.experimental.square(flow.experimental.mean(input, axis, self.keepdim)))
+            return flow.experimental.sub(
+                flow.experimental.mean(
+                    flow.experimental.square(input), axis, self.keepdim
+                ),
+                flow.experimental.square(
+                    flow.experimental.mean(input, axis, self.keepdim)
+                ),
+            )
+
 
 class ScalarSubByTensor(Module):
-
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.sub_scalar_by_tensor(x, y)
 
-class BroadcastSub(Module):
 
+class BroadcastSub(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_sub(x, y)
 
-class ScalarAdd(Module):
 
+class ScalarAdd(Module):
     def __init__(self, alpha) -> None:
         super().__init__()
         if not isinstance(alpha, int) and (not isinstance(alpha, float)):
-            raise ValueError('scalar type can only be int or float')
+            raise ValueError("scalar type can only be int or float")
         self.alpha = alpha
 
     def forward(self, x):
         return flow.F.add_scalar(x, self.alpha)
 
-class BroadcastDiv(Module):
 
+class BroadcastDiv(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_div(x, y)
 
-class ScalarDivByTensor(Module):
 
+class ScalarDivByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, scalar):
         return flow.F.div_scalar_by_tensor(x, scalar)
 
-class Reciprocal(Module):
 
+class Reciprocal(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.reciprocal_no_nan(x)
 
-class ScalarAddByTensor(Module):
 
+class ScalarAddByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.add_scalar_by_tensor(x, y)
 
-class ElementwiseAdd(Module):
 
+class ElementwiseAdd(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.add(x, y)
 
-class BroadcastAdd(Module):
 
+class BroadcastAdd(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x, y):
         return flow.F.broadcast_add(x, y)
 
-class Asin(Module):
 
+class Asin(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.asin(x)
 
-class Asinh(Module):
 
+class Asinh(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.asinh(x)
 
-class Sin(Module):
 
+class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.sin(x)
 
-class Cos(Module):
 
+class Cos(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.cos(x)
 
-class Atan(Module):
 
+class Atan(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.atan(x)
 
-class Log(Module):
 
+class Log(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.log(x)
 
-class Subtract(Module):
 
+class Subtract(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -197,32 +207,32 @@ class Subtract(Module):
         else:
             return BroadcastSub()(x, y)
 
-class Sqrt(Module):
 
+class Sqrt(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.sqrt(input)
 
-class Rsqrt(Module):
 
+class Rsqrt(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.rsqrt(input)
 
-class Square(Module):
 
+class Square(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.square(input)
 
-class Std(Module):
 
+class Std(Module):
     def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
         super().__init__()
         assert unbiased == True, "Only support 'unbiased=True' for now!"
@@ -244,14 +254,19 @@ class Std(Module):
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
-            sum = flow.experimental.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
-            square = self.square_op(flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count)
+            sum = (
+                flow.experimental.sum(self.square_op(x), self.axis, self.keepdim)
+                / self.reduce_count
+            )
+            square = self.square_op(
+                flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count
+            )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
             return res
 
-class Pow(Module):
 
+class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -261,20 +276,29 @@ class Pow(Module):
         else:
             return flow.F.pow(x, y)
 
-class Addmm(Module):
 
+class Addmm(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._matmul_op = flow.builtin_op('matmul').Input('a').Input('b').Output('out').Attr('transpose_a', False).Attr('transpose_b', False).Attr('alpha', 1.0).Build()
+        self._matmul_op = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
 
     def forward(self, x, mat1, mat2, alpha=1, beta=1):
         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
-            raise ValueError('input matrixes shape can not be greater than 2')
+            raise ValueError("input matrixes shape can not be greater than 2")
         else:
             return _mul(x, beta) + _mul(self._matmul_op(mat1, mat2)[0], alpha)
 
-class Clamp(Module):
 
+class Clamp(Module):
     def __init__(self, min_value=None, max_value=None) -> None:
         super().__init__()
         if min_value is not None:
@@ -284,63 +308,95 @@ class Clamp(Module):
             floating_max_value = float(max_value)
             integral_max_value = int(max_value)
         if min_value is not None and max_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar').Input('x').Output('y').Attr('floating_min', floating_min_value).Attr('integral_min', integral_min_value).Attr('floating_max', floating_max_value).Attr('integral_max', integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         elif min_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar_min').Input('x').Output('y').Attr('floating_min', floating_min_value).Attr('integral_min', integral_min_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_min")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Build()
+            )
         elif max_value is not None:
-            self._op = flow.builtin_op('clip_by_scalar_max').Input('x').Output('y').Attr('floating_max', floating_max_value).Attr('integral_max', integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_max")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         else:
-            raise ValueError('min_value and max_value cannot be None at the same time')
+            raise ValueError("min_value and max_value cannot be None at the same time")
 
     def forward(self, x):
         return self._op(x)[0]
 
-class Cosh(Module):
 
+class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.cosh(x)
 
-class Erf(Module):
 
+class Erf(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, input):
         return flow.F.erf(input)
 
-class Erfc(Module):
 
+class Erfc(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.erfc_op = flow.builtin_op('erfc').Input('x').Output('y').Build()
+        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
 
     def forward(self, input):
         return self.erfc_op(input)[0]
 
-class Ceil(Module):
 
+class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.ceil(x)
 
-class Expm1(Module):
 
+class Expm1(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.expm1(x)
 
-class Topk(Module):
 
-    def __init__(self, k, dim: int=None, largest: bool=True, sorted: bool=True) -> None:
+class Topk(Module):
+    def __init__(
+        self, k, dim: int = None, largest: bool = True, sorted: bool = True
+    ) -> None:
         super().__init__()
-        self._op_topk_last_dim = flow.builtin_op('top_k').Input('in').Output('out').Attr('k', k).Attr('sorted', sorted).Build()
+        self._op_topk_last_dim = (
+            flow.builtin_op("top_k")
+            .Input("in")
+            .Output("out")
+            .Attr("k", k)
+            .Attr("sorted", sorted)
+            .Build()
+        )
         self.dim = dim
         self.largest = largest
 
@@ -349,7 +405,7 @@ class Topk(Module):
             self.dim = -1
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
-        assert 0 <= axis < num_axes, 'axis out of range'
+        assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:
                 indices = self._op_topk_last_dim(input)[0]
@@ -367,6 +423,9 @@ class Topk(Module):
                 indices = self._op_topk_last_dim(neg_input)[0]
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.experimental.gather(input, indices, dim=axis), indices)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

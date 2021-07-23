@@ -4,7 +4,8 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 
-def _topk_np(input, k, dim: int=-1, largest: bool=True, _sorted: bool=True):
+
+def _topk_np(input, k, dim: int = -1, largest: bool = True, _sorted: bool = True):
     in_dims = input.shape
     out_dims = list(in_dims)
     num_axes = len(input.shape)
@@ -44,10 +45,13 @@ def _topk_np(input, k, dim: int=-1, largest: bool=True, _sorted: bool=True):
     indices_ref = indices_ref.reshape(out_dims)
     return (values_ref, indices_ref)
 
+
 def _in_top_k_np(targets, predictions, k):
-    assert targets.shape[0] == predictions.shape[0], 'The num of targets must equal the num of predictions'
-    assert len(targets.shape) == 1, 'The dimension of targets must be 1'
-    assert len(predictions.shape) == 2, 'The dimension of predictions must be 2'
+    assert (
+        targets.shape[0] == predictions.shape[0]
+    ), "The num of targets must equal the num of predictions"
+    assert len(targets.shape) == 1, "The dimension of targets must be 1"
+    assert len(predictions.shape) == 2, "The dimension of predictions must be 2"
     results = np.zeros_like(targets, dtype=np.int8)
     for i in range(len(results)):
         (_, indices_topk) = _topk_np(predictions[i], k)
@@ -55,24 +59,36 @@ def _in_top_k_np(targets, predictions, k):
             results[i] = 1
     return results
 
+
 def _test_in_top_k_impl(test_case, shape, k, device):
     np_targets = np.random.randint(0, shape[1], size=shape[0])
     np_predictions = np.random.rand(*shape)
-    of_targets = flow.Tensor(np_targets, dtype=flow.int32, device=flow.device(device), requires_grad=True)
-    of_predictions = flow.Tensor(np_predictions, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    of_targets = flow.Tensor(
+        np_targets, dtype=flow.int32, device=flow.device(device), requires_grad=True
+    )
+    of_predictions = flow.Tensor(
+        np_predictions,
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
     of_out = flow.in_top_k(of_targets, of_predictions, k)
     np_out = _in_top_k_np(np_targets, np_predictions, k)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001, equal_nan=True)
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestInTopK(flow.unittest.TestCase):
-
     def test_in_top_k(test_case):
         arg_dict = OrderedDict()
-        arg_dict['shape'] = [(2, 3), (3, 4), (5, 6)]
-        arg_dict['k'] = [1, 2, 5]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["shape"] = [(2, 3), (3, 4), (5, 6)]
+        arg_dict["k"] = [1, 2, 5]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_in_top_k_impl(test_case, *arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

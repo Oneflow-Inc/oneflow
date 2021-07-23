@@ -3,6 +3,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 from typing import Optional, List, Tuple
 
+
 class Embedding(Module):
     """A simple lookup table that stores embeddings of a fixed dictionary and size.
 
@@ -32,26 +33,43 @@ class Embedding(Module):
 
     """
 
-    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int]=None, max_norm: Optional[float]=None, norm_type: Optional[float]=None, scale_grad_by_freq: bool=False, sparse: bool=False, _weight: Optional[Tensor]=None):
+    def __init__(
+        self,
+        num_embeddings: int,
+        embedding_dim: int,
+        padding_idx: Optional[int] = None,
+        max_norm: Optional[float] = None,
+        norm_type: Optional[float] = None,
+        scale_grad_by_freq: bool = False,
+        sparse: bool = False,
+        _weight: Optional[Tensor] = None,
+    ):
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
         if padding_idx is not None:
             if padding_idx > 0:
-                assert padding_idx < self.num_embeddings, 'Padding_idx must be within num_embeddings'
+                assert (
+                    padding_idx < self.num_embeddings
+                ), "Padding_idx must be within num_embeddings"
             elif padding_idx < 0:
-                assert padding_idx >= -self.num_embeddings, 'Padding_idx must be within num_embeddings'
+                assert (
+                    padding_idx >= -self.num_embeddings
+                ), "Padding_idx must be within num_embeddings"
                 padding_idx = self.num_embeddings + padding_idx
         self.padding_idx = padding_idx
-        assert max_norm is None, 'Not support max_norm yet!'
-        assert norm_type is None, 'Not support norm_type yet!'
-        assert scale_grad_by_freq is False, 'Not support scale_grad_by_freq=True yet!'
-        assert sparse is False, 'Not support sparse=True yet!'
+        assert max_norm is None, "Not support max_norm yet!"
+        assert norm_type is None, "Not support norm_type yet!"
+        assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+        assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
             self.reset_parameters()
         else:
-            assert list(_weight.shape) == [num_embeddings, embedding_dim], 'Shape of weight does not match num_embeddings and embedding_dim'
+            assert list(_weight.shape) == [
+                num_embeddings,
+                embedding_dim,
+            ], "Shape of weight does not match num_embeddings and embedding_dim"
             self.weight = flow.nn.Parameter(_weight)
         self.sparse = sparse
 
@@ -67,6 +85,9 @@ class Embedding(Module):
     def forward(self, indices):
         res = flow.F.gather(self.weight, indices, axis=0)
         return res
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

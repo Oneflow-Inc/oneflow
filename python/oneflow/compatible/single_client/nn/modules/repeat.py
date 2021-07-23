@@ -2,8 +2,8 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 
-class Repeat(Module):
 
+class Repeat(Module):
     def __init__(self, sizes) -> None:
         super().__init__()
         self.sizes = sizes
@@ -42,6 +42,9 @@ class Repeat(Module):
         tmp_tensor = new_tensor.expand(*expand_dim)
         out = flow.experimental.reshape(tmp_tensor, out_reshape)
         return out
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

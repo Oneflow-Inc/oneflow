@@ -1,14 +1,29 @@
 import os
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.compatible.single_client.python.framework import distribute as distribute_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    distribute as distribute_util,
+)
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 from typing import Optional, Union
 
-def one_hot(indices: oneflow._oneflow_internal.BlobDesc, depth: int, on_value: Union[int, float]=1, off_value: Union[int, float]=0, axis: int=-1, dtype: Optional[flow.dtype]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def one_hot(
+    indices: oneflow._oneflow_internal.BlobDesc,
+    depth: int,
+    on_value: Union[int, float] = 1,
+    off_value: Union[int, float] = 0,
+    axis: int = -1,
+    dtype: Optional[flow.dtype] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator generates a onehot Blob from input Blob.
 
     If input Blob's rank is `N`, the corresponding onehot Blob's rank is `N+1`. The new axis is generated on the specified dimension according to the parameter `axis`.
@@ -89,8 +104,25 @@ def one_hot(indices: oneflow._oneflow_internal.BlobDesc, depth: int, on_value: U
     out_ndims = len(indices.shape) + 1
     if axis < 0:
         axis += out_ndims
-    assert axis >= 0 and axis < out_ndims, ValueError('Expected axis to between [%d, %d).  But received: %d ' % (-out_ndims, out_ndims, axis))
-    out = flow.user_op_builder(name if name is not None else id_util.UniqueStr('OneHot_')).Op('one_hot').Input('indices', [indices]).Attr('depth', int(depth)).Attr('floating_on_value', float(on_value)).Attr('integer_on_value', int(on_value)).Attr('floating_off_value', float(off_value)).Attr('integer_off_value', int(off_value)).Attr('dtype', dtype).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    assert axis >= 0 and axis < out_ndims, ValueError(
+        "Expected axis to between [%d, %d).  But received: %d "
+        % (-out_ndims, out_ndims, axis)
+    )
+    out = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("OneHot_"))
+        .Op("one_hot")
+        .Input("indices", [indices])
+        .Attr("depth", int(depth))
+        .Attr("floating_on_value", float(on_value))
+        .Attr("integer_on_value", int(on_value))
+        .Attr("floating_off_value", float(off_value))
+        .Attr("integer_off_value", int(off_value))
+        .Attr("dtype", dtype)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
     if axis != out_ndims - 1:
         dim_list = list(range(0, out_ndims))
         dim_list.insert(axis, out_ndims - 1)

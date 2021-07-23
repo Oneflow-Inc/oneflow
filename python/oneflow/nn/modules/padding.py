@@ -2,6 +2,7 @@ from typing import Union
 import oneflow as flow
 from oneflow.nn.module import Module
 
+
 class ReplicationPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -63,23 +64,31 @@ class ReplicationPad2d(Module):
     def __init__(self, padding: Union[int, tuple, list]):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError('Length of padding must be 4')
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError('padding must be int or list or tuple!')
+            raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
 
     def forward(self, x):
         (_, _, h, w) = x.shape
-        if self.padding[2] < h and self.padding[3] < h and (self.padding[0] < w) and (self.padding[1] < w):
-            return flow.F.pad(x, pad=self.padding, mode='replicate')
+        if (
+            self.padding[2] < h
+            and self.padding[3] < h
+            and (self.padding[0] < w)
+            and (self.padding[1] < w)
+        ):
+            return flow.F.pad(x, pad=self.padding, mode="replicate")
         else:
-            raise AssertionError('Padding size should be less than the corresponding input dimension. Please check.')
+            raise AssertionError(
+                "Padding size should be less than the corresponding input dimension. Please check."
+            )
 
     def extra_repr(self) -> str:
-        return '{}'.format(self.padding)
+        return "{}".format(self.padding)
+
 
 class ReflectionPad2d(Module):
     """The interface is consistent with PyTorch.
@@ -130,23 +139,31 @@ class ReflectionPad2d(Module):
     def __init__(self, padding: Union[int, tuple]) -> None:
         super().__init__()
         if isinstance(padding, tuple):
-            assert len(padding) == 4, ValueError('Padding length must be 4')
+            assert len(padding) == 4, ValueError("Padding length must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError('padding must be in or list or tuple!')
+            raise ValueError("padding must be in or list or tuple!")
         self.padding = boundary
 
     def forward(self, x):
         (H, W) = (x.shape[2], x.shape[3])
-        if self.padding[2] < H and self.padding[3] < H and (self.padding[0] < W) and (self.padding[1] < W):
-            return flow.F.pad(x, pad=self.padding, mode='reflect')
+        if (
+            self.padding[2] < H
+            and self.padding[3] < H
+            and (self.padding[0] < W)
+            and (self.padding[1] < W)
+        ):
+            return flow.F.pad(x, pad=self.padding, mode="reflect")
         else:
-            raise ValueError('padding size should be less than the corresponding input dimension!')
+            raise ValueError(
+                "padding size should be less than the corresponding input dimension!"
+            )
 
     def extra_repr(self) -> str:
-        return '{}'.format(self.padding)
+        return "{}".format(self.padding)
+
 
 class ConstantPad2d(Module):
     """The interface is consistent with PyTorch.
@@ -207,15 +224,15 @@ class ConstantPad2d(Module):
                   [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
     """
 
-    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float]=0):
+    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError('Length of padding must be 4')
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError('padding must be int or list or tuple!')
+            raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
         self.value = value
 
@@ -224,7 +241,8 @@ class ConstantPad2d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        return flow.F.pad(x, pad=self.padding, mode='constant', value=self.value)
+        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+
 
 class ConstantPad3d(Module):
     """Pads the input tensor boundaries with a constant value.
@@ -282,15 +300,22 @@ class ConstantPad3d(Module):
                    [9, 9, 9, 9]]]]], dtype=oneflow.int32)
     """
 
-    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float]=0):
+    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 6, ValueError('Length of padding must be 6')
-            boundary = [padding[0], padding[1], padding[2], padding[3], padding[4], padding[5]]
+            assert len(padding) == 6, ValueError("Length of padding must be 6")
+            boundary = [
+                padding[0],
+                padding[1],
+                padding[2],
+                padding[3],
+                padding[4],
+                padding[5],
+            ]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding, padding, padding]
         else:
-            raise ValueError('padding must be int or list or tuple!')
+            raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
         self.value = value
 
@@ -299,7 +324,10 @@ class ConstantPad3d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        return flow.F.pad(x, pad=self.padding, mode='constant', value=self.value)
-if __name__ == '__main__':
+        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

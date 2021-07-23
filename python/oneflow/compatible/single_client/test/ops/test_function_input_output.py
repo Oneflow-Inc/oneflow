@@ -5,14 +5,14 @@ from oneflow.compatible.single_client import typing as oft
 import oneflow._oneflow_internal
 from typing import Tuple
 
+
 @flow.unittest.skip_unless_1n4d()
 class TestFunctionInputOutput(flow.unittest.TestCase):
-
     def test_FixedTensorDef(test_case):
-
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5))):
             return x
+
         data = np.ones((2, 5), dtype=np.float32)
         of_ret = Foo(data).get()
         test_case.assertEqual(of_ret.numpy().max(), 1)
@@ -25,6 +25,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5))):
             return x
+
         data = np.ones((2, 5), dtype=np.float32)
         of_ret = Foo(data).get()
         test_case.assertEqual(of_ret.numpy().max(), 1)
@@ -38,9 +39,12 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.ListNumpy.Placeholder((2, 5))):
             return x
+
         data = np.ones((1, 5), dtype=np.float32)
         ndarray_list = Foo([data]).get().numpy_list()
         test_case.assertEqual(len(ndarray_list), 1)
         test_case.assertTrue(np.allclose(ndarray_list[0], data))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

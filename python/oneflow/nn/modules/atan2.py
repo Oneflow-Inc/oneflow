@@ -2,14 +2,17 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
-class Atan2(Module):
 
+class Atan2(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.atan2_op = flow.builtin_op('atan2').Input('x').Input('y').Output('z').Build()
+        self.atan2_op = (
+            flow.builtin_op("atan2").Input("x").Input("y").Output("z").Build()
+        )
 
     def forward(self, x, y):
         return self.atan2_op(x, y)[0]
+
 
 def atan2_op(input, other):
     """Element-wise arctangent of input{i}/other{i}
@@ -47,7 +50,8 @@ def atan2_op(input, other):
     """
     return Atan2()(input, other)
 
-@register_tensor_op('atan2')
+
+@register_tensor_op("atan2")
 def atan2_op_tensor(input, other):
     """
 
@@ -56,6 +60,9 @@ def atan2_op_tensor(input, other):
     See :func:`oneflow.atan2`
     """
     return Atan2()(input, other)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

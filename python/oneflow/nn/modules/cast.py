@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Cast(Module):
 
+class Cast(Module):
     def __init__(self, dtype: flow.dtype) -> None:
         super().__init__()
         self.dtype = dtype
@@ -11,7 +11,8 @@ class Cast(Module):
     def forward(self, x):
         return flow.F.cast(x, dtype=self.dtype)
 
-@register_tensor_op('cast')
+
+@register_tensor_op("cast")
 def cast_op(x, dtype):
     """The operation takes input tensor `x` and casts it to the output with `dtype`
 
@@ -36,6 +37,9 @@ def cast_op(x, dtype):
 
     """
     return Cast(dtype)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

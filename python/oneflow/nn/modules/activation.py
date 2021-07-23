@@ -6,6 +6,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 from oneflow.framework.tensor import register_tensor_op
 
+
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
@@ -22,6 +23,7 @@ def _softmax_need_transpose(x, axis):
         permute[axis] = permute[-1]
         permute[-1] = axis
     return (need_transpose, permute)
+
 
 class PReLU(Module):
     """Applies the element-wise function:
@@ -68,14 +70,17 @@ class PReLU(Module):
 
     """
 
-    def __init__(self, num_parameters: int=1, init: float=0.25) -> None:
+    def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
         super().__init__()
         self.num_parameters = num_parameters
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
 
     def forward(self, x):
-        assert self.num_parameters == 1 or self.num_parameters == x.shape[1], f'num_parameters in prelu must be 1 or {x.shape[1]}'
+        assert (
+            self.num_parameters == 1 or self.num_parameters == x.shape[1]
+        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
         return flow.F.prelu(x, self.weight)
+
 
 class ReLU(Module):
     """Applies the rectified linear unit function element-wise:
@@ -104,7 +109,7 @@ class ReLU(Module):
 
     """
 
-    def __init__(self, inplace: bool=False):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self.inplace = inplace
 
@@ -114,8 +119,9 @@ class ReLU(Module):
         return flow.F.relu(x, self.inplace)
 
     def extra_repr(self):
-        inplace_str = 'inplace=True' if self.inplace else ''
+        inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
+
 
 class ReLU6(Module):
     """Applies the element-wise function:
@@ -153,18 +159,19 @@ class ReLU6(Module):
 
     """
 
-    def __init__(self, inplace: bool=False):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('ReLU6 module do not support inplace now')
+            warnings.warn("ReLU6 module do not support inplace now")
         return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
 
     def extra_repr(self):
-        inplace_str = 'inplace=True' if self.inplace else ''
+        inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
+
 
 class Tanh(Module):
     """This operator computes the hyperbolic tangent value of Tensor.
@@ -203,7 +210,8 @@ class Tanh(Module):
     def forward(self, x):
         return flow.F.tanh(x)
 
-@register_tensor_op('tanh')
+
+@register_tensor_op("tanh")
 def tanh_op(x):
     """This operator computes the hyperbolic tangent value of Tensor.
 
@@ -235,6 +243,7 @@ def tanh_op(x):
 
     """
     return Tanh()(x)
+
 
 class ELU(Module):
     """Applies the element-wise function:
@@ -273,20 +282,21 @@ class ELU(Module):
 
     """
 
-    def __init__(self, alpha: float=1.0, inplace: bool=False):
+    def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
         self.alpha = alpha
         self.inplace = inplace
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('ELU module do not support inplace now')
+            warnings.warn("ELU module do not support inplace now")
         return flow.F.elu(x, alpha=self.alpha)
 
     def extra_repr(self):
-        param_str = f'alpha={self.alpha}'
-        param_str += ', inplace=True' if self.inplace else ''
+        param_str = f"alpha={self.alpha}"
+        param_str += ", inplace=True" if self.inplace else ""
         return param_str
+
 
 class GELU(Module):
     """Gelu activation operator.
@@ -325,7 +335,8 @@ class GELU(Module):
     def forward(self, x):
         return flow.F.gelu(x)
 
-@register_tensor_op('gelu')
+
+@register_tensor_op("gelu")
 def gelu_op(x):
     """Gelu activation operator.
 
@@ -358,6 +369,7 @@ def gelu_op(x):
     """
     return GELU()(x)
 
+
 class Sigmoid(Module):
     """Applies the element-wise function:
 
@@ -389,7 +401,8 @@ class Sigmoid(Module):
     def forward(self, x):
         return flow.F.sigmoid(x)
 
-@register_tensor_op('sigmoid')
+
+@register_tensor_op("sigmoid")
 def sigmoid_op(x):
     """Applies the element-wise function:
 
@@ -415,6 +428,7 @@ def sigmoid_op(x):
 
     """
     return Sigmoid()(x)
+
 
 class Hardsigmoid(Module):
     """Applies the element-wise function:
@@ -452,22 +466,22 @@ class Hardsigmoid(Module):
 
     """
 
-    def __init__(self, inplace: bool=False):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('Hardsigmoid module do not support inplace now')
+            warnings.warn("Hardsigmoid module do not support inplace now")
         return flow.F.hardsigmoid(x)
 
     def extra_repr(self):
-        inplace_str = 'inplace=True' if self.inplace else ''
+        inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
 
-class Softmax(Module):
 
-    def __init__(self, dim: Optional[int]=None):
+class Softmax(Module):
+    def __init__(self, dim: Optional[int] = None):
         super().__init__()
         self.axis = -1 if dim is None else dim
 
@@ -481,9 +495,10 @@ class Softmax(Module):
         return res
 
     def extra_repr(self):
-        return f'axis={self.axis}'
+        return f"axis={self.axis}"
 
-@register_tensor_op('softmax')
+
+@register_tensor_op("softmax")
 def softmax_op(tensor, dim=None):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
@@ -531,6 +546,7 @@ def softmax_op(tensor, dim=None):
     """
     return Softmax(dim)(tensor)
 
+
 class LogSoftmax(Module):
     """Applies the :math:`\\log(\\text{Softmax}(x))` function to an n-dimensional
     input Tensor.
@@ -567,13 +583,13 @@ class LogSoftmax(Module):
                 [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
-    def __init__(self, dim: Optional[int]=1):
+    def __init__(self, dim: Optional[int] = 1):
         super().__init__()
         self.dim = dim
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        if not hasattr(self, 'dim'):
+        if not hasattr(self, "dim"):
             self.dim = None
 
     def forward(self, x):
@@ -587,7 +603,8 @@ class LogSoftmax(Module):
         return res
 
     def extra_repr(self):
-        return f'dim={self.dim}'
+        return f"dim={self.dim}"
+
 
 class LogSigmoid(Module):
     """Applies the element-wise function:
@@ -626,6 +643,7 @@ class LogSigmoid(Module):
         res = flow.log(sigmoid_res)
         return res
 
+
 class Softplus(Module):
     """Applies the element-wise function:
 
@@ -663,16 +681,21 @@ class Softplus(Module):
         tensor([0.4741, 0.6931, 0.9741], dtype=oneflow.float32)
     """
 
-    def __init__(self, beta: int=1, threshold: int=20):
+    def __init__(self, beta: int = 1, threshold: int = 20):
         super().__init__()
         self.beta = beta
         self.threshold = threshold
 
     def forward(self, x):
-        return flow.where(x * self.beta > self.threshold, x, 1 / self.beta * flow.log(1.0 + flow.exp(self.beta * x)))
+        return flow.where(
+            x * self.beta > self.threshold,
+            x,
+            1 / self.beta * flow.log(1.0 + flow.exp(self.beta * x)),
+        )
 
     def extra_repr(self):
-        return f'beta={self.beta}, threshold={self.threshold}'
+        return f"beta={self.beta}, threshold={self.threshold}"
+
 
 class Hardswish(Module):
     """Applies the hardswish function, element-wise, as described in the paper:
@@ -710,18 +733,19 @@ class Hardswish(Module):
         https://arxiv.org/abs/1905.02244
     """
 
-    def __init__(self, inplace: bool=False):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('Hardswish module do not support inplace now')
+            warnings.warn("Hardswish module do not support inplace now")
         return flow.F.hardswish(x)
 
     def extra_repr(self):
-        inplace_str = 'inplace=True' if self.inplace else ''
+        inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
+
 
 class Hardtanh(Module):
     """
@@ -769,13 +793,24 @@ class Hardtanh(Module):
 
     """
 
-    def __init__(self, min_val: float=-1, max_val: float=1, inplace: bool=False, min_value: Optional[float]=None, max_value: Optional[float]=None):
+    def __init__(
+        self,
+        min_val: float = -1,
+        max_val: float = 1,
+        inplace: bool = False,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+    ):
         super().__init__()
         if min_value is not None:
-            warnings.warn('keyword argument min_value is deprecated and rename to min_val')
+            warnings.warn(
+                "keyword argument min_value is deprecated and rename to min_val"
+            )
             min_val = min_value
         if max_value is not None:
-            warnings.warn('keyword argument max_value is deprecated and rename to max_val')
+            warnings.warn(
+                "keyword argument max_value is deprecated and rename to max_val"
+            )
             max_val = max_value
         self.min_val = min_val
         self.max_val = max_val
@@ -783,13 +818,14 @@ class Hardtanh(Module):
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('Hardtanh module do not support inplace now')
+            warnings.warn("Hardtanh module do not support inplace now")
         return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
     def extra_repr(self):
-        param_str = f'min_val={self.min_val}, max_val={self.max_val}'
-        param_str += ', inplace=True' if self.inplace else ''
+        param_str = f"min_val={self.min_val}, max_val={self.max_val}"
+        param_str += ", inplace=True" if self.inplace else ""
         return param_str
+
 
 class LeakyReLU(Module):
     """Applies the element-wise function:
@@ -824,20 +860,21 @@ class LeakyReLU(Module):
         tensor([0.2, 0.3, 3. , 4. ], dtype=oneflow.float32)
     """
 
-    def __init__(self, negative_slope: float=0.01, inplace: bool=False):
+    def __init__(self, negative_slope: float = 0.01, inplace: bool = False):
         super().__init__()
         self.negative_slope = negative_slope
         self.inplace = inplace
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn('LeakyReLU module do not support inplace now')
+            warnings.warn("LeakyReLU module do not support inplace now")
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
     def extra_repr(self):
-        param_str = f'negative_slope={self.negative_slope}'
-        param_str += ', inplace=True' if self.inplace else ''
+        param_str = f"negative_slope={self.negative_slope}"
+        param_str += ", inplace=True" if self.inplace else ""
         return param_str
+
 
 class Mish(Module):
     """Applies the element-wise function:
@@ -869,12 +906,13 @@ class Mish(Module):
         tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
     """
 
-    def __init__(self, inplace: bool=False):
-        assert not inplace, 'In-place operation is not currently supported'
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
         super().__init__()
 
     def forward(self, x):
         return x * flow.tanh(flow.softplus(x))
+
 
 def mish_op(x):
     """Applies the element-wise function:
@@ -889,13 +927,17 @@ def mish_op(x):
     """
     return Mish()(x)
 
-@register_tensor_op('mish')
+
+@register_tensor_op("mish")
 def mish_op_tensor(x):
     """
     mish() -> Tensor
     See :func:`oneflow.mish`
     """
     return Mish()(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

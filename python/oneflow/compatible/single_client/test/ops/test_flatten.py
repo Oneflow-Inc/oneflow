@@ -5,27 +5,37 @@ from oneflow.compatible import single_client as flow
 from test_util import GenArgList
 import test_global_storage
 
+
 def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
-    assert device_type in ['gpu', 'cpu']
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     start_dim = start_end_dim[0]
     end_dim = start_end_dim[1]
 
-    @flow.global_function(type='train', function_config=func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def FlattenJob() -> flow.typing.Numpy:
-        with flow.scope.placement(device_type, '0:0'):
-            x = flow.get_variable('in', shape=input_shape, dtype=flow.float, initializer=flow.random_uniform_initializer(minval=2, maxval=5), trainable=True)
+        with flow.scope.placement(device_type, "0:0"):
+            x = flow.get_variable(
+                "in",
+                shape=input_shape,
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                trainable=True,
+            )
             loss = flow.flatten(x, start_dim=start_dim, end_dim=end_dim)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0).minimize(loss)
-            flow.watch(x, test_global_storage.Setter('x'))
-            flow.watch_diff(x, test_global_storage.Setter('x_diff'))
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
+            ).minimize(loss)
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             return loss
+
     of_out = FlattenJob()
-    of_x = test_global_storage.Get('x')
+    of_x = test_global_storage.Get("x")
     of_x_shape = of_x.shape
-    of_x_diff = test_global_storage.Get('x_diff')
+    of_x_diff = test_global_storage.Get("x_diff")
     true_end_dim = end_dim + len(of_x_shape) if end_dim < 0 else end_dim
     new_shape = []
     for i in range(0, start_dim):
@@ -39,18 +49,22 @@ def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
     np_out = np.reshape(of_x, tuple(new_shape))
     test_case.assertTrue(of_out.shape == np_out.shape)
     test_case.assertTrue(np.allclose(of_out, np_out, rtol=1e-05, atol=1e-05))
-    test_case.assertTrue(np.allclose(of_x_diff, np.ones(of_x_diff.shape), rtol=1e-05, atol=1e-05))
+    test_case.assertTrue(
+        np.allclose(of_x_diff, np.ones(of_x_diff.shape), rtol=1e-05, atol=1e-05)
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestFlatten(flow.unittest.TestCase):
-
     def test_flatten(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_case'] = [test_case]
-        arg_dict['device_type'] = ['gpu', 'cpu']
-        arg_dict['input_shape'] = [(2, 3, 4, 5)]
-        arg_dict['start_end_dim'] = [(0, -1), (1, 3), (2, -2)]
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(2, 3, 4, 5)]
+        arg_dict["start_end_dim"] = [(0, -1), (1, 3), (2, -2)]
         for arg in GenArgList(arg_dict):
             compare_with_numpy(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

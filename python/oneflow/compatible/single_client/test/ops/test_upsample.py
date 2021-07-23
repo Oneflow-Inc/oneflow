@@ -6,9 +6,11 @@ from oneflow.compatible import single_client as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
-gpus = tf.config.experimental.list_physical_devices('GPU')
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def cartesian(arrays, out=None):
     """
@@ -51,11 +53,20 @@ def cartesian(arrays, out=None):
     if arrays[1:]:
         cartesian(arrays[1:], out=out[0:m, 1:])
         for j in range(1, arrays[0].size):
-            out[j * m:(j + 1) * m, 1:] = out[0:m, 1:]
+            out[j * m : (j + 1) * m, 1:] = out[0:m, 1:]
     return out
 
-def interpolate_1d_with_x(data, scale_factor, x, get_coeffs, roi=None, extrapolation_value=0.0, scaler='half_pixel', exclude_outside=False):
 
+def interpolate_1d_with_x(
+    data,
+    scale_factor,
+    x,
+    get_coeffs,
+    roi=None,
+    extrapolation_value=0.0,
+    scaler="half_pixel",
+    exclude_outside=False,
+):
     def get_neighbor_idxes(x, n, limit):
         """
         Return the n nearest indexes, prefer the indexes smaller than x
@@ -88,21 +99,22 @@ def interpolate_1d_with_x(data, scale_factor, x, get_coeffs, roi=None, extrapola
         len(data)) and the value of these elements
         """
         pad_width = np.ceil(n / 2).astype(np.int32)
-        padded = np.pad(data, pad_width, mode='edge')
+        padded = np.pad(data, pad_width, mode="edge")
         x += pad_width
         idxes = get_neighbor_idxes(x, n, len(padded))
         ret = padded[idxes]
         return (idxes - pad_width, ret)
+
     input_width = len(data)
     output_width = scale_factor * input_width
-    if scaler == 'align_corners':
+    if scaler == "align_corners":
         if output_width == 1:
             x_ori = 0.0
         else:
             x_ori = x * (input_width - 1) / (output_width - 1)
-    elif scaler == 'asymmetric':
+    elif scaler == "asymmetric":
         x_ori = x / scale_factor
-    elif scaler == 'pytorch_half_pixel':
+    elif scaler == "pytorch_half_pixel":
         if output_width == 1:
             x_ori = -0.5
         else:
@@ -124,15 +136,39 @@ def interpolate_1d_with_x(data, scale_factor, x, get_coeffs, roi=None, extrapola
         coeffs /= sum(coeffs)
     return np.dot(coeffs, points).item()
 
+
 def interpolate_nd_with_x(data, n, scale_factors, x, get_coeffs, roi=None, **kwargs):
     if n == 1:
-        return interpolate_1d_with_x(data, scale_factors[0], x[0], get_coeffs, roi=roi, **kwargs)
-    return interpolate_1d_with_x([interpolate_nd_with_x(data[i], n - 1, scale_factors[1:], x[1:], get_coeffs, roi=None if roi is None else np.concatenate([roi[1:n], roi[n + 1:]]), **kwargs) for i in range(data.shape[0])], scale_factors[0], x[0], get_coeffs, roi=None if roi is None else [roi[0], roi[n]], **kwargs)
+        return interpolate_1d_with_x(
+            data, scale_factors[0], x[0], get_coeffs, roi=roi, **kwargs
+        )
+    return interpolate_1d_with_x(
+        [
+            interpolate_nd_with_x(
+                data[i],
+                n - 1,
+                scale_factors[1:],
+                x[1:],
+                get_coeffs,
+                roi=None if roi is None else np.concatenate([roi[1:n], roi[n + 1 :]]),
+                **kwargs
+            )
+            for i in range(data.shape[0])
+        ],
+        scale_factors[0],
+        x[0],
+        get_coeffs,
+        roi=None if roi is None else [roi[0], roi[n]],
+        **kwargs
+    )
 
-def interpolate_nd(data, get_coeffs, output_size=None, scale_factors=None, roi=None, **kwargs):
 
+def interpolate_nd(
+    data, get_coeffs, output_size=None, scale_factors=None, roi=None, **kwargs
+):
     def get_all_coords(data):
         return cartesian([list(range(data.shape[i])) for i in range(len(data.shape))])
+
     assert output_size is not None or scale_factors is not None
     if output_size is not None:
         scale_factors = np.array(output_size) / np.array(data.shape)
@@ -145,123 +181,178 @@ def interpolate_nd(data, get_coeffs, output_size=None, scale_factors=None, roi=N
             assert len(scale_factors) == 2
             height_scale = scale_factors[0]
             width_scale = scale_factors[1]
-        output_size = np.stack([data.shape[0], data.shape[1], data.shape[2] * height_scale, data.shape[3] * width_scale]).astype(np.int32)
+        output_size = np.stack(
+            [
+                data.shape[0],
+                data.shape[1],
+                data.shape[2] * height_scale,
+                data.shape[3] * width_scale,
+            ]
+        ).astype(np.int32)
         scale_factors = np.array([1, 1, height_scale, width_scale])
     assert scale_factors is not None
     ret = np.zeros(output_size)
     for x in get_all_coords(ret):
-        ret[tuple(x)] = interpolate_nd_with_x(data, len(data.shape), scale_factors, x, get_coeffs, roi=roi, **kwargs)
+        ret[tuple(x)] = interpolate_nd_with_x(
+            data, len(data.shape), scale_factors, x, get_coeffs, roi=roi, **kwargs
+        )
     return ret
+
 
 def linear_coeffs(ratio):
     return np.array([1 - ratio, ratio])
 
-def nearest_coeffs(ratio, mode='round_prefer_floor'):
+
+def nearest_coeffs(ratio, mode="round_prefer_floor"):
     if type(ratio) == int or ratio.is_integer():
         return np.array([0, 1])
-    elif mode == 'round_prefer_floor':
+    elif mode == "round_prefer_floor":
         return np.array([ratio <= 0.5, ratio > 0.5])
-    elif mode == 'round_prefer_ceil':
+    elif mode == "round_prefer_ceil":
         return np.array([ratio < 0.5, ratio >= 0.5])
-    elif mode == 'floor':
+    elif mode == "floor":
         return np.array([1, 0])
-    elif mode == 'ceil':
+    elif mode == "ceil":
         return np.array([0, 1])
 
-def compare_with_tensorflow(device_type, input_shape, dtype, size, data_format, interpolation, align_corners):
-    assert device_type in ['gpu', 'cpu']
+
+def compare_with_tensorflow(
+    device_type, input_shape, dtype, size, data_format, interpolation, align_corners
+):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(type='train', function_config=func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def UpsampleJob():
-        with flow.scope.placement(device_type, '0:0'):
-            x = flow.get_variable('input', shape=input_shape, dtype=type_name_to_flow_type[dtype], initializer=flow.random_uniform_initializer(minval=2, maxval=5), trainable=True)
-            loss = flow.layers.upsample_2d(x, size=size, data_format=data_format, interpolation=interpolation, align_corners=align_corners)
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0).minimize(loss)
-            flow.watch(x, test_global_storage.Setter('x'))
-            flow.watch_diff(x, test_global_storage.Setter('x_diff'))
-            flow.watch(loss, test_global_storage.Setter('loss'))
-            flow.watch_diff(loss, test_global_storage.Setter('loss_diff'))
+        with flow.scope.placement(device_type, "0:0"):
+            x = flow.get_variable(
+                "input",
+                shape=input_shape,
+                dtype=type_name_to_flow_type[dtype],
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                trainable=True,
+            )
+            loss = flow.layers.upsample_2d(
+                x,
+                size=size,
+                data_format=data_format,
+                interpolation=interpolation,
+                align_corners=align_corners,
+            )
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.0001]), momentum=0
+            ).minimize(loss)
+            flow.watch(x, test_global_storage.Setter("x"))
+            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+            flow.watch(loss, test_global_storage.Setter("loss"))
+            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
             return loss
+
     of_out = UpsampleJob().get()
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(test_global_storage.Get('x').astype(np.float32))
-        tf_out = tf.keras.layers.UpSampling2D(size=size, data_format=channel_pos, interpolation=interpolation)(x)
-    loss_diff = test_global_storage.Get('loss_diff').astype(np.float32)
+        x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
+        tf_out = tf.keras.layers.UpSampling2D(
+            size=size, data_format=channel_pos, interpolation=interpolation
+        )(x)
+    loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-05, atol=1e-05)
-    assert np.allclose(test_global_storage.Get('x_diff'), tf_x_diff.numpy(), rtol=1e-05, atol=1e-05)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-05, atol=1e-05
+    )
 
-def compare_with_numpy(device_type, input_shape, dtype, size, data_format, interpolation, align_corners):
-    assert device_type in ['gpu']
+
+def compare_with_numpy(
+    device_type, input_shape, dtype, size, data_format, interpolation, align_corners
+):
+    assert device_type in ["gpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
-    @flow.global_function(type='predict', function_config=func_config)
+    @flow.global_function(type="predict", function_config=func_config)
     def UpsampleJob():
-        with flow.scope.placement(device_type, '0:0'):
-            x = flow.get_variable('input', shape=input_shape, dtype=type_name_to_flow_type[dtype], initializer=flow.random_uniform_initializer(minval=2, maxval=5), trainable=False)
-            loss = flow.layers.upsample_2d(x, size=size, data_format=data_format, interpolation=interpolation, align_corners=align_corners)
-            flow.watch(x, test_global_storage.Setter('x1'))
-            flow.watch(loss, test_global_storage.Setter('loss1'))
+        with flow.scope.placement(device_type, "0:0"):
+            x = flow.get_variable(
+                "input",
+                shape=input_shape,
+                dtype=type_name_to_flow_type[dtype],
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                trainable=False,
+            )
+            loss = flow.layers.upsample_2d(
+                x,
+                size=size,
+                data_format=data_format,
+                interpolation=interpolation,
+                align_corners=align_corners,
+            )
+            flow.watch(x, test_global_storage.Setter("x1"))
+            flow.watch(loss, test_global_storage.Setter("loss1"))
             return loss
+
     of_out = UpsampleJob().get()
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     if align_corners:
-        assert interpolation == 'bilinear'
-        x = test_global_storage.Get('x1')
-        if data_format == 'NHWC':
+        assert interpolation == "bilinear"
+        x = test_global_storage.Get("x1")
+        if data_format == "NHWC":
             x = np.transpose(x, axes=[0, 3, 1, 2])
-        coeffs_dict = {'bilinear': linear_coeffs}
+        coeffs_dict = {"bilinear": linear_coeffs}
         coeffs = coeffs_dict[interpolation]
-        scaler = 'align_corners'
-        np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(np.float32)
+        scaler = "align_corners"
+        np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(
+            np.float32
+        )
         of_out_np = of_out.numpy()
-        if data_format == 'NHWC':
+        if data_format == "NHWC":
             of_out_np = np.transpose(of_out_np, axes=[0, 3, 1, 2])
         assert np.allclose(of_out_np, np_out, rtol=1e-05, atol=1e-05)
     else:
-        x = test_global_storage.Get('x1')
-        if data_format == 'NHWC':
+        x = test_global_storage.Get("x1")
+        if data_format == "NHWC":
             x = np.transpose(x, axes=[0, 3, 1, 2])
-        coeffs_dict = {'bilinear': linear_coeffs, 'nearest': nearest_coeffs}
+        coeffs_dict = {"bilinear": linear_coeffs, "nearest": nearest_coeffs}
         coeffs = coeffs_dict[interpolation]
-        scaler = 'pytorch_half_pixel'
-        np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(np.float32)
+        scaler = "pytorch_half_pixel"
+        np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(
+            np.float32
+        )
         of_out_np = of_out.numpy()
-        if data_format == 'NHWC':
+        if data_format == "NHWC":
             of_out_np = np.transpose(of_out_np, axes=[0, 3, 1, 2])
         assert np.allclose(of_out_np, np_out, rtol=1e-05, atol=1e-05)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestUpsample(flow.unittest.TestCase):
-
     def test_upsample(test_case):
         arg_dict = OrderedDict()
-        arg_dict['device_type'] = ['gpu']
-        arg_dict['input_shape'] = [(2, 11, 12, 13)]
-        arg_dict['dtype'] = ['float32', 'double']
-        arg_dict['size'] = [(2, 2), 3, (1, 2)]
-        arg_dict['data_format'] = ['NCHW', 'NHWC']
-        arg_dict['interpolation'] = ['nearest', 'bilinear']
-        arg_dict['align_corners'] = [False]
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(2, 11, 12, 13)]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["size"] = [(2, 2), 3, (1, 2)]
+        arg_dict["data_format"] = ["NCHW", "NHWC"]
+        arg_dict["interpolation"] = ["nearest", "bilinear"]
+        arg_dict["align_corners"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
     def test_upsample_align_corners(test_case):
         arg_dict = OrderedDict()
-        arg_dict['device_type'] = ['gpu']
-        arg_dict['input_shape'] = [(2, 5, 6, 7)]
-        arg_dict['dtype'] = ['float32', 'double']
-        arg_dict['size'] = [(2, 2), 3, (1, 2)]
-        arg_dict['data_format'] = ['NCHW', 'NHWC']
-        arg_dict['interpolation'] = ['bilinear']
-        arg_dict['align_corners'] = [True, False]
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(2, 5, 6, 7)]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["size"] = [(2, 2), 3, (1, 2)]
+        arg_dict["data_format"] = ["NCHW", "NHWC"]
+        arg_dict["interpolation"] = ["bilinear"]
+        arg_dict["align_corners"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_numpy(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

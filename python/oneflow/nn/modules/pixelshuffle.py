@@ -2,6 +2,7 @@ from typing import Optional
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 
+
 class PixelShufflev2(Module):
     """
     Part of the documentation is referenced from:
@@ -67,31 +68,71 @@ class PixelShufflev2(Module):
         https://arxiv.org/abs/1609.05158
     """
 
-    def __init__(self, upscale_factor: Optional[int]=None, h_upscale_factor: Optional[int]=None, w_upscale_factor: Optional[int]=None) -> None:
+    def __init__(
+        self,
+        upscale_factor: Optional[int] = None,
+        h_upscale_factor: Optional[int] = None,
+        w_upscale_factor: Optional[int] = None,
+    ) -> None:
         super().__init__()
         if upscale_factor is None:
-            assert h_upscale_factor is not None and w_upscale_factor is not None, 'h_upscale_factor and w_upscale_factor should be None if use upscale_factor'
+            assert (
+                h_upscale_factor is not None and w_upscale_factor is not None
+            ), "h_upscale_factor and w_upscale_factor should be None if use upscale_factor"
         else:
-            assert h_upscale_factor is None and w_upscale_factor is None, 'upscale_factor should be None if use h_upscale_factor and w_upscale_factor'
+            assert (
+                h_upscale_factor is None and w_upscale_factor is None
+            ), "upscale_factor should be None if use h_upscale_factor and w_upscale_factor"
             h_upscale_factor = upscale_factor
             w_upscale_factor = upscale_factor
-        assert h_upscale_factor > 0 and w_upscale_factor > 0, 'The scale factor of height and width must larger than zero'
+        assert (
+            h_upscale_factor > 0 and w_upscale_factor > 0
+        ), "The scale factor of height and width must larger than zero"
         self.h_upscale_factor = h_upscale_factor
         self.w_upscale_factor = w_upscale_factor
 
     def forward(self, input: Tensor) -> Tensor:
-        assert len(input.shape) == 4, 'Only Accept 4D Tensor'
+        assert len(input.shape) == 4, "Only Accept 4D Tensor"
         (_batch, _channel, _height, _width) = input.shape
-        assert _channel % (self.h_upscale_factor * self.w_upscale_factor) == 0, 'The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)'
+        assert (
+            _channel % (self.h_upscale_factor * self.w_upscale_factor) == 0
+        ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
         _new_c = int(_channel / (self.h_upscale_factor * self.w_upscale_factor))
-        out = input.reshape([_batch, _new_c, self.h_upscale_factor * self.w_upscale_factor, _height, _width])
-        out = out.reshape([_batch, _new_c, self.h_upscale_factor, self.w_upscale_factor, _height, _width])
+        out = input.reshape(
+            [
+                _batch,
+                _new_c,
+                self.h_upscale_factor * self.w_upscale_factor,
+                _height,
+                _width,
+            ]
+        )
+        out = out.reshape(
+            [
+                _batch,
+                _new_c,
+                self.h_upscale_factor,
+                self.w_upscale_factor,
+                _height,
+                _width,
+            ]
+        )
         out = out.permute(0, 1, 4, 2, 5, 3)
-        out = out.reshape([_batch, _new_c, _height * self.h_upscale_factor, _width * self.w_upscale_factor])
+        out = out.reshape(
+            [
+                _batch,
+                _new_c,
+                _height * self.h_upscale_factor,
+                _width * self.w_upscale_factor,
+            ]
+        )
         return out
 
     def extra_repr(self) -> str:
-        return f'w_upscale_factor={self.w_upscale_factor}, h_upscale_factor={self.h_upscale_factor}'
-if __name__ == '__main__':
+        return f"w_upscale_factor={self.w_upscale_factor}, h_upscale_factor={self.h_upscale_factor}"
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

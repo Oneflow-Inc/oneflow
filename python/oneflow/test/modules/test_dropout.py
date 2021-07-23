@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 
+
 def _test_dropout(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=0)
@@ -11,12 +12,16 @@ def _test_dropout(test_case, shape, device):
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
 
+
 def _test_dropout_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1.0)
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32)))
+    test_case.assertTrue(
+        np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32))
+    )
+
 
 def _test_dropout_backward_p0(test_case, shape, device):
     input_arr = np.random.randn(*shape)
@@ -25,7 +30,12 @@ def _test_dropout_backward_p0(test_case, shape, device):
     y = m(x)
     z = y.sum()
     z.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(input_arr.shape, dtype=np.float32), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            x.grad.numpy(), np.ones(input_arr.shape, dtype=np.float32), 1e-05, 1e-05
+        )
+    )
+
 
 def _test_dropout_backward_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
@@ -34,7 +44,12 @@ def _test_dropout_backward_p1(test_case, shape, device):
     y = m(x)
     z = y.sum()
     z.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(input_arr.shape, dtype=np.float32), 1e-05, 1e-05))
+    test_case.assertTrue(
+        np.allclose(
+            x.grad.numpy(), np.zeros(input_arr.shape, dtype=np.float32), 1e-05, 1e-05
+        )
+    )
+
 
 def _test_dropout_eval(test_case, shape, device):
     input_arr = np.random.randn(*shape)
@@ -43,6 +58,7 @@ def _test_dropout_eval(test_case, shape, device):
     m.eval()
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
+
 
 def _test_dropout_with_generator(test_case, shape, device):
     generator = flow.Generator()
@@ -55,15 +71,24 @@ def _test_dropout_with_generator(test_case, shape, device):
     y_2 = m(x)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestDropout(flow.unittest.TestCase):
-
     def test_transpose(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_functions'] = [_test_dropout, _test_dropout_p1, _test_dropout_backward_p0, _test_dropout_backward_p1, _test_dropout_eval, _test_dropout_with_generator]
-        arg_dict['shape'] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_functions"] = [
+            _test_dropout,
+            _test_dropout_p1,
+            _test_dropout_backward_p0,
+            _test_dropout_backward_p1,
+            _test_dropout_eval,
+            _test_dropout_with_generator,
+        ]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

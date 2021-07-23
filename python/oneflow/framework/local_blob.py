@@ -3,8 +3,8 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 import traceback
 
-class LocalBlob(object):
 
+class LocalBlob(object):
     def __init__(self, ndarray, is_dynamic):
         self.ndarray_ = ndarray
         self.is_dynamic_ = is_dynamic
@@ -14,14 +14,22 @@ class LocalBlob(object):
         return self.is_dynamic_
 
     def ndarray_list(self):
-        print('WARNING:', 'LocalBlob.ndarray_list is deprecated, please use LocalBlob.numpy()\n', traceback.format_stack()[-2])
+        print(
+            "WARNING:",
+            "LocalBlob.ndarray_list is deprecated, please use LocalBlob.numpy()\n",
+            traceback.format_stack()[-2],
+        )
         return self.numpy_list()
 
     def numpy_list(self):
         return [self.numpy()]
 
     def ndarray(self):
-        print('WARNING:', 'LocalBlob.ndarray is deprecated, please use LocalBlob.numpy()\n', traceback.format_stack()[-2])
+        print(
+            "WARNING:",
+            "LocalBlob.ndarray is deprecated, please use LocalBlob.numpy()\n",
+            traceback.format_stack()[-2],
+        )
         return self.numpy()
 
     def numpy(self, parallel_id=None):
@@ -34,6 +42,7 @@ class LocalBlob(object):
     def __getattr__(self, attr):
         return getattr(self.numpy(), attr)
 
+
 def MakeLocalBlob4EagerBlob(eager_blob):
     assert isinstance(eager_blob, oneflow._oneflow_internal.EagerBlobTrait)
     if isinstance(eager_blob, oneflow._oneflow_internal.EagerMirroredBlob):
@@ -43,15 +52,39 @@ def MakeLocalBlob4EagerBlob(eager_blob):
         return LocalBlob(eager_blob.numpy(), is_dynamic=False)
     else:
         raise NotImplementedError
-non_override_field = set(['__class__', '__doc__', '__new__', '__init__', '__del__', '__call__', '__getattr__', '__getattribute__', '__setattr__', '__delattr__', '__dir__', '__get__', '__set__', '__delete__'])
+
+
+non_override_field = set(
+    [
+        "__class__",
+        "__doc__",
+        "__new__",
+        "__init__",
+        "__del__",
+        "__call__",
+        "__getattr__",
+        "__getattribute__",
+        "__setattr__",
+        "__delattr__",
+        "__dir__",
+        "__get__",
+        "__set__",
+        "__delete__",
+    ]
+)
+
 
 def MakeBlobMethod(field_name):
-
     def ConvertOtherArgs(args):
         return [x.numpy() if isinstance(x, LocalBlob) else x for x in args]
-    return lambda self, *args: getattr(self.numpy(), field_name)(*ConvertOtherArgs(args))
+
+    return lambda self, *args: getattr(self.numpy(), field_name)(
+        *ConvertOtherArgs(args)
+    )
+
+
 for field_name in dir(np.ndarray):
-    if field_name.startswith('__') == False:
+    if field_name.startswith("__") == False:
         continue
     if field_name in non_override_field:
         continue

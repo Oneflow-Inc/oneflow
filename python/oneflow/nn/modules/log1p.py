@@ -2,16 +2,17 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Log1p(Module):
 
+class Log1p(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op('log1p').Input('x').Output('y').Build()
+        self._op = flow.builtin_op("log1p").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
-@register_tensor_op('log1p')
+
+@register_tensor_op("log1p")
 def log1p_op(input):
     """Returns a new tensor with the natural logarithm of (1 + input).
 
@@ -31,6 +32,9 @@ def log1p_op(input):
 
     """
     return Log1p()(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

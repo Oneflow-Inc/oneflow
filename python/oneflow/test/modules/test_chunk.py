@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 
+
 def _test_2_dim_forward(test_case, device):
     np_arr = np.random.randn(2, 3).astype(np.float32)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -29,6 +30,7 @@ def _test_2_dim_forward(test_case, device):
         of_out_shape = of_out[i].numpy().shape
         test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
 
+
 def _test_2_dim_tensor_function_forward(test_case, device):
     np_arr = np.random.randn(2, 3).astype(np.float32)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -53,6 +55,7 @@ def _test_2_dim_tensor_function_forward(test_case, device):
     for i in range(0, chunks):
         of_out_shape = of_out[i].numpy().shape
         test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
+
 
 def _test_4_dim_forward(test_case, device):
     np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
@@ -93,6 +96,7 @@ def _test_4_dim_forward(test_case, device):
         of_out_shape = of_out[i].numpy().shape
         test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
 
+
 def _test_4_dim_tensor_function_forward(test_case, device):
     np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -132,6 +136,7 @@ def _test_4_dim_tensor_function_forward(test_case, device):
         of_out_shape = of_out[i].numpy().shape
         test_case.assertTrue(np.allclose(of_out_shape, np_out_shape[i], 1e-05, 1e-05))
 
+
 def _test_chunk_backward(test_case, device):
     np_arr = np.random.randn(2, 3).astype(np.float32)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -143,14 +148,22 @@ def _test_chunk_backward(test_case, device):
     np_grad = np.ones((2, 3))
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestChunk(flow.unittest.TestCase):
-
     def test_chunk(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_2_dim_forward, _test_4_dim_forward, _test_2_dim_tensor_function_forward, _test_4_dim_tensor_function_forward, _test_chunk_backward]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_fun"] = [
+            _test_2_dim_forward,
+            _test_4_dim_forward,
+            _test_2_dim_tensor_function_forward,
+            _test_4_dim_tensor_function_forward,
+            _test_chunk_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

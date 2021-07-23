@@ -2,36 +2,55 @@ import os
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(shape, mean_shape, norm_axis, dtype=flow.float32):
     config.use_xla_jit(False)
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def layer_norm_grad_job(dy=flow.FixedTensorDef(shape, dtype=dtype), x=flow.FixedTensorDef(shape, dtype=dtype), mean=flow.FixedTensorDef(mean_shape, dtype=dtype), inv_variance=flow.FixedTensorDef(mean_shape, dtype=dtype)):
-        return flow.layers.layer_norm_grad(dy, x, mean, inv_variance, begin_norm_axis=norm_axis)
+    def layer_norm_grad_job(
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+        x=flow.FixedTensorDef(shape, dtype=dtype),
+        mean=flow.FixedTensorDef(mean_shape, dtype=dtype),
+        inv_variance=flow.FixedTensorDef(mean_shape, dtype=dtype),
+    ):
+        return flow.layers.layer_norm_grad(
+            dy, x, mean, inv_variance, begin_norm_axis=norm_axis
+        )
+
     return layer_norm_grad_job
+
 
 def make_xla_job(shape, mean_shape, norm_axis, dtype=flow.float32):
     config.use_xla_jit(True)
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def xla_layer_norm_grad_job(dy=flow.FixedTensorDef(shape, dtype=dtype), x=flow.FixedTensorDef(shape, dtype=dtype), mean=flow.FixedTensorDef(mean_shape, dtype=dtype), inv_variance=flow.FixedTensorDef(mean_shape, dtype=dtype)):
-        return flow.layers.layer_norm_grad(dy, x, mean, inv_variance, begin_norm_axis=norm_axis)
+    def xla_layer_norm_grad_job(
+        dy=flow.FixedTensorDef(shape, dtype=dtype),
+        x=flow.FixedTensorDef(shape, dtype=dtype),
+        mean=flow.FixedTensorDef(mean_shape, dtype=dtype),
+        inv_variance=flow.FixedTensorDef(mean_shape, dtype=dtype),
+    ):
+        return flow.layers.layer_norm_grad(
+            dy, x, mean, inv_variance, begin_norm_axis=norm_axis
+        )
+
     return xla_layer_norm_grad_job
 
-@unittest.skipIf(os.getenv('ONEFLOW_TEST_CPU_ONLY'), 'only test cpu cases')
-class TestLayerNormGrad(unittest.TestCase):
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestLayerNormGrad(unittest.TestCase):
     def _test_body(self, dy, x, mean, inv_variance, norm_axis, dtype=np.float32):
         f1 = make_job(x.shape, mean.shape, norm_axis, dtype=flow.float32)
         f2 = make_xla_job(x.shape, mean.shape, norm_axis, dtype=flow.float32)
         a = f1(dy, x, mean, inv_variance).get()
         b = f2(dy, x, mean, inv_variance).get()
-        print('without xla: ', a)
-        print('with xla', b)
+        print("without xla: ", a)
+        print("with xla", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -64,5 +83,7 @@ class TestLayerNormGrad(unittest.TestCase):
         self._test_random_body((1, 10))
         self._test_random_body((2, 10, 2))
         self._test_random_body((2, 5, 2, 2))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

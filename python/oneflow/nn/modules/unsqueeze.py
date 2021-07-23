@@ -2,19 +2,22 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Unsqueeze(Module):
 
-    def __init__(self, dim: int=0) -> None:
+class Unsqueeze(Module):
+    def __init__(self, dim: int = 0) -> None:
         super().__init__()
         self.dim = dim
 
     def forward(self, input):
-        assert -(1 + input.ndimension()) <= self.dim <= input.ndimension(), 'dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)'
+        assert (
+            -(1 + input.ndimension()) <= self.dim <= input.ndimension()
+        ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
         if self.dim < 0:
             self.dim = 1 + input.ndimension() + self.dim
         return flow.F.expand_dims(input, axis=self.dim)
 
-@register_tensor_op('unsqueeze')
+
+@register_tensor_op("unsqueeze")
 def unsqueeze_op(input, dim):
     """Returns a new tensor with a dimension of size one inserted at the
     specified position.
@@ -42,6 +45,9 @@ def unsqueeze_op(input, dim):
         flow.Size([2, 3, 1, 4])
     """
     return Unsqueeze(dim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

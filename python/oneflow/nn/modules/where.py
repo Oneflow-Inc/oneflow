@@ -2,19 +2,32 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Where(Module):
 
+class Where(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, condition, x, y):
         assert condition.dtype == flow.int32 or condition.dtype == flow.int8
         if isinstance(x, int) or isinstance(x, float):
-            x = flow.Tensor([float(x)], dtype=flow.float32, device=flow.device(condition.device.type))
+            x = flow.Tensor(
+                [float(x)],
+                dtype=flow.float32,
+                device=flow.device(condition.device.type),
+            )
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32, device=flow.device(condition.device.type))
-        assert condition.device.type == x.device.type and condition.device.type == y.device.type
-        assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(y.shape), f"The dim of where module's inputs can not match, please check!"
+            y = flow.Tensor(
+                [float(y)],
+                dtype=flow.float32,
+                device=flow.device(condition.device.type),
+            )
+        assert (
+            condition.device.type == x.device.type
+            and condition.device.type == y.device.type
+        )
+        assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
+            y.shape
+        ), f"The dim of where module's inputs can not match, please check!"
         broadcast_cond = condition
         broadcast_x = x
         broadcast_y = y
@@ -31,20 +44,29 @@ class Where(Module):
                 broadcast_x_axes.append(i)
             if max_dim != y.shape[i]:
                 broadcast_y_axes.append(i)
-        broadcast_like_tensor = flow.zeros(tuple(broadcast_like_shape), dtype=flow.float32)
+        broadcast_like_tensor = flow.zeros(
+            tuple(broadcast_like_shape), dtype=flow.float32
+        )
         broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
         broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
         if len(broadcast_condition_axes) != 0:
             condition = flow.cast(condition, flow.float32)
-            broadcast_cond = flow.broadcast_like(condition, broadcast_like_tensor, tuple(broadcast_condition_axes))
+            broadcast_cond = flow.broadcast_like(
+                condition, broadcast_like_tensor, tuple(broadcast_condition_axes)
+            )
             broadcast_cond = flow.cast(broadcast_cond, flow.int32)
         if len(broadcast_x_axes) != 0:
-            broadcast_x = flow.broadcast_like(x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes))
+            broadcast_x = flow.broadcast_like(
+                x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
+            )
         if len(broadcast_y_axes) != 0:
-            broadcast_y = flow.broadcast_like(y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes))
+            broadcast_y = flow.broadcast_like(
+                y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
+            )
         return flow.F.where(broadcast_cond, broadcast_x, broadcast_y)
 
-@register_tensor_op('where')
+
+@register_tensor_op("where")
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
@@ -85,6 +107,9 @@ def where_op(condition, x, y):
 
     """
     return Where()(condition, x, y)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

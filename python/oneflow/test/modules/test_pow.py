@@ -4,12 +4,14 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 
+
 def _test_pow_scalar_impl(test_case, shape, scalar, device):
     np_input = 10 * np.random.rand(*shape)
     of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
     of_out = flow.pow(of_input, scalar)
     np_out = np.power(np_input, scalar)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+
 
 def _test_pow_elementwise_impl(test_case, shape, scalar, device):
     np_input_x = 10 * np.random.rand(*shape)
@@ -19,6 +21,7 @@ def _test_pow_elementwise_impl(test_case, shape, scalar, device):
     of_out = flow.pow(of_input_x, of_input_y)
     np_out = np.power(np_input_x, np_input_y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+
 
 def _test_pow_backward_impl(test_case, device):
     shape = (2, 3)
@@ -30,39 +33,63 @@ def _test_pow_backward_impl(test_case, device):
     np_x_grad_scalar = np_input_y_scalar * np.power(np_input_x, np_input_y_scalar - 1)
 
     def test_x_y_grad():
-        of_input_x = flow.Tensor(np_input_x, dtype=flow.float32, device=flow.device(device), requires_grad=True)
-        of_input_y = flow.Tensor(np_input_y, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+        of_input_x = flow.Tensor(
+            np_input_x,
+            dtype=flow.float32,
+            device=flow.device(device),
+            requires_grad=True,
+        )
+        of_input_y = flow.Tensor(
+            np_input_y,
+            dtype=flow.float32,
+            device=flow.device(device),
+            requires_grad=True,
+        )
         of_out = flow.pow(of_input_x, of_input_y)
         of_out_sum = of_out.sum()
         of_out_sum.backward()
-        test_case.assertTrue(np.allclose(of_input_x.grad.numpy(), np_x_grad, 0.0001, 0.0001))
-        test_case.assertTrue(np.allclose(of_input_y.grad.numpy(), np_y_grad, 0.0001, 0.0001))
+        test_case.assertTrue(
+            np.allclose(of_input_x.grad.numpy(), np_x_grad, 0.0001, 0.0001)
+        )
+        test_case.assertTrue(
+            np.allclose(of_input_y.grad.numpy(), np_y_grad, 0.0001, 0.0001)
+        )
 
     def test_x_grad_scalar():
-        of_input_x = flow.Tensor(np_input_x, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+        of_input_x = flow.Tensor(
+            np_input_x,
+            dtype=flow.float32,
+            device=flow.device(device),
+            requires_grad=True,
+        )
         of_out = flow.pow(of_input_x, np_input_y_scalar)
         of_out_sum = of_out.sum()
         of_out_sum.backward()
-        test_case.assertTrue(np.allclose(of_input_x.grad.numpy(), np_x_grad_scalar, 0.0001, 0.0001))
+        test_case.assertTrue(
+            np.allclose(of_input_x.grad.numpy(), np_x_grad_scalar, 0.0001, 0.0001)
+        )
+
     test_x_y_grad()
     test_x_grad_scalar()
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-
     def test_pow_forward(test_case):
         arg_dict = OrderedDict()
-        arg_dict['shape'] = [(2, 3), (2, 3, 4, 5)]
-        arg_dict['scalar'] = [2.1, 0.8]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["shape"] = [(2, 3), (2, 3, 4, 5)]
+        arg_dict["scalar"] = [2.1, 0.8]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_pow_scalar_impl(test_case, *arg)
             _test_pow_elementwise_impl(test_case, *arg)
 
     def test_pow_backward(test_case):
         arg_dict = OrderedDict()
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_pow_backward_impl(test_case, *arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

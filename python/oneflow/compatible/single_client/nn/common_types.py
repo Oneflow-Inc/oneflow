@@ -1,5 +1,6 @@
 from typing import TypeVar, Union, Tuple
-T = TypeVar('T')
+
+T = TypeVar("T")
 _scalar_or_tuple_any_t = Union[T, Tuple[T, ...]]
 _scalar_or_tuple_1_t = Union[T, Tuple[T]]
 _scalar_or_tuple_2_t = Union[T, Tuple[T, T]]

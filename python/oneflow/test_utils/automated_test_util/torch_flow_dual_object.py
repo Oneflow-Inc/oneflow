@@ -6,13 +6,15 @@ import torch as torch_original
 import oneflow as flow
 import numpy as np
 from .generators import generator, random_tensor, Nothing
-postulate = ['.rand', '.Tensor']
+
+postulate = [".rand", ".Tensor"]
+
 
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
 
-class PyTorchDoesNotSupportError(Exception):
 
+class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
 
@@ -20,13 +22,14 @@ class PyTorchDoesNotSupportError(Exception):
         return repr(self)
 
     def __repr__(self):
-        return f'PyTorch error: {str(self.exc)}'
+        return f"PyTorch error: {str(self.exc)}"
+
 
 def get_args(callable, *args, **kwargs):
     try:
         spec = inspect.getfullargspec(callable)
         spec_args = spec.args
-        if spec_args[0] == 'self':
+        if spec_args[0] == "self":
             del spec_args[0]
         for (i, arg) in enumerate(args):
             arg_name = spec_args[i]
@@ -55,6 +58,7 @@ def get_args(callable, *args, **kwargs):
         if isinstance(x, generator):
             return x.value()
         return x
+
     for arg in args:
         arg = get_generator_value(arg)
         pytorch_args.append(get_pytorch_value(arg))
@@ -66,24 +70,47 @@ def get_args(callable, *args, **kwargs):
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
+
+
 counter = 0
+
 
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
-    skipped_magic_methods = ['__class__', '__mro__', '__new__', '__init__', '__getattr__', '__setattr__', '__getattribute__', '__dict__', '__weakref__', '__builtins__', '__qualname__', '__name__', '__str__', '__repr__']
+    skipped_magic_methods = [
+        "__class__",
+        "__mro__",
+        "__new__",
+        "__init__",
+        "__getattr__",
+        "__setattr__",
+        "__getattribute__",
+        "__dict__",
+        "__weakref__",
+        "__builtins__",
+        "__qualname__",
+        "__name__",
+        "__str__",
+        "__repr__",
+    ]
     pytorch_methods = dir(pytorch)
-    if hasattr(pytorch, '__call__') and '__call__' not in pytorch_methods:
-        pytorch_methods.append('__call__')
+    if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
+        pytorch_methods.append("__call__")
     magic_methods_for_new_cls = {}
     for method_name in pytorch_methods:
-        if method_name.startswith('__') and method_name not in skipped_magic_methods:
+        if method_name.startswith("__") and method_name not in skipped_magic_methods:
 
             def get_dual_method(method_name):
-                if method_name == '__call__':
+                if method_name == "__call__":
 
                     def dual_method(self, *args, **kwargs):
-                        (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs) = get_args(pytorch, *args, **kwargs)
+                        (
+                            pytorch_args,
+                            pytorch_kwargs,
+                            oneflow_args,
+                            oneflow_kwargs,
+                        ) = get_args(pytorch, *args, **kwargs)
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
@@ -92,26 +119,36 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-                        return GetDualObject('unused', pytorch_res, oneflow_res)
+                        return GetDualObject("unused", pytorch_res, oneflow_res)
+
                 else:
 
                     def dual_method(self, *args, **kwargs):
                         pytorch_method = getattr(pytorch, method_name)
                         oneflow_method = getattr(oneflow, method_name)
-                        (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs) = get_args(pytorch_method, *args, **kwargs)
+                        (
+                            pytorch_args,
+                            pytorch_kwargs,
+                            oneflow_args,
+                            oneflow_kwargs,
+                        ) = get_args(pytorch_method, *args, **kwargs)
                         try:
-                            pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
+                            pytorch_res = pytorch_method(
+                                *pytorch_args, **pytorch_kwargs
+                            )
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
-                        return GetDualObject('unused', pytorch_res, oneflow_res)
+                        return GetDualObject("unused", pytorch_res, oneflow_res)
+
                 return dual_method
+
             magic_methods_for_new_cls[method_name] = get_dual_method(method_name)
-    Cls = type(f'{name}_{counter}', (DualObject,), magic_methods_for_new_cls)
+    Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
 
-class DualObject:
 
+class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
         self.pytorch = pytorch
@@ -125,48 +162,67 @@ class DualObject:
             dual_objects_to_test.append(self)
 
     def __repr__(self):
-        return f'PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}'
+        return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
 
     def __getattr__(self, key):
         pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
-        new_name = f'{self.name}.{key}'
+        new_name = f"{self.name}.{key}"
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
+
+
 dual_modules_to_test = []
 dual_objects_to_test = []
 torch_type2checker = {}
 
-def equality_checker(torch_type, flow_type):
 
+def equality_checker(torch_type, flow_type):
     def deco(f):
         torch_type2checker[torch_type, flow_type] = f
         return f
+
     return deco
 
+
 def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
-    checker = torch_type2checker.get((type(dual_object.pytorch), type(dual_object.oneflow)), None)
+    checker = torch_type2checker.get(
+        (type(dual_object.pytorch), type(dual_object.oneflow)), None
+    )
     if checker is None:
         for (key, value) in torch_type2checker.items():
-            if isinstance(dual_object.pytorch, key[0]) and isinstance(dual_object.oneflow, key[1]):
+            if isinstance(dual_object.pytorch, key[0]) and isinstance(
+                dual_object.oneflow, key[1]
+            ):
                 checker = value
                 break
     assert checker is not None
     return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
 
+
 @equality_checker(torch_original.Tensor, flow.Tensor)
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
 def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     if torch_tensor.grad is not None:
-        assert flow_tensor.grad is not None, "OneFlow tensor doesn't have grad while PyTorch tensor has one"
-        if not np.allclose(torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()):
+        assert (
+            flow_tensor.grad is not None
+        ), "OneFlow tensor doesn't have grad while PyTorch tensor has one"
+        if not np.allclose(
+            torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()
+        ):
             return False
-    return np.allclose(torch_tensor.detach().cpu().numpy(), flow_tensor.numpy(), rtol=rtol, atol=atol, equal_nan=True)
+    return np.allclose(
+        torch_tensor.detach().cpu().numpy(),
+        flow_tensor.numpy(),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=True,
+    )
+
 
 def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
-    verbose = os.getenv('ONEFLOW_TEST_VERBOSE') is not None
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def deco(f):
-
         @functools.wraps(f)
         def new_f(test_case):
             nonlocal n
@@ -189,20 +245,46 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
-                        dual_objects_to_test.append(GetDualObject('unused', x.pytorch.state_dict()[key], x.oneflow.state_dict()[key]))
+                        dual_objects_to_test.append(
+                            GetDualObject(
+                                "unused",
+                                x.pytorch.state_dict()[key],
+                                x.oneflow.state_dict()[key],
+                            )
+                        )
                 for x in dual_objects_to_test:
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol))
                 if verbose:
-                    print('test passed')
+                    print("test passed")
                 n -= 1
+
         return new_f
+
     return deco
 
-def random_pytorch_tensor(ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, low=0, high=1, dtype=float, requires_grad=True):
+
+def random_pytorch_tensor(
+    ndim=None,
+    dim0=1,
+    dim1=None,
+    dim2=None,
+    dim3=None,
+    dim4=None,
+    low=0,
+    high=1,
+    dtype=float,
+    requires_grad=True,
+):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
-    pytorch_tensor = random_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype).value().requires_grad_(requires_grad and dtype != int)
+    pytorch_tensor = (
+        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
+        .value()
+        .requires_grad_(requires_grad and dtype != int)
+    )
     flow_tensor = flow.tensor(pytorch_tensor.detach().cpu().numpy(), requires_grad=True)
-    return GetDualObject('unused', pytorch_tensor, flow_tensor)
-torch = GetDualObject('', torch_original, flow)
-__all__ = ['torch', 'autotest', 'random_pytorch_tensor']
+    return GetDualObject("unused", pytorch_tensor, flow_tensor)
+
+
+torch = GetDualObject("", torch_original, flow)
+__all__ = ["torch", "autotest", "random_pytorch_tensor"]

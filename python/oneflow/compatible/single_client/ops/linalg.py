@@ -1,14 +1,28 @@
 import os
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import logical_blob_id_pb2 as logical_blob_id_util
-from oneflow.compatible.single_client.python.framework import interpret_util as interpret_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
+from oneflow.compatible.single_client.python.framework import (
+    interpret_util as interpret_util,
+)
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 import oneflow._oneflow_internal
 from typing import Optional
 
-def matmul(a: oneflow._oneflow_internal.BlobDesc, b: oneflow._oneflow_internal.BlobDesc, transpose_a: bool=False, transpose_b: bool=False, alpha: float=1.0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def matmul(
+    a: oneflow._oneflow_internal.BlobDesc,
+    b: oneflow._oneflow_internal.BlobDesc,
+    transpose_a: bool = False,
+    transpose_b: bool = False,
+    alpha: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator applies matrix multiplication to two Blobs.
 
     Args:
@@ -51,18 +65,50 @@ def matmul(a: oneflow._oneflow_internal.BlobDesc, b: oneflow._oneflow_internal.B
 
     """
     if name is None:
-        name = id_util.UniqueStr('Matmul_')
+        name = id_util.UniqueStr("Matmul_")
     assert len(a.shape) >= 2
     assert len(b.shape) >= 2
     if len(a.shape) == len(b.shape):
         if len(a.shape) == 2:
-            op = flow.user_op_builder(name).Op('matmul').Input('a', [a]).Input('b', [b]).Output('out').Attr('transpose_a', transpose_a).Attr('transpose_b', transpose_b).Attr('alpha', float(alpha)).Build()
+            op = (
+                flow.user_op_builder(name)
+                .Op("matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
         else:
-            op = flow.user_op_builder(name).Op('batch_matmul').Input('a', [a]).Input('b', [b]).Output('out').Attr('transpose_a', transpose_a).Attr('transpose_b', transpose_b).Attr('alpha', float(alpha)).Build()
+            op = (
+                flow.user_op_builder(name)
+                .Op("batch_matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
     else:
         if len(b.shape) != 2:
-            raise ValueError("don't support number of dimensions of a being less than number of dimensions of b")
+            raise ValueError(
+                "don't support number of dimensions of a being less than number of dimensions of b"
+            )
         if transpose_a:
             raise ValueError("don't support tensor a to be tranpose")
-        op = flow.user_op_builder(name).Op('broadcast_matmul').Input('a', [a]).Input('b', [b]).Output('out').Attr('transpose_a', transpose_a).Attr('transpose_b', transpose_b).Attr('alpha', float(alpha)).Build()
+        op = (
+            flow.user_op_builder(name)
+            .Op("broadcast_matmul")
+            .Input("a", [a])
+            .Input("b", [b])
+            .Output("out")
+            .Attr("transpose_a", transpose_a)
+            .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(alpha))
+            .Build()
+        )
     return op.InferAndTryRun().SoleOutputBlob()

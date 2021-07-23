@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     config.use_xla_jit(False)
@@ -11,10 +13,18 @@ def make_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     @flow.global_function(config)
     def batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         out = flow.layers.batch_normalization(x, axis=axis)
-        c = flow.get_variable('c', shape=out.shape, dtype=flow.float, initializer=flow.ones_initializer(), trainable=True)
+        c = flow.get_variable(
+            "c",
+            shape=out.shape,
+            dtype=flow.float,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
         out = flow.math.add_n([out, c])
         return out
+
     return batch_norm_job
+
 
 def make_xla_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     config.use_xla_jit(True)
@@ -24,10 +34,18 @@ def make_xla_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     @flow.global_function(config)
     def xla_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         out = flow.layers.batch_normalization(x, axis=axis)
-        c = flow.get_variable('c', shape=out.shape, dtype=flow.float, initializer=flow.ones_initializer(), trainable=True)
+        c = flow.get_variable(
+            "c",
+            shape=out.shape,
+            dtype=flow.float,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
         out = flow.math.add_n([out, c])
         return out
+
     return xla_batch_norm_job
+
 
 def make_trt_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     config.use_xla_jit(False)
@@ -37,13 +55,20 @@ def make_trt_job(input_shape, axis, fuse_add_to_output, dtype=flow.float32):
     @flow.global_function(config)
     def trt_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         out = flow.layers.batch_normalization(x, axis=axis)
-        c = flow.get_variable('c', shape=out.shape, dtype=flow.float, initializer=flow.ones_initializer(), trainable=True)
+        c = flow.get_variable(
+            "c",
+            shape=out.shape,
+            dtype=flow.float,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
         out = flow.math.add_n([out, c])
         return out
+
     return trt_batch_norm_job
 
-class TestRelu(unittest.TestCase):
 
+class TestRelu(unittest.TestCase):
     def _test_body(self, x, axis, fuse_add_to_output, dtype=np.float32):
         f1 = make_job(x.shape, axis, fuse_add_to_output, dtype=flow.float32)
         f2 = make_xla_job(x.shape, axis, fuse_add_to_output, dtype=flow.float32)
@@ -52,11 +77,11 @@ class TestRelu(unittest.TestCase):
         check_point.init()
         a = f1(x).get()
         b = f2(x).get()
-        print('without xla: ', a.numpy())
-        print('with xla: ', b.numpy())
+        print("without xla: ", a.numpy())
+        print("with xla: ", b.numpy())
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         c = f3(x).get()
-        print('with tensorrt: ', c.numpy())
+        print("with tensorrt: ", c.numpy())
         self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -67,7 +92,8 @@ class TestRelu(unittest.TestCase):
     def _test_random_body(self, shape, axis, fuse_add_to_output, dtype=np.float32):
         x = np.random.random(shape).astype(dtype)
         self._test_body(x, axis, fuse_add_to_output, dtype=dtype)
-    '\n      TensorRT batch norm only support 4-d tensor (NCHW).\n    '
+
+    "\n      TensorRT batch norm only support 4-d tensor (NCHW).\n    "
 
     def test_ones_input(self):
         self._test_ones_body((2, 1, 2, 2), 1, True)
@@ -80,5 +106,7 @@ class TestRelu(unittest.TestCase):
         self._test_random_body((2, 1, 2, 2), 1, False)
         self._test_random_body((2, 5, 2, 2), 1, True)
         self._test_random_body((2, 5, 2, 2), 1, False)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

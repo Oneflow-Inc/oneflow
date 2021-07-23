@@ -1,7 +1,12 @@
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.compatible.single_client.core.job import (
+    regularizer_conf_pb2 as regularizer_conf_util,
+)
 
-def l1_l2_regularizer(l1: float=0.01, l2: float=0.01) -> regularizer_conf_util.RegularizerConf:
+
+def l1_l2_regularizer(
+    l1: float = 0.01, l2: float = 0.01
+) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L1 and L2 weight regularizer. 
 
     Args:
@@ -43,11 +48,12 @@ def l1_l2_regularizer(l1: float=0.01, l2: float=0.01) -> regularizer_conf_util.R
     
     """
     regularizer = regularizer_conf_util.RegularizerConf()
-    setattr(regularizer.l1_l2_conf, 'l1', l1)
-    setattr(regularizer.l1_l2_conf, 'l2', l2)
+    setattr(regularizer.l1_l2_conf, "l1", l1)
+    setattr(regularizer.l1_l2_conf, "l2", l2)
     return regularizer
 
-def l1_regularizer(l: float=0.01) -> regularizer_conf_util.RegularizerConf:
+
+def l1_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L1 weight regularizer. 
 
     Args:
@@ -89,7 +95,8 @@ def l1_regularizer(l: float=0.01) -> regularizer_conf_util.RegularizerConf:
     """
     return l1_l2_regularizer(l1=l, l2=0.0)
 
-def l2_regularizer(l: float=0.01) -> regularizer_conf_util.RegularizerConf:
+
+def l2_regularizer(l: float = 0.01) -> regularizer_conf_util.RegularizerConf:
     """This operator creates a L2 weight regularizer. 
 
     Args:

@@ -4,6 +4,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
 import math
 
+
 class Identity(Module):
     """A placeholder identity operator that is argument-insensitive.
 
@@ -32,6 +33,7 @@ class Identity(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         return input
+
 
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
@@ -73,7 +75,7 @@ class Linear(Module):
 
     """
 
-    def __init__(self, in_features: int, out_features: int, bias: bool=True) -> None:
+    def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -96,13 +98,20 @@ class Linear(Module):
         if len(x.shape) == 2:
             res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         else:
-            res = flow.F.broadcast_matmul(x, self.weight, transpose_a=False, transpose_b=True)
+            res = flow.F.broadcast_matmul(
+                x, self.weight, transpose_a=False, transpose_b=True
+            )
         if self.use_bias:
             res += self.bias
         return res
 
     def extra_repr(self) -> str:
-        return 'in_features={}, out_features={}, bias={}'.format(self.in_features, self.out_features, self.bias is not None)
-if __name__ == '__main__':
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

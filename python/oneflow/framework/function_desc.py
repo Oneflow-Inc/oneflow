@@ -5,15 +5,15 @@ import oneflow.framework.session_context as session_ctx
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow._oneflow_internal
 
-class FunctionAttribute(object):
 
+class FunctionAttribute(object):
     def __init__(self):
         self.default_placement_scope = None
         self.default_distribute_strategy = None
         self.allow_cpu_return_op = True
 
-class FunctionDesc(object):
 
+class FunctionDesc(object):
     def __init__(self, job_func=None, job_config_proto=None, function_attribute=None):
         if job_config_proto is None:
             job_config_proto = job_conf_cfg.JobConfigProto()
@@ -32,33 +32,34 @@ class FunctionDesc(object):
         raise NotImplementedError
 
     def HasAttr(self, attr_name):
-        if attr_name == 'flag_name2flag_value':
+        if attr_name == "flag_name2flag_value":
             return False
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name in self.job_config_proto.flag_name2flag_value():
             return True
-        return getattr(self.job_config_proto, 'has_' + attr_name)()
+        return getattr(self.job_config_proto, "has_" + attr_name)()
 
     def __getattr__(self, attr_name):
-        assert attr_name != 'flag_name2flag_value'
+        assert attr_name != "flag_name2flag_value"
         flag_name2flag_value = self.job_config_proto.flag_name2flag_value()
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
-            assert getattr(self.job_config_proto, 'has_' + attr_name)()
+            assert getattr(self.job_config_proto, "has_" + attr_name)()
             return getattr(self.job_config_proto, attr_name)()
         attr_value = name2default[attr_name]
         if attr_name in flag_name2flag_value:
             attr_value = flag_name2flag_value[attr_name]
-        if attr_value.HasField('at_bool'):
+        if attr_value.HasField("at_bool"):
             return attr_value.at_bool
-        elif attr_value.HasField('at_int64'):
+        elif attr_value.HasField("at_int64"):
             return attr_value.at_int64
-        elif attr_value.HasField('at_double'):
+        elif attr_value.HasField("at_double"):
             return attr_value.at_double
-        elif attr_value.HasField('at_string'):
+        elif attr_value.HasField("at_string"):
             return attr_value.at_string
         else:
             raise NotImplementedError()
+
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def GetCurrentEagerGlobalFunctionDesc():
@@ -66,6 +67,7 @@ def GetCurrentEagerGlobalFunctionDesc():
     ret = sess.CurrentEagerGlobalFunctionDesc()
     assert ret is not None
     return ret
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def GetCurrentLazyGlobalFunctionDesc():
@@ -75,6 +77,9 @@ def GetCurrentLazyGlobalFunctionDesc():
     assert ret is not None
     return ret
 
+
 def api_current_global_function_desc() -> FunctionDesc:
-    api_func = enable_if.unique([GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc])
+    api_func = enable_if.unique(
+        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
+    )
     return api_func()

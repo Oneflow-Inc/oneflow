@@ -4,9 +4,9 @@ from oneflow.compatible.single_client.python.framework.tensor import register_te
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from typing import Optional, Sequence
 
-class Squeeze(Module):
 
-    def __init__(self, dim: Optional[Sequence[int]]=None) -> None:
+class Squeeze(Module):
+    def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
         self.dim = dim
 
@@ -14,6 +14,9 @@ class Squeeze(Module):
         if self.dim is None:
             return x
         return flow.F.squeeze(x, dim=self.dim)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

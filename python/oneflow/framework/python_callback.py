@@ -6,19 +6,21 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
 import oneflow._oneflow_internal
 
+
 def GetIdForRegisteredCallback(cb):
     assert callable(cb)
     global unique_id2handler
     unique_id2handler[id(cb)] = cb
     return id(cb)
 
+
 def DeleteRegisteredCallback(cb):
     global unique_id2handler
     assert id(cb) in unique_id2handler
     del unique_id2handler[id(cb)]
 
-class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
 
+class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
     def __init__(self):
         oneflow._oneflow_internal.ForeignCallback.__init__(self)
 
@@ -53,7 +55,9 @@ class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
 
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
-            return interpreter_callback.MakeScopeSymbol(job_conf, parallel_conf, is_mirrored)
+            return interpreter_callback.MakeScopeSymbol(
+                job_conf, parallel_conf, is_mirrored
+            )
         except Exception as e:
             print(traceback.format_exc())
             raise e
@@ -65,12 +69,15 @@ class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+
 def _WatcherHandler(unique_id, of_blob_ptr):
     global unique_id2handler
     assert unique_id in unique_id2handler
     handler = unique_id2handler[unique_id]
     assert callable(handler)
     handler(ofblob.OfBlob(of_blob_ptr))
+
+
 unique_id2handler = {}
 global_python_callback = PythonCallback()
 interpreter_callback = None

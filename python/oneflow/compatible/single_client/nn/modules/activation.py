@@ -4,6 +4,7 @@ from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 from typing import Optional
 
+
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
@@ -20,6 +21,9 @@ def _softmax_need_transpose(x, axis):
         permute[axis] = permute[-1]
         permute[-1] = axis
     return (need_transpose, permute)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

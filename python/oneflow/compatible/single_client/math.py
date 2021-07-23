@@ -20,7 +20,9 @@ from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import log1
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import log_sigmoid
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import negative
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import reciprocal
-from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import reciprocal_no_nan
+from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import (
+    reciprocal_no_nan,
+)
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import rint
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import round
 from oneflow.compatible.single_client.ops.math_unary_elementwise_ops import rsqrt
@@ -66,11 +68,17 @@ from oneflow.compatible.single_client.ops.math_ops import squared_difference
 from oneflow.compatible.single_client.ops.math_ops import gelu_grad
 from oneflow.compatible.single_client.ops.math_ops import tril
 from oneflow.compatible.single_client.ops.math_ops import fused_scale_tril
-from oneflow.compatible.single_client.ops.math_ops import fused_scale_tril_softmax_dropout
+from oneflow.compatible.single_client.ops.math_ops import (
+    fused_scale_tril_softmax_dropout,
+)
 from oneflow.compatible.single_client.ops.math_ops import polyval
 from oneflow.compatible.single_client.ops.math_ops import in_top_k
-from oneflow.compatible.single_client.ops.two_stage_reduce import api_two_stage_reduce_max
-from oneflow.compatible.single_client.ops.two_stage_reduce import api_two_stage_reduce_min
+from oneflow.compatible.single_client.ops.two_stage_reduce import (
+    api_two_stage_reduce_max,
+)
+from oneflow.compatible.single_client.ops.two_stage_reduce import (
+    api_two_stage_reduce_min,
+)
 from oneflow.compatible.single_client.ops.reduce_ops import reduce_sum
 from oneflow.compatible.single_client.ops.reduce_ops import reduce_any
 from oneflow.compatible.single_client.ops.reduce_ops import reduce_min

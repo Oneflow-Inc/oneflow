@@ -7,21 +7,36 @@ from oneflow.compatible.single_client.python.framework import config_util as con
 from oneflow.compatible.single_client.python.framework import env_util as env_util
 from oneflow.compatible.single_client.python.framework import typing_util as oft_util
 from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import job_instance as job_instance_util
+from oneflow.compatible.single_client.python.framework import (
+    job_instance as job_instance_util,
+)
 from oneflow.compatible.single_client.python.framework import push_util as push_util
-from oneflow.compatible.single_client.python.framework import session_context as session_ctx
+from oneflow.compatible.single_client.python.framework import (
+    session_context as session_ctx,
+)
 from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
 from oneflow.compatible.single_client.python.eager import op_executor as op_executor
-from oneflow.compatible.single_client.python.experimental import interface_op_read_and_write
+from oneflow.compatible.single_client.python.experimental import (
+    interface_op_read_and_write,
+)
 from oneflow.compatible.single_client.core.job.job_set_pb2 import ConfigProto
 from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
 from oneflow.compatible.single_client.python.framework import module as module_util
-from oneflow.compatible.single_client.python.framework.pull_util import LazyFutureRemoteBlobs, EagerFutureRemoteBlobs
-from oneflow.compatible.single_client.python.framework.session_context import SessionStatus
+from oneflow.compatible.single_client.python.framework.pull_util import (
+    LazyFutureRemoteBlobs,
+    EagerFutureRemoteBlobs,
+)
+from oneflow.compatible.single_client.python.framework.session_context import (
+    SessionStatus,
+)
 from oneflow import oneflow_deprecate
 from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
-from oneflow.compatible.single_client.python.framework.check_point import SnapshotManager
-from oneflow.compatible.single_client.python.framework import check_point_v2 as check_point_v2
+from oneflow.compatible.single_client.python.framework.check_point import (
+    SnapshotManager,
+)
+from oneflow.compatible.single_client.python.framework import (
+    check_point_v2 as check_point_v2,
+)
 from contextlib import contextmanager
 from typing import Callable
 import inspect
@@ -30,8 +45,8 @@ import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
 
-class Session(object):
 
+class Session(object):
     def __init__(self, sess_id):
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
@@ -155,8 +170,12 @@ class Session(object):
                     op_name2parallel_conf[op_name] = placement_group.parallel_conf
             for op_conf in job.net.op:
                 if c_api_util.IsInterfaceOpConf(op_conf):
-                    self.interface_op_name2job_name_[op_conf.name] = job.job_conf.job_name
-                    self.lazy_interface_op_name2parallel_conf_[op_conf.name] = op_name2parallel_conf[op_conf.name]
+                    self.interface_op_name2job_name_[
+                        op_conf.name
+                    ] = job.job_conf.job_name
+                    self.lazy_interface_op_name2parallel_conf_[
+                        op_conf.name
+                    ] = op_name2parallel_conf[op_conf.name]
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
@@ -178,7 +197,9 @@ class Session(object):
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
         else:
-            self.eager_config_proto_ctx_ = oneflow._oneflow_internal.LogicalConfigProtoContext(str(self.config_proto))
+            self.eager_config_proto_ctx_ = oneflow._oneflow_internal.LogicalConfigProtoContext(
+                str(self.config_proto)
+            )
         return self
 
     def FindOrCreateLazyBlob(self, op_name, Create):
@@ -213,10 +234,14 @@ class Session(object):
         self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
     def StashJob(self, job_name=None, key=None):
-        assert self.status_ is SessionStatus.RUNNING, 'current status {}'.format(self.status_)
+        assert self.status_ is SessionStatus.RUNNING, "current status {}".format(
+            self.status_
+        )
         job = c_api_util.GetCurrentJob()
         if job_name is not None:
-            assert job.job_conf.job_name == job_name, '{} is not current job name'.format(job_name)
+            assert (
+                job.job_conf.job_name == job_name
+            ), "{} is not current job name".format(job_name)
         else:
             job_name = job.job_conf.job_name
         if key is None:
@@ -255,7 +280,9 @@ class Session(object):
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            remote_blobs = compiler.EagerRun(self, function_desc, self.config_proto, arg)
+            remote_blobs = compiler.EagerRun(
+                self, function_desc, self.config_proto, arg
+            )
             if remote_blobs is None:
                 return
             future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
@@ -277,13 +304,21 @@ class Session(object):
 
     def AsyncPush(self, op_name, push_data_cb):
         assert self.status_ is SessionStatus.RUNNING
-        push_job_name = self.inter_user_job_info.input_or_var_op_name2push_job_name[op_name]
-        self.LaunchJob(job_instance_util.MakePushJobInstance(push_job_name, op_name, push_data_cb))
+        push_job_name = self.inter_user_job_info.input_or_var_op_name2push_job_name[
+            op_name
+        ]
+        self.LaunchJob(
+            job_instance_util.MakePushJobInstance(push_job_name, op_name, push_data_cb)
+        )
 
     def AsyncPull(self, op_name, pull_data_cb):
         assert self.status_ is SessionStatus.RUNNING
-        pull_job_name = self.inter_user_job_info.output_or_var_op_name2pull_job_name[op_name]
-        self.LaunchJob(job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
+        pull_job_name = self.inter_user_job_info.output_or_var_op_name2pull_job_name[
+            op_name
+        ]
+        self.LaunchJob(
+            job_instance_util.MakePullJobInstance(pull_job_name, op_name, pull_data_cb)
+        )
 
     def HasAnyCallbackAfterFunctionReturn(self):
         return len(self.uuid2watch_handler) > 0
@@ -299,7 +334,9 @@ class Session(object):
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
         if flow.eager_execution_enabled():
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
-            self.interface_op_name2job_name_[interface_op_name] = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
+            self.interface_op_name2job_name_[
+                interface_op_name
+            ] = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
         else:
             pass
 
@@ -378,9 +415,13 @@ class Session(object):
     def __del__(self):
         self.TryClose()
 
-def api_find_or_create_module(module_name: str, create: Callable[[], None], reuse: bool=False):
+
+def api_find_or_create_module(
+    module_name: str, create: Callable[[], None], reuse: bool = False
+):
     func = enable_if.unique([find_or_create_module])
     return func(module_name, create, reuse)
+
 
 @enable_if.condition(hob.in_global_mode)
 def find_or_create_module(module_name, create, reuse=False):
@@ -395,11 +436,15 @@ def find_or_create_module(module_name, create, reuse=False):
         assert isinstance(module, module_util.Module)
         module_name2module[module_name] = module
     elif not reuse:
-        assert module_name not in sess.existed_module_names_, "duplicated module_name `%s' in global_function `%s'" % (module_name, job_name)
+        assert module_name not in sess.existed_module_names_, (
+            "duplicated module_name `%s' in global_function `%s'"
+            % (module_name, job_name)
+        )
     else:
         pass
     sess.existed_module_names_.add(module_name)
     return module_name2module[module_name]
+
 
 def api_eager_execution_enabled() -> bool:
     """Get current setting of the job, if enable eager execution mode ,then return True
@@ -409,16 +454,19 @@ def api_eager_execution_enabled() -> bool:
     """
     return oneflow._oneflow_internal.EagerExecutionEnabled()
 
+
 def api_clear_default_session() -> None:
     """Clear the default session. All compiled OneFlow functions will be deleted.
     """
     func = enable_if.unique([clear_default_session])
     return func()
 
+
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
+
 
 def api_sync_default_session() -> None:
     """Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
@@ -426,13 +474,16 @@ def api_sync_default_session() -> None:
     func = enable_if.unique([sync_default_session])
     return func()
 
+
 @enable_if.condition(hob.in_normal_mode)
 def sync_default_session() -> None:
     session_ctx.GetDefaultSession().Sync()
 
+
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
         config_proto.resource.machine_num = oneflow._oneflow_internal.GetNodeSize()
+
 
 def _GetDefaultConfigProto():
     config_proto = job_set_util.ConfigProto()
@@ -444,6 +495,7 @@ def _GetDefaultConfigProto():
         config_proto.resource.gpu_device_num = 0
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
+
 
 def TmpInitEagerGlobalSession():
     config_pb = _GetDefaultConfigProto()

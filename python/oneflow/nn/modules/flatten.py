@@ -2,6 +2,7 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
+
 class Flatten(Module):
     """Flattens a contiguous range of dims into a tensor. For use with: nn.Sequential.
 
@@ -23,7 +24,7 @@ class Flatten(Module):
 
     """
 
-    def __init__(self, start_dim: int=1, end_dim: int=-1) -> None:
+    def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
         self.start_dim = start_dim
         self.end_dim = end_dim
@@ -32,10 +33,11 @@ class Flatten(Module):
         return flow.F.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
 
     def extra_repr(self) -> str:
-        return 'start_dim={}, end_dim={}'.format(self.start_dim, self.end_dim)
+        return "start_dim={}, end_dim={}".format(self.start_dim, self.end_dim)
 
-@register_tensor_op('flatten')
-def _flow_flatten(input, start_dim: int=0, end_dim: int=-1):
+
+@register_tensor_op("flatten")
+def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     """Flattens a contiguous range of dims into a tensor.
 
     Args:
@@ -55,6 +57,9 @@ def _flow_flatten(input, start_dim: int=0, end_dim: int=-1):
 
     """
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

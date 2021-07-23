@@ -11,5 +11,18 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 from typing import Optional
 
-def square_sum(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('SquareSum_')).Op('square_sum').Input('x', [x]).Output('y').Build().InferAndTryRun().RemoteBlobList()[0]
+
+def square_sum(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SquareSum_")
+        )
+        .Op("square_sum")
+        .Input("x", [x])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

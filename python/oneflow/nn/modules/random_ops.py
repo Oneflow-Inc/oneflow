@@ -3,6 +3,7 @@ import random
 import oneflow as flow
 from oneflow.nn.module import Module
 
+
 def bernoulli(input, *, generator=None, out=None):
     """This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
@@ -39,6 +40,9 @@ def bernoulli(input, *, generator=None, out=None):
 
     """
     return flow.F.bernoulli(input, flow.float32, generator)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

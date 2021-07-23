@@ -1,4 +1,3 @@
-
 from oneflow.compatible.single_client.ops.nn_ops import conv1d
 from oneflow.compatible.single_client.ops.nn_ops import conv2d
 from oneflow.compatible.single_client.ops.nn_ops import conv3d
@@ -23,10 +22,18 @@ from oneflow.compatible.single_client.ops.nn_ops import softmax
 from oneflow.compatible.single_client.ops.nn_ops import logsoftmax
 from oneflow.compatible.single_client.ops.nn_ops import softmax_grad
 from oneflow.compatible.single_client.ops.nn_ops import sparse_cross_entropy
-from oneflow.compatible.single_client.ops.nn_ops import softmax_cross_entropy_with_logits
-from oneflow.compatible.single_client.ops.nn_ops import sparse_softmax_cross_entropy_with_logits
-from oneflow.compatible.single_client.ops.nn_ops import distributed_sparse_softmax_cross_entropy_with_logits
-from oneflow.compatible.single_client.ops.nn_ops import sigmoid_cross_entropy_with_logits
+from oneflow.compatible.single_client.ops.nn_ops import (
+    softmax_cross_entropy_with_logits,
+)
+from oneflow.compatible.single_client.ops.nn_ops import (
+    sparse_softmax_cross_entropy_with_logits,
+)
+from oneflow.compatible.single_client.ops.nn_ops import (
+    distributed_sparse_softmax_cross_entropy_with_logits,
+)
+from oneflow.compatible.single_client.ops.nn_ops import (
+    sigmoid_cross_entropy_with_logits,
+)
 from oneflow.compatible.single_client.ops.nn_ops import random_mask_like
 from oneflow.compatible.single_client.ops.nn_ops import dropout
 from oneflow.compatible.single_client.ops.nn_ops import deconv2d
@@ -48,11 +55,17 @@ from oneflow.compatible.single_client.ops.nn_ops import triplet_margin_loss
 from oneflow.compatible.single_client.ops.nn_ops import pixel_shuffle
 from oneflow.compatible.single_client.ops.nn_ops import pixel_shufflev2
 from oneflow.compatible.single_client.ops.nn_ops import kldivloss
-from oneflow.compatible.single_client.ops.domain_ops import api_fused_self_attention_query_mul_key_and_value
+from oneflow.compatible.single_client.ops.domain_ops import (
+    api_fused_self_attention_query_mul_key_and_value,
+)
 from oneflow.compatible.single_client.ops.math_ops import relu as relu
 from oneflow.compatible.single_client.ops.math_ops import tril as tril
-from oneflow.compatible.single_client.ops.math_ops import fused_scale_tril as fused_scale_tril
-from oneflow.compatible.single_client.ops.math_ops import fused_scale_tril_softmax_dropout as fused_scale_tril_softmax_dropout
+from oneflow.compatible.single_client.ops.math_ops import (
+    fused_scale_tril as fused_scale_tril,
+)
+from oneflow.compatible.single_client.ops.math_ops import (
+    fused_scale_tril_softmax_dropout as fused_scale_tril_softmax_dropout,
+)
 from oneflow.compatible.single_client.ops.loss_ops import ctc_greedy_decoder
 from oneflow.compatible.single_client.nn.parameter import Parameter
 from oneflow.compatible.single_client.nn.module import Module

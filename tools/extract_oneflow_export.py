@@ -558,5 +558,5 @@ if __name__ == "__main__":
     if args.black:
         print("[postprocess]", "black")
         subprocess.check_call(
-            f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"`which python3` -m black . {extra_arg}", shell=True, cwd=args.out_dir,
         )

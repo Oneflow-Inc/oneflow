@@ -6,9 +6,28 @@ import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.framework.distribute as distribute_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
+
 IntPair = Tuple[int, int]
 
-def dense(inputs: oneflow._oneflow_internal.BlobDesc, units: int, activation: Optional[Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc]]=None, use_bias: bool=True, kernel_initializer: Optional[initializer_conf_util.InitializerConf]=None, bias_initializer: Optional[initializer_conf_util.InitializerConf]=None, kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, bias_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, trainable: bool=True, name: str='Dense', model_distribute: oneflow._oneflow_internal.distribute.Distribute=oneflow._oneflow_internal.distribute.broadcast()) -> oneflow._oneflow_internal.BlobDesc:
+
+def dense(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    units: int,
+    activation: Optional[
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Dense",
+    model_distribute: oneflow._oneflow_internal.distribute.Distribute = oneflow._oneflow_internal.distribute.broadcast(),
+) -> oneflow._oneflow_internal.BlobDesc:
     """Fully-connected layer.
 
     The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob.
@@ -66,7 +85,11 @@ def dense(inputs: oneflow._oneflow_internal.BlobDesc, units: int, activation: Op
     in_shape = inputs.shape
     in_num_axes = len(in_shape)
     assert in_num_axes >= 2
-    assert model_distribute is oneflow._oneflow_internal.distribute.auto() or model_distribute is oneflow._oneflow_internal.distribute.broadcast() or model_distribute is oneflow._oneflow_internal.distribute.split(0)
+    assert (
+        model_distribute is oneflow._oneflow_internal.distribute.auto()
+        or model_distribute is oneflow._oneflow_internal.distribute.broadcast()
+        or model_distribute is oneflow._oneflow_internal.distribute.split(0)
+    )
     if model_distribute is oneflow._oneflow_internal.distribute.split(0):
         assert in_num_axes == 2
     if in_num_axes > 2:
@@ -74,22 +97,67 @@ def dense(inputs: oneflow._oneflow_internal.BlobDesc, units: int, activation: Op
     with flow.scope.namespace(name):
         if kernel_initializer is None:
             kernel_initializer = flow.constant_initializer(0)
-        weight = flow.get_variable(name='weight', shape=(units, inputs.shape[1]), dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', distribute=model_distribute, reuse=False)
+        weight = flow.get_variable(
+            name="weight",
+            shape=(units, inputs.shape[1]),
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            distribute=model_distribute,
+            reuse=False,
+        )
         weight = weight.with_distribute(model_distribute)
-        out = flow.matmul(a=inputs, b=weight, transpose_b=True, name='matmul')
+        out = flow.matmul(a=inputs, b=weight, transpose_b=True, name="matmul")
         if use_bias:
             if bias_initializer is None:
                 bias_initializer = flow.constant_initializer(0)
-            bias = flow.get_variable(name='bias', shape=(units,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', distribute=model_distribute, reuse=False)
+            bias = flow.get_variable(
+                name="bias",
+                shape=(units,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                distribute=model_distribute,
+                reuse=False,
+            )
             bias = bias.with_distribute(model_distribute)
-            out = flow.nn.bias_add(out, bias, name='bias_add')
+            out = flow.nn.bias_add(out, bias, name="bias_add")
         if callable(activation):
-            out = activation(out, name='activation')
+            out = activation(out, name="activation")
     if in_num_axes > 2:
         out = flow.reshape(out, in_shape[:-1] + (units,))
     return out
 
-def conv1d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size: Union[int, Tuple[int]]=1, strides: Union[int, Tuple[int]]=1, padding: Union[str, Tuple[IntPair, IntPair, IntPair]]='VALID', data_format: str='NCW', dilation_rate: Optional[Union[int, Tuple[int]]]=None, groups: int=1, activation: Optional[Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc]]=None, use_bias: bool=True, kernel_initializer: Optional[initializer_conf_util.InitializerConf]=None, bias_initializer: Optional[initializer_conf_util.InitializerConf]=None, kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, bias_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, trainable: bool=True, name: str='Conv1d', weight_name: Optional[str]=None, bias_name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv1d(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    filters: int,
+    kernel_size: Union[int, Tuple[int]] = 1,
+    strides: Union[int, Tuple[int]] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair]] = "VALID",
+    data_format: str = "NCW",
+    dilation_rate: Optional[Union[int, Tuple[int]]] = None,
+    groups: int = 1,
+    activation: Optional[
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Conv1d",
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """1D convolution layer.
 
     This layer computes a 1-D convolution with 3D input Blob and filters.
@@ -166,41 +234,111 @@ def conv1d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size
     assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
-    if data_format.upper() == 'NCW':
+    if data_format.upper() == "NCW":
         assert groups <= inputs.shape[1]
         assert inputs.shape[1] % groups == 0
         weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
-    elif data_format.upper() == 'NWC':
+    elif data_format.upper() == "NWC":
         assert groups == 1
         assert groups <= inputs.shape[2]
         assert inputs.shape[2] % groups == 0
         weight_shape = (filters, kernel_size[0], inputs.shape[2] // groups)
     else:
-        raise ValueError('data_format must be in NCW or NWC')
+        raise ValueError("data_format must be in NCW or NWC")
     if kernel_initializer is None:
         kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
     if weight_name is None:
         with flow.scope.namespace(name):
-            weight = flow.get_variable(name='weight', shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
     else:
-        weight = flow.get_variable(name=weight_name, shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
-    output = flow.nn.conv1d(inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name)
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
+    output = flow.nn.conv1d(
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
+    )
     if use_bias:
         if bias_initializer is None:
             bias_initializer = flow.constant_initializer(0)
         if bias_name is None:
             with flow.scope.namespace(name):
-                bias = flow.get_variable(name='bias', shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
         else:
-            bias = flow.get_variable(name=bias_name, shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name='bias_add')
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
     if callable(activation):
         with flow.scope.namespace(name):
-            output = activation(output, name='activation')
+            output = activation(output, name="activation")
     return output
 
-def conv2d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size: Union[int, IntPair]=1, strides: Union[int, IntPair]=1, padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]]='VALID', data_format: str='NCHW', dilation_rate: Optional[Union[int, IntPair]]=None, groups: int=1, activation: Optional[Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc]]=None, use_bias: bool=True, kernel_initializer: Optional[initializer_conf_util.InitializerConf]=None, bias_initializer: Optional[initializer_conf_util.InitializerConf]=None, kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, bias_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, trainable: bool=True, name: str='Conv2d', weight_name: Optional[str]=None, bias_name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv2d(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    filters: int,
+    kernel_size: Union[int, IntPair] = 1,
+    strides: Union[int, IntPair] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]] = "VALID",
+    data_format: str = "NCHW",
+    dilation_rate: Optional[Union[int, IntPair]] = None,
+    groups: int = 1,
+    activation: Optional[
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Conv2d",
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """2D convolution layer.
 
     This layer computes a 2D convolution with 4D input Blob and filters.
@@ -279,41 +417,117 @@ def conv2d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size
     assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
-    if data_format.upper() == 'NCHW':
+    if data_format.upper() == "NCHW":
         assert groups <= inputs.shape[1]
         assert inputs.shape[1] % groups == 0
         weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
-    elif data_format.upper() == 'NHWC':
+    elif data_format.upper() == "NHWC":
         assert groups == 1
         assert groups <= inputs.shape[3]
         assert inputs.shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], inputs.shape[3] // groups)
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            kernel_size[1],
+            inputs.shape[3] // groups,
+        )
     else:
-        raise ValueError('data_format must be in NCHW or NHWC')
+        raise ValueError("data_format must be in NCHW or NHWC")
     if kernel_initializer is None:
         kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
     if weight_name is None:
         with flow.scope.namespace(name):
-            weight = flow.get_variable(name='weight', shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
     else:
-        weight = flow.get_variable(name=weight_name, shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
-    output = flow.nn.conv2d(inputs, weight, strides=strides, padding=padding, bias=None, data_format=data_format, dilations=dilation_rate, groups=groups, name=name)
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
+    output = flow.nn.conv2d(
+        inputs,
+        weight,
+        strides=strides,
+        padding=padding,
+        bias=None,
+        data_format=data_format,
+        dilations=dilation_rate,
+        groups=groups,
+        name=name,
+    )
     if use_bias:
         if bias_initializer is None:
             bias_initializer = flow.constant_initializer(0)
         if bias_name is None:
             with flow.scope.namespace(name):
-                bias = flow.get_variable(name='bias', shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
         else:
-            bias = flow.get_variable(name=bias_name, shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name='bias_add')
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
     if callable(activation):
         with flow.scope.namespace(name):
-            output = activation(output, name='activation')
+            output = activation(output, name="activation")
     return output
 
-def conv3d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size: Union[int, Sequence[int]]=1, strides: Union[int, Sequence[int]]=1, padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]='VALID', data_format: str='NCDHW', dilation_rate: Optional[Union[int, IntPair]]=None, groups: int=1, activation: Optional[Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc]]=None, use_bias: bool=True, kernel_initializer: Optional[initializer_conf_util.InitializerConf]=None, bias_initializer: Optional[initializer_conf_util.InitializerConf]=None, kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, bias_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, trainable: bool=True, name: str='Conv3d', weight_name: Optional[str]=None, bias_name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv3d(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    filters: int,
+    kernel_size: Union[int, Sequence[int]] = 1,
+    strides: Union[int, Sequence[int]] = 1,
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]] = "VALID",
+    data_format: str = "NCDHW",
+    dilation_rate: Optional[Union[int, IntPair]] = None,
+    groups: int = 1,
+    activation: Optional[
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
+    ] = None,
+    use_bias: bool = True,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    trainable: bool = True,
+    name: str = "Conv3d",
+    weight_name: Optional[str] = None,
+    bias_name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """3D convolution layer.
 
     This layer computes 3D convolution with 5D input Blob and filters
@@ -383,9 +597,9 @@ def conv3d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size
 
     """
     need_transpose = 0
-    if data_format.upper() == 'NDHWC':
+    if data_format.upper() == "NDHWC":
         need_transpose = 1
-        data_format = 'NCDHW'
+        data_format = "NCDHW"
     if need_transpose:
         inputs = flow.transpose(inputs, perm=[0, 4, 1, 2, 3])
         if isinstance(padding, (list, tuple)):
@@ -401,43 +615,104 @@ def conv3d(inputs: oneflow._oneflow_internal.BlobDesc, filters: int, kernel_size
     assert groups > 0
     assert groups <= filters
     assert filters % groups == 0
-    if data_format.upper() == 'NCDHW':
+    if data_format.upper() == "NCDHW":
         assert groups <= inputs.shape[1]
         assert inputs.shape[1] % groups == 0
         weight_shape = (filters, inputs.shape[1] // groups) + kernel_size
-    elif data_format.upper() == 'NDHWC':
+    elif data_format.upper() == "NDHWC":
         assert groups == 1
         assert groups <= inputs.shape[3]
         assert inputs.shape[3] % groups == 0
-        weight_shape = (filters, kernel_size[0], kernel_size[1], kernel_size[2], inputs.shape[4] // groups)
+        weight_shape = (
+            filters,
+            kernel_size[0],
+            kernel_size[1],
+            kernel_size[2],
+            inputs.shape[4] // groups,
+        )
     else:
-        raise ValueError('data_format must be in NCHW or NHWC')
+        raise ValueError("data_format must be in NCHW or NHWC")
     if kernel_initializer is None:
         kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
     if weight_name is None:
         with flow.scope.namespace(name):
-            weight = flow.get_variable(name='weight', shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
+            weight = flow.get_variable(
+                name="weight",
+                shape=weight_shape,
+                dtype=inputs.dtype,
+                initializer=kernel_initializer,
+                regularizer=kernel_regularizer,
+                trainable=trainable,
+                model_name="weight",
+                reuse=False,
+            )
     else:
-        weight = flow.get_variable(name=weight_name, shape=weight_shape, dtype=inputs.dtype, initializer=kernel_initializer, regularizer=kernel_regularizer, trainable=trainable, model_name='weight', reuse=False)
-    output = flow.nn.conv3d(inputs, weight, strides, padding, data_format, dilation_rate, groups=groups, name=name)
+        weight = flow.get_variable(
+            name=weight_name,
+            shape=weight_shape,
+            dtype=inputs.dtype,
+            initializer=kernel_initializer,
+            regularizer=kernel_regularizer,
+            trainable=trainable,
+            model_name="weight",
+            reuse=False,
+        )
+    output = flow.nn.conv3d(
+        inputs,
+        weight,
+        strides,
+        padding,
+        data_format,
+        dilation_rate,
+        groups=groups,
+        name=name,
+    )
     if use_bias:
         if bias_initializer is None:
             bias_initializer = flow.constant_initializer(0)
         if bias_name is None:
             with flow.scope.namespace(name):
-                bias = flow.get_variable(name='bias', shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+                bias = flow.get_variable(
+                    name="bias",
+                    shape=(filters,),
+                    dtype=inputs.dtype,
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                    trainable=trainable,
+                    model_name="bias",
+                    reuse=False,
+                )
         else:
-            bias = flow.get_variable(name=bias_name, shape=(filters,), dtype=inputs.dtype, initializer=bias_initializer, regularizer=bias_regularizer, trainable=trainable, model_name='bias', reuse=False)
+            bias = flow.get_variable(
+                name=bias_name,
+                shape=(filters,),
+                dtype=inputs.dtype,
+                initializer=bias_initializer,
+                regularizer=bias_regularizer,
+                trainable=trainable,
+                model_name="bias",
+                reuse=False,
+            )
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name='bias_add')
+            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
     if callable(activation):
         with flow.scope.namespace(name):
-            output = activation(output, name='activation')
+            output = activation(output, name="activation")
     if need_transpose:
         output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
     return output
 
-def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, center: bool=True, scale: bool=True, trainable: bool=True, begin_norm_axis: int=1, begin_params_axis: int=-1, epsilon: float=1e-05, name: str='LayerNorm') -> oneflow._oneflow_internal.BlobDesc:
+
+def layer_norm(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    center: bool = True,
+    scale: bool = True,
+    trainable: bool = True,
+    begin_norm_axis: int = 1,
+    begin_params_axis: int = -1,
+    epsilon: float = 1e-05,
+    name: str = "LayerNorm",
+) -> oneflow._oneflow_internal.BlobDesc:
     """Layer Normalization.
 
     Args:
@@ -485,11 +760,29 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, center: bool=True, sc
     param_shape = inputs.shape[begin_params_axis:]
     if center:
         with flow.scope.namespace(name):
-            beta = flow.get_variable(name='beta', shape=param_shape, dtype=inputs.dtype, initializer=flow.constant_initializer(0.0), trainable=trainable, model_name='beta', distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
+            beta = flow.get_variable(
+                name="beta",
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(0.0),
+                trainable=trainable,
+                model_name="beta",
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
+                reuse=False,
+            )
     if scale:
         with flow.scope.namespace(name):
-            gamma = flow.get_variable(name='gamma', shape=param_shape, dtype=inputs.dtype, initializer=flow.constant_initializer(1.0), trainable=trainable, model_name='gamma', distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
-    if flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+            gamma = flow.get_variable(
+                name="gamma",
+                shape=param_shape,
+                dtype=inputs.dtype,
+                initializer=flow.constant_initializer(1.0),
+                trainable=trainable,
+                model_name="gamma",
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
+                reuse=False,
+            )
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if begin_norm_axis < 0:
             begin_norm_axis = begin_norm_axis + len(inputs.shape)
         reduce_axis = []
@@ -498,8 +791,17 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, center: bool=True, sc
                 reduce_axis.append(dim)
         (mean, variance) = flow.nn.moments(inputs, reduce_axis, keepdims=True)
         axis = begin_norm_axis
-        normalized = flow.nn.batch_normalization(x=inputs, mean=mean, variance=variance, variance_epsilon=epsilon, axis=axis, name=name)
-        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(param_shape)
+        normalized = flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
         affined = normalized
         if gamma:
             gamma = flow.reshape(gamma, nd_params_shape)
@@ -508,23 +810,38 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, center: bool=True, sc
             beta = flow.reshape(beta, nd_params_shape)
             affined += beta
         return affined
-    elif flow.current_scope().device_parallel_desc_symbol.device_tag == 'gpu':
-        op_builder = flow.user_op_builder(name).Op('layer_norm').Input('x', [inputs]).Output('y').Output('mean').Output('inv_variance')
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
         if beta is not None:
-            op_builder.Input('beta', [beta])
+            op_builder.Input("beta", [beta])
         if gamma is not None:
-            op_builder.Input('gamma', [gamma])
-            op_builder.Output('normalized')
-        op_builder.Attr('center', center)
-        op_builder.Attr('scale', scale)
-        op_builder.Attr('begin_norm_axis', begin_norm_axis)
-        op_builder.Attr('begin_params_axis', begin_params_axis)
-        op_builder.Attr('epsilon', epsilon)
+            op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
         return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         raise NotImplementedError
 
-def layer_norm_grad(dy: oneflow._oneflow_internal.BlobDesc, x: oneflow._oneflow_internal.BlobDesc, mean: oneflow._oneflow_internal.BlobDesc, inv_variance: oneflow._oneflow_internal.BlobDesc, begin_norm_axis: int=1, name: str='LayerNormGrad') -> oneflow._oneflow_internal.BlobDesc:
+
+def layer_norm_grad(
+    dy: oneflow._oneflow_internal.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    mean: oneflow._oneflow_internal.BlobDesc,
+    inv_variance: oneflow._oneflow_internal.BlobDesc,
+    begin_norm_axis: int = 1,
+    name: str = "LayerNormGrad",
+) -> oneflow._oneflow_internal.BlobDesc:
     """Layer normalization
 
     Args:
@@ -538,10 +855,32 @@ def layer_norm_grad(dy: oneflow._oneflow_internal.BlobDesc, x: oneflow._oneflow_
     Returns:
         oneflow._oneflow_internal.BlobDesc: Gradient with respect to input `Blob`.
     """
-    op = flow.user_op_builder(name).Op('layer_norm_grad').Input('dy', [dy]).Input('x', [x]).Input('mean', [mean]).Input('inv_variance', [inv_variance]).Output('dx').Attr('begin_norm_axis', begin_norm_axis).Attr('epsilon', 1e-05).Build()
+    op = (
+        flow.user_op_builder(name)
+        .Op("layer_norm_grad")
+        .Input("dy", [dy])
+        .Input("x", [x])
+        .Input("mean", [mean])
+        .Input("inv_variance", [inv_variance])
+        .Output("dx")
+        .Attr("begin_norm_axis", begin_norm_axis)
+        .Attr("epsilon", 1e-05)
+        .Build()
+    )
     return op.InferAndTryRun().SoleOutputBlob()
 
-def layer_norm_param_grad(dy: oneflow._oneflow_internal.BlobDesc, norm: oneflow._oneflow_internal.BlobDesc, gamma: oneflow._oneflow_internal.BlobDesc, begin_params_axis: int=-1, name: str='LayerNormParamGrad') -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
+
+def layer_norm_param_grad(
+    dy: oneflow._oneflow_internal.BlobDesc,
+    norm: oneflow._oneflow_internal.BlobDesc,
+    gamma: oneflow._oneflow_internal.BlobDesc,
+    begin_params_axis: int = -1,
+    name: str = "LayerNormParamGrad",
+) -> Tuple[
+    oneflow._oneflow_internal.BlobDesc,
+    oneflow._oneflow_internal.BlobDesc,
+    oneflow._oneflow_internal.BlobDesc,
+]:
     """Backward pass for layer normalization
 
     Args:
@@ -557,56 +896,149 @@ def layer_norm_param_grad(dy: oneflow._oneflow_internal.BlobDesc, norm: oneflow.
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
     """
-    op = flow.user_op_builder(name).Op('layer_norm_param_grad').Input('dy', [dy]).Input('normalized', [norm]).Input('gamma', [gamma]).Output('normalized_diff').Output('beta_diff').Output('gamma_diff').Output('reduce_buf').Attr('begin_params_axis', begin_params_axis).Build()
-    (normalized_diff, beta_diff, gamma_diff, reduce_buf) = op.InferAndTryRun().RemoteBlobList()
+    op = (
+        flow.user_op_builder(name)
+        .Op("layer_norm_param_grad")
+        .Input("dy", [dy])
+        .Input("normalized", [norm])
+        .Input("gamma", [gamma])
+        .Output("normalized_diff")
+        .Output("beta_diff")
+        .Output("gamma_diff")
+        .Output("reduce_buf")
+        .Attr("begin_params_axis", begin_params_axis)
+        .Build()
+    )
+    (
+        normalized_diff,
+        beta_diff,
+        gamma_diff,
+        reduce_buf,
+    ) = op.InferAndTryRun().RemoteBlobList()
     return (normalized_diff, beta_diff, gamma_diff)
 
-def _get_batch_normalization_variables(name, gamma_name, beta_name, moving_mean_name, moving_variance_name, center, scale, params_shape, params_dtype, trainable, beta_initializer, beta_regularizer, gamma_initializer, gamma_regularizer, moving_mean_initializer, moving_variance_initializer):
 
+def _get_batch_normalization_variables(
+    name,
+    gamma_name,
+    beta_name,
+    moving_mean_name,
+    moving_variance_name,
+    center,
+    scale,
+    params_shape,
+    params_dtype,
+    trainable,
+    beta_initializer,
+    beta_regularizer,
+    gamma_initializer,
+    gamma_regularizer,
+    moving_mean_initializer,
+    moving_variance_initializer,
+):
     def get_beta_var(name):
         if center:
-            beta = flow.get_variable(name=name, shape=params_shape, dtype=params_dtype, initializer=beta_initializer or flow.zeros_initializer(), regularizer=beta_regularizer, trainable=trainable, distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
+            beta = flow.get_variable(
+                name=name,
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
+                reuse=False,
+            )
         else:
             beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name=name)
         return beta
+
     if beta_name is None:
         with flow.scope.namespace(name):
-            beta = get_beta_var('beta')
+            beta = get_beta_var("beta")
     else:
         beta = get_beta_var(beta_name)
 
     def get_gamma_var(name):
         if scale:
-            gamma = flow.get_variable(name=name, shape=params_shape, dtype=params_dtype, initializer=gamma_initializer or flow.ones_initializer(), regularizer=gamma_regularizer, trainable=trainable, distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
+            gamma = flow.get_variable(
+                name=name,
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
+                reuse=False,
+            )
         else:
             gamma = flow.constant(1, dtype=params_dtype, shape=params_shape, name=name)
         return gamma
+
     if gamma_name is None:
         with flow.scope.namespace(name):
-            gamma = get_gamma_var('gamma')
+            gamma = get_gamma_var("gamma")
     else:
         gamma = get_gamma_var(gamma_name)
 
     def get_moving_mean_var(name):
-        moving_mean = flow.get_variable(name=name, shape=params_shape, dtype=params_dtype, initializer=moving_mean_initializer or flow.zeros_initializer(), trainable=False, distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
+        moving_mean = flow.get_variable(
+            name=name,
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
+            distribute=oneflow._oneflow_internal.distribute.broadcast(),
+            reuse=False,
+        )
         return moving_mean
+
     if moving_mean_name is None:
         with flow.scope.namespace(name):
-            moving_mean = get_moving_mean_var('moving_mean')
+            moving_mean = get_moving_mean_var("moving_mean")
     else:
         moving_mean = get_moving_mean_var(moving_mean_name)
 
     def get_moving_variance_var(name):
-        moving_variance = flow.get_variable(name=name, shape=params_shape, dtype=params_dtype, initializer=moving_variance_initializer or flow.ones_initializer(), trainable=False, distribute=oneflow._oneflow_internal.distribute.broadcast(), reuse=False)
+        moving_variance = flow.get_variable(
+            name=name,
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
+            distribute=oneflow._oneflow_internal.distribute.broadcast(),
+            reuse=False,
+        )
         return moving_variance
+
     if moving_variance_name is None:
         with flow.scope.namespace(name):
-            moving_variance = get_moving_variance_var('moving_variance')
+            moving_variance = get_moving_variance_var("moving_variance")
     else:
         moving_variance = get_moving_variance_var(moving_variance_name)
     return (beta, gamma, moving_mean, moving_variance)
 
-def batch_normalization(inputs: oneflow._oneflow_internal.BlobDesc, axis: int=-1, momentum: float=0.99, epsilon: float=0.001, center: bool=True, scale: bool=True, beta_initializer: Optional[initializer_conf_util.InitializerConf]=None, gamma_initializer: Optional[initializer_conf_util.InitializerConf]=None, beta_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, moving_mean_initializer: Optional[initializer_conf_util.InitializerConf]=None, moving_variance_initializer: Optional[initializer_conf_util.InitializerConf]=None, trainable: bool=True, training: bool=True, name: str='BatchNorm', gamma_name: Optional[str]=None, beta_name: Optional[str]=None, moving_mean_name: Optional[str]=None, moving_variance_name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def batch_normalization(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNorm",
+    gamma_name: Optional[str] = None,
+    beta_name: Optional[str] = None,
+    moving_mean_name: Optional[str] = None,
+    moving_variance_name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """The BatchNormalization Layer.
 
     This layer can be used in conv or dense layer.
@@ -682,8 +1114,25 @@ def batch_normalization(inputs: oneflow._oneflow_internal.BlobDesc, axis: int=-1
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
-    (beta, gamma, moving_mean, moving_variance) = _get_batch_normalization_variables(name, gamma_name, beta_name, moving_mean_name, moving_variance_name, center, scale, params_shape, params_dtype, trainable, beta_initializer, beta_regularizer, gamma_initializer, gamma_regularizer, moving_mean_initializer, moving_variance_initializer)
-    if flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+    (beta, gamma, moving_mean, moving_variance) = _get_batch_normalization_variables(
+        name,
+        gamma_name,
+        beta_name,
+        moving_mean_name,
+        moving_variance_name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if training:
             reduce_axis = []
             for dim in range(len(inputs.shape)):
@@ -693,21 +1142,77 @@ def batch_normalization(inputs: oneflow._oneflow_internal.BlobDesc, axis: int=-1
 
             def update_moving(moving, this_batch):
                 moving_identity = flow.identity(moving)
-                flow.assign(moving, momentum * moving_identity + (1 - momentum) * this_batch)
+                flow.assign(
+                    moving, momentum * moving_identity + (1 - momentum) * this_batch
+                )
+
             update_moving(moving_mean, mean)
             update_moving(moving_variance, variance)
-            return flow.nn.batch_normalization(x=inputs, mean=mean, variance=variance, offset=beta, scale=gamma, variance_epsilon=epsilon, axis=axis, name=name)
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
         else:
             mean = moving_mean
             variance = moving_variance
-            return flow.nn.batch_normalization(x=inputs, mean=mean, variance=variance, offset=beta, scale=gamma, variance_epsilon=epsilon, axis=axis, name=name)
+            return flow.nn.batch_normalization(
+                x=inputs,
+                mean=mean,
+                variance=variance,
+                offset=beta,
+                scale=gamma,
+                variance_epsilon=epsilon,
+                axis=axis,
+                name=name,
+            )
     else:
-        builder = flow.user_op_builder(name).Op('normalization').Input('x', [inputs]).Input('moving_mean', [moving_mean]).Input('moving_variance', [moving_variance]).Input('gamma', [gamma]).Input('beta', [beta]).Output('y').Attr('axis', axis).Attr('epsilon', epsilon).Attr('training', training).Attr('momentum', momentum)
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [inputs])
+            .Input("moving_mean", [moving_mean])
+            .Input("moving_variance", [moving_variance])
+            .Input("gamma", [gamma])
+            .Input("beta", [beta])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("training", training)
+            .Attr("momentum", momentum)
+        )
         if trainable and training:
-            builder = builder.Output('mean').Output('inv_variance')
+            builder = builder.Output("mean").Output("inv_variance")
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def batch_normalization_add_relu(inputs: oneflow._oneflow_internal.BlobDesc, addend: Optional[oneflow._oneflow_internal.BlobDesc]=None, axis: int=-1, momentum: float=0.99, epsilon: float=0.001, center: bool=True, scale: bool=True, beta_initializer: Optional[initializer_conf_util.InitializerConf]=None, gamma_initializer: Optional[initializer_conf_util.InitializerConf]=None, beta_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, moving_mean_initializer: Optional[initializer_conf_util.InitializerConf]=None, moving_variance_initializer: Optional[initializer_conf_util.InitializerConf]=None, trainable: bool=True, training: bool=True, name: str='BatchNorm', gamma_name: Optional[str]=None, beta_name: Optional[str]=None, moving_mean_name: Optional[str]=None, moving_variance_name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def batch_normalization_add_relu(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    addend: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNorm",
+    gamma_name: Optional[str] = None,
+    beta_name: Optional[str] = None,
+    moving_mean_name: Optional[str] = None,
+    moving_variance_name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Fused flow.layers.batch_normalization + flow.math.add + flow.math.relu
 
     Args:
@@ -741,9 +1246,28 @@ def batch_normalization_add_relu(inputs: oneflow._oneflow_internal.BlobDesc, add
     """
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
-    if not training or flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
-        out = flow.layers.batch_normalization(inputs, axis=axis, momentum=momentum, epsilon=epsilon, center=center, scale=scale, beta_initializer=beta_initializer, gamma_initializer=gamma_initializer, beta_regularizer=beta_regularizer, gamma_regularizer=gamma_regularizer, moving_mean_initializer=moving_mean_initializer, moving_variance_initializer=moving_variance_initializer, trainable=trainable, training=training, name=name)
-        with flow.scope.namespace('BatchNormAddRelu'):
+    if (
+        not training
+        or flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
+        out = flow.layers.batch_normalization(
+            inputs,
+            axis=axis,
+            momentum=momentum,
+            epsilon=epsilon,
+            center=center,
+            scale=scale,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            beta_regularizer=beta_regularizer,
+            gamma_regularizer=gamma_regularizer,
+            moving_mean_initializer=moving_mean_initializer,
+            moving_variance_initializer=moving_variance_initializer,
+            trainable=trainable,
+            training=training,
+            name=name,
+        )
+        with flow.scope.namespace("BatchNormAddRelu"):
             if addend is not None:
                 out = out + addend
             return flow.math.relu(out)
@@ -752,13 +1276,62 @@ def batch_normalization_add_relu(inputs: oneflow._oneflow_internal.BlobDesc, add
     assert 0 <= axis < len(inputs.shape)
     params_shape = [inputs.shape[axis]]
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
-    (beta, gamma, moving_mean, moving_variance) = _get_batch_normalization_variables(name, gamma_name, beta_name, moving_mean_name, moving_variance_name, center, scale, params_shape, params_dtype, trainable, beta_initializer, beta_regularizer, gamma_initializer, gamma_regularizer, moving_mean_initializer, moving_variance_initializer)
-    builder = flow.user_op_builder(name).Op('normalization_add_relu').Input('x', [inputs]).Input('moving_mean', [moving_mean]).Input('moving_variance', [moving_variance]).Input('gamma', [gamma]).Input('beta', [beta]).Output('y').Output('mean').Output('inv_variance').Output('reserve_space').Attr('axis', axis).Attr('epsilon', epsilon).Attr('momentum', momentum)
+    (beta, gamma, moving_mean, moving_variance) = _get_batch_normalization_variables(
+        name,
+        gamma_name,
+        beta_name,
+        moving_mean_name,
+        moving_variance_name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
+    builder = (
+        flow.user_op_builder(name)
+        .Op("normalization_add_relu")
+        .Input("x", [inputs])
+        .Input("moving_mean", [moving_mean])
+        .Input("moving_variance", [moving_variance])
+        .Input("gamma", [gamma])
+        .Input("beta", [beta])
+        .Output("y")
+        .Output("mean")
+        .Output("inv_variance")
+        .Output("reserve_space")
+        .Attr("axis", axis)
+        .Attr("epsilon", epsilon)
+        .Attr("momentum", momentum)
+    )
     if addend is not None:
-        builder = builder.Input('addend', [addend])
+        builder = builder.Input("addend", [addend])
     return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def batch_normalization_relu(inputs: oneflow._oneflow_internal.BlobDesc, axis: int=-1, momentum: float=0.99, epsilon: float=0.001, center: bool=True, scale: bool=True, beta_initializer: Optional[initializer_conf_util.InitializerConf]=None, gamma_initializer: Optional[initializer_conf_util.InitializerConf]=None, beta_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf]=None, moving_mean_initializer: Optional[initializer_conf_util.InitializerConf]=None, moving_variance_initializer: Optional[initializer_conf_util.InitializerConf]=None, trainable: bool=True, training: bool=True, name: str='BatchNorm') -> oneflow._oneflow_internal.BlobDesc:
+
+def batch_normalization_relu(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNorm",
+) -> oneflow._oneflow_internal.BlobDesc:
     """Fused flow.layers.batch_normalization + flow.math.relu
 
 Args:
@@ -785,9 +1358,33 @@ Raises:
     ValueError: If axis is out of dimension of input.
 
 """
-    return flow.layers.batch_normalization_add_relu(inputs, axis=axis, momentum=momentum, epsilon=epsilon, center=center, scale=scale, beta_initializer=beta_initializer, gamma_initializer=gamma_initializer, beta_regularizer=beta_regularizer, gamma_regularizer=gamma_regularizer, moving_mean_initializer=moving_mean_initializer, moving_variance_initializer=moving_variance_initializer, trainable=trainable, training=training, name=name)
+    return flow.layers.batch_normalization_add_relu(
+        inputs,
+        axis=axis,
+        momentum=momentum,
+        epsilon=epsilon,
+        center=center,
+        scale=scale,
+        beta_initializer=beta_initializer,
+        gamma_initializer=gamma_initializer,
+        beta_regularizer=beta_regularizer,
+        gamma_regularizer=gamma_regularizer,
+        moving_mean_initializer=moving_mean_initializer,
+        moving_variance_initializer=moving_variance_initializer,
+        trainable=trainable,
+        training=training,
+        name=name,
+    )
 
-def upsample(x: oneflow._oneflow_internal.BlobDesc, size: Sequence[int]=(2, 2), align_corners: bool=False, data_format: str='NCHW', interpolation: str='nearest', name: str='Upsample2D'):
+
+def upsample(
+    x: oneflow._oneflow_internal.BlobDesc,
+    size: Sequence[int] = (2, 2),
+    align_corners: bool = False,
+    data_format: str = "NCHW",
+    interpolation: str = "nearest",
+    name: str = "Upsample2D",
+):
     """The Upsample Layer, this layer can upsample the feature map to a specified scale.
 
     Args:
@@ -840,18 +1437,29 @@ def upsample(x: oneflow._oneflow_internal.BlobDesc, size: Sequence[int]=(2, 2), 
         assert len(size) == 2
         height_scale = size[0]
         width_scale = size[1]
-    if interpolation != 'nearest' and interpolation != 'bilinear':
+    if interpolation != "nearest" and interpolation != "bilinear":
         raise ValueError('interpolation must be "nearest" or "bilinear".')
-    if interpolation == 'nearest' and align_corners:
+    if interpolation == "nearest" and align_corners:
         raise ValueError('interpolation "nearest" does not support align_corners.')
-    if data_format.upper() != 'NCHW' and data_format.upper() != 'NHWC':
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
     need_transpose = 0
-    if data_format.upper() == 'NHWC':
+    if data_format.upper() == "NHWC":
         need_transpose = 1
     if need_transpose:
         x = flow.transpose(x, perm=[0, 3, 1, 2])
-    op = flow.user_op_builder(name).Op('upsample').Input('x', [x]).Output('y').Attr('height_scale', float(height_scale)).Attr('width_scale', float(width_scale)).Attr('align_corners', align_corners).Attr('data_format', 'channels_first').Attr('interpolation', interpolation).Build()
+    op = (
+        flow.user_op_builder(name)
+        .Op("upsample")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("height_scale", float(height_scale))
+        .Attr("width_scale", float(width_scale))
+        .Attr("align_corners", align_corners)
+        .Attr("data_format", "channels_first")
+        .Attr("interpolation", interpolation)
+        .Build()
+    )
     output = op.InferAndTryRun().SoleOutputBlob()
     if need_transpose:
         output = flow.transpose(output, perm=[0, 2, 3, 1])

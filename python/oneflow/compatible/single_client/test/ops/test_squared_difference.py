@@ -5,27 +5,33 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
+
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
-def GenerateTest(test_case, a_shape, b_shape):
 
+def GenerateTest(test_case, a_shape, b_shape):
     @flow.global_function(function_config=func_config)
-    def SqrDiffJob(a: oft.Numpy.Placeholder(a_shape), b: oft.Numpy.Placeholder(b_shape)):
+    def SqrDiffJob(
+        a: oft.Numpy.Placeholder(a_shape), b: oft.Numpy.Placeholder(b_shape)
+    ):
         return flow.math.squared_difference(a, b)
+
     a = np.random.rand(*a_shape).astype(np.float32)
     b = np.random.rand(*b_shape).astype(np.float32)
     y = SqrDiffJob(a, b).get().numpy()
     test_case.assertTrue(np.allclose(y, (a - b) * (a - b)))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSquaredDifference(flow.unittest.TestCase):
-
     def test_naive(test_case):
-
         @flow.global_function(function_config=func_config)
-        def SqrDiffJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):
+        def SqrDiffJob(
+            a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))
+        ):
             return flow.math.squared_difference(a, b)
+
         x = np.random.rand(5, 2).astype(np.float32)
         y = np.random.rand(5, 2).astype(np.float32)
         z = None
@@ -33,10 +39,12 @@ class TestSquaredDifference(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z, (x - y) * (x - y)))
 
     def test_broadcast(test_case):
-
         @flow.global_function(function_config=func_config)
-        def SqrDiffJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))):
+        def SqrDiffJob(
+            a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))
+        ):
             return flow.math.squared_difference(a, b)
+
         x = np.random.rand(5, 2).astype(np.float32)
         y = np.random.rand(1, 2).astype(np.float32)
         z = None
@@ -57,12 +65,19 @@ class TestSquaredDifference(flow.unittest.TestCase):
 
     def test_scalar_sqr_diff(test_case):
         arg_dict = OrderedDict()
-        arg_dict['device_type'] = ['gpu', 'cpu']
-        arg_dict['flow_op'] = [flow.math.squared_difference]
-        arg_dict['tf_op'] = [tf.math.squared_difference]
-        arg_dict['input_shape'] = [(10, 10, 10)]
-        arg_dict['op_args'] = [Args([1]), Args([-1]), Args([84223.19348]), Args([-3284.139])]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.squared_difference]
+        arg_dict["tf_op"] = [tf.math.squared_difference]
+        arg_dict["input_shape"] = [(10, 10, 10)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([-1]),
+            Args([84223.19348]),
+            Args([-3284.139]),
+        ]
         for arg in GenArgDict(arg_dict):
             CompareOpWithTensorFlow(**arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

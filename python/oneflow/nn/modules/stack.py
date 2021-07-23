@@ -4,9 +4,9 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import Tensor
 
-class Stack(Module):
 
-    def __init__(self, dim: int=0) -> None:
+class Stack(Module):
+    def __init__(self, dim: int = 0) -> None:
         super().__init__()
         self.dim = dim
 
@@ -21,12 +21,17 @@ class Stack(Module):
         unsqueezed = list()
         for i in range(input_list_length):
             current_shape = inputs[i].shape
-            assert input_shape == current_shape, 'Each tensor should have the same shape ! Found a tensor instance shape is: {}'.format(current_shape)
+            assert (
+                input_shape == current_shape
+            ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+                current_shape
+            )
             unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
         return flow.cat(unsqueezed, dim=self.dim)
 
-@register_tensor_op('stack')
-def stack(inputs: Tensor, dim: int=0) -> None:
+
+@register_tensor_op("stack")
+def stack(inputs: Tensor, dim: int = 0) -> None:
     """Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
 
@@ -54,6 +59,9 @@ def stack(inputs: Tensor, dim: int=0) -> None:
         flow.Size([1, 3, 5, 2])
     """
     return Stack(dim)(inputs)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

@@ -1,28 +1,46 @@
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import input_blob_def as input_blob_def
+from oneflow.compatible.single_client.python.framework import (
+    input_blob_def as input_blob_def,
+)
 from oneflow.compatible.single_client.python.framework import dtype as dtype_util
-from oneflow.compatible.single_client.python.framework import python_callback as python_callback
-from oneflow.compatible.single_client.python.framework import balanced_splitter as balanced_splitter
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    python_callback as python_callback,
+)
+from oneflow.compatible.single_client.python.framework import (
+    balanced_splitter as balanced_splitter,
+)
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 from oneflow.compatible.single_client.python.framework import id_util as id_util
 from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import logical_blob_id_pb2 as logical_blob_id_util
+from oneflow.compatible.single_client.core.register import (
+    logical_blob_id_pb2 as logical_blob_id_util,
+)
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 import oneflow._oneflow_internal
 import numpy
 from functools import reduce
+
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
+
 
 def AsyncPush(session, job_func, *arg):
     assert len(arg) == len(job_func.__oneflow_input_blob_defs__)
     for i in range(len(arg)):
         _AsyncPushArg(session, job_func.__oneflow_input_blob_defs__[i], arg[i])
 
+
 def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert isinstance(arg_ndarray, (list, tuple)), 'type(arg_ndarray): %s' % type(arg_ndarray)
-        assert len(arg_blob_def) == len(arg_ndarray), '%s v.s. %s' % (len(arg_blob_def), len(arg_ndarray))
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % type(
+            arg_ndarray
+        )
+        assert len(arg_blob_def) == len(arg_ndarray), "%s v.s. %s" % (
+            len(arg_blob_def),
+            len(arg_ndarray),
+        )
         for (blob_def, ndarray) in zip(arg_blob_def, arg_ndarray):
             _AsyncPushArg(session, blob_def, ndarray)
     elif isinstance(arg_blob_def, dict):
@@ -34,17 +52,29 @@ def _AsyncPushArg(session, arg_blob_def, arg_ndarray):
         assert isinstance(arg_blob_def, input_blob_def.ArgBlobDef)
         arg_blob_def.CheckAndAsyncPush(session, arg_ndarray)
 
+
 def MakeEagerInputBlobs(arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, (list, tuple)):
-        assert isinstance(arg_ndarray, (list, tuple)), 'type(arg_ndarray): %s' % type(arg_ndarray)
+        assert isinstance(arg_ndarray, (list, tuple)), "type(arg_ndarray): %s" % type(
+            arg_ndarray
+        )
         assert len(arg_blob_def) == len(arg_ndarray)
-        return type(arg_blob_def)((MakeEagerInputBlobs(blob_def, ndarray) for (blob_def, ndarray) in zip(arg_blob_def, arg_ndarray)))
+        return type(arg_blob_def)(
+            (
+                MakeEagerInputBlobs(blob_def, ndarray)
+                for (blob_def, ndarray) in zip(arg_blob_def, arg_ndarray)
+            )
+        )
     elif isinstance(arg_blob_def, dict):
         assert type(arg_blob_def) is type(arg_ndarray)
         assert set(arg_blob_def.keys()) == set(arg_ndarray.keys())
-        return {k: MakeEagerInputBlobs(blob_def, arg_ndarray[k]) for (k, blob_def) in arg_blob_def.items()}
+        return {
+            k: MakeEagerInputBlobs(blob_def, arg_ndarray[k])
+            for (k, blob_def) in arg_blob_def.items()
+        }
     else:
         return _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray)
+
 
 def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
@@ -59,12 +89,14 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
     else:
         raise NotImplementedError
 
+
 def FeedValueToEagerBlob(blob_object, blob_def, ndarray):
     physical_blob_objects = _GetPhysicalBlobObjects(blob_object, None)
     feed_ctx = FeedContext(blob_object.op_arg_parallel_attr, ndarray)
     for (i, physical_blob_object) in enumerate(physical_blob_objects):
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, physical_blob_object)
+
 
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_ndarray)
@@ -79,14 +111,18 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
 
         def get_blob(lbi, blob_object, blob_register):
-            blob = oneflow._oneflow_internal.EagerConsistentBlob(lbi, blob_object, blob_register)
+            blob = oneflow._oneflow_internal.EagerConsistentBlob(
+                lbi, blob_object, blob_register
+            )
             with flow.scope.consistent_view():
                 return flow.identity(blob)
+
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
         get_blob = oneflow._oneflow_internal.EagerMirroredBlob
     else:
         raise NotImplementedError
     return get_blob(lbi, blob_object=arg_blob_object, blob_register=blob_register)
+
 
 def _MakeInputBlobObject(arg_blob_def):
     (input_op_conf, lbi) = _MakeInputOpConfAndRetLbi(arg_blob_def)
@@ -96,10 +132,16 @@ def _MakeInputBlobObject(arg_blob_def):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
         scope = flow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(str(op_attribute))
-        builder.StatelessCall(cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo)
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
+        builder.StatelessCall(
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo
+        )
+
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildInputInstruction)
-    return (bn_in_op2blob_object['out'], lbi)
+    return (bn_in_op2blob_object["out"], lbi)
+
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
     blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
@@ -107,23 +149,27 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
 
     def BuildLogical2PhysicalInstruction(builder):
         nonlocal physical_blob_objects
-        physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(logical_blob_object)
+        physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
+            logical_blob_object
+        )
+
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
+
 
 def _MakeInputOpConfAndRetLbi(arg_blob_def):
     assert isinstance(arg_blob_def, input_blob_def.ArgBlobDef)
     op_conf = op_conf_util.OperatorConf()
-    op_conf.name = id_util.UniqueStr('Input_')
-    op_conf.input_conf.out = 'out'
+    op_conf.name = id_util.UniqueStr("Input_")
+    op_conf.input_conf.out = "out"
     op_conf.input_conf.blob_conf.CopyFrom(arg_blob_def.ToInterfaceBlobConf())
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = op_conf.input_conf.out
     return (op_conf, lbi)
 
-class FeedContext(object):
 
+class FeedContext(object):
     def __init__(self, op_arg_parallel_attr, arg_ndarray, rank=0):
         self.op_arg_parallel_attr_ = op_arg_parallel_attr
         self.arg_ndarray_ = arg_ndarray
@@ -135,7 +181,10 @@ class FeedContext(object):
 
     def GetFixedTensor(self, logical_shape):
         assert isinstance(self.arg_ndarray_, numpy.ndarray)
-        assert self.arg_ndarray_.shape == logical_shape, '%s v.s. %s' % (self.arg_ndarray_.shape, logical_shape)
+        assert self.arg_ndarray_.shape == logical_shape, "%s v.s. %s" % (
+            self.arg_ndarray_.shape,
+            logical_shape,
+        )
         sbp_parallel = self.op_arg_parallel_attr_.sbp_parallel
         parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
         if sbp_parallel.has_broadcast_parallel() or parallel_num == 1:
@@ -166,16 +215,21 @@ class FeedContext(object):
         assert self.rank_ < parallel_num
         ndarray = self.arg_ndarray_[self.rank_]
         elem_cnt = reduce(lambda x, y: x * y, ndarray.shape, 1)
-        assert elem_cnt <= capacity, '%s v.s. %s' % (ndarray.shape, static_shape)
+        assert elem_cnt <= capacity, "%s v.s. %s" % (ndarray.shape, static_shape)
         return self._AsContiguousNdArray(ndarray)
 
     def _AsContiguousNdArray(self, ndarray):
         if isinstance(ndarray, numpy.ndarray):
-            return ndarray if ndarray.flags['C_CONTIGUOUS'] else numpy.ascontiguousarray(ndarray)
+            return (
+                ndarray
+                if ndarray.flags["C_CONTIGUOUS"]
+                else numpy.ascontiguousarray(ndarray)
+            )
         elif isinstance(ndarray, (tuple, list)):
             return type(ndarray)((self._AsContiguousNdArray(a) for a in ndarray))
         else:
             raise NotImplementedError
+
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
@@ -184,9 +238,15 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert callable(FeedBlob)
 
     def BuildFeedInstruction(builder):
-        builder.FeedBlob(blob_object, python_callback.GetIdForRegisteredCallback(FeedBlob))
-        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob))
+        builder.FeedBlob(
+            blob_object, python_callback.GetIdForRegisteredCallback(FeedBlob)
+        )
+        builder.InsertRemoveForeignCallbackInstruction(
+            blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
+        )
+
     oneflow._oneflow_internal.deprecated.PhysicalRun(BuildFeedInstruction)
+
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
     if isinstance(blob_def, input_blob_def.FixedTensorDef):
@@ -194,19 +254,24 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
         def FeedBlob(ofblob):
             ndarray = feed_ctx.GetFixedTensor(blob_def.shape)
             dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
-            assert ndarray.dtype == dtype, '%s v.s. %s' % (ndarray.dtype, dtype)
-            assert ndarray.shape == ofblob.static_shape, '%s v.s. %s' % (ndarray.shape, ofblob.static_shape)
+            assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
+            assert ndarray.shape == ofblob.static_shape, "%s v.s. %s" % (
+                ndarray.shape,
+                ofblob.static_shape,
+            )
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
+
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
 
         def FeedBlob(ofblob):
             ndarray = feed_ctx.GetMirroredTensor(ofblob.static_shape)
             assert isinstance(ndarray, numpy.ndarray)
             dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
-            assert ndarray.dtype == dtype, '%s v.s. %s' % (ndarray.dtype, dtype)
+            assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
+
     else:
         raise NotImplementedError
     return FeedBlob

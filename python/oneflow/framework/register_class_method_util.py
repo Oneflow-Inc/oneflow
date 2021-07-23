@@ -6,11 +6,14 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.blob_trait as blob_trait
 import oneflow._oneflow_internal
 
+
 def RegisterMethod4Class():
     op_expr_util.RegisterMethod4UserOpExpr()
     functional.RegisterFunctionalApis()
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
-    blob_trait.RegisterBlobOperatorTraitMethod(oneflow._oneflow_internal.EagerPhysicalBlob)
+    blob_trait.RegisterBlobOperatorTraitMethod(
+        oneflow._oneflow_internal.EagerPhysicalBlob
+    )
     blob_trait.RegisterBlobOperatorTraitMethod(oneflow._oneflow_internal.ConsistentBlob)
     blob_trait.RegisterBlobOperatorTraitMethod(oneflow._oneflow_internal.MirroredBlob)
     remote_blob_util.RegisterMethod4EagerBlobTrait()

@@ -1,11 +1,14 @@
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim, get_inversed_perm
+from oneflow.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
+
 
 class Argmax(Module):
-
-    def __init__(self, dim: int=None, keepdim: bool=False) -> None:
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self.dim = dim
         self.keepdim = keepdim
@@ -16,7 +19,7 @@ class Argmax(Module):
             self.dim = 0
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
-        assert 0 <= axis < num_axes, 'axis out of range'
+        assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             x = flow.F.argmax(input)
             if self.keepdim == True:
@@ -32,8 +35,9 @@ class Argmax(Module):
                 x = x.squeeze(dim=[axis])
             return x
 
-@register_tensor_op('argmax')
-def argmax_op(input, dim: int=None, keepdim: bool=False):
+
+@register_tensor_op("argmax")
+def argmax_op(input, dim: int = None, keepdim: bool = False):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
@@ -63,6 +67,9 @@ def argmax_op(input, dim: int=None, keepdim: bool=False):
 
     """
     return Argmax(dim=dim, keepdim=keepdim)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

@@ -4,15 +4,19 @@ import collections
 from oneflow.nn.parameter import Parameter
 from oneflow.framework.tensor import Tensor
 
-class ParamGroup(object):
 
-    def __init__(self, parameters: Union[Iterator[Parameter], Dict[str, Any]], default_options: Dict):
+class ParamGroup(object):
+    def __init__(
+        self,
+        parameters: Union[Iterator[Parameter], Dict[str, Any]],
+        default_options: Dict,
+    ):
         if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
             self._options = default_options
         else:
-            assert 'params' in parameters
-            self._parameters = list(parameters['params'])
+            assert "params" in parameters
+            self._parameters = list(parameters["params"])
             self._options = default_options
             for key in self._options:
                 if key in parameters:
@@ -32,13 +36,13 @@ class ParamGroup(object):
     def parameters(self):
         return self._parameters
 
-class Optimizer(object):
 
+class Optimizer(object):
     def __init__(self):
         self.param_groups = list()
         self._default_options = dict()
         self._state = dict()
-        self._state['step'] = 0
+        self._state["step"] = 0
         self._op = None
 
     def add_param_group(self, param_group) -> None:
@@ -50,10 +54,10 @@ class Optimizer(object):
     def state_dict(self):
         raise NotImplementedError()
 
-    def step(self, closure: Union[Callable, None]=None) -> Union[Tensor, None]:
+    def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
 
-    def zero_grad(self, set_to_none: bool=False):
+    def zero_grad(self, set_to_none: bool = False):
         """Sets the gradients of all optimized torch.Tensor s to zero.
 
         Args:
@@ -86,4 +90,6 @@ class Optimizer(object):
                     else:
                         param.grad.zeros_()
         if all_grad_is_none:
-            warnings.warn('\nParameters in optimizer do not have gradient.\nPlease check `loss.backward()` is called or not,\nor try to declare optimizer after calling `module.to()`')
+            warnings.warn(
+                "\nParameters in optimizer do not have gradient.\nPlease check `loss.backward()` is called or not,\nor try to declare optimizer after calling `module.to()`"
+            )

@@ -2,6 +2,7 @@ from typing import Union
 import oneflow as flow
 from oneflow.nn.module import Module
 
+
 class ZeroPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -66,12 +67,12 @@ class ZeroPad2d(Module):
     def __init__(self, padding: Union[int, tuple]):
         super().__init__()
         if isinstance(padding, tuple):
-            assert len(padding) == 4, ValueError('Length of padding must be 4')
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError('padding must be int  or tuple!')
+            raise ValueError("padding must be int  or tuple!")
         self.padding = boundary
         self.value = 0.0
 
@@ -83,9 +84,20 @@ class ZeroPad2d(Module):
         else:
             floating_value = float(0)
             integral_value = int(self.value)
-        self._op = flow.builtin_op('constant_pad2d').Input('x').Output('y').Attr('padding', self.padding).Attr('floating_value', floating_value).Attr('integral_value', integral_value).Build()
+        self._op = (
+            flow.builtin_op("constant_pad2d")
+            .Input("x")
+            .Output("y")
+            .Attr("padding", self.padding)
+            .Attr("floating_value", floating_value)
+            .Attr("integral_value", integral_value)
+            .Build()
+        )
         res = self._op(x)[0]
         return res
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

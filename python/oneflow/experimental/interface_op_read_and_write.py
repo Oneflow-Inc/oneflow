@@ -13,12 +13,16 @@ import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_ut
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
 import oneflow._oneflow_internal
 
+
 def sync_default_session_if_normal():
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         flow.sync_default_session()
     else:
         pass
+
+
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
+
 
 def _GetInterfaceBlobObject(builder, op_name):
     sess = session_ctx.GetDefaultSession()
@@ -26,22 +30,29 @@ def _GetInterfaceBlobObject(builder, op_name):
         return sess.var_name2var_blob[op_name].blob_object
     sess = session_ctx.GetDefaultSession()
     op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
-    cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(str(op_attribute))
+    cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
+        str(op_attribute)
+    )
     parallel_conf = sess.ParallelConf4LazyInterfaceOpName(op_name)
-    if not isinstance(parallel_conf, oneflow._oneflow_internal.oneflow.core.job.placement.ParallelConf):
+    if not isinstance(
+        parallel_conf, oneflow._oneflow_internal.oneflow.core.job.placement.ParallelConf
+    ):
         parallel_conf_cfg = placement_cfg.ParallelConf()
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
         for device_name in parallel_conf.device_name:
             parallel_conf_cfg.add_device_name(device_name)
-        if parallel_conf.HasField('hierarchy'):
+        if parallel_conf.HasField("hierarchy"):
             hierarchy = shape_proto_cfg.ShapeProto()
             for dim in parallel_conf.hierarchy.dim:
                 hierarchy.add_dim(dim)
             assert hierarchy.dim_size() > 0
             parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
         parallel_conf = parallel_conf_cfg
-    blob_object = builder.MakeLazyRefBlobObject(op_name, cfg_op_attribute, parallel_conf)
+    blob_object = builder.MakeLazyRefBlobObject(
+        op_name, cfg_op_attribute, parallel_conf
+    )
     return blob_object
+
 
 def GetEagerInterfaceBlob(op_name):
     sync_default_session_if_normal()
@@ -58,16 +69,25 @@ def GetEagerInterfaceBlob(op_name):
             assert len(op_attribute.output_bns) == 1
             lbi.set_blob_name(op_attribute.output_bns[0])
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(lbi, blob_object, blob_register, job_name)
+                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(
+                    lbi, blob_object, blob_register, job_name
+                )
             else:
-                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(lbi, blob_object, blob_register, job_name)
+                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(
+                    lbi, blob_object, blob_register, job_name
+                )
             Yield(remote_blob)
 
         def AsyncGetInterfaceBlob(Yield):
-            oneflow._oneflow_internal.deprecated.LogicalRun(lambda builder: Build(builder, Yield))
+            oneflow._oneflow_internal.deprecated.LogicalRun(
+                lambda builder: Build(builder, Yield)
+            )
+
         blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
         return blob
+
     return sess.FindOrCreateLazyBlob(op_name, CreateBlob)
+
 
 def GetInterfaceBlobValue(op_name):
     sync_default_session_if_normal()
@@ -75,7 +95,6 @@ def GetInterfaceBlobValue(op_name):
     job_name = sess.JobName4InterfaceOpName(op_name)
 
     def AsyncGetInterfaceBlobValue(Yield):
-
         def build(builder):
             blob_object = GetEagerInterfaceBlob(op_name).blob_object
             lbi = lbi_util.LogicalBlobId()
@@ -89,33 +108,49 @@ def GetInterfaceBlobValue(op_name):
                 cfg_lbi.set_blob_name(lbi.blob_name)
                 lbi = cfg_lbi
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(lbi, blob_object, blob_register, job_name)
+                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(
+                    lbi, blob_object, blob_register, job_name
+                )
             else:
-                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(lbi, blob_object, blob_register, job_name)
+                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(
+                    lbi, blob_object, blob_register, job_name
+                )
             value = remote_blob.numpy()
             Yield(value)
+
         oneflow._oneflow_internal.deprecated.LogicalRun(build)
+
     return async_util.Await(1, AsyncGetInterfaceBlobValue)[0]
+
 
 def FeedValueToInterfaceBlobObject(blob_object, ndarray):
     sync_default_session_if_normal()
 
     def build(builder):
         if blob_object.op_arg_parallel_attr.is_mirrored():
-            input_blob_def = input_blob_def_util.MirroredTensorDef(ndarray.shape, dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype))
+            input_blob_def = input_blob_def_util.MirroredTensorDef(
+                ndarray.shape,
+                dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),
+            )
         else:
-            input_blob_def = input_blob_def_util.FixedTensorDef(ndarray.shape, dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype))
+            input_blob_def = input_blob_def_util.FixedTensorDef(
+                ndarray.shape,
+                dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),
+            )
         push_util.FeedValueToEagerBlob(blob_object, input_blob_def, ndarray)
+
     oneflow._oneflow_internal.deprecated.LogicalRun(build)
+
 
 def FeedValueToInterfaceBlob(op_name, ndarray):
     sync_default_session_if_normal()
 
     def AsyncFeedValueToInterfaceBlob(Yield):
-
         def build(builder):
             blob_object = GetEagerInterfaceBlob(op_name).blob_object
             FeedValueToInterfaceBlobObject(blob_object, ndarray)
             Yield()
+
         oneflow._oneflow_internal.deprecated.LogicalRun(build)
+
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)

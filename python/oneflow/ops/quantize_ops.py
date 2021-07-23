@@ -4,7 +4,15 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
-def min_max_observer(input: oneflow._oneflow_internal.BlobDesc, quantization_bit: int=8, quantization_scheme: str='symmetric', quantization_formula: str='google', per_layer_quantization: bool=True, name: Optional[str]=None) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
+
+def min_max_observer(
+    input: oneflow._oneflow_internal.BlobDesc,
+    quantization_bit: int = 8,
+    quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
+    per_layer_quantization: bool = True,
+    name: Optional[str] = None,
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     """Compute the quantization parameters of the input tensor.
 
     First compute the max and min values of input tensor:
@@ -75,12 +83,37 @@ def min_max_observer(input: oneflow._oneflow_internal.BlobDesc, quantization_bit
         scale, zero_point = QuantizeJob(input)
 
     """
-    if quantization_formula == 'cambricon' and (not per_layer_quantization):
-        raise NotImplementedError('per-channel mode is not supported in cambricon scheme')
-    (scale, zero_point) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('MinMaxObserver_')).Op('min_max_observer').Input('in', [input]).Output('scale').Output('zero_point').Attr('quantization_bit', quantization_bit).Attr('quantization_scheme', quantization_scheme).Attr('quantization_formula', quantization_formula).Attr('per_layer_quantization', per_layer_quantization).Build().InferAndTryRun().RemoteBlobList()
+    if quantization_formula == "cambricon" and (not per_layer_quantization):
+        raise NotImplementedError(
+            "per-channel mode is not supported in cambricon scheme"
+        )
+    (scale, zero_point) = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MinMaxObserver_")
+        )
+        .Op("min_max_observer")
+        .Input("in", [input])
+        .Output("scale")
+        .Output("zero_point")
+        .Attr("quantization_bit", quantization_bit)
+        .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
+        .Attr("per_layer_quantization", per_layer_quantization)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return (scale, zero_point)
 
-def moving_average_min_max_observer(input: oneflow._oneflow_internal.BlobDesc, quantization_bit: int=8, quantization_scheme: str='symmetric', quantization_formula: str='google', momentum: float=0.95, name: Optional[str]=None) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
+
+def moving_average_min_max_observer(
+    input: oneflow._oneflow_internal.BlobDesc,
+    quantization_bit: int = 8,
+    quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
+    momentum: float = 0.95,
+    name: Optional[str] = None,
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     """Compute the quantization parameters based on the moving average of the input tensor's min and max values.
 
     First compute the moving\\_max and moving\\_min value of input tensor:
@@ -161,17 +194,64 @@ def moving_average_min_max_observer(input: oneflow._oneflow_internal.BlobDesc, q
         scale, zero_point = QuantizeJob(input)
 
     """
-    op_name = name if name is not None else id_util.UniqueStr('MovingAverageMinMaxObserver_')
+    op_name = (
+        name if name is not None else id_util.UniqueStr("MovingAverageMinMaxObserver_")
+    )
     training = True if flow.current_global_function_desc().IsTrainable() else False
     with flow.scope.namespace(op_name):
-        moving_max = flow.get_variable('moving_max', shape=(1,), dtype=input.dtype, initializer=flow.zeros_initializer(input.dtype), trainable=False)
-        moving_min = flow.get_variable('moving_min', shape=(1,), dtype=input.dtype, initializer=flow.zeros_initializer(input.dtype), trainable=False)
-        current_train_step = flow.get_variable('current_train_step', shape=(1,), dtype=flow.int64, initializer=flow.zeros_initializer(flow.int64), trainable=False)
+        moving_max = flow.get_variable(
+            "moving_max",
+            shape=(1,),
+            dtype=input.dtype,
+            initializer=flow.zeros_initializer(input.dtype),
+            trainable=False,
+        )
+        moving_min = flow.get_variable(
+            "moving_min",
+            shape=(1,),
+            dtype=input.dtype,
+            initializer=flow.zeros_initializer(input.dtype),
+            trainable=False,
+        )
+        current_train_step = flow.get_variable(
+            "current_train_step",
+            shape=(1,),
+            dtype=flow.int64,
+            initializer=flow.zeros_initializer(flow.int64),
+            trainable=False,
+        )
     stop_update_after_iters = 1
-    (scale, zero_point) = flow.user_op_builder(op_name).Op('moving_average_min_max_observer').Input('in', [input]).Input('current_train_step', [current_train_step]).Input('moving_max', [moving_max]).Input('moving_min', [moving_min]).Output('scale').Output('zero_point').Attr('training', training).Attr('stop_update_after_iters', stop_update_after_iters).Attr('quantization_bit', quantization_bit).Attr('quantization_scheme', quantization_scheme).Attr('quantization_formula', quantization_formula).Attr('momentum', momentum).Build().InferAndTryRun().RemoteBlobList()
+    (scale, zero_point) = (
+        flow.user_op_builder(op_name)
+        .Op("moving_average_min_max_observer")
+        .Input("in", [input])
+        .Input("current_train_step", [current_train_step])
+        .Input("moving_max", [moving_max])
+        .Input("moving_min", [moving_min])
+        .Output("scale")
+        .Output("zero_point")
+        .Attr("training", training)
+        .Attr("stop_update_after_iters", stop_update_after_iters)
+        .Attr("quantization_bit", quantization_bit)
+        .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
+        .Attr("momentum", momentum)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return (scale, zero_point)
 
-def fake_quantization(input: oneflow._oneflow_internal.BlobDesc, scale: oneflow._oneflow_internal.BlobDesc, zero_point: oneflow._oneflow_internal.BlobDesc, quantization_bit: int=8, quantization_scheme: str='symmetric', quantization_formula: str='google', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def fake_quantization(
+    input: oneflow._oneflow_internal.BlobDesc,
+    scale: oneflow._oneflow_internal.BlobDesc,
+    zero_point: oneflow._oneflow_internal.BlobDesc,
+    quantization_bit: int = 8,
+    quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Simulate the quantize and dequantize operations in training time.
 
     The output will be computed as:
@@ -239,4 +319,19 @@ def fake_quantization(input: oneflow._oneflow_internal.BlobDesc, scale: oneflow.
         fake_quantize_out = QuantizeJob(input)
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Fake_Quantization_')).Op('fake_quantization').Input('in', [input]).Input('scale', [scale]).Input('zero_point', [zero_point]).Output('out').Attr('quantization_bit', quantization_bit).Attr('quantization_scheme', quantization_scheme).Attr('quantization_formula', quantization_formula).Build().InferAndTryRun().SoleOutputBlob()
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Fake_Quantization_")
+        )
+        .Op("fake_quantization")
+        .Input("in", [input])
+        .Input("scale", [scale])
+        .Input("zero_point", [zero_point])
+        .Output("out")
+        .Attr("quantization_bit", quantization_bit)
+        .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
+        .Build()
+        .InferAndTryRun()
+        .SoleOutputBlob()
+    )

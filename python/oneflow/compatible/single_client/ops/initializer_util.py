@@ -3,16 +3,24 @@ import math
 import numpy as np
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.compatible.single_client.core.job import (
+    initializer_conf_pb2 as initializer_conf_util,
+)
 from typing import Optional, Sequence, Union
 
-def empty_initializer(dtype: flow.dtype=flow.float) -> initializer_conf_util.InitializerConf:
+
+def empty_initializer(
+    dtype: flow.dtype = flow.float,
+) -> initializer_conf_util.InitializerConf:
     initializer = initializer_conf_util.InitializerConf()
     empty_conf = initializer_conf_util.EmptyInitializerConf()
     initializer.empty_conf.CopyFrom(empty_conf)
     return initializer
 
-def constant_initializer(value: float=0, dtype: flow.dtype=flow.float) -> initializer_conf_util.InitializerConf:
+
+def constant_initializer(
+    value: float = 0, dtype: flow.dtype = flow.float
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates blob with constant values.
 
     Args:
@@ -90,14 +98,17 @@ def constant_initializer(value: float=0, dtype: flow.dtype=flow.float) -> initia
     """
     initializer = initializer_conf_util.InitializerConf()
     if dtype in [flow.float, flow.double]:
-        setattr(initializer.constant_conf, 'value', float(value))
+        setattr(initializer.constant_conf, "value", float(value))
     elif dtype in [flow.int8, flow.int32, flow.int64]:
-        setattr(initializer.constant_int_conf, 'value', int(value))
+        setattr(initializer.constant_int_conf, "value", int(value))
     else:
-        raise NotImplementedError('Do not support such data type')
+        raise NotImplementedError("Do not support such data type")
     return initializer
 
-def zeros_initializer(dtype: flow.dtype=flow.float) -> initializer_conf_util.InitializerConf:
+
+def zeros_initializer(
+    dtype: flow.dtype = flow.float,
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates blobs initialized to 0
 
     Args:
@@ -171,7 +182,10 @@ def zeros_initializer(dtype: flow.dtype=flow.float) -> initializer_conf_util.Ini
     """
     return constant_initializer(0.0, dtype)
 
-def ones_initializer(dtype: flow.dtype=flow.float) -> initializer_conf_util.InitializerConf:
+
+def ones_initializer(
+    dtype: flow.dtype = flow.float,
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates blobs initialized to 1.
 
     Args:
@@ -245,7 +259,10 @@ def ones_initializer(dtype: flow.dtype=flow.float) -> initializer_conf_util.Init
     """
     return constant_initializer(1.0, dtype)
 
-def random_uniform_initializer(minval: float=0, maxval: float=1, dtype: flow.dtype=flow.float) -> initializer_conf_util.InitializerConf:
+
+def random_uniform_initializer(
+    minval: float = 0, maxval: float = 1, dtype: flow.dtype = flow.float
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates blobs with a uniform distribution. 
 
     Args:
@@ -326,16 +343,22 @@ def random_uniform_initializer(minval: float=0, maxval: float=1, dtype: flow.dty
     assert minval <= maxval
     initializer = initializer_conf_util.InitializerConf()
     if dtype in [flow.float, flow.double]:
-        setattr(initializer.random_uniform_conf, 'min', float(minval))
-        setattr(initializer.random_uniform_conf, 'max', float(maxval))
+        setattr(initializer.random_uniform_conf, "min", float(minval))
+        setattr(initializer.random_uniform_conf, "max", float(maxval))
     elif dtype in [flow.int8, flow.int32, flow.int64]:
-        setattr(initializer.random_uniform_int_conf, 'min', int(minval))
-        setattr(initializer.random_uniform_int_conf, 'max', int(maxval))
+        setattr(initializer.random_uniform_int_conf, "min", int(minval))
+        setattr(initializer.random_uniform_int_conf, "max", int(maxval))
     else:
-        raise NotImplementedError('Do not support such data type')
+        raise NotImplementedError("Do not support such data type")
     return initializer
 
-def random_normal_initializer(mean: float=0.0, stddev: float=1.0, seed: Optional[int]=None, dtype: Optional[flow.dtype]=None) -> initializer_conf_util.InitializerConf:
+
+def random_normal_initializer(
+    mean: float = 0.0,
+    stddev: float = 1.0,
+    seed: Optional[int] = None,
+    dtype: Optional[flow.dtype] = None,
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates blob with a normal distribution.
 
     Args:
@@ -416,11 +439,14 @@ def random_normal_initializer(mean: float=0.0, stddev: float=1.0, seed: Optional
     if seed is not None:
         assert name is not None
     initializer = initializer_conf_util.InitializerConf()
-    setattr(initializer.random_normal_conf, 'mean', float(mean))
-    setattr(initializer.random_normal_conf, 'std', float(stddev))
+    setattr(initializer.random_normal_conf, "mean", float(mean))
+    setattr(initializer.random_normal_conf, "std", float(stddev))
     return initializer
 
-def truncated_normal_initializer(mean: float=0.0, stddev: float=1.0) -> initializer_conf_util.InitializerConf:
+
+def truncated_normal_initializer(
+    mean: float = 0.0, stddev: float = 1.0
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates a truncated normal distribution.
 
     Args:
@@ -495,11 +521,14 @@ def truncated_normal_initializer(mean: float=0.0, stddev: float=1.0) -> initiali
 
     """
     initializer = initializer_conf_util.InitializerConf()
-    setattr(initializer.truncated_normal_conf, 'mean', float(mean))
-    setattr(initializer.truncated_normal_conf, 'std', float(stddev))
+    setattr(initializer.truncated_normal_conf, "mean", float(mean))
+    setattr(initializer.truncated_normal_conf, "std", float(stddev))
     return initializer
 
-def glorot_uniform_initializer(data_format: str='') -> initializer_conf_util.InitializerConf:
+
+def glorot_uniform_initializer(
+    data_format: str = "",
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates a Xavier uniform distribution. 
     
     It also can be called as `oneflow.compatible.single_client.glorot_uniform_initializer`.  
@@ -585,9 +614,12 @@ def glorot_uniform_initializer(data_format: str='') -> initializer_conf_util.Ini
         # out.shape (1, 128, 32, 32)
 
     """
-    return variance_scaling_initializer(1.0, 'fan_avg', 'random_uniform', data_format)
+    return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
-def glorot_normal_initializer(data_format: str='') -> initializer_conf_util.InitializerConf:
+
+def glorot_normal_initializer(
+    data_format: str = "",
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates a Xavier normal distribution. 
     
     It also can be called as `oneflow.compatible.single_client.glorot_normal_initializer`.  
@@ -673,9 +705,15 @@ def glorot_normal_initializer(data_format: str='') -> initializer_conf_util.Init
         # out.shape (1, 128, 32, 32)
 
     """
-    return variance_scaling_initializer(1.0, 'fan_avg', 'random_normal', data_format)
+    return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
-def variance_scaling_initializer(scale: float=1.0, mode: str='fan_in', distribution: str='truncated_normal', data_format: str='') -> initializer_conf_util.InitializerConf:
+
+def variance_scaling_initializer(
+    scale: float = 1.0,
+    mode: str = "fan_in",
+    distribution: str = "truncated_normal",
+    data_format: str = "",
+) -> initializer_conf_util.InitializerConf:
     """Initializer that generates a truncated normal distribution or a random normal distribution or a random uniform distribution with a scale adapting to it.
 
     When the distribution is "truncated_normal"
@@ -767,13 +805,29 @@ def variance_scaling_initializer(scale: float=1.0, mode: str='fan_in', distribut
 
     """
     initializer = initializer_conf_util.InitializerConf()
-    setattr(initializer.variance_scaling_conf, 'scale', float(scale))
-    setattr(initializer.variance_scaling_conf, 'variance_norm', _get_variance_norm(mode))
-    setattr(initializer.variance_scaling_conf, 'distribution', _get_random_distribution(distribution))
-    setattr(initializer.variance_scaling_conf, 'data_format', _get_data_format(data_format))
+    setattr(initializer.variance_scaling_conf, "scale", float(scale))
+    setattr(
+        initializer.variance_scaling_conf, "variance_norm", _get_variance_norm(mode)
+    )
+    setattr(
+        initializer.variance_scaling_conf,
+        "distribution",
+        _get_random_distribution(distribution),
+    )
+    setattr(
+        initializer.variance_scaling_conf, "data_format", _get_data_format(data_format)
+    )
     return initializer
 
-def kaiming_initializer(shape: Sequence[int], distribution: str='random_normal', mode: str='fan_in', nonlinearity: str='leaky_relu', negative_slope: float=0.0, data_format: str='NCHW') -> None:
+
+def kaiming_initializer(
+    shape: Sequence[int],
+    distribution: str = "random_normal",
+    mode: str = "fan_in",
+    nonlinearity: str = "leaky_relu",
+    negative_slope: float = 0.0,
+    data_format: str = "NCHW",
+) -> None:
     """Initialize weight according to the method described in `Delving deep into
     rectifiers: Surpassing human-level performance on ImageNet classification`
     - He, K. et al. (2015), using a normal or uniform distribution.
@@ -885,50 +939,56 @@ def kaiming_initializer(shape: Sequence[int], distribution: str='random_normal',
     assert len(shape) >= 2
     elem_cnt = functools.reduce(lambda a, b: a * b, shape, 1)
     assert elem_cnt > 0
-    assert distribution in ['random_normal', 'random_uniform']
-    assert mode in ['fan_in', 'fan_out', 'fan_avg']
-    assert nonlinearity in [None, 'tanh', 'sigmoid', 'relu', 'leaky_relu']
-    assert data_format in ['NCHW', 'NHWC']
+    assert distribution in ["random_normal", "random_uniform"]
+    assert mode in ["fan_in", "fan_out", "fan_avg"]
+    assert nonlinearity in [None, "tanh", "sigmoid", "relu", "leaky_relu"]
+    assert data_format in ["NCHW", "NHWC"]
     fan = _CalcFan(shape, mode, _get_data_format(data_format))
     gain = CalcGain(nonlinearity, negative_slope)
     std = gain / math.sqrt(fan)
-    if distribution == 'random_normal':
+    if distribution == "random_normal":
         return flow.random_normal_initializer(0.0, std)
-    elif distribution == 'random_uniform':
+    elif distribution == "random_uniform":
         bound = math.sqrt(3.0) * std
         return flow.random_uniform_initializer(-bound, bound)
     else:
-        raise NotImplementedError('Only support normal and uniform distribution')
+        raise NotImplementedError("Only support normal and uniform distribution")
+
 
 def _get_variance_norm(mode):
-    if mode.lower() == 'fan_in':
+    if mode.lower() == "fan_in":
         return initializer_conf_util.kFanIn
-    elif mode.lower() == 'fan_out':
+    elif mode.lower() == "fan_out":
         return initializer_conf_util.kFanOut
-    elif mode.lower() == 'fan_avg':
+    elif mode.lower() == "fan_avg":
         return initializer_conf_util.kAverage
     else:
-        raise ValueError('Invalid variance_norm')
+        raise ValueError("Invalid variance_norm")
+
 
 def _get_random_distribution(distribution):
-    if distribution.lower() == 'truncated_normal':
+    if distribution.lower() == "truncated_normal":
         return initializer_conf_util.kTruncatedNormal
-    elif distribution.lower() == 'random_normal':
+    elif distribution.lower() == "random_normal":
         return initializer_conf_util.kRandomNormal
-    elif distribution.lower() == 'random_uniform':
+    elif distribution.lower() == "random_uniform":
         return initializer_conf_util.kRandomUniform
     else:
-        raise ValueError('Invalid random_distribution')
+        raise ValueError("Invalid random_distribution")
+
 
 def _get_data_format(data_format):
-    assert isinstance(data_format, str), 'data_format must be a string'
-    if data_format.startswith('NC'):
-        return 'channels_first'
-    elif data_format.startswith('N') and data_format.endswith('C'):
-        return 'channels_last'
+    assert isinstance(data_format, str), "data_format must be a string"
+    if data_format.startswith("NC"):
+        return "channels_first"
+    elif data_format.startswith("N") and data_format.endswith("C"):
+        return "channels_last"
     else:
-        assert data_format == '', ValueError('data_format must be "N...C" or "NC..." or ""')
-        return ''
+        assert data_format == "", ValueError(
+            'data_format must be "N...C" or "NC..." or ""'
+        )
+        return ""
+
 
 def _CalcFan(shape, mode, data_format):
     if len(shape) == 2:
@@ -939,51 +999,70 @@ def _CalcFan(shape, mode, data_format):
         for dim in shape[1:]:
             fan_in *= dim
         fan_out = shape[0]
-        if data_format == 'channels_first':
+        if data_format == "channels_first":
             for dim in shape[2:]:
                 fan_out *= dim
-        elif data_format == 'channels_last':
+        elif data_format == "channels_last":
             for dim in shape[1:-1]:
                 fan_out *= dim
         else:
-            raise NotImplementedError("Only support 'channels_first' and 'channels_last' data format")
-    if mode == 'fan_avg':
+            raise NotImplementedError(
+                "Only support 'channels_first' and 'channels_last' data format"
+            )
+    if mode == "fan_avg":
         return (float(fan_in) + float(fan_out)) / 2
-    elif mode == 'fan_in':
+    elif mode == "fan_in":
         return float(fan_in)
-    elif mode == 'fan_out':
+    elif mode == "fan_out":
         return float(fan_out)
     else:
         raise NotImplementedError("Only support 'fan_in', 'fan_out' and 'fan_avg' mode")
 
+
 def CalcGain(nonlinearity, param):
-    linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d', 'conv_transpose2d', 'conv_transpose3d']
-    if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
+    linear_fns = [
+        "linear",
+        "conv1d",
+        "conv2d",
+        "conv3d",
+        "conv_transpose1d",
+        "conv_transpose2d",
+        "conv_transpose3d",
+    ]
+    if nonlinearity in linear_fns or nonlinearity == "sigmoid":
         return 1
-    elif nonlinearity == 'tanh':
+    elif nonlinearity == "tanh":
         return 5.0 / 3
-    elif nonlinearity == 'relu':
+    elif nonlinearity == "relu":
         return math.sqrt(2.0)
-    elif nonlinearity == 'leaky_relu':
+    elif nonlinearity == "leaky_relu":
         if param is None:
             negative_slope = 0.01
-        elif not isinstance(param, bool) and isinstance(param, int) or isinstance(param, float):
+        elif (
+            not isinstance(param, bool)
+            and isinstance(param, int)
+            or isinstance(param, float)
+        ):
             negative_slope = param
         else:
-            raise ValueError('negative_slope {} not a valid number'.format(param))
+            raise ValueError("negative_slope {} not a valid number".format(param))
         return math.sqrt(2.0 / (1 + negative_slope ** 2))
-    elif nonlinearity == 'selu':
+    elif nonlinearity == "selu":
         return 3.0 / 4
     else:
-        raise ValueError('Unsupported nonlinearity {}'.format(nonlinearity))
+        raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
+
+
 _init_map = {}
 
-def register_initializer(flow_initializer):
 
+def register_initializer(flow_initializer):
     def deco(func):
         _init_map[flow_initializer] = func
         return func
+
     return deco
+
 
 def GetInitializer(initializer_conf, random_seed, var_blob_shape):
     f = None
@@ -994,25 +1073,57 @@ def GetInitializer(initializer_conf, random_seed, var_blob_shape):
     assert f is not None, initializer_conf
     return f(getattr(initializer_conf, m), random_seed, var_blob_shape)
 
-@register_initializer('constant_conf')
-@register_initializer('constant_int_conf')
-def ConstantInitializerImpl(initializer_conf: Union[initializer_conf_util.ConstantInitializerConf, initializer_conf_util.ConstantIntInitializerConf], random_seed: int, var_blob_shape: Sequence[int]):
+
+@register_initializer("constant_conf")
+@register_initializer("constant_int_conf")
+def ConstantInitializerImpl(
+    initializer_conf: Union[
+        initializer_conf_util.ConstantInitializerConf,
+        initializer_conf_util.ConstantIntInitializerConf,
+    ],
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     return lambda length: np.full((length,), initializer_conf.value)
 
-@register_initializer('random_normal_conf')
-def RandomNormalInitializerImpl(initializer_conf: initializer_conf_util.RandomNormalInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
-    rng = np.random.default_rng(random_seed)
-    return lambda length: rng.normal(loc=initializer_conf.mean, scale=initializer_conf.std, size=length)
 
-@register_initializer('random_uniform_conf')
-def RandomUniformInitializerImpl(initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
+@register_initializer("random_normal_conf")
+def RandomNormalInitializerImpl(
+    initializer_conf: initializer_conf_util.RandomNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     rng = np.random.default_rng(random_seed)
-    return lambda length: rng.uniform(low=initializer_conf.min, high=np.nextafter(initializer_conf.max, float('inf')), size=length)
+    return lambda length: rng.normal(
+        loc=initializer_conf.mean, scale=initializer_conf.std, size=length
+    )
 
-@register_initializer('random_uniform_int_conf')
-def RandomUniformIntInitializerImpl(initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
+
+@register_initializer("random_uniform_conf")
+def RandomUniformInitializerImpl(
+    initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     rng = np.random.default_rng(random_seed)
-    return lambda length: rng.integers(low=initializer_conf.min, high=initializer_conf.max, size=length)
+    return lambda length: rng.uniform(
+        low=initializer_conf.min,
+        high=np.nextafter(initializer_conf.max, float("inf")),
+        size=length,
+    )
+
+
+@register_initializer("random_uniform_int_conf")
+def RandomUniformIntInitializerImpl(
+    initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.integers(
+        low=initializer_conf.min, high=initializer_conf.max, size=length
+    )
+
 
 def RngTruncatedNormal(mean, std, length, rng):
     truncated_value = 2 * std
@@ -1023,21 +1134,29 @@ def RngTruncatedNormal(mean, std, length, rng):
         remaining = length - generated
         norm = rng.normal(mean, std, size=int(remaining * ratio))
         truncated = norm[np.abs(norm - mean) < truncated_value][:remaining]
-        data[generated:generated + len(truncated)] = truncated
+        data[generated : generated + len(truncated)] = truncated
         generated += len(truncated)
     return data
 
-@register_initializer('truncated_normal_conf')
-def TruncatedNormalInitializerImpl(initializer_conf: initializer_conf_util.TruncatedNormalInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
+
+@register_initializer("truncated_normal_conf")
+def TruncatedNormalInitializerImpl(
+    initializer_conf: initializer_conf_util.TruncatedNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     rng = np.random.default_rng(random_seed)
-    return lambda length: RngTruncatedNormal(initializer_conf.mean, initializer_conf.std, length, rng)
+    return lambda length: RngTruncatedNormal(
+        initializer_conf.mean, initializer_conf.std, length, rng
+    )
+
 
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
     fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
     fan_out = var_blob_shape[0]
-    if data_format == 'channel_first':
+    if data_format == "channel_first":
         fan_out *= np.prod(var_blob_shape[2:]).astype(np.int).item()
     else:
         fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
@@ -1051,8 +1170,13 @@ def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
         raise NotImplemented()
     return fan
 
-@register_initializer('variance_scaling_conf')
-def VarianceScalingInitializerImpl(initializer_conf: initializer_conf_util.VarianceScalingInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
+
+@register_initializer("variance_scaling_conf")
+def VarianceScalingInitializerImpl(
+    initializer_conf: initializer_conf_util.VarianceScalingInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
     distribution = initializer_conf.distribution
     rng = np.random.default_rng(random_seed)
@@ -1068,6 +1192,11 @@ def VarianceScalingInitializerImpl(initializer_conf: initializer_conf_util.Varia
     else:
         raise NotImplemented()
 
-@register_initializer('empty_conf')
-def EmptyInitializerImpl(initializer_conf: initializer_conf_util.EmptyInitializerConf, random_seed: int, var_blob_shape: Sequence[int]):
+
+@register_initializer("empty_conf")
+def EmptyInitializerImpl(
+    initializer_conf: initializer_conf_util.EmptyInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
     return None

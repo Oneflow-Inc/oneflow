@@ -5,6 +5,7 @@ from oneflow.compatible import single_client as flow
 from test_util import GenArgList
 from oneflow.compatible.single_client import typing as oft
 
+
 def _test_split_to_split_enable_all_to_all(test_case, src_axis, dst_axis):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
@@ -16,13 +17,15 @@ def _test_split_to_split_enable_all_to_all(test_case, src_axis, dst_axis):
 
     @flow.global_function(function_config=func_config)
     def split_to_split_job(x: oft.Numpy.Placeholder((32, 16, 64, 48))):
-        with flow.scope.placement('gpu', '0:0-1'):
+        with flow.scope.placement("gpu", "0:0-1"):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
+
     x = np.random.rand(32, 16, 64, 48).astype(np.float32)
     y = split_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
+
 
 def _test_split_to_broadcast(test_case, src_axis):
     flow.clear_default_session()
@@ -35,13 +38,15 @@ def _test_split_to_broadcast(test_case, src_axis):
 
     @flow.global_function(function_config=func_config)
     def split_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96))):
-        with flow.scope.placement('gpu', '0:0-1'):
+        with flow.scope.placement("gpu", "0:0-1"):
             src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
+
     x = np.random.rand(96, 96).astype(np.float32)
     y = split_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
+
 
 def _test_partial_sum_to_split(test_case, dst_axis):
     flow.clear_default_session()
@@ -54,14 +59,16 @@ def _test_partial_sum_to_split(test_case, dst_axis):
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement('gpu', '0:0-1'):
+        with flow.scope.placement("gpu", "0:0-1"):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
+
     x = np.random.uniform(-1e-05, 1e-05, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_split_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
+
 
 def _test_partial_sum_to_broadcast(test_case):
     flow.clear_default_session()
@@ -74,22 +81,23 @@ def _test_partial_sum_to_broadcast(test_case):
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
-        with flow.scope.placement('gpu', '0:0-1'):
+        with flow.scope.placement("gpu", "0:0-1"):
             src = flow.identity(x.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
+
     x = np.random.uniform(-1e-05, 1e-05, (96, 96, 96)).astype(np.float32)
     y = partial_sum_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
+
 @flow.unittest.skip_unless_1n2d()
 class TestNcclUseComputeStream(flow.unittest.TestCase):
-
     def test_split_to_split_all_to_all(test_case):
         arg_dict = OrderedDict()
-        arg_dict['src_axis'] = [0, 1, 2, 3]
-        arg_dict['dst_axis'] = [0, 1, 2, 3]
+        arg_dict["src_axis"] = [0, 1, 2, 3]
+        arg_dict["dst_axis"] = [0, 1, 2, 3]
         for arg in GenArgList(arg_dict):
             (src_axis, dst_axis) = arg
             if src_axis == dst_axis:
@@ -98,17 +106,19 @@ class TestNcclUseComputeStream(flow.unittest.TestCase):
 
     def test_split_to_broadcast(test_case):
         arg_dict = OrderedDict()
-        arg_dict['src_axis'] = [0, 1]
+        arg_dict["src_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_split_to_broadcast(test_case, *arg)
 
     def test_partial_sum_to_split(test_case):
         arg_dict = OrderedDict()
-        arg_dict['dst_axis'] = [0, 1]
+        arg_dict["dst_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_partial_sum_to_split(test_case, *arg)
 
     def test_partial_sum_to_broadcast(test_case):
         _test_partial_sum_to_broadcast(test_case)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

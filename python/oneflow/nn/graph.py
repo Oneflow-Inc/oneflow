@@ -14,6 +14,7 @@ from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.utils import add_indent
 from oneflow.framework.function_util import FunctionConfig
 
+
 class Graph(object):
     _child_init_cnt = dict()
 
@@ -43,18 +44,29 @@ class Graph(object):
     def build(self, *args):
         raise NotImplementedError()
 
-    def add_optimizer(self, name: str, optimizer: Optimizer=None, lr_scheduler=None, grad_clipping_conf=None, weight_decay_conf=None):
-        assert name is not None, 'name cannot be None'
-        assert type(name) is str, 'name must be an instance of str'
-        assert optimizer is not None, 'optimizer cannot be None'
-        assert isinstance(optimizer, Optimizer), 'optimizer must be an instance of Optimizer'
-        self._optimizers[name] = OptimizerConfig(name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf)
+    def add_optimizer(
+        self,
+        name: str,
+        optimizer: Optimizer = None,
+        lr_scheduler=None,
+        grad_clipping_conf=None,
+        weight_decay_conf=None,
+    ):
+        assert name is not None, "name cannot be None"
+        assert type(name) is str, "name must be an instance of str"
+        assert optimizer is not None, "optimizer cannot be None"
+        assert isinstance(
+            optimizer, Optimizer
+        ), "optimizer must be an instance of Optimizer"
+        self._optimizers[name] = OptimizerConfig(
+            name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
+        )
 
     def _generate_name(self):
         child_name = self.__class__.__name__
         if Graph._child_init_cnt.get(child_name) is None:
             Graph._child_init_cnt[child_name] = 0
-        self._name = child_name + '_' + str(Graph._child_init_cnt[child_name])
+        self._name = child_name + "_" + str(Graph._child_init_cnt[child_name])
         Graph._child_init_cnt[child_name] += 1
 
     def _state(self):
@@ -71,7 +83,9 @@ class Graph(object):
         for state_block in self._state():
             state_list.append(state_block.origin)
             if state_block.type == BlockType.PARAMETER:
-                self._var2var_op_name[state_block.origin] = state_block.name_prefix + state_block.name
+                self._var2var_op_name[state_block.origin] = (
+                    state_block.name_prefix + state_block.name
+                )
 
     def _complete_graph_config(self):
         if len(self._optimizers):
@@ -80,7 +94,9 @@ class Graph(object):
             self.config.add_optimizer_config(opt_config, self._var2var_op_name)
 
     def _compile(self, *args):
-        assert not self._is_compiled, 'nn.Graph ' + self._name + ' has already been compiled.'
+        assert not self._is_compiled, (
+            "nn.Graph " + self._name + " has already been compiled."
+        )
         self._preprocess_state()
         self._complete_graph_config()
         session = session_ctx.GetDefaultSession()
@@ -90,7 +106,7 @@ class Graph(object):
             lazy_args = []
             lazy_arg_op_names = []
             for (idx, arg) in enumerate(args):
-                op_name = '_' + self.name + '-input_' + str(idx)
+                op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
             state_op_names = []
@@ -100,7 +116,9 @@ class Graph(object):
                 state_tensor = state_block.origin
                 state_op_names.append(op_name)
                 state_tensors.append(state_tensor)
-                state_block.set_lazy_origin_builder(partial(graph_build_util.build_graph_state, op_name, state_tensor))
+                state_block.set_lazy_origin_builder(
+                    partial(graph_build_util.build_graph_state, op_name, state_tensor)
+                )
             outputs = self.build(*lazy_args)
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
@@ -111,7 +129,7 @@ class Graph(object):
             eager_outputs = []
             eager_output_op_names = []
             for (idx, out) in enumerate(outputs):
-                op_name = '_' + self.name + '-output_' + str(idx)
+                op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
             if len(eager_outputs) == 0:
@@ -130,7 +148,7 @@ class Graph(object):
     def __call__(self, *args):
         ...
 
-    def _add_block(self, name: str, module: Module=None) -> None:
+    def _add_block(self, name: str, module: Module = None) -> None:
         """Adds a module to the current graph as a block.
 
         The block can be accessed as an attribute using the given name.
@@ -141,32 +159,38 @@ class Graph(object):
             module (Module): child module to be added to the graph.
         """
         if not isinstance(module, Module) and module is not None:
-            raise TypeError('{} is not a Module subclass'.format(type(module)))
+            raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
-            raise TypeError('module name should be a string. Got {}'.format(type(name)))
+            raise TypeError("module name should be a string. Got {}".format(type(name)))
         elif hasattr(self, name) and name not in self._blocks:
             raise KeyError("attribute '{}' already exists".format(name))
-        elif '.' in name:
+        elif "." in name:
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
-        elif name == '':
+        elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block('', name, module)
+        self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
-            raise AttributeError("'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(type(self).__name__, name))
+            raise AttributeError(
+                "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(
+                    type(self).__name__, name
+                )
+            )
         else:
             object.__setattr__(self, name, value)
 
     def __getattr__(self, name: str):
-        if '_blocks' in self.__dict__:
+        if "_blocks" in self.__dict__:
             if name in self._blocks:
                 return self._blocks[name]
         if name in self.__dict__:
             return self.__dict__[name]
-        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, name))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+        )
 
     def __repr__(self):
         lines = None
@@ -177,14 +201,14 @@ class Graph(object):
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
             lines = child_lines
-        main_str = '(' + self._name + ':' + self.__class__.__name__ + ':GRAPH): ('
+        main_str = "(" + self._name + ":" + self.__class__.__name__ + ":GRAPH): ("
         if lines is not None:
-            main_str += '\n  ' + '\n  '.join(lines) + '\n'
-        main_str += ')'
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
         return main_str
 
-class GraphConfig(FunctionConfig):
 
+class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
         self._train(False)
@@ -201,15 +225,21 @@ class GraphConfig(FunctionConfig):
             return False
         raise NotImplementedError
 
-    def _train(self, mode: bool=True):
+    def _train(self, mode: bool = True):
         if mode:
             self.proto.mutable_train_conf()
             self.proto.mutable_train_conf().set_loss_scale_factor(1.0)
         else:
             self.proto.mutable_predict_conf()
 
-    def add_optimizer_config(self, optimizer_config: OptimizerConfig=None, var2var_op_name: Dict=None):
-        optimizer_config.optimizer.add_to_graph_train_config(self.proto.mutable_train_conf(), var2var_op_name)
+    def add_optimizer_config(
+        self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
+    ):
+        optimizer_config.optimizer.add_to_graph_train_config(
+            self.proto.mutable_train_conf(), var2var_op_name
+        )
+
+
 from oneflow.nn.graph_block import Block
 from oneflow.nn.graph_block import BlockConfig
 from oneflow.nn.graph import Graph as Graph

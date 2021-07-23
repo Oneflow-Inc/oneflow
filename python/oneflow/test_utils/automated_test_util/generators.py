@@ -8,6 +8,7 @@ import numpy as np
 import oneflow as flow
 import torch
 import numpy as np
+
 py_tuple = tuple
 TEST_MODULE = 0
 TEST_FLOW = 1
@@ -16,23 +17,27 @@ rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 
-def data_generator(annotation):
 
+def data_generator(annotation):
     def register_data_generator(cls):
-        annotation2default_generator[annotation] = lambda : cls()
+        annotation2default_generator[annotation] = lambda: cls()
         return cls
+
     return register_data_generator
 
-def torch_to_flow_converter(annotation):
 
+def torch_to_flow_converter(annotation):
     def register_flow_to_flow_converter(func):
         annotation2torch_to_flow_converter[annotation] = func
         return func
+
     return register_flow_to_flow_converter
+
 
 @torch_to_flow_converter(torch.Tensor)
 def tensor_converter(torch_tensor):
     return flow.tensor(torch_tensor.cpu().numpy())
+
 
 def convert_torch_object_to_flow(x):
     for (annotation, converter) in annotation2torch_to_flow_converter.items():
@@ -40,16 +45,18 @@ def convert_torch_object_to_flow(x):
             return converter(x)
     return x
 
+
 def pack(x):
     if isinstance(x, generator):
         return x
     return constant(x)
 
+
 class Nothing:
     pass
 
-class generator:
 
+class generator:
     def __init__(self, children):
         self.children = children
         self._value = None
@@ -76,7 +83,9 @@ class generator:
 
     def __or__(self, other):
         other = pack(other)
-        return oneof(self, other, possibility=self.size() / (self.size() + other.size()))
+        return oneof(
+            self, other, possibility=self.size() / (self.size() + other.size())
+        )
 
     def __ror__(self, other):
         return self | other
@@ -108,8 +117,8 @@ class generator:
     def _to(self, annotation):
         pass
 
-class add(generator):
 
+class add(generator):
     def __init__(self, a, b):
         self.a = pack(a)
         self.b = pack(b)
@@ -118,8 +127,8 @@ class add(generator):
     def _calc_value(self):
         return self.a.value() + self.b.value()
 
-class mul(generator):
 
+class mul(generator):
     def __init__(self, a, b):
         self.a = pack(a)
         self.b = pack(b)
@@ -128,8 +137,8 @@ class mul(generator):
     def _calc_value(self):
         return self.a.value() * self.b.value()
 
-class neg(generator):
 
+class neg(generator):
     def __init__(self, a):
         self.a = pack(a)
         super().__init__([self.a])
@@ -137,8 +146,8 @@ class neg(generator):
     def _calc_value(self):
         return -self.a.value()
 
-class oneof(generator):
 
+class oneof(generator):
     def __init__(self, *args, possibility=None):
         self.args = list(map(pack, args))
         super().__init__(self.args)
@@ -161,8 +170,8 @@ class oneof(generator):
     def size(self):
         return sum([x.size() for x in self.args])
 
-class tuple(generator):
 
+class tuple(generator):
     def __init__(self, *args):
         self.args = list(map(pack, args))
         super().__init__(self.args)
@@ -170,8 +179,8 @@ class tuple(generator):
     def _calc_value(self):
         return py_tuple([x.value() for x in self.args])
 
-class constant(generator):
 
+class constant(generator):
     def __init__(self, x):
         super().__init__([])
         self.x = x
@@ -179,16 +188,16 @@ class constant(generator):
     def _calc_value(self):
         return self.x
 
-class nothing(generator):
 
+class nothing(generator):
     def __init__(self):
         super().__init__([])
 
     def _calc_value(self):
         return Nothing()
 
-class random(generator):
 
+class random(generator):
     def __init__(self, low=1, high=6):
         self.low = pack(low)
         self.high = pack(high)
@@ -198,19 +207,21 @@ class random(generator):
     def _to(self, annotation):
         if self.annotation is not None:
             return
-        if hasattr(annotation, '__origin__'):
+        if hasattr(annotation, "__origin__"):
             annotation = eval(repr(annotation))
         self.annotation = annotation
 
     def _generate(self, annotation):
-        if hasattr(annotation, '__origin__'):
+        if hasattr(annotation, "__origin__"):
             if annotation.__origin__ is Union:
                 x = random_util.choice(annotation.__args__)
                 return self._generate(x)
             if annotation.__origin__ is Tuple or annotation.__origin__ is py_tuple:
                 return [self._generate(x) for x in annotation.__args__]
             else:
-                raise NotImplementedError(f'Not implemented annotation {annotation} in random, type(annotation.__origin__) is {type(annotation.__origin__)}')
+                raise NotImplementedError(
+                    f"Not implemented annotation {annotation} in random, type(annotation.__origin__) is {type(annotation.__origin__)}"
+                )
         (low, high) = (self.low.value(), self.high.value())
         if annotation == int:
             val = int(rng.integers(low, high))
@@ -219,19 +230,33 @@ class random(generator):
         elif annotation == bool:
             val = random_util.choice([True, False])
         else:
-            raise NotImplementedError(f'Not implemented annotation {annotation} in random')
+            raise NotImplementedError(
+                f"Not implemented annotation {annotation} in random"
+            )
         return val
 
     def _calc_value(self):
         return self._generate(self.annotation)
 
+
 def random_or_nothing(low, high):
     return oneof(random(low, high), nothing(), possibility=2 / 3)
 
+
 @data_generator(torch.Tensor)
 class random_tensor(generator):
-
-    def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, low=0, high=1, dtype=float):
+    def __init__(
+        self,
+        ndim=None,
+        dim0=1,
+        dim1=None,
+        dim2=None,
+        dim3=None,
+        dim4=None,
+        low=0,
+        high=1,
+        dtype=float,
+    ):
         if ndim is None:
             ndim = random(1, 6)
         if dim0 is None:
@@ -253,7 +278,19 @@ class random_tensor(generator):
         self.low = pack(low).to(float)
         self.high = pack(high).to(float)
         self.dtype = pack(dtype)
-        super().__init__([self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4, self.low, self.high, self.dtype])
+        super().__init__(
+            [
+                self.ndim,
+                self.dim0,
+                self.dim1,
+                self.dim2,
+                self.dim3,
+                self.dim4,
+                self.low,
+                self.high,
+                self.dtype,
+            ]
+        )
 
     def _calc_value(self):
         ndim = self.ndim.value()
@@ -283,22 +320,38 @@ class random_tensor(generator):
             np_arr = rng.integers(low=low, high=high, size=shape)
             return torch.tensor(np_arr, dtype=torch.int64)
         else:
-            raise NotImplementedError(f'Not implemented dtype {dtype} in random')
+            raise NotImplementedError(f"Not implemented dtype {dtype} in random")
+
 
 @data_generator(bool)
 def random_bool():
     return random().to(bool)
 
-class random_device(generator):
 
+class random_device(generator):
     def __init__(self):
         super().__init__([])
 
     def _calc_value(self):
-        return random_util.choice(['cuda', 'cpu'])
+        return random_util.choice(["cuda", "cpu"])
 
-def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[Dict[str, Any]]=None, extra_generators: Optional[Dict[str, Any]]=None, extra_defaults: Optional[Dict[str, Any]]=None, device: str='cuda', training: bool=True, backward: bool=True, rtol=0.0001, atol=1e-05, n=20, pytorch_callable_name=None, api_flag: int=TEST_MODULE):
-    assert device in ['cuda', 'cpu']
+
+def test_against_pytorch(
+    test_case,
+    callable_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=0.0001,
+    atol=1e-05,
+    n=20,
+    pytorch_callable_name=None,
+    api_flag: int = TEST_MODULE,
+):
+    assert device in ["cuda", "cpu"]
     if not training:
         assert not backward
     if extra_annotations is None:
@@ -309,7 +362,7 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
         extra_defaults = {}
     if pytorch_callable_name is None:
         pytorch_callable_name = callable_name
-    verbose = os.getenv('ONEFLOW_TEST_VERBOSE') is not None
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def has_full_args_spec(callable):
         try:
@@ -317,12 +370,16 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
             return True
         except Exception:
             return False
+
     if api_flag == TEST_TENSOR:
         pytorch_tensor = torch.Tensor(1)
-        pytorch_call = eval(f'pytorch_tensor.{pytorch_callable_name}')
+        pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
     else:
-        pytorch_call = eval(f'torch.{pytorch_callable_name}')
-    Spec = namedtuple('spec', 'args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations')
+        pytorch_call = eval(f"torch.{pytorch_callable_name}")
+    Spec = namedtuple(
+        "spec",
+        "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
+    )
     if has_full_args_spec(pytorch_call):
         tmp_spec = inspect.getfullargspec(pytorch_call)
         new_defaults = tmp_spec.defaults
@@ -331,25 +388,37 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
         new_kwonlydefaults = tmp_spec.kwonlydefaults
         if new_kwonlydefaults is None:
             new_kwonlydefaults = []
-        spec = Spec(tmp_spec.args, tmp_spec.varargs, tmp_spec.varkw, new_defaults, tmp_spec.kwonlyargs, new_kwonlydefaults, tmp_spec.annotations)
+        spec = Spec(
+            tmp_spec.args,
+            tmp_spec.varargs,
+            tmp_spec.varkw,
+            new_defaults,
+            tmp_spec.kwonlyargs,
+            new_kwonlydefaults,
+            tmp_spec.annotations,
+        )
     else:
         args = list(extra_annotations.keys()) + list(extra_defaults.keys())
         spec = Spec(args, None, None, [], [], {}, {})
     annotations = spec.annotations
     annotations.update(extra_annotations)
-    if 'return' in annotations:
-        del annotations['return']
-    args = (set(spec.args) | set(spec.kwonlyargs)) - {'self'}
-    assert args == set(annotations.keys()), f'args = {args}, annotations = {annotations.keys()}'
-    if 'input' not in annotations:
-        annotations.update({'input': torch.Tensor})
+    if "return" in annotations:
+        del annotations["return"]
+    args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
+    assert args == set(
+        annotations.keys()
+    ), f"args = {args}, annotations = {annotations.keys()}"
+    if "input" not in annotations:
+        annotations.update({"input": torch.Tensor})
 
     def has_default(name):
         if name in spec.args:
             return len(spec.args) - spec.args.index(name) <= len(spec.defaults)
         else:
             assert name in spec.kwonlyargs
-            return len(spec.kwonlyargs) - spec.kwonlyargs.index(name) <= len(spec.kwonlydefaults)
+            return len(spec.kwonlyargs) - spec.kwonlyargs.index(name) <= len(
+                spec.kwonlydefaults
+            )
 
     def get_generator(name):
         annotation = annotations[name]
@@ -359,10 +428,13 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
             generator = annotation2default_generator[annotation]()
         generator = generator.to(annotation)
         return generator
+
     while n > 0:
         flow_attr_dict = {}
         torch_attr_dict = {}
-        generator_tuple = tuple(*[get_generator(name) for name in args] + [get_generator('input')])
+        generator_tuple = tuple(
+            *[get_generator(name) for name in args] + [get_generator("input")]
+        )
         values = generator_tuple.eval()
         for (i, name) in enumerate(args):
             torch_data = values[i]
@@ -376,12 +448,15 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
         if verbose:
-            print(f'attr = {torch_attr_dict}, device = {device}')
+            print(f"attr = {torch_attr_dict}, device = {device}")
         torch_input_original = values[-1]
         flow_input_original = convert_torch_object_to_flow(torch_input_original)
         flow_input_original.requires_grad_(backward)
         torch_input_original.requires_grad_(backward)
-        (flow_input, torch_input) = (flow_input_original.to(device), torch_input_original.to(device))
+        (flow_input, torch_input) = (
+            flow_input_original.to(device),
+            torch_input_original.to(device),
+        )
         try:
             if api_flag == TEST_MODULE:
                 torch_call = pytorch_call(**torch_attr_dict)
@@ -389,41 +464,54 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
                 torch_call.train(training)
                 torch_res = torch_call(torch_input)
                 state_dict = torch_call.state_dict()
-                state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+                state_dict = {
+                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
+                }
             elif api_flag == TEST_FLOW:
-                torch_xxx_func = eval(f'torch.{pytorch_callable_name}')
+                torch_xxx_func = eval(f"torch.{pytorch_callable_name}")
                 torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
             else:
-                torch_tensor_xxx_func = eval(f'torch_input.{pytorch_callable_name}')
+                torch_tensor_xxx_func = eval(f"torch_input.{pytorch_callable_name}")
                 torch_res = torch_tensor_xxx_func(**torch_attr_dict)
             loss = torch_res.sum()
             loss.backward()
             if api_flag == TEST_MODULE:
                 state_dict = torch_call.state_dict()
-                state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+                state_dict = {
+                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
+                }
         except Exception as e:
             if verbose:
-                print(f'PyTorch error: {e}')
+                print(f"PyTorch error: {e}")
             continue
         if api_flag == TEST_MODULE:
-            flow_call_class = eval(f'flow.{callable_name}')
+            flow_call_class = eval(f"flow.{callable_name}")
             flow_call = flow_call_class(**flow_attr_dict)
             flow_call = flow_call.to(device)
             flow_call.train(training)
             flow_call.load_state_dict(state_dict)
             flow_res = flow_call(flow_input)
         elif api_flag == TEST_FLOW:
-            flow_xxx_func = eval(f'flow.{callable_name}')
+            flow_xxx_func = eval(f"flow.{callable_name}")
             flow_res = flow_xxx_func(flow_input, **flow_attr_dict)
         else:
-            flow_tensor_xxx_func = eval(f'flow_input.{callable_name}')
+            flow_tensor_xxx_func = eval(f"flow_input.{callable_name}")
             flow_res = flow_tensor_xxx_func(**flow_attr_dict)
         loss = flow_res.sum()
         loss.backward()
 
         def allclose_or_fail(flow_tensor, torch_tensor):
-            is_allclose = np.allclose(flow_tensor.numpy(), torch_tensor.detach().cpu().numpy(), rtol=rtol, atol=atol)
-            test_case.assertTrue(is_allclose, f'flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}')
+            is_allclose = np.allclose(
+                flow_tensor.numpy(),
+                torch_tensor.detach().cpu().numpy(),
+                rtol=rtol,
+                atol=atol,
+            )
+            test_case.assertTrue(
+                is_allclose,
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}",
+            )
+
         allclose_or_fail(flow_res, torch_res)
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
         if api_flag == TEST_MODULE:
@@ -432,15 +520,113 @@ def test_against_pytorch(test_case, callable_name, extra_annotations: Optional[D
                 flow_param = flow_parameters[name]
                 allclose_or_fail(flow_param.grad, torch_param.grad)
         if verbose:
-            print('test passed')
+            print("test passed")
         n -= 1
 
-def test_module_against_pytorch(test_case, callable_name, extra_annotations: Optional[Dict[str, Any]]=None, extra_generators: Optional[Dict[str, Any]]=None, extra_defaults: Optional[Dict[str, Any]]=None, device: str='cuda', training: bool=True, backward: bool=True, rtol=0.0001, atol=1e-05, n=20, pytorch_callable_name=None):
-    return test_against_pytorch(test_case=test_case, callable_name=callable_name, extra_annotations=extra_annotations, extra_generators=extra_generators, extra_defaults=extra_defaults, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, pytorch_callable_name=pytorch_callable_name, api_flag=TEST_MODULE)
 
-def test_flow_against_pytorch(test_case, callable_name, extra_annotations: Optional[Dict[str, Any]]=None, extra_generators: Optional[Dict[str, Any]]=None, extra_defaults: Optional[Dict[str, Any]]=None, device: str='cuda', training: bool=True, backward: bool=True, rtol=0.0001, atol=1e-05, n=20, pytorch_callable_name=None):
-    return test_against_pytorch(test_case=test_case, callable_name=callable_name, extra_annotations=extra_annotations, extra_generators=extra_generators, extra_defaults=extra_defaults, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, pytorch_callable_name=pytorch_callable_name, api_flag=TEST_FLOW)
+def test_module_against_pytorch(
+    test_case,
+    callable_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=0.0001,
+    atol=1e-05,
+    n=20,
+    pytorch_callable_name=None,
+):
+    return test_against_pytorch(
+        test_case=test_case,
+        callable_name=callable_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_callable_name=pytorch_callable_name,
+        api_flag=TEST_MODULE,
+    )
 
-def test_tensor_against_pytorch(test_case, callable_name, extra_annotations: Optional[Dict[str, Any]]=None, extra_generators: Optional[Dict[str, Any]]=None, extra_defaults: Optional[Dict[str, Any]]=None, device: str='cuda', training: bool=True, backward: bool=True, rtol=0.0001, atol=1e-05, n=20, pytorch_callable_name=None):
-    return test_against_pytorch(test_case=test_case, callable_name=callable_name, extra_annotations=extra_annotations, extra_generators=extra_generators, extra_defaults=extra_defaults, device=device, training=training, backward=backward, rtol=rtol, atol=atol, n=n, pytorch_callable_name=pytorch_callable_name, api_flag=TEST_TENSOR)
-__all__ = ['random_tensor', 'random_bool', 'random_device', 'random', 'random_or_nothing', 'oneof', 'constant', 'nothing', 'test_module_against_pytorch', 'test_flow_against_pytorch', 'test_tensor_against_pytorch']
+
+def test_flow_against_pytorch(
+    test_case,
+    callable_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=0.0001,
+    atol=1e-05,
+    n=20,
+    pytorch_callable_name=None,
+):
+    return test_against_pytorch(
+        test_case=test_case,
+        callable_name=callable_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_callable_name=pytorch_callable_name,
+        api_flag=TEST_FLOW,
+    )
+
+
+def test_tensor_against_pytorch(
+    test_case,
+    callable_name,
+    extra_annotations: Optional[Dict[str, Any]] = None,
+    extra_generators: Optional[Dict[str, Any]] = None,
+    extra_defaults: Optional[Dict[str, Any]] = None,
+    device: str = "cuda",
+    training: bool = True,
+    backward: bool = True,
+    rtol=0.0001,
+    atol=1e-05,
+    n=20,
+    pytorch_callable_name=None,
+):
+    return test_against_pytorch(
+        test_case=test_case,
+        callable_name=callable_name,
+        extra_annotations=extra_annotations,
+        extra_generators=extra_generators,
+        extra_defaults=extra_defaults,
+        device=device,
+        training=training,
+        backward=backward,
+        rtol=rtol,
+        atol=atol,
+        n=n,
+        pytorch_callable_name=pytorch_callable_name,
+        api_flag=TEST_TENSOR,
+    )
+
+
+__all__ = [
+    "random_tensor",
+    "random_bool",
+    "random_device",
+    "random",
+    "random_or_nothing",
+    "oneof",
+    "constant",
+    "nothing",
+    "test_module_against_pytorch",
+    "test_flow_against_pytorch",
+    "test_tensor_against_pytorch",
+]

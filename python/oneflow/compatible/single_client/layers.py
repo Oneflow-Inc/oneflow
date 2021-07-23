@@ -1,4 +1,6 @@
-from oneflow.compatible.single_client.ops.categorical_ordinal_encode_op import categorical_ordinal_encoder
+from oneflow.compatible.single_client.ops.categorical_ordinal_encode_op import (
+    categorical_ordinal_encoder,
+)
 from oneflow.compatible.single_client.ops.prelu import prelu
 from oneflow.compatible.single_client.ops.layers import dense
 from oneflow.compatible.single_client.ops.layers import conv1d

@@ -2,14 +2,21 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 
-class Gather_nd(Module):
 
+class Gather_nd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.gather_nd_op = flow.builtin_op('gather_nd').Input('params').Input('indices').Output('out').Build()
+        self.gather_nd_op = (
+            flow.builtin_op("gather_nd")
+            .Input("params")
+            .Input("indices")
+            .Output("out")
+            .Build()
+        )
 
     def forward(self, input, index):
         return self.gather_nd_op(input, index)[0]
+
 
 def gather_nd_op(input, index):
     """This operator is a high-dimensional extension of `gather`, `index` is a K-dimensional
@@ -47,6 +54,9 @@ def gather_nd_op(input, index):
 
     """
     return Gather_nd()(input, index)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

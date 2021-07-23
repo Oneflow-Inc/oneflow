@@ -3,8 +3,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import Tensor, register_tensor_op
 
-class Tile(Module):
 
+class Tile(Module):
     def __init__(self, reps: tuple) -> None:
         super().__init__()
         self.reps = reps
@@ -21,7 +21,8 @@ class Tile(Module):
             reps = tuple(shape)
         return input.repeat(reps)
 
-@register_tensor_op('tile')
+
+@register_tensor_op("tile")
 def tile_op(x, reps):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -67,6 +68,9 @@ def tile_op(x, reps):
 
     """
     return Tile(reps=reps)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

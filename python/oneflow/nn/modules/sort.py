@@ -1,20 +1,29 @@
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim, get_inversed_perm
+from oneflow.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
+
 
 class Sort(Module):
-
-    def __init__(self, dim: int=-1, descending: bool=False) -> None:
+    def __init__(self, dim: int = -1, descending: bool = False) -> None:
         super().__init__()
         self.dim = dim
-        direction = 'DESCENDING' if descending else 'ASCENDING'
-        self._argsort_op = flow.builtin_op('arg_sort').Input('in').Output('out').Attr('direction', direction).Build()
+        direction = "DESCENDING" if descending else "ASCENDING"
+        self._argsort_op = (
+            flow.builtin_op("arg_sort")
+            .Input("in")
+            .Output("out")
+            .Attr("direction", direction)
+            .Build()
+        )
 
     def forward(self, input):
         num_dims = len(input.shape)
         dim = self.dim if self.dim >= 0 else self.dim + num_dims
-        assert 0 <= dim < num_dims, 'dim out of range'
+        assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
             indices = self._argsort_op(input)[0]
             return (flow.gather(input, indices, dim), indices)
@@ -25,8 +34,9 @@ class Sort(Module):
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, indices, dim), indices)
 
-@register_tensor_op('sort')
-def sort_op(input, dim: int=-1, descending: bool=False):
+
+@register_tensor_op("sort")
+def sort_op(input, dim: int = -1, descending: bool = False):
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.
 
     Args:
@@ -71,6 +81,9 @@ def sort_op(input, dim: int=-1, descending: bool=False):
  
     """
     return Sort(dim=dim, descending=descending)(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

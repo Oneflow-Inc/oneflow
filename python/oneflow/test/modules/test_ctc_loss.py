@@ -3,7 +3,9 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from test_util import GenArgList
-ninf = -float('inf')
+
+ninf = -float("inf")
+
 
 def _logsumexp(a, b):
     if a < b:
@@ -13,11 +15,13 @@ def _logsumexp(a, b):
     else:
         return a + np.log(1 + np.exp(b - a))
 
+
 def logsumexp(*args):
     res = args[0]
     for e in args[1:]:
         res = _logsumexp(res, e)
     return res
+
 
 def log_softmax(logits, axis=0):
     max_value = np.max(logits, axis, keepdims=True)
@@ -26,11 +30,13 @@ def log_softmax(logits, axis=0):
     dist = exp / exp_sum
     return np.log(dist)
 
+
 def get_target_prime(targets, b, s, blank):
     if s % 2 == 0:
         return blank
     else:
         return targets[b, s // 2]
+
 
 def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
     (max_input_length, batch_size, _) = log_probs.shape
@@ -53,11 +59,17 @@ def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
                     la2 = alpha[b, t - 1, s - 1]
                 else:
                     la2 = ninf
-                if s > 1 and get_target_prime(targets, b, s - 2, blank) != current_target_prime:
+                if (
+                    s > 1
+                    and get_target_prime(targets, b, s - 2, blank)
+                    != current_target_prime
+                ):
                     la3 = alpha[b, t - 1, s - 2]
                 else:
                     la3 = ninf
-                alpha[b, t, s] = logsumexp(la1, la2, la3) + log_probs[t, b, current_target_prime]
+                alpha[b, t, s] = (
+                    logsumexp(la1, la2, la3) + log_probs[t, b, current_target_prime]
+                )
         if target_length == 0:
             loss[b] = -alpha[b, input_length - 1, 0]
         else:
@@ -66,7 +78,18 @@ def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
             loss[b] = -logsumexp(l1, l2)
     return (loss, alpha)
 
-def ctc_loss_grad_np(grad_out, loss, alpha, log_probs, targets, input_lengths, target_lengths, blank=0, zero_infinity=False):
+
+def ctc_loss_grad_np(
+    grad_out,
+    loss,
+    alpha,
+    log_probs,
+    targets,
+    input_lengths,
+    target_lengths,
+    blank=0,
+    zero_infinity=False,
+):
     (max_input_length, batch_size, num_labels) = log_probs.shape
     (_, max_target_length) = targets.shape
     beta = np.zeros([batch_size, max_input_length, 2 * max_target_length + 1])
@@ -76,17 +99,29 @@ def ctc_loss_grad_np(grad_out, loss, alpha, log_probs, targets, input_lengths, t
         input_length = input_lengths[b]
         target_length = target_lengths[b]
         nll = loss[b]
-        if zero_infinity and nll == float('inf'):
+        if zero_infinity and nll == float("inf"):
             grad[:, b, :] = 0
             continue
         if input_length > 0:
             beta[b, input_length - 1, :] = ninf
-            beta[b, input_length - 1, 2 * target_length] = log_probs[input_length - 1, b, blank]
-            grad[input_length - 1, b, blank] = alpha[b, input_length - 1, 2 * target_length] + beta[b, input_length - 1, 2 * target_length]
+            beta[b, input_length - 1, 2 * target_length] = log_probs[
+                input_length - 1, b, blank
+            ]
+            grad[input_length - 1, b, blank] = (
+                alpha[b, input_length - 1, 2 * target_length]
+                + beta[b, input_length - 1, 2 * target_length]
+            )
             if target_length > 0:
-                current_target_prime = get_target_prime(targets, b, 2 * target_length - 1, blank)
-                beta[b, input_length - 1, 2 * target_length - 1] = log_probs[input_length - 1, b, current_target_prime]
-                grad[input_length - 1, b, current_target_prime] = alpha[b, input_length - 1, 2 * target_length - 1] + beta[b, input_length - 1, 2 * target_length - 1]
+                current_target_prime = get_target_prime(
+                    targets, b, 2 * target_length - 1, blank
+                )
+                beta[b, input_length - 1, 2 * target_length - 1] = log_probs[
+                    input_length - 1, b, current_target_prime
+                ]
+                grad[input_length - 1, b, current_target_prime] = (
+                    alpha[b, input_length - 1, 2 * target_length - 1]
+                    + beta[b, input_length - 1, 2 * target_length - 1]
+                )
         for t in range(input_length - 2, -1, -1):
             for s in range(2 * target_length, -1, -1):
                 current_target_prime = get_target_prime(targets, b, s, blank)
@@ -95,11 +130,17 @@ def ctc_loss_grad_np(grad_out, loss, alpha, log_probs, targets, input_lengths, t
                     lb2 = beta[b, t + 1, s + 1]
                 else:
                     lb2 = ninf
-                if s < 2 * target_length - 1 and get_target_prime(targets, b, s + 2, blank) != current_target_prime:
+                if (
+                    s < 2 * target_length - 1
+                    and get_target_prime(targets, b, s + 2, blank)
+                    != current_target_prime
+                ):
                     lb3 = beta[b, t + 1, s + 2]
                 else:
                     lb3 = ninf
-                beta[b, t, s] = logsumexp(lb1, lb2, lb3) + log_probs[t, b, current_target_prime]
+                beta[b, t, s] = (
+                    logsumexp(lb1, lb2, lb3) + log_probs[t, b, current_target_prime]
+                )
                 alpha_beta = alpha[b, t, s] + beta[b, t, s]
                 lcab = grad[t, b, current_target_prime]
                 if lcab == ninf:
@@ -115,32 +156,90 @@ def ctc_loss_grad_np(grad_out, loss, alpha, log_probs, targets, input_lengths, t
             grad[input_length:max_input_length, b] = 0
     return grad
 
-def compare_with_np(device_type, device_num, data_type, max_input_length, batch_size, num_classes, max_target_length, blank, reduction, zero_infinity):
-    assert data_type in ['float32', 'double']
-    assert device_type in ['cuda', 'cpu']
-    assert reduction in ['none', 'mean', 'sum']
+
+def compare_with_np(
+    device_type,
+    device_num,
+    data_type,
+    max_input_length,
+    batch_size,
+    num_classes,
+    max_target_length,
+    blank,
+    reduction,
+    zero_infinity,
+):
+    assert data_type in ["float32", "double"]
+    assert device_type in ["cuda", "cpu"]
+    assert reduction in ["none", "mean", "sum"]
     assert zero_infinity in [False, True]
-    log_probs = np.random.random(size=(max_input_length, batch_size, num_classes)).astype(np.float32)
+    log_probs = np.random.random(
+        size=(max_input_length, batch_size, num_classes)
+    ).astype(np.float32)
     log_probs = log_softmax(log_probs, axis=2)
-    targets = np.random.randint(1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32)
-    input_lengths = np.random.randint(max_input_length / 2, high=max_input_length, size=(batch_size,), dtype=np.int32)
-    target_lengths = np.random.randint(max_target_length / 2, high=max_target_length, size=(batch_size,), dtype=np.int32)
-    (np_loss, np_alpha) = ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank)
-    np_out = np.where(np_loss == float('inf'), 0, np_loss) if zero_infinity else np_loss
-    if reduction == 'mean':
-        np_out = np.mean(np.divide(np_out, np.clip(target_lengths, 1, a_max=None).astype(np.float32)))
-    elif reduction == 'sum':
+    targets = np.random.randint(
+        1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32
+    )
+    input_lengths = np.random.randint(
+        max_input_length / 2, high=max_input_length, size=(batch_size,), dtype=np.int32
+    )
+    target_lengths = np.random.randint(
+        max_target_length / 2,
+        high=max_target_length,
+        size=(batch_size,),
+        dtype=np.int32,
+    )
+    (np_loss, np_alpha) = ctc_loss_np(
+        log_probs, targets, input_lengths, target_lengths, blank
+    )
+    np_out = np.where(np_loss == float("inf"), 0, np_loss) if zero_infinity else np_loss
+    if reduction == "mean":
+        np_out = np.mean(
+            np.divide(np_out, np.clip(target_lengths, 1, a_max=None).astype(np.float32))
+        )
+    elif reduction == "sum":
         np_out = np.sum(np_out)
     np_grad_out = np.ones_like(np_loss, dtype=np.float32)
-    if reduction == 'mean':
-        np_grad_out = np.divide(np_grad_out, np.clip(target_lengths, 1, a_max=None).astype(np.float32))
+    if reduction == "mean":
+        np_grad_out = np.divide(
+            np_grad_out, np.clip(target_lengths, 1, a_max=None).astype(np.float32)
+        )
         np_grad_out /= target_lengths.size
-    np_grad = ctc_loss_grad_np(np_grad_out, np_loss, np_alpha, log_probs, targets, input_lengths, target_lengths, blank, zero_infinity)
-    ctc_loss = flow.nn.CTCLoss(blank=blank, reduction=reduction, zero_infinity=zero_infinity)
-    log_probs = flow.Tensor(log_probs, dtype=flow.float32, requires_grad=True, device=flow.device(device_type))
-    targets = flow.Tensor(targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type))
-    input_lengths = flow.Tensor(input_lengths, dtype=flow.int32, requires_grad=False, device=flow.device(device_type))
-    target_lengths = flow.Tensor(target_lengths, dtype=flow.int32, requires_grad=False, device=flow.device(device_type))
+    np_grad = ctc_loss_grad_np(
+        np_grad_out,
+        np_loss,
+        np_alpha,
+        log_probs,
+        targets,
+        input_lengths,
+        target_lengths,
+        blank,
+        zero_infinity,
+    )
+    ctc_loss = flow.nn.CTCLoss(
+        blank=blank, reduction=reduction, zero_infinity=zero_infinity
+    )
+    log_probs = flow.Tensor(
+        log_probs,
+        dtype=flow.float32,
+        requires_grad=True,
+        device=flow.device(device_type),
+    )
+    targets = flow.Tensor(
+        targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type)
+    )
+    input_lengths = flow.Tensor(
+        input_lengths,
+        dtype=flow.int32,
+        requires_grad=False,
+        device=flow.device(device_type),
+    )
+    target_lengths = flow.Tensor(
+        target_lengths,
+        dtype=flow.int32,
+        requires_grad=False,
+        device=flow.device(device_type),
+    )
     ctc_loss = ctc_loss.to(device_type)
     of_out = ctc_loss(log_probs, targets, input_lengths, target_lengths)
     assert np.allclose(of_out.numpy(), np_out, atol=1e-05)
@@ -148,25 +247,28 @@ def compare_with_np(device_type, device_num, data_type, max_input_length, batch_
     of_out.backward()
     assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-05, equal_nan=True)
 
+
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict['device_type'] = ['cuda', 'cpu']
-    arg_dict['device_num'] = [1]
-    arg_dict['data_type'] = ['float32']
-    arg_dict['max_input_length'] = [20]
-    arg_dict['batch_size'] = [4]
-    arg_dict['num_classes'] = [5]
-    arg_dict['max_target_length'] = [10]
-    arg_dict['blank'] = [0, 4]
-    arg_dict['reduction'] = ['mean', 'none']
-    arg_dict['zero_infinity'] = [False, True]
+    arg_dict["device_type"] = ["cuda", "cpu"]
+    arg_dict["device_num"] = [1]
+    arg_dict["data_type"] = ["float32"]
+    arg_dict["max_input_length"] = [20]
+    arg_dict["batch_size"] = [4]
+    arg_dict["num_classes"] = [5]
+    arg_dict["max_target_length"] = [10]
+    arg_dict["blank"] = [0, 4]
+    arg_dict["reduction"] = ["mean", "none"]
+    arg_dict["zero_infinity"] = [False, True]
     return GenArgList(arg_dict)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestCTCLoss1n1d(flow.unittest.TestCase):
-
     def test_ctc_loss(test_case):
         for arg in gen_arg_list():
             compare_with_np(*arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

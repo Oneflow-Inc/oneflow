@@ -3,7 +3,9 @@ from oneflow.nn import init
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import Tensor
 from typing import Tuple, Union
+
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
+
 
 class GroupNorm(Module):
     """The interface is consistent with PyTorch.
@@ -58,10 +60,16 @@ class GroupNorm(Module):
     
 """
 
-    def __init__(self, num_groups: int, num_channels: int, eps: float=1e-05, affine: bool=True) -> None:
+    def __init__(
+        self,
+        num_groups: int,
+        num_channels: int,
+        eps: float = 1e-05,
+        affine: bool = True,
+    ) -> None:
         super().__init__()
-        assert num_groups > 0, 'The num_groups must larger than zero'
-        assert num_channels > 0, 'The num_channels must larger than zero'
+        assert num_groups > 0, "The num_groups must larger than zero"
+        assert num_channels > 0, "The num_channels must larger than zero"
         self.num_groups = num_groups
         self.num_channels = num_channels
         self.eps = eps
@@ -70,8 +78,8 @@ class GroupNorm(Module):
             self.weight = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
             self.bias = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -80,14 +88,22 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        assert len(input.shape) >= 3, 'The dimensions of input tensor must larger than 2'
-        assert input.shape[1] == self.num_channels, 'The channels of input tensor must equal num_channels'
+        assert (
+            len(input.shape) >= 3
+        ), "The dimensions of input tensor must larger than 2"
+        assert (
+            input.shape[1] == self.num_channels
+        ), "The channels of input tensor must equal num_channels"
         origin_shape = input.shape
-        reshape_to_1d = flow.reshape(input, shape=[origin_shape[0], self.num_groups, -1])
+        reshape_to_1d = flow.reshape(
+            input, shape=[origin_shape[0], self.num_groups, -1]
+        )
         mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
         variance = flow.var(reshape_to_1d, dim=2, keepdim=True)
         normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
-        normalized = flow.reshape(normalized, shape=[origin_shape[0], self.num_channels, -1])
+        normalized = flow.reshape(
+            normalized, shape=[origin_shape[0], self.num_channels, -1]
+        )
         if self.weight:
             normalized = normalized * self.weight
         if self.bias:
@@ -96,7 +112,10 @@ class GroupNorm(Module):
         return res
 
     def extra_repr(self) -> str:
-        return '{num_groups}, {num_channels}, eps={eps}, affine={affine}'.format(**self.__dict__)
+        return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(
+            **self.__dict__
+        )
+
 
 class LayerNorm(Module):
     """Applies Layer Normalization over a mini-batch of inputs as described in
@@ -179,12 +198,18 @@ class LayerNorm(Module):
                  [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
 
     """
-    __constants__ = ['normalized_shape', 'eps', 'elementwise_affine']
+
+    __constants__ = ["normalized_shape", "eps", "elementwise_affine"]
     normalized_shape: Tuple[int, ...]
     eps: float
     elementwise_affine: bool
 
-    def __init__(self, normalized_shape: _shape_t, eps: float=1e-05, elementwise_affine: bool=True) -> None:
+    def __init__(
+        self,
+        normalized_shape: _shape_t,
+        eps: float = 1e-05,
+        elementwise_affine: bool = True,
+    ) -> None:
         super(LayerNorm, self).__init__()
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
@@ -195,8 +220,8 @@ class LayerNorm(Module):
             self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
             self.bias = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
         self.reset_parameters()
         self.begin_norm_axis = 1
         self.begin_params_axis = 1
@@ -207,10 +232,12 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
 
     def forward(self, x):
-        assert len(x.shape) > len(self.normalized_shape), 'Input tensor dim must greater than normalized dim!'
+        assert len(x.shape) > len(
+            self.normalized_shape
+        ), "Input tensor dim must greater than normalized dim!"
         self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
         self.begin_params_axis = len(x.shape) - len(self.normalized_shape)
-        if x.device == flow.device('cpu'):
+        if x.device == flow.device("cpu"):
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim >= self.begin_norm_axis:
@@ -218,7 +245,7 @@ class LayerNorm(Module):
             mean = x.mean(dim=reduce_axis, keepdim=True)
             variance = x.var(dim=reduce_axis, keepdim=True)
             axis = self.begin_norm_axis
-            params_shape = x.shape[self.begin_params_axis:]
+            params_shape = x.shape[self.begin_params_axis :]
             weight = self.weight
             bias = self.bias
             if len(mean.shape) == 1:
@@ -233,7 +260,9 @@ class LayerNorm(Module):
             elif len(mean.shape) == len(x.shape):
                 pass
             else:
-                raise ValueError("shape of mean and variance should be 1D or has number of axes and x's")
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
             variance += self.epsilon
             normalized = (x - mean) * variance.rsqrt()
             if self.weight:
@@ -241,20 +270,39 @@ class LayerNorm(Module):
             if self.bias:
                 normalized = normalized + bias
             affined = normalized
-            nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(params_shape)
+            nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(
+                params_shape
+            )
             if self.elementwise_affine:
                 affined = affined * self.weight
                 affined = affined + self.bias
             return affined
         else:
             if self.elementwise_affine:
-                res = flow.F.layer_norm_affine(x, self.weight, self.bias, begin_norm_axis=self.begin_norm_axis, begin_params_axis=self.begin_params_axis, epsilon=self.epsilon)
+                res = flow.F.layer_norm_affine(
+                    x,
+                    self.weight,
+                    self.bias,
+                    begin_norm_axis=self.begin_norm_axis,
+                    begin_params_axis=self.begin_params_axis,
+                    epsilon=self.epsilon,
+                )
             else:
-                res = flow.F.layer_norm(x, begin_norm_axis=self.begin_norm_axis, begin_params_axis=self.begin_params_axis, epsilon=self.epsilon)
+                res = flow.F.layer_norm(
+                    x,
+                    begin_norm_axis=self.begin_norm_axis,
+                    begin_params_axis=self.begin_params_axis,
+                    epsilon=self.epsilon,
+                )
             return res
 
     def extra_repr(self) -> str:
-        return '{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}'.format(**self.__dict__)
-if __name__ == '__main__':
+        return "{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}".format(
+            **self.__dict__
+        )
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

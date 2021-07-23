@@ -5,36 +5,41 @@ from oneflow.nn.modules.utils import _single, _pair
 from oneflow.nn.common_types import _size_1_t, _size_2_t
 from oneflow.nn import init
 
+
 def slice(x, begin, size):
     ndim = len(x.shape)
     if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
-        raise ValueError("begin must be a list/tuple with the same length as input tensor's number of dimensions")
+        raise ValueError(
+            "begin must be a list/tuple with the same length as input tensor's number of dimensions"
+        )
     if not all((isinstance(b, int) or b is None for b in begin)):
-        raise ValueError('element of begin must be a int or None')
+        raise ValueError("element of begin must be a int or None")
     if not isinstance(size, (list, tuple)) or len(size) != ndim:
-        raise ValueError("size must be a list/tuple with the same length as input tensor's number of dimensions.")
+        raise ValueError(
+            "size must be a list/tuple with the same length as input tensor's number of dimensions."
+        )
     if not all((isinstance(s, int) or s is None for s in size)):
-        raise ValueError('element of size must be a int or None')
+        raise ValueError("element of size must be a int or None")
     slice_tup_list = []
     for (b, s, dim_size) in zip(begin, size, x.shape):
         (start, stop, step) = (None, None, 1)
         if b is not None:
             if b < -dim_size or b >= dim_size:
-                raise ValueError('element of begin is out of range')
+                raise ValueError("element of begin is out of range")
             start = b
         if s is not None:
             if s == -1:
                 stop = dim_size
             else:
                 if s <= 0 or s > dim_size:
-                    raise ValueError('element of size is invalid')
+                    raise ValueError("element of size is invalid")
                 if b + s < dim_size:
                     stop = b + s
         slice_tup_list.append((start, stop, step))
     return flow.slice(x, slice_tup_list)
 
-class ConvUtil(object):
 
+class ConvUtil(object):
     @classmethod
     def split(cls, x, axis, split_num):
         split_len = x.shape[axis] // split_num
@@ -47,6 +52,7 @@ class ConvUtil(object):
             result = slice(x, slice_begin, slice_size)
             result_list.append(result)
         return result_list
+
 
 class Conv1d(Module):
     """The interface is consistent with PyTorch.    
@@ -140,9 +146,20 @@ class Conv1d(Module):
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: _size_1_t, stride: _size_1_t=1, padding: _size_1_t=0, dilation: _size_1_t=1, groups: int=1, bias: bool=True, padding_mode: str='zeros'):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_1_t,
+        stride: _size_1_t = 1,
+        padding: _size_1_t = 0,
+        dilation: _size_1_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",
+    ):
         super().__init__()
-        assert padding_mode == 'zeros'
+        assert padding_mode == "zeros"
         self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
@@ -153,7 +170,9 @@ class Conv1d(Module):
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(flow.Tensor(out_channels, in_channels // groups, *self.kernel_size))
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -168,32 +187,65 @@ class Conv1d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device.type == 'cpu' and self.groups > 1:
+        if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
             weight_channel_axis = 0
             bias_channel_axis = 0
-            in_split_list = ConvUtil.split(x, axis=in_channel_axis, split_num=self.groups)
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(flow.F.conv1d(in_split_list[i], self.weight[i * self.out_channel_groups:(i + 1) * self.out_channel_groups, :, :], self.bias[i * self.out_channel_groups:(i + 1) * self.out_channel_groups] if self.bias else None, stride=self.stride, padding=self.padding, dilation=self.dilation, groups=1))
+                out_list.append(
+                    flow.F.conv1d(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation,
+                        groups=1,
+                    )
+                )
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv1d(x, self.weight, self.bias, stride=self.stride, padding=self.padding, dilation=self.dilation, groups=self.groups)
+            res = flow.F.conv1d(
+                x,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
         return res
 
     def extra_repr(self):
-        s = '{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}'
+        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
         if self.padding != (0,) * len(self.padding):
-            s += ', padding={padding}'
+            s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
-            s += ', dilation={dilation}'
+            s += ", dilation={dilation}"
         if self.groups != 1:
-            s += ', groups={groups}'
+            s += ", groups={groups}"
         if self.bias is None:
-            s += ', bias=False'
-        if self.padding_mode != 'zeros':
-            s += ', padding_mode={padding_mode}'
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
         return s.format(**self.__dict__)
+
 
 class Conv2d(Module):
     """The interface is consistent with PyTorch.    
@@ -313,9 +365,20 @@ class Conv2d(Module):
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: _size_2_t, stride: _size_2_t=1, padding: _size_2_t=0, dilation: _size_2_t=1, groups: int=1, bias: bool=True, padding_mode: str='zeros'):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_2_t,
+        stride: _size_2_t = 1,
+        padding: _size_2_t = 0,
+        dilation: _size_2_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",
+    ):
         super().__init__()
-        assert padding_mode == 'zeros'
+        assert padding_mode == "zeros"
         self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -326,7 +389,9 @@ class Conv2d(Module):
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(flow.Tensor(out_channels, in_channels // groups, *self.kernel_size))
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -342,31 +407,67 @@ class Conv2d(Module):
 
     def forward(self, x):
         if x.shape[1] != self.in_channels:
-            raise ValueError('The input channels should be equal to self.in_channels')
-        if x.device.type == 'cpu' and self.groups > 1:
+            raise ValueError("The input channels should be equal to self.in_channels")
+        if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
-            in_split_list = ConvUtil.split(x, axis=in_channel_axis, split_num=self.groups)
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(flow.F.conv2d(in_split_list[i], self.weight[i * self.out_channel_groups:(i + 1) * self.out_channel_groups, :, :, :], self.bias[i * self.out_channel_groups:(i + 1) * self.out_channel_groups] if self.bias else None, stride=self.stride, padding=self.padding, dilation=self.dilation, groups=1))
+                out_list.append(
+                    flow.F.conv2d(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation,
+                        groups=1,
+                    )
+                )
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv2d(x, self.weight, self.bias, stride=self.stride, padding=self.padding, dilation=self.dilation, groups=self.groups)
+            res = flow.F.conv2d(
+                x,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
         return res
 
     def extra_repr(self):
-        s = '{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}'
+        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
         if self.padding != (0,) * len(self.padding):
-            s += ', padding={padding}'
+            s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
-            s += ', dilation={dilation}'
+            s += ", dilation={dilation}"
         if self.groups != 1:
-            s += ', groups={groups}'
+            s += ", groups={groups}"
         if self.bias is None:
-            s += ', bias=False'
-        if self.padding_mode != 'zeros':
-            s += ', padding_mode={padding_mode}'
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
         return s.format(**self.__dict__)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

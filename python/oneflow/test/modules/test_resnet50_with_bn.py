@@ -3,32 +3,59 @@ import unittest
 import oneflow as flow
 from resnet50_model import resnet50
 
+
 @flow.unittest.skip_unless_1n1d()
 @flow.unittest.skip_unless_1n1d()
 class TestResNet50(flow.unittest.TestCase):
-
     def test_resnet50_with_batchnorm(test_case):
         batch_size = 32
-        color_space = 'RGB'
+        color_space = "RGB"
         height = 224
         width = 224
-        output_layout = 'NCHW'
+        output_layout = "NCHW"
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
-        record_reader = flow.nn.OfrecordReader('/dataset/imagenette/ofrecord', batch_size=batch_size, data_part_num=1, part_name_suffix_length=5, shuffle_after_epoch=False)
-        record_image_decoder = flow.nn.OFRecordImageDecoder('encoded', color_space=color_space)
-        record_label_decoder = flow.nn.OfrecordRawDecoder('class/label', shape=(), dtype=flow.int32)
-        resize = flow.nn.image.Resize(resize_side='shorter', keep_aspect_ratio=True, target_size=256)
-        crop_mirror_normal = flow.nn.CropMirrorNormalize(color_space=color_space, output_layout=output_layout, crop_h=height, crop_w=width, crop_pos_y=0.5, crop_pos_x=0.5, mean=rgb_mean, std=rgb_std, output_dtype=flow.float)
-        res50_module = resnet50(replace_stride_with_dilation=[False, False, False], norm_layer=flow.nn.BatchNorm2d)
+        record_reader = flow.nn.OfrecordReader(
+            "/dataset/imagenette/ofrecord",
+            batch_size=batch_size,
+            data_part_num=1,
+            part_name_suffix_length=5,
+            shuffle_after_epoch=False,
+        )
+        record_image_decoder = flow.nn.OFRecordImageDecoder(
+            "encoded", color_space=color_space
+        )
+        record_label_decoder = flow.nn.OfrecordRawDecoder(
+            "class/label", shape=(), dtype=flow.int32
+        )
+        resize = flow.nn.image.Resize(
+            resize_side="shorter", keep_aspect_ratio=True, target_size=256
+        )
+        crop_mirror_normal = flow.nn.CropMirrorNormalize(
+            color_space=color_space,
+            output_layout=output_layout,
+            crop_h=height,
+            crop_w=width,
+            crop_pos_y=0.5,
+            crop_pos_x=0.5,
+            mean=rgb_mean,
+            std=rgb_std,
+            output_dtype=flow.float,
+        )
+        res50_module = resnet50(
+            replace_stride_with_dilation=[False, False, False],
+            norm_layer=flow.nn.BatchNorm2d,
+        )
         res50_module.train()
-        res50_module.load_state_dict(flow.load('/dataset/imagenette/resnet50_models'))
+        res50_module.load_state_dict(flow.load("/dataset/imagenette/resnet50_models"))
         of_corss_entropy = flow.nn.CrossEntropyLoss()
-        res50_module.to('cuda')
-        of_corss_entropy.to('cuda')
+        res50_module.to("cuda")
+        of_corss_entropy.to("cuda")
         learning_rate = 0.001
         mom = 0.9
-        of_sgd = flow.optim.SGD(res50_module.parameters(), lr=learning_rate, momentum=mom)
+        of_sgd = flow.optim.SGD(
+            res50_module.parameters(), lr=learning_rate, momentum=mom
+        )
         errors = 0.0
         for b in range(100):
             val_record = record_reader()
@@ -36,8 +63,8 @@ class TestResNet50(flow.unittest.TestCase):
             image_raw_buffer = record_image_decoder(val_record)
             image = resize(image_raw_buffer)[0]
             image = crop_mirror_normal(image)
-            image = image.to('cuda')
-            label = label.to('cuda')
+            image = image.to("cuda")
+            label = label.to("cuda")
             logits = res50_module(image)
             loss = of_corss_entropy(logits, label)
             loss.backward()
@@ -45,5 +72,7 @@ class TestResNet50(flow.unittest.TestCase):
             of_sgd.zero_grad()
             l = loss.numpy()[0]
         test_case.assertTrue(l < 3.5)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

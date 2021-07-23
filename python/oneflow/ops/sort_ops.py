@@ -6,10 +6,40 @@ from oneflow.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
 
-def _sort_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    assert direction in ['ASCENDING', 'DESCENDING']
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Sort_')).Op('sort').Input('in', [input]).Output('out').Attr('direction', direction).Build().InferAndTryRun().RemoteBlobList()[0]
 
-def _argsort_at_last_dim(input: oneflow._oneflow_internal.BlobDesc, direction: str='ASCENDING', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
-    assert direction in ['ASCENDING', 'DESCENDING']
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('ArgSort_')).Op('arg_sort').Input('in', [input]).Output('out').Attr('direction', direction).Build().InferAndTryRun().RemoteBlobList()[0]
+def _sort_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    assert direction in ["ASCENDING", "DESCENDING"]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
+        .Op("sort")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("direction", direction)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+def _argsort_at_last_dim(
+    input: oneflow._oneflow_internal.BlobDesc,
+    direction: str = "ASCENDING",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    assert direction in ["ASCENDING", "DESCENDING"]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("ArgSort_")
+        )
+        .Op("arg_sort")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("direction", direction)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

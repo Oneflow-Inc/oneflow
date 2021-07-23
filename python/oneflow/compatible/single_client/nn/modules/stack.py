@@ -4,9 +4,9 @@ from oneflow.compatible.single_client.python.framework.tensor import register_te
 from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import Tensor
 
-class Stack(Module):
 
-    def __init__(self, dim: int=0) -> None:
+class Stack(Module):
+    def __init__(self, dim: int = 0) -> None:
         super().__init__()
         self.dim = dim
 
@@ -21,9 +21,16 @@ class Stack(Module):
         unsqueezed = list()
         for i in range(input_list_length):
             current_shape = inputs[i].shape
-            assert input_shape == current_shape, 'Each tensor should have the same shape ! Found a tensor instance shape is: {}'.format(current_shape)
+            assert (
+                input_shape == current_shape
+            ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+                current_shape
+            )
             unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
         return flow.experimental.cat(unsqueezed, dim=self.dim)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

@@ -5,13 +5,14 @@ from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.modules.utils import _check_axis
 
-class Floor(Module):
 
+class Floor(Module):
     def __init__(self) -> None:
         super().__init__()
 
     def forward(self, x):
         return flow.F.floor(x)
+
 
 def floor_op(x):
     """
@@ -47,12 +48,16 @@ def floor_op(x):
     """
     return Floor()(x)
 
-@register_tensor_op('floor')
+
+@register_tensor_op("floor")
 def floor_op_tensor(input):
     """
     See :func:`oneflow.floor`
     """
     return Floor()(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

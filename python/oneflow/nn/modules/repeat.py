@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Repeat(Module):
 
+class Repeat(Module):
     def __init__(self, sizes) -> None:
         super().__init__()
         self.sizes = sizes
@@ -43,7 +43,8 @@ class Repeat(Module):
         out = flow.reshape(tmp_tensor, out_reshape)
         return out
 
-@register_tensor_op('repeat')
+
+@register_tensor_op("repeat")
 def repeat_op(x, sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
@@ -70,6 +71,9 @@ def repeat_op(x, sizes):
         flow.Size([1, 3, 2, 4])
     """
     return Repeat(sizes=sizes)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

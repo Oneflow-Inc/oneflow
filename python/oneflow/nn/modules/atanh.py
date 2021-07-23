@@ -2,13 +2,14 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Atanh(Module):
 
+class Atanh(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
         return flow.F.atanh(x)
+
 
 def atanh_op(input):
     """Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
@@ -34,7 +35,8 @@ def atanh_op(input):
     """
     return Atanh()(input)
 
-@register_tensor_op('atanh')
+
+@register_tensor_op("atanh")
 def atanh_op_tensor(x):
     """
     atanh() -> Tensor
@@ -43,6 +45,7 @@ def atanh_op_tensor(x):
     """
     return Atanh()(x)
 
+
 def arctanh_op(input):
     """
 
@@ -50,13 +53,17 @@ def arctanh_op(input):
     """
     return Atanh()(input)
 
-@register_tensor_op('arctanh')
+
+@register_tensor_op("arctanh")
 def arctanh_op_tensor(input):
     """
 
     Alias for :func:`oneflow.atanh`
     """
     return Atanh()(input)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

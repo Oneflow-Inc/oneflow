@@ -4,6 +4,7 @@ import oneflow as flow
 import numpy as np
 from test_util import GenArgList, FlattenArray, Array2Numpy, Index2Coordinate
 
+
 def gen_numpy_test_sample(input, padding):
     (c_idx, h_idx, w_idx) = (1, 2, 3)
     pad_left = padding[0]
@@ -13,7 +14,7 @@ def gen_numpy_test_sample(input, padding):
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_reflection_pad2d(input, pad_shape):
-        numpy_reflect = np.pad(input, pad_shape, 'reflect')
+        numpy_reflect = np.pad(input, pad_shape, "reflect")
         return numpy_reflect
 
     def _np_reflection_pad2d_grad(src, dest):
@@ -45,23 +46,29 @@ def gen_numpy_test_sample(input, padding):
             ip_x = ip_x - pad_left
             ip_y = ip_y - pad_top
             src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
-            dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            dest_index = (
+                n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            )
             array_dest[dest_index] += array_src[src_index]
         numpy_dest = Array2Numpy(array_dest, dest.shape)
         return numpy_dest
+
     output = _np_reflection_pad2d(input, pad_shape)
     grad = _np_reflection_pad2d_grad(output, input)
     return (output, grad)
 
+
 def _test_reflection_pad2d(test_case, shape, padding, device):
     np_input = np.random.randn(*shape).astype(np.float32)
-    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     if isinstance(padding, int):
         boundary = [padding, padding, padding, padding]
     elif isinstance(padding, tuple) and len(padding) == 4:
         boundary = [padding[0], padding[1], padding[2], padding[3]]
     else:
-        raise ValueError('padding must be in or list or tuple!')
+        raise ValueError("padding must be in or list or tuple!")
     (np_out, np_grad) = gen_numpy_test_sample(np_input, boundary)
     layer = flow.nn.ReflectionPad2d(padding=padding)
     of_out = layer(of_input)
@@ -70,15 +77,17 @@ def _test_reflection_pad2d(test_case, shape, padding, device):
     of_out.backward()
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 0.0001, 0.0001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestReflectionPad2dModule(flow.unittest.TestCase):
-
     def test_reflection_pad2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict['shape'] = [(1, 2, 3, 4), (8, 3, 4, 4)]
-        arg_dict['padding'] = [2, (1, 1, 2, 2)]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
+        arg_dict["padding"] = [2, (1, 1, 2, 2)]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_reflection_pad2d(test_case, *arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

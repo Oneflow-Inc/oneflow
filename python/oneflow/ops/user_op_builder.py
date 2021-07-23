@@ -24,10 +24,11 @@ import oneflow as flow
 import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
+
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
-class UserOp(object):
 
+class UserOp(object):
     def __init__(self, op_name, op_type_name=None):
         self.op_conf_ = op_conf_util.OperatorConf()
         self.op_conf_.name = op_name
@@ -51,24 +52,34 @@ class UserOp(object):
         remote_blob_list = []
         for k in self.op_conf_.user_conf.output:
             if k not in self.output_arg_key_list_:
-                raise ValueError('output_arg_name {} of {} op is not set in python op builder'.format(k, self.op_conf_.name))
+                raise ValueError(
+                    "output_arg_name {} of {} op is not set in python op builder".format(
+                        k, self.op_conf_.name
+                    )
+                )
         for output_arg_name in self.output_arg_key_list_:
             assert output_arg_name in self.op_conf_.user_conf.output
             for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
-                lbi.blob_name = '{}_{}'.format(output_arg_name, i)
+                lbi.blob_name = "{}_{}".format(output_arg_name, i)
                 remote_blob_obj = self.MakeRemoteBlob(lbi)
                 remote_blob_list.append(remote_blob_obj)
                 if flow.eager_execution_enabled():
-                    gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(remote_blob_obj.logical_blob_name, remote_blob_obj.blob_object)
+                    gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
+                        remote_blob_obj.logical_blob_name, remote_blob_obj.blob_object
+                    )
         return tuple(remote_blob_list)
 
     def RemoteBlobDict(self):
         remote_blob_dict = {}
         for k in self.op_conf_.user_conf.output:
             if k not in self.output_arg_key_list_:
-                raise ValueError('output_arg_name {} of {} op is not set in python op builder'.format(k, self.op_conf_.name))
+                raise ValueError(
+                    "output_arg_name {} of {} op is not set in python op builder".format(
+                        k, self.op_conf_.name
+                    )
+                )
         for output_arg_name in self.output_arg_key_list_:
             assert output_arg_name in self.op_conf_.user_conf.output
             if output_arg_name not in remote_blob_dict:
@@ -76,7 +87,7 @@ class UserOp(object):
             for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
-                lbi.blob_name = '{}_{}'.format(output_arg_name, i)
+                lbi.blob_name = "{}_{}".format(output_arg_name, i)
                 remote_blob_dict[output_arg_name].append(self.MakeRemoteBlob(lbi))
         return remote_blob_dict
 
@@ -85,18 +96,19 @@ class UserOp(object):
         assert len(blobs) == 1
         return blobs[0]
 
-class UserOpModule(object):
 
+class UserOpModule(object):
     @property
     def opkernel_object(self):
         return self.opkernel_object_
 
     def set_opkernel_object(self, opkernel_object):
-        assert not hasattr(self, 'opkernel_object_')
+        assert not hasattr(self, "opkernel_object_")
         self.opkernel_object_ = opkernel_object
 
     def InitOpKernel(self):
         raise NotImplementedError
+
 
 def api_user_op_builder(op_name):
     """Build a wrapper of user op.
@@ -123,14 +135,15 @@ def api_user_op_builder(op_name):
     api = enable_if.unique([lazy_user_op_builder, eager_user_op_builder])
     return api(op_name)
 
+
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(LazyUserOp, op_name, None)
 
-class LazyUserOp(UserOp):
 
+class LazyUserOp(UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
@@ -141,14 +154,15 @@ class LazyUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
+
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_user_op_builder(op_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(EagerUserOp, op_name, None)
 
-class EagerUserOp(UserOp):
 
+class EagerUserOp(UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
@@ -159,13 +173,14 @@ class EagerUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
+
 def api_consistent_user_op_builder(op_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(ConsistentUserOp, op_name, None)
 
-class ConsistentUserOp(UserOp):
 
+class ConsistentUserOp(UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
@@ -176,14 +191,16 @@ class ConsistentUserOp(UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
-class UserOpConfBuilder(object):
 
+class UserOpConfBuilder(object):
     def __init__(self, user_op_or_module_class, op_name, op_type_name):
         self.user_op_ = user_op_or_module_class(op_name, op_type_name)
 
     def CheckAndComplete(self):
-        assert self.user_op_.op_conf_.user_conf.op_type_name != ''
-        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(self.user_op_.op_conf_)
+        assert self.user_op_.op_conf_.user_conf.op_type_name != ""
+        self.user_op_.op_conf_ = c_api_util.CheckAndCompleteUserOpConf(
+            self.user_op_.op_conf_
+        )
         return self
 
     def Build(self):
@@ -202,7 +219,8 @@ class UserOpConfBuilder(object):
         user_conf = self.user_op_.op_conf_.user_conf
 
         def GetLbn(output_name, i):
-            return '{}/{}_{}'.format(op_name, output_name, i)
+            return "{}/{}_{}".format(op_name, output_name, i)
+
         for (output_name, output) in user_conf.output.items():
             output.s[:] = [GetLbn(output_name, i) for i in range(len(output.s))]
         return self
@@ -231,7 +249,7 @@ class UserOpConfBuilder(object):
         """
         assert isinstance(input_blob_list, (tuple, list))
         input_conf = self.user_op_.op_conf_.user_conf.input
-        input_conf[input_name].ClearField('s')
+        input_conf[input_name].ClearField("s")
         for input_blob in input_blob_list:
             input_conf[input_name].s.append(input_blob.unique_name)
         return self
@@ -241,7 +259,7 @@ class UserOpConfBuilder(object):
         assert input_blob_size >= 0
         assert input_name not in input_conf
         for i in range(input_blob_size):
-            unique_name = '%s/%s_%s' % (self.user_op_.op_conf_.name, input_name, i)
+            unique_name = "%s/%s_%s" % (self.user_op_.op_conf_.name, input_name, i)
             input_conf[input_name].s.append(unique_name)
         return self
 
@@ -258,7 +276,7 @@ class UserOpConfBuilder(object):
         assert isinstance(num, int) and num >= 1
         out_lbns = []
         for i in range(num):
-            lbn = '{}/{}_{}'.format(self.user_op_.op_conf_.name, output_name, i)
+            lbn = "{}/{}_{}".format(self.user_op_.op_conf_.name, output_name, i)
             out_lbns.append(lbn)
         self.user_op_.op_conf_.user_conf.output[output_name].s[:] = out_lbns
         self.user_op_.output_arg_key_list_.append(output_name)
@@ -278,11 +296,15 @@ class UserOpConfBuilder(object):
             [type]: [description]
         """
         if attr_type_name != None:
-            print('WARNING: Argument \'attr_type_name\' of UserOpConfBuilder.Attr has been deprecated. Please remove it.\n\n            For instance:\n                -     .Attr("out_num", out_num, "AttrTypeInt64")\n                +     .Attr("out_num", out_num)\n                        ')
+            print(
+                'WARNING: Argument \'attr_type_name\' of UserOpConfBuilder.Attr has been deprecated. Please remove it.\n\n            For instance:\n                -     .Attr("out_num", out_num, "AttrTypeInt64")\n                +     .Attr("out_num", out_num)\n                        '
+            )
             print(traceback.format_stack()[-2])
         attribute = user_op_attr_cfg.AttrValue()
         assert isinstance(attr_name, str)
-        attr_type = oneflow._oneflow_internal.GetUserOpAttrType(self.user_op_.op_conf_.user_conf.op_type_name, attr_name)
+        attr_type = oneflow._oneflow_internal.GetUserOpAttrType(
+            self.user_op_.op_conf_.user_conf.op_type_name, attr_name
+        )
         if attr_type == user_op_attr_cfg.kAtInt32:
             assert isinstance(attr_value, int)
             attribute.set_at_int32(attr_value)
@@ -309,7 +331,9 @@ class UserOpConfBuilder(object):
                 attribute_mutable_at_shape.add_dim(x)
         elif attr_type == user_op_attr_cfg.kAtDataType:
             assert attr_value in oneflow.dtypes()
-            attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(attr_value)
+            attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+                attr_value
+            )
             assert isinstance(attr_value, int)
             attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
         elif attr_type == user_op_attr_cfg.kAtListInt32:
@@ -340,7 +364,9 @@ class UserOpConfBuilder(object):
                 attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
-            attribute_mutable_at_list_shape = attribute.mutable_at_list_shape().mutable_val()
+            attribute_mutable_at_list_shape = (
+                attribute.mutable_at_list_shape().mutable_val()
+            )
             for x in attr_value:
                 assert isinstance(x, (tuple, list))
                 shape = shape_cfg.ShapeProto()
@@ -355,16 +381,21 @@ class UserOpConfBuilder(object):
                 assert isinstance(x, str)
                 attribute_mutable_at_list_string.add_val(x)
         else:
-            raise ValueError('Invalid op attribute type {}'.format(attr_type))
-        self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(text_format.Parse(str(attribute), attr_value_pb.AttrValue()))
+            raise ValueError("Invalid op attribute type {}".format(attr_type))
+        self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(
+            text_format.Parse(str(attribute), attr_value_pb.AttrValue())
+        )
         return self
 
+
 def api_user_op_module_builder(op_type_name):
-    api = enable_if.unique([lazy_user_op_module_builder, eager_logical_user_op_module_builder])
+    api = enable_if.unique(
+        [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
+    )
     return api(op_type_name)
 
-class UserOpModuleBuilder(UserOpConfBuilder):
 
+class UserOpModuleBuilder(UserOpConfBuilder):
     def __init__(self, *args, **kwargs):
         UserOpConfBuilder.__init__(self, *args, **kwargs)
         self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
@@ -374,7 +405,12 @@ class UserOpModuleBuilder(UserOpConfBuilder):
         return self.user_op_
 
     def Op(self, op_type_name):
-        raise ValueError("user op module builder of {} can't call '.Op(op_type_name)' method".format(op_type_name))
+        raise ValueError(
+            "user op module builder of {} can't call '.Op(op_type_name)' method".format(
+                op_type_name
+            )
+        )
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_module_builder(op_type_name):
@@ -382,14 +418,15 @@ def lazy_user_op_module_builder(op_type_name):
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
 
+
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_logical_user_op_module_builder(op_type_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
 
-class LazyUserOpModule(UserOpModule, UserOp):
 
+class LazyUserOpModule(UserOpModule, UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
@@ -404,17 +441,22 @@ class LazyUserOpModule(UserOpModule, UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
-class EagerLogicalUserOpModule(UserOpModule, UserOp):
 
+class EagerLogicalUserOpModule(UserOpModule, UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
-
         def BuildInstruction(builder):
-            if not isinstance(self.op_conf, oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf):
-                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(str(self.op_conf))
+            if not isinstance(
+                self.op_conf,
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf,
+            ):
+                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
+
         oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
@@ -425,9 +467,16 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
+
 def api_consistent_user_op_module_builder(op_type_name):
-    api = enable_if.unique([lazy_consistent_user_op_module_builder, eager_consistent_user_op_module_builder])
+    api = enable_if.unique(
+        [
+            lazy_consistent_user_op_module_builder,
+            eager_consistent_user_op_module_builder,
+        ]
+    )
     return api(op_type_name)
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_consistent_user_op_module_builder(op_type_name):
@@ -435,14 +484,15 @@ def lazy_consistent_user_op_module_builder(op_type_name):
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
 
+
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_consistent_user_op_module_builder(op_type_name):
     job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
 
-class LazyConsistentUserOpModule(UserOpModule, UserOp):
 
+class LazyConsistentUserOpModule(UserOpModule, UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
@@ -457,17 +507,22 @@ class LazyConsistentUserOpModule(UserOpModule, UserOp):
     def MakeRemoteBlob(self, lbi):
         return remote_blob_util.RemoteBlob(lbi)
 
-class EagerConsistentUserOpModule(UserOpModule, UserOp):
 
+class EagerConsistentUserOpModule(UserOpModule, UserOp):
     def __init__(self, op_name, op_type_name):
         UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
-
         def BuildInstruction(builder):
-            if not isinstance(self.op_conf, oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf):
-                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(str(self.op_conf))
+            if not isinstance(
+                self.op_conf,
+                oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf,
+            ):
+                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
+
         oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):

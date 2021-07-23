@@ -8,7 +8,13 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
-def constant(value: Union[int, float], dtype: Optional[flow.dtype]=None, shape: Optional[Sequence[int]]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def constant(
+    value: Union[int, float],
+    dtype: Optional[flow.dtype] = None,
+    shape: Optional[Sequence[int]] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a constant Blob.
 
     Args:
@@ -48,7 +54,7 @@ def constant(value: Union[int, float], dtype: Optional[flow.dtype]=None, shape: 
 
     """
     if name is None:
-        name = id_util.UniqueStr('Constant_')
+        name = id_util.UniqueStr("Constant_")
     assert value is not None
     assert dtype is not None
     if not isinstance(value, (int, float)):
@@ -65,9 +71,26 @@ def constant(value: Union[int, float], dtype: Optional[flow.dtype]=None, shape: 
         assert isinstance(shape, (list, tuple))
     else:
         shape = []
-    return flow.user_op_builder(name).Op('constant').Output('out').Attr('floating_value', floating_value).Attr('integer_value', integer_value).Attr('is_floating_value', is_floating_value).Attr('dtype', dtype).Attr('shape', shape).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name)
+        .Op("constant")
+        .Output("out")
+        .Attr("floating_value", floating_value)
+        .Attr("integer_value", integer_value)
+        .Attr("is_floating_value", is_floating_value)
+        .Attr("dtype", dtype)
+        .Attr("shape", shape)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def constant_scalar(value: Union[int, float], dtype: Optional[flow.dtype]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def constant_scalar(
+    value: Union[int, float],
+    dtype: Optional[flow.dtype] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a constant scalar Blob.
 
     Args:
@@ -101,7 +124,13 @@ def constant_scalar(value: Union[int, float], dtype: Optional[flow.dtype]=None, 
     """
     return flow.constant(value, dtype=dtype, shape=[1])
 
-def constant_like(like: oneflow._oneflow_internal.BlobDesc, value: Union[int, float], dtype: Optional[flow.dtype]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def constant_like(
+    like: oneflow._oneflow_internal.BlobDesc,
+    value: Union[int, float],
+    dtype: Optional[flow.dtype] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a constant Blob that has the same shape as `like`.
 
     Args:
@@ -144,8 +173,12 @@ def constant_like(like: oneflow._oneflow_internal.BlobDesc, value: Union[int, fl
 
     """
     op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, 'name', name if name is not None else id_util.UniqueStr('ConstantLike_'))
-    setattr(op_conf.constant_like_conf, 'like', like.unique_name)
+    setattr(
+        op_conf,
+        "name",
+        name if name is not None else id_util.UniqueStr("ConstantLike_"),
+    )
+    setattr(op_conf.constant_like_conf, "like", like.unique_name)
     if isinstance(value, int):
         op_conf.constant_like_conf.int_operand = value
     elif isinstance(value, float):
@@ -153,10 +186,14 @@ def constant_like(like: oneflow._oneflow_internal.BlobDesc, value: Union[int, fl
     else:
         raise NotImplementedError
     if dtype is not None:
-        setattr(op_conf.constant_like_conf, 'data_type', oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(dtype))
-    setattr(op_conf.constant_like_conf, 'out', 'out')
+        setattr(
+            op_conf.constant_like_conf,
+            "data_type",
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(dtype),
+        )
+    setattr(op_conf.constant_like_conf, "out", "out")
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, 'op_name', op_conf.name)
-    setattr(out_lbi, 'blob_name', 'out')
+    setattr(out_lbi, "op_name", op_conf.name)
+    setattr(out_lbi, "blob_name", "out")
     return remote_blob_util.RemoteBlob(out_lbi)

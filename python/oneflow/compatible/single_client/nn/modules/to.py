@@ -3,8 +3,8 @@ from oneflow.compatible.single_client.python.nn.module import Module
 from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
 from typing import Optional, Union
 
-class To(Module):
 
+class To(Module):
     def __init__(self, copy):
         super().__init__()
         self.copy = copy
@@ -19,7 +19,8 @@ class To(Module):
                 result = flow.F.cast(result, dtype=dtype)
         return result
 
-@register_tensor_op('to')
+
+@register_tensor_op("to")
 def to_op(input, *args, **kwargs):
     """Performs Tensor dtype and/or device conversion. 
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
@@ -52,9 +53,9 @@ def to_op(input, *args, **kwargs):
         True
 
     """
-    copy = kwargs.get('copy', False)
-    device = kwargs.get('device', None)
-    dtype = kwargs.get('dtype', None)
+    copy = kwargs.get("copy", False)
+    device = kwargs.get("device", None)
+    dtype = kwargs.get("dtype", None)
     if len(args) > 0:
         if isinstance(args[0], flow.Tensor):
             if len(args) == 2:
@@ -75,7 +76,10 @@ def to_op(input, *args, **kwargs):
             return To(copy)(input, device, dtype)
     if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
         return To(copy)(input, device, dtype)
-    raise TypeError('to() received an invalid combination of arguments')
-if __name__ == '__main__':
+    raise TypeError("to() received an invalid combination of arguments")
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

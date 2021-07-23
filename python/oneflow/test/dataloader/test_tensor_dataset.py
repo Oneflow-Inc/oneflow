@@ -4,8 +4,8 @@ import oneflow as flow
 import oneflow.utils.data as Data
 import oneflow.nn as nn
 
-class LinearNet(nn.Module):
 
+class LinearNet(nn.Module):
     def __init__(self, n_feature):
         super(LinearNet, self).__init__()
         self.linear = nn.Linear(n_feature, 1)
@@ -14,10 +14,13 @@ class LinearNet(nn.Module):
         y = self.linear(x)
         return y
 
-@flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(not flow.unittest.env.eager_execution_enabled(), ".numpy() doesn't work in lazy mode")
-class TestTensorDataset(flow.unittest.TestCase):
 
+@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestTensorDataset(flow.unittest.TestCase):
     def test_tensor_dataset(test_case):
         num_inputs = 2
         num_examples = 1000
@@ -28,9 +31,13 @@ class TestTensorDataset(flow.unittest.TestCase):
         flow.nn.init.constant_(net.linear.bias, val=0)
         loss = nn.MSELoss()
         optimizer = flow.optim.SGD(net.parameters(), lr=0.03)
-        features = flow.tensor(np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float)
+        features = flow.tensor(
+            np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float
+        )
         labels = true_w[0] * features[:, 0] + true_w[1] * features[:, 1] + true_b
-        labels += flow.tensor(np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float)
+        labels += flow.tensor(
+            np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float
+        )
         batch_size = 10
         dataset = Data.TensorDataset(features, labels)
         data_iter = Data.DataLoader(dataset, batch_size, shuffle=True, num_workers=0)
@@ -44,5 +51,7 @@ class TestTensorDataset(flow.unittest.TestCase):
                 optimizer.step()
             if epoch == num_epochs:
                 test_case.assertLess(l.numpy(), 0.00019)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

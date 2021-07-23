@@ -1,10 +1,17 @@
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.python.framework import (
+    remote_blob as remote_blob_util,
+)
 from typing import Optional
 import oneflow._oneflow_internal
 
-def diag(input: oneflow._oneflow_internal.BlobDesc, diagonal: Optional[int]=0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def diag(
+    input: oneflow._oneflow_internal.BlobDesc,
+    diagonal: Optional[int] = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator compute diagonal. 
 
     If input is a vector, then returns a square matrix with the elements of input as the diagonal.
@@ -37,4 +44,13 @@ def diag(input: oneflow._oneflow_internal.BlobDesc, diagonal: Optional[int]=0, n
         # out [1. 5. 9.]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Diag_')).Op('diag').Input('in', [input]).Attr('diagonal', int(diagonal)).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Diag_"))
+        .Op("diag")
+        .Input("in", [input])
+        .Attr("diagonal", int(diagonal))
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

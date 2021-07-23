@@ -2,8 +2,8 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
-class Triu(Module):
 
+class Triu(Module):
     def __init__(self, diagonal=0):
         super().__init__()
         self.diagonal = diagonal
@@ -11,7 +11,8 @@ class Triu(Module):
     def forward(self, x):
         return flow.F.triu(x, self.diagonal)
 
-@register_tensor_op('triu')
+
+@register_tensor_op("triu")
 def triu_op(x, diagonal=0):
     """Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
     the other elements of the result tensor out are set to 0.
@@ -35,6 +36,9 @@ def triu_op(x, diagonal=0):
 
     """
     return Triu(diagonal)(x)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)

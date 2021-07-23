@@ -4,8 +4,8 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 import numpy as np
 
-class FutureRemoteBlobs(object):
 
+class FutureRemoteBlobs(object):
     def __init__(self):
         self.inited_ = False
 
@@ -23,8 +23,8 @@ class FutureRemoteBlobs(object):
         self.inited_ = True
         return self
 
-class LazyFutureRemoteBlobs(FutureRemoteBlobs):
 
+class LazyFutureRemoteBlobs(FutureRemoteBlobs):
     def __init__(self, session):
         super().__init__()
         self.session_ = session
@@ -32,7 +32,7 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
         self.out_remote_blob_pullers_ = []
         self.finished_cnt_ = 0
         self.data_delivered_ = False
-        self.async_get_callback_ = lambda : None
+        self.async_get_callback_ = lambda: None
 
     def get(self):
         assert self.inited_
@@ -49,7 +49,10 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
         def Callback():
             assert self.finished_cnt_ <= pullers_cnt
             if self.finished_cnt_ == pullers_cnt:
-                callback(self._TrySyncAndGetResultNdarray(self.out_remote_blob_pullers_))
+                callback(
+                    self._TrySyncAndGetResultNdarray(self.out_remote_blob_pullers_)
+                )
+
         try:
             self.cond_var_.acquire()
             if self.finished_cnt_ == pullers_cnt:
@@ -126,13 +129,17 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
         if isinstance(out_remote_blobs, oneflow._oneflow_internal.MirroredBlob):
             return _MirroredBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
-            return type(out_remote_blobs)((self._MakeRemoteBlobPullers(x) for x in out_remote_blobs))
+            return type(out_remote_blobs)(
+                (self._MakeRemoteBlobPullers(x) for x in out_remote_blobs)
+            )
         if isinstance(out_remote_blobs, dict):
-            return {k: self._MakeRemoteBlobPullers(v) for (k, v) in out_remote_blobs.items()}
+            return {
+                k: self._MakeRemoteBlobPullers(v) for (k, v) in out_remote_blobs.items()
+            }
         raise NotImplementedError
 
-class _BlobPuller(object):
 
+class _BlobPuller(object):
     def __init__(self, session):
         self.session_ = session
 
@@ -143,8 +150,8 @@ class _BlobPuller(object):
     def result(self):
         raise NotImplementedError
 
-class _ConsistentBlobPuller(_BlobPuller):
 
+class _ConsistentBlobPuller(_BlobPuller):
     def __init__(self, consistent_blob, session):
         _BlobPuller.__init__(self, session)
         self.result_ = None
@@ -159,18 +166,25 @@ class _ConsistentBlobPuller(_BlobPuller):
         yield self
 
     def AsyncPull(self, pull_cb):
-
         def PullCallback(of_blob):
-            self.result_ = local_blob_util.LocalBlob(of_blob.CopyToNdarray(), self.consistent_blob_.is_dynamic)
+            self.result_ = local_blob_util.LocalBlob(
+                of_blob.CopyToNdarray(), self.consistent_blob_.is_dynamic
+            )
             pull_cb()
+
         self.session_.AsyncPull(self.consistent_blob_.op_name, PullCallback)
 
-class _MirroredBlobPuller(_BlobPuller):
 
+class _MirroredBlobPuller(_BlobPuller):
     def __init__(self, mirrored_blob, session):
         _BlobPuller.__init__(self, session)
         self.mirrored_blob_ = mirrored_blob
-        self.sub_pullers_ = tuple((_ConsistentBlobPuller(x, self.session_) for x in mirrored_blob.sub_consistent_blob_list))
+        self.sub_pullers_ = tuple(
+            (
+                _ConsistentBlobPuller(x, self.session_)
+                for x in mirrored_blob.sub_consistent_blob_list
+            )
+        )
         self.local_mirrored_blob_ = None
 
     @property
@@ -180,17 +194,19 @@ class _MirroredBlobPuller(_BlobPuller):
         local_blob_list = [x.result.numpy() for x in self.sub_pullers_]
         local_numpy = local_blob_list[0]
         if len(local_blob_list) > 1:
-            print('WARNING: return tensor list will concat as axis = 0.')
+            print("WARNING: return tensor list will concat as axis = 0.")
             local_numpy = np.concatenate(local_blob_list, axis=0)
-        self.local_mirrored_blob_ = local_blob_util.LocalBlob(local_numpy, self.mirrored_blob_.is_dynamic)
+        self.local_mirrored_blob_ = local_blob_util.LocalBlob(
+            local_numpy, self.mirrored_blob_.is_dynamic
+        )
         return self.local_mirrored_blob_
 
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_:
             yield x
 
-class EagerFutureRemoteBlobs(FutureRemoteBlobs):
 
+class EagerFutureRemoteBlobs(FutureRemoteBlobs):
     def __init__(self):
         super().__init__()
         self.blob_getters_ = None
@@ -210,9 +226,13 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
 
     def _MakeRemoteBlobGetters(self, remote_blobs):
         if isinstance(remote_blobs, (list, tuple)):
-            return type(remote_blobs)((self._MakeRemoteBlobGetters(blob) for blob in remote_blobs))
+            return type(remote_blobs)(
+                (self._MakeRemoteBlobGetters(blob) for blob in remote_blobs)
+            )
         elif isinstance(remote_blobs, dict):
-            return {k: self._MakeRemoteBlobGetters(v) for (k, v) in remote_blobs.items()}
+            return {
+                k: self._MakeRemoteBlobGetters(v) for (k, v) in remote_blobs.items()
+            }
         elif isinstance(remote_blobs, oneflow._oneflow_internal.EagerBlobTrait):
             return _EagerBlobGetter(remote_blobs)
         else:
@@ -229,8 +249,8 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
         else:
             raise NotImplementedError(type(getter))
 
-class _EagerBlobGetter(object):
 
+class _EagerBlobGetter(object):
     def __init__(self, eager_blob):
         assert isinstance(eager_blob, oneflow._oneflow_internal.EagerBlobTrait)
         self.eager_blob_ = eager_blob

@@ -5,7 +5,13 @@ import os
 import random
 from oneflow.compatible.single_client import typing as oft
 from collections import OrderedDict
-from test_util import GenArgList, GenArgDict, type_name_to_flow_type, type_name_to_np_type
+from test_util import (
+    GenArgList,
+    GenArgDict,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
+
 
 def _compare_with_np(test_case, x_shape, dtype):
     x = np.random.randn(*x_shape).astype(type_name_to_np_type[dtype])
@@ -13,9 +19,9 @@ def _compare_with_np(test_case, x_shape, dtype):
     for idx in range(0, len(ret)):
         test_case.assertEqual(ret[idx], x.shape[idx])
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSize(flow.unittest.TestCase):
-
     def test_size(test_case):
         size = flow.Size((4, 3, 10, 5))
         test_case.assertTrue(size[0] == 4)
@@ -41,8 +47,14 @@ class TestSize(flow.unittest.TestCase):
 
     def test_offical(test_case):
         arg_dict = OrderedDict()
-        arg_dict['x_shape'] = [(10,), (20, 10), (20, 10, 10), (20, 10, 10, 3), (20, 10, 10, 3, 3)]
-        arg_dict['dtype'] = ['float32', 'int32', 'double']
+        arg_dict["x_shape"] = [
+            (10,),
+            (20, 10),
+            (20, 10, 10),
+            (20, 10, 10, 3),
+            (20, 10, 10, 3, 3),
+        ]
+        arg_dict["dtype"] = ["float32", "int32", "double"]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -88,5 +100,7 @@ class TestSize(flow.unittest.TestCase):
         test_case.assertTrue(size[:2] == (2, 3))
         test_case.assertTrue(size[-3:] == flow.Size((3, 4, 5)))
         test_case.assertTrue(size[-3:-1] == flow.Size((3, 4)))
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

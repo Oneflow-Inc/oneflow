@@ -2,26 +2,31 @@ from typing import List
 import collections.abc as container_abcs
 from itertools import repeat
 
-def _ntuple(n):
 
+def _ntuple(n):
     def parse(x):
         if isinstance(x, container_abcs.Iterable):
             return tuple(x)
         return tuple(repeat(x, n))
+
     return parse
 
-def _getint():
 
+def _getint():
     def parse(x):
         if isinstance(x, container_abcs.Iterable):
             return int(x[0])
         return int(x)
+
     return parse
+
+
 _getint = _getint()
 _single = _ntuple(1)
 _pair = _ntuple(2)
 _triple = _ntuple(3)
 _quadruple = _ntuple(4)
+
 
 def _reverse_repeat_tuple(t, n):
     """Reverse the order of `t` and repeat each element for `n` times.
@@ -30,12 +35,19 @@ def _reverse_repeat_tuple(t, n):
     """
     return tuple((x for x in reversed(t) for _ in range(n)))
 
+
 def _list_with_default(out_size, defaults):
     if isinstance(out_size, int):
         return out_size
     if len(defaults) <= len(out_size):
-        raise ValueError('Input dimension should be at least {}'.format(len(out_size) + 1))
-    return [v if v is not None else d for (v, d) in zip(out_size, defaults[-len(out_size):])]
+        raise ValueError(
+            "Input dimension should be at least {}".format(len(out_size) + 1)
+        )
+    return [
+        v if v is not None else d
+        for (v, d) in zip(out_size, defaults[-len(out_size) :])
+    ]
+
 
 def _check_axis(axis, shape):
     ndim = len(shape)
@@ -43,14 +55,21 @@ def _check_axis(axis, shape):
         axis = list(range(len(shape)))
     if isinstance(axis, int):
         axis = [axis]
-    assert isinstance(axis, (list, tuple)), 'Invalid axis {}'.format(axis)
+    assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
     axis = list(axis)
     for i in range(len(axis)):
-        assert -ndim <= axis[i] <= ndim - 1, 'Dimension out of range (expected to be in range of [{}, {}], but got {})'.format(-ndim, ndim - 1, axis[i])
+        assert (
+            -ndim <= axis[i] <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, axis[i]
+        )
         if axis[i] < 0:
             axis[i] = axis[i] + ndim
     return axis
 
+
 def _check_inplace_valid(x):
     if x.is_leaf and x.requires_grad:
-        raise RuntimeError('a leaf Tensor that requires grad is being used in an in-place operation')
+        raise RuntimeError(
+            "a leaf Tensor that requires grad is being used in an in-place operation"
+        )

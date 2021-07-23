@@ -12,21 +12,29 @@ import oneflow.framework.module as module_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.distribute as distribute_util
 import oneflow._oneflow_internal
+
 IntPair = Tuple[int, int]
+
 
 def calc_same_padding(input_size, filter_size, dilation_rate, stride):
     effective_filter_size = (filter_size - 1) * dilation_rate + 1
     output_size = (input_size + stride - 1) // stride
-    padding_needed = max(0, int((output_size - 1) * stride + effective_filter_size - input_size))
+    padding_needed = max(
+        0, int((output_size - 1) * stride + effective_filter_size - input_size)
+    )
     return padding_needed
 
+
 def get_dhw_offset(channel_pos):
-    if channel_pos == 'channels_first':
+    if channel_pos == "channels_first":
         return 2
     else:
         return 1
 
-def check_conv_cudnn_padding_support(input_size, pad, filter_size, dilation_rate, stride, is_dynamic):
+
+def check_conv_cudnn_padding_support(
+    input_size, pad, filter_size, dilation_rate, stride, is_dynamic
+):
     assert len(pad) == 2
     if pad[0] == pad[1]:
         return True
@@ -34,17 +42,38 @@ def check_conv_cudnn_padding_support(input_size, pad, filter_size, dilation_rate
         return False
     else:
         effective_filter_size = (filter_size - 1) * dilation_rate + 1
-        cudnn_output_size = (input_size + 2 * pad[0] - effective_filter_size + stride) // stride
-        output_size = (input_size + pad[0] + pad[1] - effective_filter_size + stride) // stride
+        cudnn_output_size = (
+            input_size + 2 * pad[0] - effective_filter_size + stride
+        ) // stride
+        output_size = (
+            input_size + pad[0] + pad[1] - effective_filter_size + stride
+        ) // stride
         return cudnn_output_size == output_size
 
-def check_ndim_conv_cudnn_padding_support(inputs_shape, ndim_pads_list, kernel_sizes, dilations, strides, dhw_offset, is_dynamic):
+
+def check_ndim_conv_cudnn_padding_support(
+    inputs_shape,
+    ndim_pads_list,
+    kernel_sizes,
+    dilations,
+    strides,
+    dhw_offset,
+    is_dynamic,
+):
     ndims = len(ndim_pads_list)
     for i in range(ndims):
-        cudnn_support = check_conv_cudnn_padding_support(inputs_shape[dhw_offset + i], ndim_pads_list[i], kernel_sizes[i], dilations[i], strides[i], is_dynamic)
+        cudnn_support = check_conv_cudnn_padding_support(
+            inputs_shape[dhw_offset + i],
+            ndim_pads_list[i],
+            kernel_sizes[i],
+            dilations[i],
+            strides[i],
+            is_dynamic,
+        )
         if not cudnn_support:
             return False
     return True
+
 
 def get_ndim_pads_list(padding, dhw_offset, ndims):
     pads_list = []
@@ -56,26 +85,34 @@ def get_ndim_pads_list(padding, dhw_offset, ndims):
             assert len(pad) == 2
             pad = [pad[0], pad[1]]
         else:
-            raise ValueError('padding must be list tuple or int')
+            raise ValueError("padding must be list tuple or int")
         if i in range(dhw_offset, dhw_offset + ndims):
             pads_list.append(pad)
         else:
             assert pad == [0, 0]
     return pads_list
 
-def calc_ndim_same_padding(input_shape, padding, kernel_sizes, dilations, strides, dhw_offset):
+
+def calc_ndim_same_padding(
+    input_shape, padding, kernel_sizes, dilations, strides, dhw_offset
+):
     ndim_padding_needed = []
     ndims = len(kernel_sizes)
     for i in range(ndims):
-        ndim_padding_needed.append(calc_same_padding(input_shape[dhw_offset + i], kernel_sizes[i], dilations[i], strides[i]))
+        ndim_padding_needed.append(
+            calc_same_padding(
+                input_shape[dhw_offset + i], kernel_sizes[i], dilations[i], strides[i]
+            )
+        )
     pads_small = [padding_needed // 2 for padding_needed in ndim_padding_needed]
     pads_large = [ndim_padding_needed[i] - pads_small[i] for i in range(ndims)]
-    if padding.upper() == 'SAME_LOWER':
+    if padding.upper() == "SAME_LOWER":
         return [[pads_large[i], pads_small[i]] for i in range(ndims)]
-    elif padding.upper() == 'SAME_UPPER':
+    elif padding.upper() == "SAME_UPPER":
         return [[pads_small[i], pads_large[i]] for i in range(ndims)]
     else:
         raise NotImplementedError
+
 
 def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, strides):
     ndims = len(inputs.shape) - 2
@@ -83,29 +120,46 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
     assert len(dilations) == ndims
     assert len(strides) == ndims
     is_dynamic = inputs.is_dynamic
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     dhw_offset = get_dhw_offset(channel_pos)
     ndim_pads_list = []
     if isinstance(padding, str):
-        padding = 'SAME_LOWER' if padding.upper() == 'SAME' else padding
-        assert padding.upper() in ['VALID', 'SAME_LOWER', 'SAME_UPPER']
-        if padding.upper() == 'VALID':
+        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
+        if padding.upper() == "VALID":
             return_pads_list = [[0, 0]] * ndims
             return (inputs, return_pads_list)
         elif is_dynamic:
             return_pads_list = [[0, 0]] * ndims
-            inputs = flow.same_padding(inputs, padding.lower(), data_format=data_format, kernel_size=kernel_sizes, strides=strides, dilation_rate=dilations)
+            inputs = flow.same_padding(
+                inputs,
+                padding.lower(),
+                data_format=data_format,
+                kernel_size=kernel_sizes,
+                strides=strides,
+                dilation_rate=dilations,
+            )
             return (inputs, return_pads_list)
         else:
-            ndim_pads_list = calc_ndim_same_padding(inputs.shape, padding, kernel_sizes, dilations, strides, dhw_offset)
+            ndim_pads_list = calc_ndim_same_padding(
+                inputs.shape, padding, kernel_sizes, dilations, strides, dhw_offset
+            )
             assert len(ndim_pads_list) == ndims
     elif isinstance(padding, (list, tuple)):
         assert len(padding) == ndims + 2
         ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
         assert len(ndim_pads_list) == ndims
     else:
-        raise ValueError('padding must be str or a list.')
-    cudnn_padding_support = check_ndim_conv_cudnn_padding_support(inputs.shape, ndim_pads_list, kernel_sizes, dilations, strides, dhw_offset, is_dynamic)
+        raise ValueError("padding must be str or a list.")
+    cudnn_padding_support = check_ndim_conv_cudnn_padding_support(
+        inputs.shape,
+        ndim_pads_list,
+        kernel_sizes,
+        dilations,
+        strides,
+        dhw_offset,
+        is_dynamic,
+    )
     if cudnn_padding_support:
         return (inputs, ndim_pads_list)
     else:
@@ -116,8 +170,8 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         return_pads_list = [[0, 0]] * ndims
         return (inputs, return_pads_list)
 
-class ConvUtil(object):
 
+class ConvUtil(object):
     @classmethod
     def split(cls, x, axis, split_num):
         split_len = x.shape[axis] // split_num
@@ -131,13 +185,49 @@ class ConvUtil(object):
             result_list.append(result)
         return result_list
 
-def conv_op(conv_type, inputs, filters, bias, padding_before, channel_pos, kernel_size_list, strides, dilations, groups, name):
-    op_builder = flow.user_op_builder(name if name is not None else id_util.UniqueStr('Conv_')).Op(conv_type).Input('in', [inputs]).Input('weight', [filters]).Output('out').Attr('filters', filters.shape[0]).Attr('padding_before', padding_before).Attr('data_format', channel_pos).Attr('kernel_size', kernel_size_list).Attr('strides', strides).Attr('dilation_rate', dilations).Attr('groups', groups)
+
+def conv_op(
+    conv_type,
+    inputs,
+    filters,
+    bias,
+    padding_before,
+    channel_pos,
+    kernel_size_list,
+    strides,
+    dilations,
+    groups,
+    name,
+):
+    op_builder = (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv_"))
+        .Op(conv_type)
+        .Input("in", [inputs])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
+    )
     if bias is not None:
-        op_builder = op_builder.Input('bias', [bias])
+        op_builder = op_builder.Input("bias", [bias])
     return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def conv1d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_internal.BlobDesc, strides: Union[int, Tuple[int]], padding: Union[str, Tuple[IntPair, IntPair, IntPair]], data_format: str='NCW', dilations: Optional[Union[int, Tuple[int]]]=None, groups: int=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv1d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    filters: oneflow._oneflow_internal.BlobDesc,
+    strides: Union[int, Tuple[int]],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair]],
+    data_format: str = "NCW",
+    dilations: Optional[Union[int, Tuple[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """1D convolution layer.
 
     Args:
@@ -213,36 +303,40 @@ def conv1d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     assert len(input.shape) == 3
     assert len(filters.shape) == 3
     if isinstance(strides, (list, tuple)):
-        assert len(strides) == 1, ValueError('strides length must be 1 when passed as a list.')
+        assert len(strides) == 1, ValueError(
+            "strides length must be 1 when passed as a list."
+        )
     elif isinstance(strides, int):
         strides = [strides]
     else:
-        raise ValueError('strides must be an int or a list.')
-    if data_format.upper() != 'NCW' and data_format.upper() != 'NWC':
+        raise ValueError("strides must be an int or a list.")
+    if data_format.upper() != "NCW" and data_format.upper() != "NWC":
         raise ValueError('data_format must be "NCW" or "NWC".')
-    channel_pos = 'channels_first' if data_format == 'NCW' else 'channels_last'
+    channel_pos = "channels_first" if data_format == "NCW" else "channels_last"
     if dilations is None:
         dilations = [1]
     elif isinstance(dilations, (list, tuple)):
-        assert len(dilations) == 1, ValueError('dilations length must be 1 when passed as a list.')
+        assert len(dilations) == 1, ValueError(
+            "dilations length must be 1 when passed as a list."
+        )
     elif isinstance(dilations, int):
         dilations = [dilations]
     else:
-        raise ValueError('dilations must be an int or a list.')
-    if channel_pos == 'channels_first':
+        raise ValueError("dilations must be an int or a list.")
+    if channel_pos == "channels_first":
         kernel_size_list = filters.shape[2:3]
         in_channel_axis = 1
         filter_out_axis = 0
         filter_in_axis = 1
-    elif channel_pos == 'channels_last':
+    elif channel_pos == "channels_last":
         kernel_size_list = filters.shape[-2:-1]
         in_channel_axis = 2
         filter_out_axis = 0
         filter_in_axis = 2
         if groups > 1:
-            raise ValueError('data_format NWC not support groups > 1')
+            raise ValueError("data_format NWC not support groups > 1")
     else:
-        raise ValueError('invalid data_format')
+        raise ValueError("invalid data_format")
     assert isinstance(kernel_size_list, tuple)
     assert isinstance(groups, int)
     assert groups > 0
@@ -251,21 +345,65 @@ def conv1d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     assert groups <= input.shape[in_channel_axis]
     assert input.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == input.shape[in_channel_axis] // groups
-    (inputs, pads_list) = calc_conv_padding(input, padding, data_format.upper(), kernel_size_list, dilations, strides)
+    (inputs, pads_list) = calc_conv_padding(
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides
+    )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
-    if groups > 1 and flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
         in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
-        filter_split_list = ConvUtil.split(filters, axis=filter_out_axis, split_num=groups)
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
         out_list = []
-        name = name if name is not None else id_util.UniqueStr('Conv1d_')
+        name = name if name is not None else id_util.UniqueStr("Conv1d_")
         for i in range(len(in_split_list)):
-            out_list.append(conv_op('conv1d', in_split_list[i], filter_split_list[i], None, padding_before, channel_pos, kernel_size_list, strides, dilations, groups=1, name=name + str(i)))
+            out_list.append(
+                conv_op(
+                    "conv1d",
+                    in_split_list[i],
+                    filter_split_list[i],
+                    None,
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
+                )
+            )
         return flow.concat(out_list, axis=in_channel_axis)
     else:
-        return conv_op('conv1d', inputs, filters, None, padding_before, channel_pos, kernel_size_list, strides, dilations, groups, name)
+        return conv_op(
+            "conv1d",
+            inputs,
+            filters,
+            None,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
 
-def conv2d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_internal.BlobDesc, strides: Union[int, IntPair], padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]], bias: Optional[oneflow._oneflow_internal.BlobDesc]=None, data_format: str='NCHW', dilations: Optional[Union[int, IntPair]]=None, groups: int=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv2d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    filters: oneflow._oneflow_internal.BlobDesc,
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    data_format: str = "NCHW",
+    dilations: Optional[Union[int, IntPair]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """2D convolution layer.
 
     Args:
@@ -344,40 +482,49 @@ def conv2d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     if bias is not None:
         assert len(bias.shape) == 1
     if isinstance(strides, (list, tuple)):
-        assert len(strides) == 2, ValueError('strides length must be 2 when passed as a list.')
+        assert len(strides) == 2, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
     elif isinstance(strides, int):
         strides = [strides, strides]
     else:
-        raise ValueError('strides must be an int or a list.')
-    if data_format.upper() != 'NCHW' and data_format.upper() != 'NHWC':
+        raise ValueError("strides must be an int or a list.")
+    if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
-    channel_pos = 'channels_first' if data_format == 'NCHW' else 'channels_last'
+    channel_pos = "channels_first" if data_format == "NCHW" else "channels_last"
     if dilations is None:
         dilations = [1, 1]
     elif isinstance(dilations, (list, tuple)):
-        assert len(dilations) == 2, ValueError('dilations length must be 2 when passed as a list.')
+        assert len(dilations) == 2, ValueError(
+            "dilations length must be 2 when passed as a list."
+        )
     elif isinstance(dilations, int):
         dilations = [dilations, dilations]
     else:
-        raise ValueError('dilations must be an int or a list.')
+        raise ValueError("dilations must be an int or a list.")
     assert isinstance(groups, int)
     assert groups > 0
-    if data_format.upper() == 'NCHW':
+    if data_format.upper() == "NCHW":
         kernel_size_list = filters.shape[2:4]
         in_channel_axis = 1
         filter_out_axis = 0
         filter_in_axis = 1
-    elif data_format.upper() == 'NHWC':
+    elif data_format.upper() == "NHWC":
         kernel_size_list = filters.shape[-3:-1]
         in_channel_axis = 3
         filter_out_axis = 0
         filter_in_axis = 3
-        if groups > 1 and flow.current_scope().device_parallel_desc_symbol.device_tag == 'gpu':
-            raise ValueError('gpu data_format NHWC not support groups > 1')
+        if (
+            groups > 1
+            and flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu"
+        ):
+            raise ValueError("gpu data_format NHWC not support groups > 1")
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
     assert isinstance(kernel_size_list, tuple)
-    (inputs, pads_list) = calc_conv_padding(input, padding, data_format.upper(), kernel_size_list, dilations, strides)
+    (inputs, pads_list) = calc_conv_padding(
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides
+    )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     assert groups <= filters.shape[filter_out_axis]
@@ -387,19 +534,64 @@ def conv2d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
     if bias is not None:
         assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
-    if groups > 1 and flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
         in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
-        filter_split_list = ConvUtil.split(filters, axis=filter_out_axis, split_num=groups)
-        bias_spilt_list = ConvUtil.split(bias, axis=filter_out_axis, split_num=groups) if bias is not None else [None for _ in range(groups)]
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
+        )
         out_list = []
-        name = name if name is not None else id_util.UniqueStr('Conv2d_')
+        name = name if name is not None else id_util.UniqueStr("Conv2d_")
         for i in range(len(in_split_list)):
-            out_list.append(conv_op('conv2d', in_split_list[i], filter_split_list[i], bias_spilt_list[i], padding_before, channel_pos, kernel_size_list, strides, dilations, groups=1, name=name + str(i)))
+            out_list.append(
+                conv_op(
+                    "conv2d",
+                    in_split_list[i],
+                    filter_split_list[i],
+                    bias_spilt_list[i],
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
+                )
+            )
         return flow.concat(out_list, axis=in_channel_axis)
     else:
-        return conv_op('conv2d', inputs, filters, bias, padding_before, channel_pos, kernel_size_list, strides, dilations, groups, name)
+        return conv_op(
+            "conv2d",
+            inputs,
+            filters,
+            bias,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
 
-def conv3d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_internal.BlobDesc, strides: Union[int, Sequence[int]], padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]], data_format: str='NCDHW', dilations: Optional[Union[int, Sequence[int]]]=None, groups: int=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def conv3d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    filters: oneflow._oneflow_internal.BlobDesc,
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]],
+    data_format: str = "NCDHW",
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """3D convolution layer.
 
     Args:
@@ -475,9 +667,9 @@ def conv3d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
 
     """
     need_transpose = 0
-    if data_format.upper() == 'NDHWC':
+    if data_format.upper() == "NDHWC":
         need_transpose = 1
-        data_format = 'NCDHW'
+        data_format = "NCDHW"
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
@@ -487,36 +679,40 @@ def conv3d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
     if isinstance(strides, (list, tuple)):
-        assert len(strides) == 3, ValueError('strides length must be 3 when passed as a list.')
+        assert len(strides) == 3, ValueError(
+            "strides length must be 3 when passed as a list."
+        )
     elif isinstance(strides, int):
         strides = [strides, strides, strides]
     else:
-        raise ValueError('strides must be an int or a list.')
-    if data_format.upper() != 'NCDHW' and data_format.upper() != 'NDHWC':
+        raise ValueError("strides must be an int or a list.")
+    if data_format.upper() != "NCDHW" and data_format.upper() != "NDHWC":
         raise ValueError('data_format must be "NDHWC" or "NCDHW".')
-    channel_pos = 'channels_first' if data_format == 'NCDHW' else 'channels_last'
+    channel_pos = "channels_first" if data_format == "NCDHW" else "channels_last"
     if dilations is None:
         dilations = [1, 1, 1]
     elif isinstance(dilations, (list, tuple)):
-        assert len(dilations) == 3, ValueError('dilations length must be 3 when passed as a list.')
+        assert len(dilations) == 3, ValueError(
+            "dilations length must be 3 when passed as a list."
+        )
     elif isinstance(dilations, int):
         dilations = [dilations, dilations, dilations]
     else:
-        raise ValueError('dilations must be an int or a list.')
-    if channel_pos == 'channels_first':
+        raise ValueError("dilations must be an int or a list.")
+    if channel_pos == "channels_first":
         kernel_size_list = filters.shape[2:5]
         in_channel_axis = 1
         filter_out_axis = 0
         filter_in_axis = 1
-    elif channel_pos == 'channels_last':
+    elif channel_pos == "channels_last":
         kernel_size_list = filters.shape[-4:-1]
         in_channel_axis = 4
         filter_out_axis = 0
         filter_in_axis = 4
         if groups > 1:
-            raise ValueError('data_format NDHWC not support groups > 1')
+            raise ValueError("data_format NDHWC not support groups > 1")
     else:
-        raise ValueError('invalid data_format')
+        raise ValueError("invalid data_format")
     assert isinstance(kernel_size_list, tuple)
     assert isinstance(groups, int)
     assert groups > 0
@@ -525,24 +721,63 @@ def conv3d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_
     assert groups <= input.shape[in_channel_axis]
     assert input.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == input.shape[1] // groups
-    (inputs, pads_list) = calc_conv_padding(input, padding, data_format.upper(), kernel_size_list, dilations, strides)
+    (inputs, pads_list) = calc_conv_padding(
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides
+    )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
-    if groups > 1 and flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
         in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
-        filter_split_list = ConvUtil.split(filters, axis=filter_out_axis, split_num=groups)
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
         out_list = []
-        name = name if name is not None else id_util.UniqueStr('Conv3d_')
+        name = name if name is not None else id_util.UniqueStr("Conv3d_")
         for i in range(len(in_split_list)):
-            out_list.append(conv_op('conv3d', in_split_list[i], filter_split_list[i], None, padding_before, channel_pos, kernel_size_list, strides, dilations, groups=1, name=name + str(i)))
+            out_list.append(
+                conv_op(
+                    "conv3d",
+                    in_split_list[i],
+                    filter_split_list[i],
+                    None,
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
+                )
+            )
         output = flow.concat(out_list, axis=in_channel_axis)
     else:
-        output = conv_op('conv3d', inputs, filters, None, padding_before, channel_pos, kernel_size_list, strides, dilations, groups, name)
+        output = conv_op(
+            "conv3d",
+            inputs,
+            filters,
+            None,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
     if need_transpose:
         output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
     return output
 
-def moments(x: oneflow._oneflow_internal.BlobDesc, axes: List[int], keepdims: Optional[bool]=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def moments(
+    x: oneflow._oneflow_internal.BlobDesc,
+    axes: List[int],
+    keepdims: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the mean and variance value of input Blob.
 
     Args:
@@ -579,11 +814,20 @@ def moments(x: oneflow._oneflow_internal.BlobDesc, axes: List[int], keepdims: Op
     """
     assert isinstance(axes, list)
     if name is None:
-        name = id_util.UniqueStr('Moments_')
+        name = id_util.UniqueStr("Moments_")
     with flow.scope.namespace(name):
-        return (flow.math.reduce_mean(x, axis=axes, keepdims=keepdims), flow.math.reduce_variance(x, axis=axes, keepdims=keepdims))
+        return (
+            flow.math.reduce_mean(x, axis=axes, keepdims=keepdims),
+            flow.math.reduce_variance(x, axis=axes, keepdims=keepdims),
+        )
 
-def instance_normalization1d(x: oneflow._oneflow_internal.BlobDesc, eps: float=1e-05, affine: bool=True, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def instance_normalization1d(
+    x: oneflow._oneflow_internal.BlobDesc,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Applies Instance Normalization over a 3D input.
 
     Args:
@@ -620,18 +864,36 @@ def instance_normalization1d(x: oneflow._oneflow_internal.BlobDesc, eps: float=1
     """
     assert len(x.shape) == 3
     if name is None:
-        name = id_util.UniqueStr('InstanceNorm1D_')
+        name = id_util.UniqueStr("InstanceNorm1D_")
     channel = x.shape[1]
     (mean, variance) = flow.nn.moments(x, [2], keepdims=True)
     normalized = (x - mean) / flow.math.sqrt(variance + eps)
     if affine == True:
-        gamma = flow.get_variable(name + '_gamma', shape=(1, channel, 1), dtype=x.dtype, initializer=flow.ones_initializer(), trainable=True)
-        beta = flow.get_variable(name + '_beta', shape=(1, channel, 1), dtype=x.dtype, initializer=flow.zeros_initializer(), trainable=True)
+        gamma = flow.get_variable(
+            name + "_gamma",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
+        beta = flow.get_variable(
+            name + "_beta",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.zeros_initializer(),
+            trainable=True,
+        )
         return gamma * normalized + beta
     else:
         return normalized
 
-def instance_normalization2d(x: oneflow._oneflow_internal.BlobDesc, eps: float=1e-05, affine: bool=True, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def instance_normalization2d(
+    x: oneflow._oneflow_internal.BlobDesc,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Applies Instance Normalization over a 4D input.
 
     Args:
@@ -668,13 +930,25 @@ def instance_normalization2d(x: oneflow._oneflow_internal.BlobDesc, eps: float=1
     """
     assert len(x.shape) == 4
     if name is None:
-        name = id_util.UniqueStr('InstanceNorm2D_')
+        name = id_util.UniqueStr("InstanceNorm2D_")
     reshape_to_1d = flow.reshape(x, shape=[x.shape[0], x.shape[1], -1])
-    normalized_1d_out = flow.nn.InstanceNorm1d(reshape_to_1d, eps=eps, affine=affine, name=name)
+    normalized_1d_out = flow.nn.InstanceNorm1d(
+        reshape_to_1d, eps=eps, affine=affine, name=name
+    )
     reshape_back_to_2d = flow.reshape(normalized_1d_out, shape=list(x.shape))
     return reshape_back_to_2d
 
-def batch_normalization(x: oneflow._oneflow_internal.BlobDesc, mean: oneflow._oneflow_internal.BlobDesc, variance: oneflow._oneflow_internal.BlobDesc, offset: Optional[oneflow._oneflow_internal.BlobDesc]=None, scale: Optional[oneflow._oneflow_internal.BlobDesc]=None, variance_epsilon: Optional[float]=1e-05, axis: int=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def batch_normalization(
+    x: oneflow._oneflow_internal.BlobDesc,
+    mean: oneflow._oneflow_internal.BlobDesc,
+    variance: oneflow._oneflow_internal.BlobDesc,
+    offset: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    scale: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    variance_epsilon: Optional[float] = 1e-05,
+    axis: int = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This op does not fully align with tf.nn.batch_normalization.
 
     The `mean`, `variable`, `offset` and `scale` are always 1D. Users need to specify `axis` to 1 for NCHW data format.
@@ -728,9 +1002,9 @@ def batch_normalization(x: oneflow._oneflow_internal.BlobDesc, mean: oneflow._on
     if axis < 0:
         axis += len(x.shape)
     if name is None:
-        name = id_util.UniqueStr('BatchNorm_')
+        name = id_util.UniqueStr("BatchNorm_")
     params_shape = [x.shape[axis]]
-    if flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if len(mean.shape) == 1:
             nd_params_shape = [1] * len(x.shape)
             nd_params_shape[axis] = params_shape[0]
@@ -743,7 +1017,9 @@ def batch_normalization(x: oneflow._oneflow_internal.BlobDesc, mean: oneflow._on
         elif len(mean.shape) == len(x.shape):
             pass
         else:
-            raise ValueError("shape of mean and variance should be 1D or has number of axes and x's")
+            raise ValueError(
+                "shape of mean and variance should be 1D or has number of axes and x's"
+            )
         variance += variance_epsilon
         std_inv = flow.math.rsqrt(variance)
         normalized = (x - mean) * std_inv
@@ -753,18 +1029,44 @@ def batch_normalization(x: oneflow._oneflow_internal.BlobDesc, mean: oneflow._on
         if offset:
             affined += offset
         return affined
-    elif flow.current_scope().device_parallel_desc_symbol.device_tag == 'gpu':
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
         params_dtype = flow.float32 if x.dtype == flow.float16 else x.dtype
         if scale is None:
-            scale = flow.constant(1, dtype=params_dtype, shape=params_shape, name='gamma')
+            scale = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
         if offset is None:
-            offset = flow.constant(0, dtype=params_dtype, shape=params_shape, name='beta')
-        builder = flow.user_op_builder(name).Op('normalization').Input('x', [x]).Input('moving_mean', [mean]).Input('moving_variance', [variance]).Input('gamma', [scale]).Input('beta', [offset]).Output('y').Attr('axis', axis).Attr('epsilon', variance_epsilon).Attr('training', False).Attr('momentum', 0.0)
+            offset = flow.constant(
+                0, dtype=params_dtype, shape=params_shape, name="beta"
+            )
+        builder = (
+            flow.user_op_builder(name)
+            .Op("normalization")
+            .Input("x", [x])
+            .Input("moving_mean", [mean])
+            .Input("moving_variance", [variance])
+            .Input("gamma", [scale])
+            .Input("beta", [offset])
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", variance_epsilon)
+            .Attr("training", False)
+            .Attr("momentum", 0.0)
+        )
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         raise NotImplementedError
 
-def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, gamma: Optional[oneflow._oneflow_internal.BlobDesc]=None, beta: Optional[oneflow._oneflow_internal.BlobDesc]=None, begin_norm_axis: int=1, begin_params_axis: int=-1, epsilon: float=1e-05, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def layer_norm(
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    gamma: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    beta: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    begin_norm_axis: int = 1,
+    begin_params_axis: int = -1,
+    epsilon: float = 1e-05,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Layer Normalization.
 
     Args:
@@ -806,8 +1108,8 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, gamma: Optional[onefl
     """
     param_shape = inputs.shape[begin_params_axis:]
     if name is None:
-        name = id_util.UniqueStr('LayerNorm_')
-    if flow.current_scope().device_parallel_desc_symbol.device_tag == 'cpu':
+        name = id_util.UniqueStr("LayerNorm_")
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if begin_norm_axis < 0:
             begin_norm_axis = begin_norm_axis + len(inputs.shape)
         reduce_axis = []
@@ -816,8 +1118,17 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, gamma: Optional[onefl
                 reduce_axis.append(dim)
         (mean, variance) = flow.nn.moments(inputs, reduce_axis, keepdims=True)
         axis = begin_norm_axis
-        normalized = flow.nn.batch_normalization(x=inputs, mean=mean, variance=variance, variance_epsilon=epsilon, axis=axis, name=name)
-        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(param_shape)
+        normalized = flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
         affined = normalized
         if gamma:
             gamma = flow.reshape(gamma, nd_params_shape)
@@ -826,28 +1137,45 @@ def layer_norm(inputs: oneflow._oneflow_internal.BlobDesc, gamma: Optional[onefl
             beta = flow.reshape(beta, nd_params_shape)
             affined += beta
         return affined
-    elif flow.current_scope().device_parallel_desc_symbol.device_tag == 'gpu':
-        op_builder = flow.user_op_builder(name).Op('layer_norm').Input('x', [inputs]).Output('y').Output('mean').Output('inv_variance')
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
         scale = False
         center = False
         if beta is not None:
             center = True
-            op_builder.Input('beta', [beta])
+            op_builder.Input("beta", [beta])
         if gamma is not None:
             scale = True
-            op_builder.Input('gamma', [gamma])
-            op_builder.Output('normalized')
-        op_builder.Attr('center', center)
-        op_builder.Attr('scale', scale)
-        op_builder.Attr('begin_norm_axis', begin_norm_axis)
-        op_builder.Attr('begin_params_axis', begin_params_axis)
-        op_builder.Attr('epsilon', epsilon)
+            op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
         y = op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
         return y
     else:
         raise NotImplementedError
 
-def tf_conv2d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._oneflow_internal.BlobDesc, strides: Union[int, Sequence[int]], padding: str, data_format: str='NCHW', dilations: Optional[Union[int, Sequence[int]]]=None, groups: int=1, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def tf_conv2d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    filters: oneflow._oneflow_internal.BlobDesc,
+    strides: Union[int, Sequence[int]],
+    padding: str,
+    data_format: str = "NCHW",
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+    groups: int = 1,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes a 2-D convolution given `input` and 4-D `filters` `Blob`.
 
     Args:
@@ -917,11 +1245,19 @@ def tf_conv2d(input: oneflow._oneflow_internal.BlobDesc, filters: oneflow._onefl
         # out.shape (1, 128, 16, 16)
 
     """
-    if padding.upper() == 'SAME':
-        padding = 'SAME_UPPER'
-    return flow.nn.conv2d(input, filters, strides, padding, None, data_format, dilations, groups, name)
+    if padding.upper() == "SAME":
+        padding = "SAME_UPPER"
+    return flow.nn.conv2d(
+        input, filters, strides, padding, None, data_format, dilations, groups, name
+    )
 
-def bias_add(value: oneflow._oneflow_internal.BlobDesc, bias: oneflow._oneflow_internal.BlobDesc, data_format: Optional[str]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def bias_add(
+    value: oneflow._oneflow_internal.BlobDesc,
+    bias: oneflow._oneflow_internal.BlobDesc,
+    data_format: Optional[str] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator adds a bias to Blob.
 
     Args:
@@ -967,18 +1303,34 @@ def bias_add(value: oneflow._oneflow_internal.BlobDesc, bias: oneflow._oneflow_i
 
     """
     if name is None:
-        name = id_util.UniqueStr('BiasAdd_')
+        name = id_util.UniqueStr("BiasAdd_")
     if data_format is None:
         bias_add_axis = 1
-    elif data_format.startswith('NC'):
+    elif data_format.startswith("NC"):
         bias_add_axis = 1
-    elif data_format.startswith('N') and data_format.endswith('C'):
+    elif data_format.startswith("N") and data_format.endswith("C"):
         bias_add_axis = len(value.shape) - 1
     else:
-        raise ValueError('data_format must be of the form `N...C` or `NC...`')
-    return flow.user_op_builder(name).Op('bias_add').Input('a', [value]).Input('b', [bias]).Output('out').Attr('axis', bias_add_axis).Build().InferAndTryRun().RemoteBlobList()[0]
+        raise ValueError("data_format must be of the form `N...C` or `NC...`")
+    return (
+        flow.user_op_builder(name)
+        .Op("bias_add")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def fused_bias_add_gelu(value: oneflow._oneflow_internal.BlobDesc, bias: oneflow._oneflow_internal.BlobDesc, data_format: Optional[str]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def fused_bias_add_gelu(
+    value: oneflow._oneflow_internal.BlobDesc,
+    bias: oneflow._oneflow_internal.BlobDesc,
+    data_format: Optional[str] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator fuse flow.nn.bias_add and flow.math.gelu operator.
 
     Args:
@@ -1024,18 +1376,37 @@ def fused_bias_add_gelu(value: oneflow._oneflow_internal.BlobDesc, bias: oneflow
 
     """
     if name is None:
-        name = id_util.UniqueStr('FusedBiasAddGelu_')
+        name = id_util.UniqueStr("FusedBiasAddGelu_")
     if data_format is None:
         bias_add_axis = 1
-    elif data_format.startswith('NC'):
+    elif data_format.startswith("NC"):
         bias_add_axis = 1
-    elif data_format.startswith('N') and data_format.endswith('C'):
+    elif data_format.startswith("N") and data_format.endswith("C"):
         bias_add_axis = len(value.shape) - 1
     else:
-        raise ValueError('data_format must be of the form `N...C` or `NC...`')
-    return flow.user_op_builder(name).Op('fused_bias_add_gelu').Input('a', [value]).Input('b', [bias]).Output('out').Attr('axis', bias_add_axis).Build().InferAndTryRun().RemoteBlobList()[0]
+        raise ValueError("data_format must be of the form `N...C` or `NC...`")
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_gelu")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def fused_bias_add_dropout(value: oneflow._oneflow_internal.BlobDesc, bias: oneflow._oneflow_internal.BlobDesc, data_format: Optional[str]=None, rate: float=0.0, noise_shape: Optional[oneflow._oneflow_internal.BlobDesc]=None, seed: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def fused_bias_add_dropout(
+    value: oneflow._oneflow_internal.BlobDesc,
+    bias: oneflow._oneflow_internal.BlobDesc,
+    data_format: Optional[str] = None,
+    rate: float = 0.0,
+    noise_shape: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator fuse flow.nn.bias_add and flow.nn.dropout operator.
 
     Args:
@@ -1087,19 +1458,41 @@ def fused_bias_add_dropout(value: oneflow._oneflow_internal.BlobDesc, bias: onef
     if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
         return flow.nn.bias_add(value, bias, data_format, name)
     if name is None:
-        name = id_util.UniqueStr('BiasAddDropout_')
-    mask = flow.nn.random_mask_like(value, rate, seed, noise_shape, '%s-dropout_random_mask_like' % name)
+        name = id_util.UniqueStr("BiasAddDropout_")
+    mask = flow.nn.random_mask_like(
+        value, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
     if data_format is None:
         bias_add_axis = 1
-    elif data_format.startswith('NC'):
+    elif data_format.startswith("NC"):
         bias_add_axis = 1
-    elif data_format.startswith('N') and data_format.endswith('C'):
+    elif data_format.startswith("N") and data_format.endswith("C"):
         bias_add_axis = len(value.shape) - 1
     else:
-        raise ValueError('data_format must be of the form `N...C` or `NC...`')
-    return flow.user_op_builder(name).Op('fused_bias_add_mask_scale').Input('a', [value]).Input('b', [bias]).Input('mask', [mask]).Output('out').Attr('axis', bias_add_axis).Attr('scale', float(1.0 / (1.0 - rate))).Build().InferAndTryRun().RemoteBlobList()[0]
+        raise ValueError("data_format must be of the form `N...C` or `NC...`")
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_mask_scale")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Input("mask", [mask])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Attr("scale", float(1.0 / (1.0 - rate)))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def max_pool1d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequence[int]], strides: Union[int, Sequence[int]], padding: Union[str, Sequence[Sequence[int]]], data_format: str='NWC', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def max_pool1d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NWC",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the 1d-max pooling on the input.
 
     Args:
@@ -1118,7 +1511,15 @@ def max_pool1d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequ
     """
     raise NotImplementedError
 
-def avg_pool1d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequence[int]], strides: Union[int, Sequence[int]], padding: Union[str, Sequence[Sequence[int]]], data_format: str='NCW', name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def avg_pool1d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NCW",
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the average pooling on the input `Blob`.
 
     Args:
@@ -1137,20 +1538,30 @@ def avg_pool1d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequ
     """
     raise NotImplementedError
 
+
 def calc_pool_padding(padding, dhw_offset, ndims):
     if isinstance(padding, str):
-        padding = 'SAME_LOWER' if padding.upper() == 'SAME' else padding
-        assert padding.upper() in ['VALID', 'SAME_LOWER', 'SAME_UPPER']
+        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
         padding_type = padding.lower()
         ndim_pads_list = [[0, 0]] * ndims
     elif isinstance(padding, (list, tuple)):
-        padding_type = 'customized'
+        padding_type = "customized"
         ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
     else:
-        raise ValueError('padding must be str or a list.')
+        raise ValueError("padding must be str or a list.")
     return (padding_type, ndim_pads_list)
 
-def max_pool2d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, IntPair], strides: Union[int, IntPair], padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]], data_format: str='NCHW', ceil_mode: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def max_pool2d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, IntPair],
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    data_format: str = "NCHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the 2d-max pooling on the input `Blob`.
 
     Args:
@@ -1193,25 +1604,43 @@ def max_pool2d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, IntP
         # out.shape (1, 32, 64, 64)
 
     """
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('MaxPool2D_')).Op('max_pool_2d').Input('x', [input]).Output('y')
-    assert data_format in ['NHWC', 'NCHW', 'NCHW_VECT_C']
-    channel_pos = 'channels_last' if data_format == 'NHWC' else 'channels_first'
-    op.Attr('data_format', channel_pos)
-    pool_size = _GetSequence(ksize, 2, 'ksize')
-    op.Attr('pool_size', pool_size)
-    strides = _GetSequence(strides, 2, 'strides')
-    op.Attr('strides', strides)
-    (padding_type, pads_list) = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool2D_")
+        )
+        .Op("max_pool_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    pool_size = _GetSequence(ksize, 2, "ksize")
+    op.Attr("pool_size", pool_size)
+    strides = _GetSequence(strides, 2, "strides")
+    op.Attr("strides", strides)
+    (padding_type, pads_list) = calc_pool_padding(
+        padding, get_dhw_offset(channel_pos), 2
+    )
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    op.Attr('padding', padding_type)
-    op.Attr('padding_before', padding_before)
-    op.Attr('padding_after', padding_after)
-    op.Attr('ceil_mode', ceil_mode)
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def avg_pool2d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, IntPair], strides: Union[int, IntPair], padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]], data_format: str='NCHW', ceil_mode: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def avg_pool2d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, IntPair],
+    strides: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    data_format: str = "NCHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the 2d-average pooling on the input.
 
     Args:
@@ -1253,25 +1682,43 @@ def avg_pool2d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, IntP
         # out.shape (1, 32, 64, 64)
 
     """
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('AvgPool2D_')).Op('avg_pool_2d').Input('x', [input]).Output('y')
-    assert data_format in ['NHWC', 'NCHW', 'NCHW_VECT_C']
-    channel_pos = 'channels_last' if data_format == 'NHWC' else 'channels_first'
-    op.Attr('data_format', channel_pos)
-    pool_size = _GetSequence(ksize, 2, 'ksize')
-    op.Attr('pool_size', pool_size)
-    strides = _GetSequence(strides, 2, 'strides')
-    op.Attr('strides', strides)
-    (padding_type, pads_list) = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("AvgPool2D_")
+        )
+        .Op("avg_pool_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    pool_size = _GetSequence(ksize, 2, "ksize")
+    op.Attr("pool_size", pool_size)
+    strides = _GetSequence(strides, 2, "strides")
+    op.Attr("strides", strides)
+    (padding_type, pads_list) = calc_pool_padding(
+        padding, get_dhw_offset(channel_pos), 2
+    )
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    op.Attr('padding', padding_type)
-    op.Attr('padding_before', padding_before)
-    op.Attr('padding_after', padding_after)
-    op.Attr('ceil_mode', ceil_mode)
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def max_pool3d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequence[int]], strides: Union[int, Sequence[int]], padding: Union[str, Sequence[Sequence[int]]], data_format: str='NCDHW', ceil_mode: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def max_pool3d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NCDHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the 3d-max pooling on the input.
 
     Args:
@@ -1314,25 +1761,43 @@ def max_pool3d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequ
         # out.shape (1, 32, 5, 64, 64)
 
     """
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('MaxPool3D_')).Op('max_pool_3d').Input('x', [input]).Output('y')
-    assert data_format in ['NDHWC', 'NCDHW']
-    channel_pos = 'channels_last' if data_format == 'NDHWC' else 'channels_first'
-    op.Attr('data_format', channel_pos)
-    pool_size = _GetSequence(ksize, 3, 'ksize')
-    op.Attr('pool_size', pool_size)
-    strides = _GetSequence(strides, 3, 'strides')
-    op.Attr('strides', strides)
-    (padding_type, pads_list) = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool3D_")
+        )
+        .Op("max_pool_3d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NDHWC", "NCDHW"]
+    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    pool_size = _GetSequence(ksize, 3, "ksize")
+    op.Attr("pool_size", pool_size)
+    strides = _GetSequence(strides, 3, "strides")
+    op.Attr("strides", strides)
+    (padding_type, pads_list) = calc_pool_padding(
+        padding, get_dhw_offset(channel_pos), 3
+    )
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    op.Attr('padding', padding_type)
-    op.Attr('padding_before', padding_before)
-    op.Attr('padding_after', padding_after)
-    op.Attr('ceil_mode', ceil_mode)
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
-def avg_pool3d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequence[int]], strides: Union[int, Sequence[int]], padding: Union[str, Sequence[Sequence[int]]], data_format: str='NCDHW', ceil_mode: bool=False, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def avg_pool3d(
+    input: oneflow._oneflow_internal.BlobDesc,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NCDHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Performs the 3d-average pooling on the input.
 
     Args:
@@ -1375,23 +1840,33 @@ def avg_pool3d(input: oneflow._oneflow_internal.BlobDesc, ksize: Union[int, Sequ
         # out.shape (1, 32, 5, 64, 64)
 
     """
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('AvgPool3D_')).Op('avg_pool_3d').Input('x', [input]).Output('y')
-    assert data_format in ['NDHWC', 'NCDHW']
-    channel_pos = 'channels_last' if data_format == 'NDHWC' else 'channels_first'
-    op.Attr('data_format', channel_pos)
-    pool_size = _GetSequence(ksize, 3, 'ksize')
-    op.Attr('pool_size', pool_size)
-    strides = _GetSequence(strides, 3, 'strides')
-    op.Attr('strides', strides)
-    (padding_type, pads_list) = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("AvgPool3D_")
+        )
+        .Op("avg_pool_3d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NDHWC", "NCDHW"]
+    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    pool_size = _GetSequence(ksize, 3, "ksize")
+    op.Attr("pool_size", pool_size)
+    strides = _GetSequence(strides, 3, "strides")
+    op.Attr("strides", strides)
+    (padding_type, pads_list) = calc_pool_padding(
+        padding, get_dhw_offset(channel_pos), 3
+    )
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    op.Attr('padding', padding_type)
-    op.Attr('padding_before', padding_before)
-    op.Attr('padding_after', padding_after)
-    op.Attr('ceil_mode', ceil_mode)
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
 
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
@@ -1409,7 +1884,12 @@ def _softmax_need_transpose(x, axis):
         permute[-1] = axis
     return (need_transpose, permute)
 
-def softmax(logits: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def softmax(
+    logits: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes softmax activations.
 
     For each element, we apply:
@@ -1456,12 +1936,27 @@ def softmax(logits: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=None
     (need_transpose, permute) = _softmax_need_transpose(logits, axis)
     if need_transpose:
         logits = flow.transpose(logits, perm=permute)
-    out = flow.user_op_builder(name if name is not None else id_util.UniqueStr('Softmax_')).Op('softmax').Input('in', [logits]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    out = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Softmax_")
+        )
+        .Op("softmax")
+        .Input("in", [logits])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
     if need_transpose:
         out = flow.transpose(out, perm=permute)
     return out
 
-def logsoftmax(logits: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def logsoftmax(
+    logits: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes logsoftmax activations.
 
     For each element, we apply:
@@ -1505,10 +2000,18 @@ def logsoftmax(logits: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=N
     if axis is None:
         axis = -1
     if name is None:
-        name = id_util.UniqueStr('logsoftmax')
-    return flow.math.log(flow.nn.softmax(logits, axis, name=name + '_softmax'), name=name + '_log')
+        name = id_util.UniqueStr("logsoftmax")
+    return flow.math.log(
+        flow.nn.softmax(logits, axis, name=name + "_softmax"), name=name + "_log"
+    )
 
-def softmax_grad(y: oneflow._oneflow_internal.BlobDesc, dy: oneflow._oneflow_internal.BlobDesc, axis: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def softmax_grad(
+    y: oneflow._oneflow_internal.BlobDesc,
+    dy: oneflow._oneflow_internal.BlobDesc,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes gradient of softmax activations.
 
     Args:
@@ -1526,12 +2029,28 @@ def softmax_grad(y: oneflow._oneflow_internal.BlobDesc, dy: oneflow._oneflow_int
     if need_transpose:
         y = flow.transpose(y, perm=permute)
         dy = flow.transpose(dy, perm=permute)
-    dx = flow.user_op_builder(name if name is not None else id_util.UniqueStr('Softmax_')).Op('softmax_grad').Input('y', [y]).Input('dy', [dy]).Output('dx').Build().InferAndTryRun().RemoteBlobList()[0]
+    dx = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Softmax_")
+        )
+        .Op("softmax_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
     if need_transpose:
         dx = flow.transpose(dx, perm=permute)
     return dx
 
-def sparse_cross_entropy(labels: oneflow._oneflow_internal.BlobDesc, prediction: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sparse_cross_entropy(
+    labels: oneflow._oneflow_internal.BlobDesc,
+    prediction: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes sparse cross entropy
 
     Args:
@@ -1582,12 +2101,43 @@ def sparse_cross_entropy(labels: oneflow._oneflow_internal.BlobDesc, prediction:
         labels = flow.squeeze(labels, axis=[-1])
     else:
         assert len(labels.shape) == len(prediction.shape) - 1
-    if prediction.distribute is oneflow._oneflow_internal.distribute.split(len(prediction.shape) - 1):
-        return flow.user_op_builder(name if name is not None else id_util.UniqueStr('SparseCrossEntropyMs_')).Op('sparse_cross_entropy_ms').Input('prediction', [prediction]).Input('label', [labels]).Output('out').Attr('depth', int(prediction.shape[-1])).Build().InferAndTryRun().RemoteBlobList()[0]
+    if prediction.distribute is oneflow._oneflow_internal.distribute.split(
+        len(prediction.shape) - 1
+    ):
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropyMs_")
+            )
+            .Op("sparse_cross_entropy_ms")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("out")
+            .Attr("depth", int(prediction.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
     else:
-        return flow.user_op_builder(name if name is not None else id_util.UniqueStr('SparseCrossEntropy_')).Op('sparse_cross_entropy').Input('prediction', [prediction]).Input('label', [labels]).Output('out').Attr('depth', int(prediction.shape[-1])).Build().InferAndTryRun().RemoteBlobList()[0]
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("SparseCrossEntropy_")
+            )
+            .Op("sparse_cross_entropy")
+            .Input("prediction", [prediction])
+            .Input("label", [labels])
+            .Output("out")
+            .Attr("depth", int(prediction.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
-def softmax_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc, logits: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def softmax_cross_entropy_with_logits(
+    labels: oneflow._oneflow_internal.BlobDesc,
+    logits: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes softmax cross entropy between logits and labels.
 
     Args:
@@ -1631,10 +2181,27 @@ def softmax_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc
     assert logits is not None
     assert labels.shape == logits.shape
     assert labels.dtype == logits.dtype
-    (prob, out) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('SoftmaxCrossEntropy_')).Op('softmax_cross_entropy').Input('prediction', [logits]).Input('label', [labels]).Output('prob').Output('out').Build().InferAndTryRun().RemoteBlobList()
+    (prob, out) = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SoftmaxCrossEntropy_")
+        )
+        .Op("softmax_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return out
 
-def sparse_softmax_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc, logits: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sparse_softmax_cross_entropy_with_logits(
+    labels: oneflow._oneflow_internal.BlobDesc,
+    logits: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes sparse softmax cross entropy between logits and labels.
 
     Args:
@@ -1686,13 +2253,50 @@ def sparse_softmax_cross_entropy_with_logits(labels: oneflow._oneflow_internal.B
         labels = flow.squeeze(labels, axis=[-1])
     else:
         assert len(labels.shape) == len(logits.shape) - 1
-    if logits.distribute is oneflow._oneflow_internal.distribute.split(len(logits.shape) - 1):
-        (prob, out) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('SparseSoftmaxCrossEntropyMs_')).Op('sparse_softmax_cross_entropy_ms').Input('prediction', [logits]).Input('label', [labels]).Output('prob').Output('out').Attr('depth', int(logits.shape[-1])).Build().InferAndTryRun().RemoteBlobList()
+    if logits.distribute is oneflow._oneflow_internal.distribute.split(
+        len(logits.shape) - 1
+    ):
+        (prob, out) = (
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("SparseSoftmaxCrossEntropyMs_")
+            )
+            .Op("sparse_softmax_cross_entropy_ms")
+            .Input("prediction", [logits])
+            .Input("label", [labels])
+            .Output("prob")
+            .Output("out")
+            .Attr("depth", int(logits.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
+        )
     else:
-        (prob, out) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('SparseSoftmaxCrossEntropy_')).Op('sparse_softmax_cross_entropy').Input('prediction', [logits]).Input('label', [labels]).Output('prob').Output('out').Attr('depth', int(logits.shape[-1])).Build().InferAndTryRun().RemoteBlobList()
+        (prob, out) = (
+            flow.user_op_builder(
+                name
+                if name is not None
+                else id_util.UniqueStr("SparseSoftmaxCrossEntropy_")
+            )
+            .Op("sparse_softmax_cross_entropy")
+            .Input("prediction", [logits])
+            .Input("label", [labels])
+            .Output("prob")
+            .Output("out")
+            .Attr("depth", int(logits.shape[-1]))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
+        )
     return out
 
-def distributed_sparse_softmax_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc, logits: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def distributed_sparse_softmax_cross_entropy_with_logits(
+    labels: oneflow._oneflow_internal.BlobDesc,
+    logits: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     assert labels is not None
     assert logits is not None
     if len(labels.shape) == len(logits.shape):
@@ -1700,10 +2304,30 @@ def distributed_sparse_softmax_cross_entropy_with_logits(labels: oneflow._oneflo
         labels = flow.squeeze(labels, axis=[-1])
     else:
         assert len(labels.shape) == len(logits.shape) - 1
-    (prob, out) = flow.user_op_builder(name if name is not None else id_util.UniqueStr('DistributedSparseSoftmaxCrossEntropy_')).Op('sparse_softmax_cross_entropy_ms').Input('prediction', [logits]).Input('label', [labels]).Output('prob').Output('out').Attr('depth', int(logits.shape[-1])).Build().InferAndTryRun().RemoteBlobList()
+    (prob, out) = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("DistributedSparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy_ms")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Attr("depth", int(logits.shape[-1]))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return out
 
-def sigmoid_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc, logits: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def sigmoid_cross_entropy_with_logits(
+    labels: oneflow._oneflow_internal.BlobDesc,
+    logits: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Computes sigmoid cross entropy given logits.
 
     Args:
@@ -1751,8 +2375,18 @@ def sigmoid_cross_entropy_with_logits(labels: oneflow._oneflow_internal.BlobDesc
     """
     assert labels is not None
     assert logits is not None
-    op = flow.user_op_builder(name if name is not None else id_util.UniqueStr('SigmoidCrossEntropy_')).Op('sigmoid_cross_entropy').Input('prediction', [logits]).Input('label', [labels]).Output('loss').Build()
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_")
+        )
+        .Op("sigmoid_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("loss")
+        .Build()
+    )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
 
 def _GetSequence(value, n, name):
     """Formats value from input"""
@@ -1766,9 +2400,18 @@ def _GetSequence(value, n, name):
     elif current_n == n:
         return list(value)
     else:
-        raise ValueError('{} should be of length 1 or {} but was {}'.format(name, n, current_n))
+        raise ValueError(
+            "{} should be of length 1 or {} but was {}".format(name, n, current_n)
+        )
 
-def random_mask_like(like: oneflow._oneflow_internal.BlobDesc, rate: float, seed: Optional[int]=None, noise_shape: Optional[Sequence]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def random_mask_like(
+    like: oneflow._oneflow_internal.BlobDesc,
+    rate: float,
+    seed: Optional[int] = None,
+    noise_shape: Optional[Sequence] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Random mask `Blob` with same shape as '`like'`.
 
     Args:
@@ -1813,38 +2456,66 @@ def random_mask_like(like: oneflow._oneflow_internal.BlobDesc, rate: float, seed
     """
     assert rate is not None and rate >= 0.0 and (rate < 1.0)
     if noise_shape is not None:
-        assert 0, 'noise_shape will be supported later.'
+        assert 0, "noise_shape will be supported later."
         assert isinstance(noise_shape, (list, tuple))
     if seed is not None:
         assert name is not None
     if name is None:
-        mask_op = flow.user_op_builder(id_util.UniqueStr('RandomMaskLike_')).Op('random_mask_like').Input('like', [like]).Output('out').Attr('rate', float(rate))
+        mask_op = (
+            flow.user_op_builder(id_util.UniqueStr("RandomMaskLike_"))
+            .Op("random_mask_like")
+            .Input("like", [like])
+            .Output("out")
+            .Attr("rate", float(rate))
+        )
         if seed is not None:
-            mask_op.Attr('seed', seed)
+            mask_op.Attr("seed", seed)
         else:
-            mask_op.Attr('seed', random.randint(-sys.maxsize, sys.maxsize))
+            mask_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
         return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
-        module = flow.find_or_create_module(name, lambda : RandomMaskLike(rate=rate, seed=seed, name=name))
+        module = flow.find_or_create_module(
+            name, lambda: RandomMaskLike(rate=rate, seed=seed, name=name)
+        )
         return module(like)
 
-class RandomMaskLike(module_util.Module):
 
-    def __init__(self, rate: float, seed: Optional[int]=None, name: str=None):
+class RandomMaskLike(module_util.Module):
+    def __init__(self, rate: float, seed: Optional[int] = None, name: str = None):
         module_util.Module.__init__(self, name)
         if seed is None:
             seed = random.randint(-sys.maxsize, sys.maxsize)
-        self.op_module_builder = flow.user_op_module_builder('random_mask_like').InputSize('like', 1).Output('out').Attr('rate', float(rate)).Attr('seed', seed).CheckAndComplete()
+        self.op_module_builder = (
+            flow.user_op_module_builder("random_mask_like")
+            .InputSize("like", 1)
+            .Output("out")
+            .Attr("rate", float(rate))
+            .Attr("seed", seed)
+            .CheckAndComplete()
+        )
         self.op_module_builder.user_op_module.InitOpKernel()
 
     def forward(self, like: oneflow._oneflow_internal.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
-            name = id_util.UniqueStr('RandomMaskLike_')
-        return self.op_module_builder.OpName(name).Input('like', [like]).Build().InferAndTryRun().RemoteBlobList()[0]
+            name = id_util.UniqueStr("RandomMaskLike_")
+        return (
+            self.op_module_builder.OpName(name)
+            .Input("like", [like])
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
-def dropout(x: oneflow._oneflow_internal.BlobDesc, rate: float, noise_shape: Optional[oneflow._oneflow_internal.BlobDesc]=None, seed: Optional[int]=None, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def dropout(
+    x: oneflow._oneflow_internal.BlobDesc,
+    rate: float,
+    noise_shape: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """For preventing overfitting, randomly set elements to zero.
 
     Args:
@@ -1913,11 +2584,35 @@ def dropout(x: oneflow._oneflow_internal.BlobDesc, rate: float, noise_shape: Opt
     if seed is not None:
         assert name is not None
     if name is None:
-        name = id_util.UniqueStr('Dropout_')
-    mask = random_mask_like(x, rate, seed, noise_shape, '%s-dropout_random_mask_like' % name)
-    return flow.user_op_builder(name).Op('dropout').Input('in', [x]).Input('mask', [mask]).Output('out').Attr('scale', float(1.0 / (1.0 - rate))).Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr("Dropout_")
+    mask = random_mask_like(
+        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
+    return (
+        flow.user_op_builder(name)
+        .Op("dropout")
+        .Input("in", [x])
+        .Input("mask", [mask])
+        .Output("out")
+        .Attr("scale", float(1.0 / (1.0 - rate)))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def deconv2d(value: Optional[oneflow._oneflow_internal.BlobDesc]=None, filter: Optional[oneflow._oneflow_internal.BlobDesc]=None, output_shape: Tuple[int, int, int, int]=None, strides: Optional[Union[int, Sequence[int]]]=None, padding: str='VALID', data_format: str='NCHW', name: Optional[str]=None, input: Optional[oneflow._oneflow_internal.BlobDesc]=None, filters: Optional[oneflow._oneflow_internal.BlobDesc]=None, dilations: Optional[Union[int, Sequence[int]]]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def deconv2d(
+    value: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    filter: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    output_shape: Tuple[int, int, int, int] = None,
+    strides: Optional[Union[int, Sequence[int]]] = None,
+    padding: str = "VALID",
+    data_format: str = "NCHW",
+    name: Optional[str] = None,
+    input: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    filters: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    dilations: Optional[Union[int, Sequence[int]]] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """2d transposed convolution.
 
     Args:
@@ -1991,8 +2686,12 @@ def deconv2d(value: Optional[oneflow._oneflow_internal.BlobDesc]=None, filter: O
         # out.shape (1, 32, 64, 64)
 
     """
-    assert (value is not None) ^ (input is not None), 'only one of `input` and `value` could be not None'
-    assert (filter is not None) ^ (filters is not None), 'only one of `filter` and `filters` could be not None'
+    assert (value is not None) ^ (
+        input is not None
+    ), "only one of `input` and `value` could be not None"
+    assert (filter is not None) ^ (
+        filters is not None
+    ), "only one of `filter` and `filters` could be not None"
     filters = filters or filter
     input = input or value
     NDims = 2
@@ -2003,69 +2702,147 @@ def deconv2d(value: Optional[oneflow._oneflow_internal.BlobDesc]=None, filter: O
     if dilations is None:
         dilations = [1, 1]
     elif isinstance(dilations, (list, tuple)):
-        assert len(dilations) == 2, ValueError('dilations length must be 2 when passed as a list.')
+        assert len(dilations) == 2, ValueError(
+            "dilations length must be 2 when passed as a list."
+        )
     elif isinstance(dilations, int):
         dilations = [dilations, dilations]
     else:
-        raise ValueError('dilations must be an int or a list.')
-    if data_format.upper() == 'NCHW':
+        raise ValueError("dilations must be an int or a list.")
+    if data_format.upper() == "NCHW":
         input_shape = input.shape[2:]
         kernel_size = filters.shape[2:4]
         channels = filters.shape[1]
         assert output_shape[1] == channels
         output_shape = output_shape[2:4]
-    elif data_format.upper() == 'NHWC':
+    elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
         channels = filters.shape[3]
         assert output_shape[3] == channels
         output_shape = output_shape[1:3]
-        assert dilations == [1, 1], ValueError('dialtions must be 1 when data format is NHWC ')
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     if isinstance(strides, (list, tuple)):
-        assert len(strides) == NDims, ValueError('strides length must be 2 when passed as a list.')
+        assert len(strides) == NDims, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
     elif isinstance(strides, int):
         strides = [strides, strides]
     else:
-        raise ValueError('strides must be an int or a list.')
+        raise ValueError("strides must be an int or a list.")
     output_padding = [0] * NDims
     padding_needed = [0] * NDims
-    if padding.upper() == 'VALID':
+    if padding.upper() == "VALID":
         for i in range(NDims):
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[i] == input_shape[i]
+            assert (output_shape[i] + strides[i] - effective_filter_size) // strides[
+                i
+            ] == input_shape[i]
             tmp_output_shape = (input_shape[i] - 1) * strides[i] + effective_filter_size
             output_padding[i] = output_shape[i] - tmp_output_shape
-    elif padding.upper() == 'SAME':
+    elif padding.upper() == "SAME":
         padding_left = [0] * NDims
         padding_right = [0] * NDims
         for i in range(NDims):
             assert (output_shape[i] + strides[i] - 1) // strides[i] == input_shape[i]
             effective_filter_size = (kernel_size[i] - 1) * dilations[i] + 1
-            padding_needed[i] = max(0, (input_shape[i] - 1) * strides[i] + effective_filter_size - output_shape[i])
-            tmp_output_shape = (input_shape[i] - 1) * strides[i] + effective_filter_size - padding_needed[i]
+            padding_needed[i] = max(
+                0,
+                (input_shape[i] - 1) * strides[i]
+                + effective_filter_size
+                - output_shape[i],
+            )
+            tmp_output_shape = (
+                (input_shape[i] - 1) * strides[i]
+                + effective_filter_size
+                - padding_needed[i]
+            )
             output_padding[i] = output_shape[i] - tmp_output_shape
             padding_left[i] = padding_needed[i] // 2
             padding_right[i] = padding_needed[i] - padding_needed[i] // 2
     else:
         raise ValueError('padding must be "SAME" or "VALID".')
-    if padding.upper() == 'SAME' and padding_left != padding_right:
-        assert data_format.upper() == 'NCHW'
+    if padding.upper() == "SAME" and padding_left != padding_right:
+        assert data_format.upper() == "NCHW"
         padding_before = [0] * NDims
-        input = flow.user_op_builder(name if name is not None else id_util.UniqueStr('Deconv2d_')).Op('deconv2d').Input('in', [input]).Input('weight', [filters]).Output('out').Attr('filters', channels).Attr('padding_before', padding_before).Attr('data_format', channel_pos).Attr('kernel_size', kernel_size).Attr('strides', strides).Attr('dilation_rate', dilations).Attr('output_padding', output_padding).Build().InferAndTryRun().RemoteBlobList()[0]
-        return flow.pad_grad(input, [(0, 0), (0, 0), (padding_left[0], padding_right[0]), (padding_left[1], padding_right[1])], name=name + '_pad_grad' if name is not None else None)
+        input = (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Deconv2d_")
+            )
+            .Op("deconv2d")
+            .Input("in", [input])
+            .Input("weight", [filters])
+            .Output("out")
+            .Attr("filters", channels)
+            .Attr("padding_before", padding_before)
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("strides", strides)
+            .Attr("dilation_rate", dilations)
+            .Attr("output_padding", output_padding)
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+        return flow.pad_grad(
+            input,
+            [
+                (0, 0),
+                (0, 0),
+                (padding_left[0], padding_right[0]),
+                (padding_left[1], padding_right[1]),
+            ],
+            name=name + "_pad_grad" if name is not None else None,
+        )
     assert len(padding_needed) == len(input.shape) - 2
     padding_before = []
     for pad in padding_needed:
         assert pad % 2 == 0
         padding_before.append(pad // 2)
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Deconv2d_')).Op('deconv2d').Input('in', [input]).Input('weight', [filters]).Output('out').Attr('filters', channels).Attr('padding_before', padding_before).Attr('data_format', channel_pos).Attr('kernel_size', kernel_size).Attr('strides', strides).Attr('dilation_rate', dilations).Attr('output_padding', output_padding).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Deconv2d_")
+        )
+        .Op("deconv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", channels)
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("output_padding", output_padding)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def deconv2d_torch(value=None, filter=None, output_padding=None, strides=None, padding_needed=None, data_format='NCHW', name=None, input=None, filters=None, dilations=None):
-    assert (value is not None) ^ (input is not None), 'only one of `input` and `value` could be not None'
-    assert (filter is not None) ^ (filters is not None), 'only one of `filter` and `filters` could be not None'
+
+def deconv2d_torch(
+    value=None,
+    filter=None,
+    output_padding=None,
+    strides=None,
+    padding_needed=None,
+    data_format="NCHW",
+    name=None,
+    input=None,
+    filters=None,
+    dilations=None,
+):
+    assert (value is not None) ^ (
+        input is not None
+    ), "only one of `input` and `value` could be not None"
+    assert (filter is not None) ^ (
+        filters is not None
+    ), "only one of `filter` and `filters` could be not None"
     filters = filters or filter
     input = input or value
     NDims = 2
@@ -2074,29 +2851,35 @@ def deconv2d_torch(value=None, filter=None, output_padding=None, strides=None, p
     if dilations is None:
         dilations = [1, 1]
     elif isinstance(dilations, (list, tuple)):
-        assert len(dilations) == 2, ValueError('dilations length must be 2 when passed as a list.')
+        assert len(dilations) == 2, ValueError(
+            "dilations length must be 2 when passed as a list."
+        )
     elif isinstance(dilations, int):
         dilations = [dilations, dilations]
     else:
-        raise ValueError('dilations must be an int or a list.')
-    if data_format.upper() == 'NCHW':
+        raise ValueError("dilations must be an int or a list.")
+    if data_format.upper() == "NCHW":
         input_shape = input.shape[2:]
         kernel_size = filters.shape[2:4]
         channels = filters.shape[1]
-    elif data_format.upper() == 'NHWC':
+    elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
         channels = filters.shape[3]
-        assert dilations == [1, 1], ValueError('dialtions must be 1 when data format is NHWC ')
+        assert dilations == [1, 1], ValueError(
+            "dialtions must be 1 when data format is NHWC "
+        )
     else:
         raise ValueError('data_format must be "NHWC" or "NCHW".')
-    channel_pos = 'channels_first' if data_format.startswith('NC') else 'channels_last'
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     if isinstance(strides, (list, tuple)):
-        assert len(strides) == NDims, ValueError('strides length must be 2 when passed as a list.')
+        assert len(strides) == NDims, ValueError(
+            "strides length must be 2 when passed as a list."
+        )
     elif isinstance(strides, int):
         strides = [strides, strides]
     else:
-        raise ValueError('strides must be an int or a list.')
+        raise ValueError("strides must be an int or a list.")
     assert len(padding_needed) == len(input.shape) - 2
     padding_before = []
     for pad in padding_needed:
@@ -2104,9 +2887,32 @@ def deconv2d_torch(value=None, filter=None, output_padding=None, strides=None, p
         padding_before.append(pad // 2)
     if output_padding is None:
         output_padding = (0, 0)
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('Deconv2d_')).Op('deconv2d').Input('in', [input]).Input('weight', [filters]).Output('out').Attr('filters', channels).Attr('padding_before', padding_before).Attr('data_format', channel_pos).Attr('kernel_size', kernel_size).Attr('strides', strides).Attr('dilation_rate', dilations).Attr('output_padding', output_padding).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Deconv2d_")
+        )
+        .Op("deconv2d")
+        .Input("in", [input])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", channels)
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("output_padding", output_padding)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def leaky_relu(x: oneflow._oneflow_internal.BlobDesc, alpha: float=0.2, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def leaky_relu(
+    x: oneflow._oneflow_internal.BlobDesc,
+    alpha: float = 0.2,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """Leaky ReLU activation.
 
     .. math::
@@ -2143,9 +2949,25 @@ def leaky_relu(x: oneflow._oneflow_internal.BlobDesc, alpha: float=0.2, name: Op
         # out [-2. -1.  0.  5. 10.]
 
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('LeakyRelu_')).Op('leaky_relu').Input('x', [x]).Output('y').Attr('alpha', float(alpha)).Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("LeakyRelu_")
+        )
+        .Op("leaky_relu")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("alpha", float(alpha))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def elu(x: oneflow._oneflow_internal.BlobDesc, alpha: float=1.0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def elu(
+    x: oneflow._oneflow_internal.BlobDesc,
+    alpha: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """The ELU activation.
 
     The formula is:
@@ -2186,10 +3008,22 @@ def elu(x: oneflow._oneflow_internal.BlobDesc, alpha: float=1.0, name: Optional[
     """
     alpha = float(alpha)
     if name is None:
-        name = id_util.UniqueStr('Elu_')
-    return flow.user_op_builder(name).Op('elu').Input('in', [x]).Output('out').Attr('alpha', alpha).Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr("Elu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("elu")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("alpha", alpha)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def hard_sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def hard_sigmoid(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Hardsigmoid activation.
 
     The formula is:
@@ -2230,9 +3064,22 @@ def hard_sigmoid(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None
     Returns:
         oneflow._oneflow_internal.BlobDesc: The activated Tensor.
     """
-    return flow.user_op_builder(name if name is not None else id_util.UniqueStr('HardSigmoid_')).Op('hardsigmoid').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("HardSigmoid_")
+        )
+        .Op("hardsigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def mish(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def mish(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Mish activation function.
 
     The equation is:
@@ -2266,10 +3113,15 @@ def mish(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> one
         oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
     if name is None:
-        name = id_util.UniqueStr('Mish_')
-    return x * flow.math.tanh(flow.math.softplus(x, name=name + 'softplus'), name=name + 'tanh')
+        name = id_util.UniqueStr("Mish_")
+    return x * flow.math.tanh(
+        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    )
 
-def swish(x: oneflow._oneflow_internal.BlobDesc, beta: float=1.0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def swish(
+    x: oneflow._oneflow_internal.BlobDesc, beta: float = 1.0, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Swish activation function.
 
     The equation is:
@@ -2307,10 +3159,13 @@ def swish(x: oneflow._oneflow_internal.BlobDesc, beta: float=1.0, name: Optional
         oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
     if name is None:
-        name = id_util.UniqueStr('Swish_')
-    return x * flow.math.sigmoid(beta * x, name=name + '_sigmoid')
+        name = id_util.UniqueStr("Swish_")
+    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
 
-def hardswish(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def hardswish(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Hardswish activation.
 
     The formula is:
@@ -2349,10 +3204,24 @@ def hardswish(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -
         oneflow._oneflow_internal.BlobDesc: The activated Tensor.
     """
     if name is None:
-        name = id_util.UniqueStr('HardSwish_')
-    return flow.user_op_builder(name).Op('hardswish').Input('in', [x]).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+        name = id_util.UniqueStr("HardSwish_")
+    return (
+        flow.user_op_builder(name)
+        .Op("hardswish")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def hardtanh(x: oneflow._oneflow_internal.BlobDesc, min_val: float=-1.0, max_val: float=1.0, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def hardtanh(
+    x: oneflow._oneflow_internal.BlobDesc,
+    min_val: float = -1.0,
+    max_val: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """The Hardtanh activation.
 
     The equation is:
@@ -2395,13 +3264,26 @@ def hardtanh(x: oneflow._oneflow_internal.BlobDesc, min_val: float=-1.0, max_val
         oneflow._oneflow_internal.BlobDesc: The activated tensor.
     """
     if name is None:
-        name = id_util.UniqueStr('Hardtanh_')
+        name = id_util.UniqueStr("Hardtanh_")
     min_val = float(min_val)
     max_val = float(max_val)
-    assert min_val < max_val, 'max_val should be larger than min_val'
-    return flow.user_op_builder(name).Op('hardtanh').Input('in', [x]).Attr('min_val', min_val).Attr('max_val', max_val).Output('out').Build().InferAndTryRun().RemoteBlobList()[0]
+    assert min_val < max_val, "max_val should be larger than min_val"
+    return (
+        flow.user_op_builder(name)
+        .Op("hardtanh")
+        .Input("in", [x])
+        .Attr("min_val", min_val)
+        .Attr("max_val", max_val)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
-def relu6(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def relu6(
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """Relu6 activation, it clips the value around (0, 6).
 
     The equation is:
@@ -2443,10 +3325,16 @@ def relu6(x: oneflow._oneflow_internal.BlobDesc, name: Optional[str]=None) -> on
         oneflow._oneflow_internal.BlobDesc: The activated Tensor.
     """
     if name is None:
-        name = id_util.UniqueStr('Relu6_')
+        name = id_util.UniqueStr("Relu6_")
     return flow.nn.hardtanh(x, min_val=0.0, max_val=6.0, name=name)
 
-def pixel_shufflev2(input: oneflow._oneflow_internal.BlobDesc, h_upscale_factor: int, w_upscale_factor: int, name: Optional[str]=None) -> oneflow._oneflow_internal.BlobDesc:
+
+def pixel_shufflev2(
+    input: oneflow._oneflow_internal.BlobDesc,
+    h_upscale_factor: int,
+    w_upscale_factor: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in
     `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in
     `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width.
@@ -2480,15 +3368,31 @@ def pixel_shufflev2(input: oneflow._oneflow_internal.BlobDesc, h_upscale_factor:
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
-    assert h_upscale_factor > 0 and w_upscale_factor > 0, 'The scale factor of height and width must larger than zero'
-    assert len(input.shape) == 4, 'Only Accept 4D Blob'
+    assert (
+        h_upscale_factor > 0 and w_upscale_factor > 0
+    ), "The scale factor of height and width must larger than zero"
+    assert len(input.shape) == 4, "Only Accept 4D Blob"
     (_batch, _channel, _height, _width) = input.shape
-    assert _channel % (h_upscale_factor * w_upscale_factor) == 0, 'The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)'
+    assert (
+        _channel % (h_upscale_factor * w_upscale_factor) == 0
+    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
     if name is None:
-        name = id_util.UniqueStr('PixelShufflev2')
+        name = id_util.UniqueStr("PixelShufflev2")
     _new_c = int(_channel / (h_upscale_factor * w_upscale_factor))
-    out = flow.reshape(input, [_batch, _new_c, h_upscale_factor * w_upscale_factor, _height, _width], name=name + '_reshape1')
-    out = flow.reshape(out, [_batch, _new_c, h_upscale_factor, w_upscale_factor, _height, _width], name=name + '_reshape2')
-    out = flow.transpose(out, [0, 1, 4, 2, 5, 3], name=name + '_transpose')
-    out = flow.reshape(out, [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor], name=name + '_reshape3')
+    out = flow.reshape(
+        input,
+        [_batch, _new_c, h_upscale_factor * w_upscale_factor, _height, _width],
+        name=name + "_reshape1",
+    )
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
+        name=name + "_reshape2",
+    )
+    out = flow.transpose(out, [0, 1, 4, 2, 5, 3], name=name + "_transpose")
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor],
+        name=name + "_reshape3",
+    )
     return out

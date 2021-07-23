@@ -5,6 +5,7 @@ import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
+
 def _test_abs_forward(test_case, device):
     input = flow.Tensor(np.random.randn(2, 3).astype(np.float32))
     of_out = flow.abs(input)
@@ -12,12 +13,14 @@ def _test_abs_forward(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(input.abs().numpy(), np_out, 1e-05, 1e-05))
 
+
 def _test_abs_tensor_function_forward(test_case, device):
     x = np.random.randn(2, 3).astype(np.float32)
     input = flow.Tensor(x, dtype=flow.float32)
     np_out = np.abs(x)
     of_out = input.abs()
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
 
 def _test_abs_backward(test_case, device):
     np_input = np.random.randn(2, 3).astype(np.float32)
@@ -27,6 +30,7 @@ def _test_abs_backward(test_case, device):
     np_grad = np.where(np_input > 0, 1, -1)
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+
 def _test_abs_tensor_function_backward(test_case, device):
     np_input = np.random.randn(2, 3).astype(np.float32)
     input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
@@ -35,22 +39,29 @@ def _test_abs_tensor_function_backward(test_case, device):
     np_grad = np.where(np_input > 0, 1, -1)
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestAbs(flow.unittest.TestCase):
-
     def test_cosh(test_case):
         arg_dict = OrderedDict()
-        arg_dict['test_fun'] = [_test_abs_forward, _test_abs_tensor_function_forward, _test_abs_backward, _test_abs_tensor_function_backward]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["test_fun"] = [
+            _test_abs_forward,
+            _test_abs_tensor_function_forward,
+            _test_abs_backward,
+            _test_abs_tensor_function_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     def test_flow_abs_with_random_data(test_case):
-        for device in ['cpu', 'cuda']:
-            test_flow_against_pytorch(test_case, 'abs', device=device)
+        for device in ["cpu", "cuda"]:
+            test_flow_against_pytorch(test_case, "abs", device=device)
 
     def test_flow_tensor_abs_with_random_data(test_case):
-        for device in ['cpu', 'cuda']:
-            test_tensor_against_pytorch(test_case, 'abs', device=device)
-if __name__ == '__main__':
+        for device in ["cpu", "cuda"]:
+            test_tensor_against_pytorch(test_case, "abs", device=device)
+
+
+if __name__ == "__main__":
     unittest.main()

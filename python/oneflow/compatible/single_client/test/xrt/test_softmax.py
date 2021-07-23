@@ -1,7 +1,9 @@
 import unittest
 import numpy as np
 from oneflow.compatible import single_client as flow
+
 config = flow.function_config()
+
 
 def make_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
@@ -10,7 +12,9 @@ def make_job(input_shape, axis, dtype=flow.float32):
     @flow.global_function(config)
     def softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return softmax_job
+
 
 def make_xla_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(True)
@@ -19,7 +23,9 @@ def make_xla_job(input_shape, axis, dtype=flow.float32):
     @flow.global_function(config)
     def xla_softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return xla_softmax_job
+
 
 def make_trt_job(input_shape, axis, dtype=flow.float32):
     config.use_xla_jit(False)
@@ -28,22 +34,23 @@ def make_trt_job(input_shape, axis, dtype=flow.float32):
     @flow.global_function(config)
     def trt_softmax_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
         return flow.nn.softmax(x, axis=axis)
+
     return trt_softmax_job
 
-class TestSoftmax(unittest.TestCase):
 
+class TestSoftmax(unittest.TestCase):
     def _test_body(self, x, axis, dtype=np.float32):
         f1 = make_job(x.shape, axis, dtype=flow.float32)
         f2 = make_xla_job(x.shape, axis, dtype=flow.float32)
         a = f1(x).get()
         b = f2(x).get()
-        print('without xla: ', a)
-        print('with xla: ', b)
+        print("without xla: ", a)
+        print("with xla: ", b)
         self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
         f3 = make_trt_job(x.shape, axis, dtype=flow.float32)
         c = f3(x).get()
-        print('with tensorrt: ', c)
+        print("with tensorrt: ", c)
         self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
         flow.clear_default_session()
 
@@ -66,5 +73,7 @@ class TestSoftmax(unittest.TestCase):
         self._test_random_body((2, 5), axis=-1)
         self._test_random_body((1, 5, 2), axis=1)
         self._test_random_body((1, 5, 2), axis=2)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

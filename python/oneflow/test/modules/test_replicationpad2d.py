@@ -4,6 +4,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList, FlattenArray, Array2Numpy, Index2Coordinate
 
+
 def _np_replication_pad2d_grad(src, dest, padding):
     (c_idx, h_idx, w_idx) = (1, 2, 3)
     pad_left = padding[0]
@@ -43,35 +44,45 @@ def _np_replication_pad2d_grad(src, dest, padding):
     numpy_dest = Array2Numpy(array_dest, dest.shape)
     return numpy_dest
 
+
 def _test_ReplicationPad2d(test_case, shape, padding, device):
     np_input = np.random.random(shape).astype(np.float32)
-    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     if isinstance(padding, int):
         np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
         boundry = [padding, padding, padding, padding]
     elif isinstance(padding, (tuple, int)) and len(padding) == 4:
-        np_boundary = ((0, 0), (0, 0), (padding[2], padding[3]), (padding[0], padding[1]))
+        np_boundary = (
+            (0, 0),
+            (0, 0),
+            (padding[2], padding[3]),
+            (padding[0], padding[1]),
+        )
         boundry = [padding[0], padding[1], padding[2], padding[3]]
     else:
-        raise ValueError('padding must be in or list or tuple!')
+        raise ValueError("padding must be in or list or tuple!")
     layer = flow.nn.ReplicationPad2d(padding=padding)
     of_out = layer(of_input)
-    np_out = np.pad(np_input, np_boundary, mode='edge')
+    np_out = np.pad(np_input, np_boundary, mode="edge")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = _np_replication_pad2d_grad(np_out, np_input, boundry)
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 0.001, 0.001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestReplicationPad2dModule(flow.unittest.TestCase):
-
     def test_ReplicationPad2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict['shape'] = [(1, 2, 3, 4), (8, 3, 4, 4)]
-        arg_dict['padding'] = [2, (1, 1, 2, 2)]
-        arg_dict['device'] = ['cpu', 'cuda']
+        arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
+        arg_dict["padding"] = [2, (1, 1, 2, 2)]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_ReplicationPad2d(test_case, *arg)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

@@ -18,8 +18,8 @@ import oneflow.framework.dtype as dtype_util
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
-def register_local_tensor_method(name=None):
 
+def register_local_tensor_method(name=None):
     def decorator(method):
         if name is None:
             op_name = method.__name__
@@ -27,77 +27,155 @@ def register_local_tensor_method(name=None):
             op_name = name
         setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
+
     return decorator
 
-@register_local_tensor_method('numpy')
+
+@register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
     if eager_local_tensor.dtype == flow.tensor_buffer:
         (shapes, dtypes) = eager_local_tensor._tensor_buffer_shapes_and_dtypes
-        tensors = flow.tensor_buffer_to_list_of_tensors(Tensor(eager_local_tensor), shapes, dtypes)
+        tensors = flow.tensor_buffer_to_list_of_tensors(
+            Tensor(eager_local_tensor), shapes, dtypes
+        )
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
-    ndarray = np.empty(tuple(eager_local_tensor.shape), dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype))
+    ndarray = np.empty(
+        tuple(eager_local_tensor.shape),
+        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
+    )
     copy_to_numpy(ndarray)
     return ndarray
 
-@register_local_tensor_method('copy_')
+
+@register_local_tensor_method("copy_")
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()
     copy_from_numpy = getattr(eager_local_tensor, method_name)
-    assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype)
+    assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
+        eager_local_tensor.dtype
+    )
     if np_arr.shape == ():
         assert tuple(eager_local_tensor.shape) == (1,)
     else:
         assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
 
-@register_local_tensor_method('_init_by_initializer_conf')
-def _init_eager_local_tensor_by_initializer_conf(eager_local_tensor, initializer_conf, random_seed=0):
+
+@register_local_tensor_method("_init_by_initializer_conf")
+def _init_eager_local_tensor_by_initializer_conf(
+    eager_local_tensor, initializer_conf, random_seed=0
+):
     shape = tuple(eager_local_tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
     if initializer is None:
         return
-    _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, check_point_v2.generate_values_by_initializer(initializer, shape, eager_local_tensor.dtype))
+    _copy_from_numpy_to_eager_local_tensor(
+        eager_local_tensor,
+        check_point_v2.generate_values_by_initializer(
+            initializer, shape, eager_local_tensor.dtype
+        ),
+    )
 
-def construct_tensor(data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None, is_consistent=False, is_lazy=False):
+
+def construct_tensor(
+    data,
+    dtype=None,
+    device=None,
+    requires_grad=False,
+    placement=None,
+    sbp=None,
+    is_consistent=False,
+    is_lazy=False,
+):
     if _is_scalar(data) or _input_args_is_data(data):
-        if not _input_args_is_numpy(data) and dtype is None and _input_dtype_is_float(data):
+        if (
+            not _input_args_is_numpy(data)
+            and dtype is None
+            and _input_dtype_is_float(data)
+        ):
             dtype = flow.float32
         data = np.array(data)
         if dtype is None:
             dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(data.dtype)
-        return Tensor(data, dtype=dtype, device=device, requires_grad=requires_grad, placement=placement, sbp=sbp, is_consistent=is_consistent, is_lazy=is_lazy)
+        return Tensor(
+            data,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+        )
     else:
-        raise TypeError('Construction error, invalid combination of arguments')
+        raise TypeError("Construction error, invalid combination of arguments")
+
 
 class Tensor:
-
-    def __init__(self, *args, dtype=None, device=None, requires_grad=False, placement=None, sbp=None, is_consistent=False, is_lazy=False, data_initializer=None, determining_initializer=None):
+    def __init__(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+        data_initializer=None,
+        determining_initializer=None,
+    ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
         if isinstance(device, str):
             device = flow.device(device)
         if placement is None:
-            device = device if device is not None else oneflow._oneflow_internal.device('cpu')
+            device = (
+                device
+                if device is not None
+                else oneflow._oneflow_internal.device("cpu")
+            )
         if _input_args_is_tensor(*args):
-            self._local_or_consistent_tensor = flow.to(*args, device=args[0].device, dtype=args[0].dtype, copy=True)
+            self._local_or_consistent_tensor = flow.to(
+                *args, device=args[0].device, dtype=args[0].dtype, copy=True
+            )
             self._undetermined_tensor = None
         elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
         elif _input_args_is_data(*args):
             self._local_or_consistent_tensor = None
-            self._construct_with_data(*args, dtype=dtype, device=device, requires_grad=requires_grad, placement=placement, sbp=sbp, is_consistent=is_consistent, is_lazy=is_lazy)
+            self._construct_with_data(
+                *args,
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
+                is_lazy=is_lazy,
+            )
         elif _input_args_is_shape(*args):
             shape = args
             self._local_or_consistent_tensor = None
-            self._undetermined_tensor = UndeterminedTensor(shape, dtype, device=device, requires_grad=requires_grad, placement=placement, sbp=sbp, is_consistent=is_consistent, is_lazy=is_lazy, data_initializer=data_initializer)
+            self._undetermined_tensor = UndeterminedTensor(
+                shape,
+                dtype,
+                device=device,
+                requires_grad=requires_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
+                is_lazy=is_lazy,
+                data_initializer=data_initializer,
+            )
             if determining_initializer is None:
                 determining_initializer = _default_initializer_for_determining
             self._determining_initializer = determining_initializer
         else:
-            raise TypeError('new() received an invalid combination of arguments')
+            raise TypeError("new() received an invalid combination of arguments")
 
     @property
     def shape(self):
@@ -125,7 +203,7 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    @register_local_tensor_method('ndim')
+    @register_local_tensor_method("ndim")
     @property
     def ndim(self):
         return len(self.shape)
@@ -145,12 +223,12 @@ class Tensor:
             return self._undetermined_tensor.dtype
 
     def _auto_determine(func):
-
         def wrapped_func(*args, **kwargs):
             tensor = args[0]
             if not tensor.is_determined:
                 tensor.determine()
             return func(*args, **kwargs)
+
         return wrapped_func
 
     @property
@@ -172,11 +250,17 @@ class Tensor:
     @grad.setter
     @_auto_determine
     def grad(self, new_grad):
-
         def check_grad(grad, new_grad):
-            assert grad.shape == new_grad.shape, f'Shape of grads are not equal, {grad.shape} vs {new_grad.shape}'
-            assert grad.device == new_grad.device, f'Device of grads are not equal, {grad.device} vs {new_grad.device}'
-            assert grad.dtype == new_grad.dtype, f'Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}'
+            assert (
+                grad.shape == new_grad.shape
+            ), f"Shape of grads are not equal, {grad.shape} vs {new_grad.shape}"
+            assert (
+                grad.device == new_grad.device
+            ), f"Device of grads are not equal, {grad.device} vs {new_grad.device}"
+            assert (
+                grad.dtype == new_grad.dtype
+            ), f"Data type of grads are not equal, {grad.dtype} vs {new_grad.dtype}"
+
         if self._local_or_consistent_tensor is not None:
             if new_grad is None:
                 self._local_or_consistent_tensor.set_grad(None)
@@ -293,7 +377,9 @@ class Tensor:
         if not lazy_mode.is_enabled():
             flow.autograd.backward(self, gradient, retain_graph, create_graph)
         else:
-            assert self.is_lazy, 'nn.Graph only accept lazy tensor to call backward() in lazy mode.'
+            assert (
+                self.is_lazy
+            ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
             flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
     @register_local_tensor_method()
@@ -312,7 +398,6 @@ class Tensor:
 
     @register_local_tensor_method()
     def _get_slice_obj(self, key):
-
         def get_or_default(x, default):
             return x if x is not None else default
 
@@ -320,13 +405,14 @@ class Tensor:
             if index < 0:
                 index += length
             if index > length or index < 0:
-                raise IndexError(f'Index should be in [0, {length}), but got {index}')
+                raise IndexError(f"Index should be in [0, {length}), but got {index}")
             return max(min(index, length), start)
 
         def get_slice_if_int(x):
             if isinstance(x, slice):
                 return x
             return slice(x, x + 1)
+
         if isinstance(key, tuple):
             assert all((isinstance(x, (slice, int)) for x in key))
         else:
@@ -336,11 +422,21 @@ class Tensor:
         assert len(key) <= len(self.shape)
         for i in range(len(key), len(self.shape)):
             key += (slice(None, None, None),)
-        starts = [get_canonical_index(get_or_default(x.start, 0), self.shape[i]) for (i, x) in enumerate(key)]
-        stops = [get_canonical_index(get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]) for (i, x) in enumerate(key)]
+        starts = [
+            get_canonical_index(get_or_default(x.start, 0), self.shape[i])
+            for (i, x) in enumerate(key)
+        ]
+        stops = [
+            get_canonical_index(
+                get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]
+            )
+            for (i, x) in enumerate(key)
+        ]
         steps = [get_or_default(x.step, 1) for x in key]
         assert all((x > 0 for x in steps))
-        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(np.array(steps)) + 1
+        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(
+            np.array(steps)
+        ) + 1
         shape = shape.tolist()
         return (starts, stops, steps, shape)
 
@@ -522,28 +618,48 @@ class Tensor:
 
     @register_local_tensor_method()
     def uniform_(self, a=0, b=1):
-        initializer_conf = flow.random_uniform_initializer(minval=a, maxval=b, dtype=self.dtype)
+        initializer_conf = flow.random_uniform_initializer(
+            minval=a, maxval=b, dtype=self.dtype
+        )
         return self._init_by_initializer_conf(initializer_conf)
 
     @register_local_tensor_method()
-    def kaiming_uniform_(self, a=0, mode='fan_in', nonlinearity='leaky_relu', *, data_format='NCHW'):
-        initializer_conf = flow.kaiming_initializer(shape=self.shape, distribution='random_uniform', mode=mode, nonlinearity=nonlinearity, negative_slope=a, data_format=data_format)
+    def kaiming_uniform_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_uniform",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
+        )
         return self._init_by_initializer_conf(initializer_conf)
 
     @register_local_tensor_method()
-    def kaiming_normal_(self, a=0, mode='fan_in', nonlinearity='leaky_relu', *, data_format='NCHW'):
-        initializer_conf = flow.kaiming_initializer(shape=self.shape, distribution='random_normal', mode=mode, nonlinearity=nonlinearity, negative_slope=a, data_format=data_format)
+    def kaiming_normal_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_normal",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
+        )
         return self._init_by_initializer_conf(initializer_conf)
 
     @register_local_tensor_method()
-    def xavier_normal_(self, gain=1.0, *, data_format='NCHW'):
-        assert gain == 1.0, 'Only gain == 1.0 is supported now'
+    def xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
         initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
         return self._init_by_initializer_conf(initializer_conf)
 
     @register_local_tensor_method()
-    def xavier_uniform_(self, gain=1.0, *, data_format='NCHW'):
-        assert gain == 1.0, 'Only gain == 1.0 is supported now'
+    def xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
         initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
         return self._init_by_initializer_conf(initializer_conf)
 
@@ -569,8 +685,10 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def register_hook(self, hook):
-        assert self.is_leaf, 'register_hook only supports leaf tensor for now'
-        assert self.requires_grad, 'register_hook only supports tensor with requires_grad=True'
+        assert self.is_leaf, "register_hook only supports leaf tensor for now"
+        assert (
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
 
         def hook_returning_determined_tensor(grad):
             new_grad = hook(grad)
@@ -578,10 +696,13 @@ class Tensor:
                 new_grad.determine()
                 new_grad = new_grad._local_or_consistent_tensor
             return new_grad
-        self._local_or_consistent_tensor._register_hook(hook_returning_determined_tensor)
+
+        self._local_or_consistent_tensor._register_hook(
+            hook_returning_determined_tensor
+        )
 
     @_auto_determine
-    def copy_(self, other: Union['Tensor', np.ndarray]):
+    def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
             TODO()
@@ -598,9 +719,13 @@ class Tensor:
         if self.is_determined:
             if self.is_consistent:
                 with self._placement_scope():
-                    check_point_v2.init_by_initializer_conf(self, initializer_conf, True, None)
+                    check_point_v2.init_by_initializer_conf(
+                        self, initializer_conf, True, None
+                    )
             else:
-                _init_eager_local_tensor_by_initializer_conf(self._local_or_consistent_tensor, initializer_conf)
+                _init_eager_local_tensor_by_initializer_conf(
+                    self._local_or_consistent_tensor, initializer_conf
+                )
         else:
             self.set_data_initializer(initializer_conf)
         return self
@@ -611,7 +736,17 @@ class Tensor:
         else:
             return _convert_to_placement_scope(self.device)
 
-    def _construct_with_data(self, *args, dtype=None, device=None, requires_grad=False, placement=None, sbp=None, is_consistent=False, is_lazy=False):
+    def _construct_with_data(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+    ):
         numpy_data = None
         if _input_args_is_tuple_or_list(*args):
             numpy_data = np.array(args[0])
@@ -620,17 +755,45 @@ class Tensor:
         numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
-        self._undetermined_tensor = UndeterminedTensor(shape, dtype, device=device, requires_grad=requires_grad, placement=placement, sbp=sbp, is_consistent=is_consistent, is_lazy=is_lazy, numpy_data=numpy_data)
+        self._undetermined_tensor = UndeterminedTensor(
+            shape,
+            dtype,
+            device=device,
+            requires_grad=requires_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+            numpy_data=numpy_data,
+        )
+
 
 class UndeterminedTensor:
-
-    def __init__(self, shape, dtype, device=None, requires_grad=False, placement=None, sbp=None, is_consistent=False, is_lazy=False, data_initializer=None, numpy_data=None):
+    def __init__(
+        self,
+        shape,
+        dtype,
+        device=None,
+        requires_grad=False,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+        data_initializer=None,
+        numpy_data=None,
+    ):
         if not isinstance(shape, oneflow._oneflow_internal.Size):
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
             shape = oneflow._oneflow_internal.Size(shape)
-        data_initializer = data_initializer if data_initializer is not None else flow.empty_initializer(dtype=dtype)
-        device = device if device is not None else oneflow._oneflow_internal.device('cpu')
+        data_initializer = (
+            data_initializer
+            if data_initializer is not None
+            else flow.empty_initializer(dtype=dtype)
+        )
+        device = (
+            device if device is not None else oneflow._oneflow_internal.device("cpu")
+        )
         self.shape = shape
         self.dtype = dtype
         self.device = device
@@ -650,8 +813,9 @@ class UndeterminedTensor:
         elif self.device is not None:
             device_type = self.device.type
         else:
-            raise ValueError('Neither placement nor device found.')
-        return device_type == 'gpu' or device_type == 'cuda'
+            raise ValueError("Neither placement nor device found.")
+        return device_type == "gpu" or device_type == "cuda"
+
 
 def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
@@ -661,9 +825,19 @@ def _default_initializer_for_determining(tensor):
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.Tensor(shape, dtype, undetermined_tensor.device, undetermined_tensor.is_lazy, undetermined_tensor.requires_grad, True)
-        _init_eager_local_tensor_by_initializer_conf(determined_tensor, undetermined_tensor.data_initializer)
+        determined_tensor = oneflow._oneflow_internal.Tensor(
+            shape,
+            dtype,
+            undetermined_tensor.device,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+        )
+        _init_eager_local_tensor_by_initializer_conf(
+            determined_tensor, undetermined_tensor.data_initializer
+        )
     return determined_tensor
+
 
 def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
@@ -673,51 +847,74 @@ def _numpy_initializer_for_determining(tensor):
     if undetermined_tensor.is_consistent:
         raise NotImplementedError()
     else:
-        determined_tensor = oneflow._oneflow_internal.Tensor(undetermined_tensor.shape, undetermined_tensor.dtype, undetermined_tensor.device, undetermined_tensor.is_lazy, undetermined_tensor.requires_grad, True)
+        determined_tensor = oneflow._oneflow_internal.Tensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.device,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+        )
         _copy_from_numpy_to_eager_local_tensor(determined_tensor, numpy_data)
     return determined_tensor
+
 
 def _input_args_is_tuple_or_list(*args):
     return len(args) == 1 and isinstance(args[0], (tuple, list))
 
+
 def _input_args_is_numpy(*args):
     return len(args) == 1 and isinstance(args[0], np.ndarray)
+
 
 def _input_args_is_consistent_or_local(*args):
     return len(args) == 1 and isinstance(args[0], oneflow._oneflow_internal.Tensor)
 
+
 def _input_args_is_tensor(*args):
     return len(args) == 1 and isinstance(args[0], flow.Tensor)
+
 
 def _input_args_is_data(*args):
     return _input_args_is_numpy(*args) or _input_args_is_tuple_or_list(*args)
 
+
 def _input_args_is_shape(*args):
     return all((isinstance(x, int) for x in args))
 
-def register_tensor_op(op_name):
 
+def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
         setattr(oneflow._oneflow_internal.Tensor, op_name, method)
         return method
+
     return set_tensor_op
+
 
 def _convert_to_placement_scope(placement_or_device):
     if isinstance(placement_or_device, flow.placement):
         placement = placement_or_device
-        return flow.scope.placement(placement.device_tag, list(placement.parallel_conf.device_name()), placement.hierarchy)
+        return flow.scope.placement(
+            placement.device_tag,
+            list(placement.parallel_conf.device_name()),
+            placement.hierarchy,
+        )
     else:
         device = placement_or_device
         machine_id = 0
-        if device.type == 'cuda':
-            device_tag = 'gpu'
+        if device.type == "cuda":
+            device_tag = "gpu"
         else:
             device_tag = device.type
-        return flow.scope.placement(device_tag, '{}:{}'.format(machine_id, device.index), None)
+        return flow.scope.placement(
+            device_tag, "{}:{}".format(machine_id, device.index), None
+        )
+
 
 def _is_scalar(data):
     return isinstance(data, (int, float, bool, complex))
+
 
 def _flatten_list_or_tuple(list_or_tuple):
     for item in list_or_tuple:
@@ -725,6 +922,7 @@ def _flatten_list_or_tuple(list_or_tuple):
             yield from _flatten_list_or_tuple(item)
         else:
             yield item
+
 
 def _input_dtype_is_float(data):
     if _is_scalar(data):

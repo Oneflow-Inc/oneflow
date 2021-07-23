@@ -7,15 +7,21 @@ from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils import add_indent
 
+
 class BlockType:
-    NONE = 'NONE'
-    MODULE = 'MODULE'
-    PARAMETER = 'PARAMETER'
-    BUFFER = 'BUFFER'
+    NONE = "NONE"
+    MODULE = "MODULE"
+    PARAMETER = "PARAMETER"
+    BUFFER = "BUFFER"
+
 
 class Block(object):
-
-    def __init__(self, prefix: str='', name: str='', value: Union[Module, Parameter, Tensor]=None):
+    def __init__(
+        self,
+        prefix: str = "",
+        name: str = "",
+        value: Union[Module, Parameter, Tensor] = None,
+    ):
         assert not isinstance(value, Block)
         self._name = name
         self._name_prefix = prefix
@@ -31,11 +37,11 @@ class Block(object):
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
             for (n, m) in list(value.named_children()):
-                self.__setattr__(n, Block(self._name_prefix + self._name + '.', n, m))
-            for (n, p) in list(value.named_parameters('', False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + '.', n, p))
-            for (n, b) in list(value.named_buffers('', False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + '.', n, b))
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, m))
+            for (n, p) in list(value.named_parameters("", False)):
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, p))
+            for (n, b) in list(value.named_buffers("", False)):
+                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
             self._lazy_origin = None
@@ -65,15 +71,21 @@ class Block(object):
 
     @property
     def lazy_origin(self):
-        assert self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER, 'Only Parameter or Buffer Block has lazy_origin'
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin
 
     def lazy_origin_builder(self):
-        assert self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER, 'Only Parameter or Buffer Block has lazy_origin_builder'
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, fn=None):
-        assert self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER, 'Only Parameter or Buffer Block has lazy_origin_builder'
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
         self._lazy_origin_builder = fn
 
     @property
@@ -104,7 +116,7 @@ class Block(object):
         self._is_executing_forward = False
         return result
 
-    def modules(self, memo: Optional[Set['Block']]=None) -> Iterator['Block']:
+    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         if memo is None:
             memo = set()
@@ -117,7 +129,7 @@ class Block(object):
                 for m in module.modules(memo):
                     yield m
 
-    def _members(self, get_members_fn, recurse=True) -> Iterator['Block']:
+    def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
@@ -129,13 +141,13 @@ class Block(object):
                 memo.add(v)
                 yield v
 
-    def parameters(self, recurse: bool=True) -> Iterator['Block']:
+    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         gen = self._members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
-    def buffers(self, recurse: bool=True) -> Iterator['Block']:
+    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         gen = self._members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
@@ -145,10 +157,19 @@ class Block(object):
         if value is None or not isinstance(value, Block):
             self.__dict__[name] = value
         else:
-            dicts_or_sets = (self.__dict__, self._modules, self._parameters, self._buffers)
+            dicts_or_sets = (
+                self.__dict__,
+                self._modules,
+                self._parameters,
+                self._buffers,
+            )
             for d in dicts_or_sets:
                 if name in d:
-                    raise AttributeError("'{}' object has duplicated attribute named '{}'".format(self._name, name))
+                    raise AttributeError(
+                        "'{}' object has duplicated attribute named '{}'".format(
+                            self._name, name
+                        )
+                    )
             if value.type == BlockType.MODULE:
                 self._modules[name] = value
             elif value.type == BlockType.PARAMETER:
@@ -156,41 +177,55 @@ class Block(object):
             elif value.type == BlockType.BUFFER:
                 self._buffers[name] = value
             else:
-                raise AttributeError("'{}' object are not allowed to set attribute named '{}'".format(type(self).__name__, name))
+                raise AttributeError(
+                    "'{}' object are not allowed to set attribute named '{}'".format(
+                        type(self).__name__, name
+                    )
+                )
 
     def __getattr__(self, name: str):
         if name in self.__dict__:
             return self.__dict__[name]
         if self._type == BlockType.MODULE:
-            if '_modules' in self.__dict__:
-                modules = self.__dict__['_modules']
+            if "_modules" in self.__dict__:
+                modules = self.__dict__["_modules"]
                 if name in modules:
                     return modules[name]
-            if '_parameters' in self.__dict__:
-                _parameters = self.__dict__['_parameters']
+            if "_parameters" in self.__dict__:
+                _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
                     p_block = _parameters[name]
                     if self._is_executing_forward:
                         if graph_build_util.lazy_mode.is_enabled():
                             if p_block._lazy_origin is None:
-                                assert p_block._lazy_origin_builder is not None, repr(p_block) + ' has no lazy Tensor creation function.'
+                                assert p_block._lazy_origin_builder is not None, (
+                                    repr(p_block)
+                                    + " has no lazy Tensor creation function."
+                                )
                                 with p_block.scope_context():
-                                    p_block._lazy_origin = p_block._lazy_origin_builder()
+                                    p_block._lazy_origin = (
+                                        p_block._lazy_origin_builder()
+                                    )
                             return p_block._lazy_origin
                         else:
                             return p_block.origin
                     else:
                         return p_block
-            if '_buffers' in self.__dict__:
-                _buffers = self.__dict__['_buffers']
+            if "_buffers" in self.__dict__:
+                _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
                     b_block = _buffers[name]
                     if self._is_executing_forward:
                         if graph_build_util.lazy_mode.is_enabled():
                             if b_block._lazy_origin is None:
-                                assert b_block._lazy_origin_builder is not None, repr(b_block) + ' has no lazy Tensor creation function.'
+                                assert b_block._lazy_origin_builder is not None, (
+                                    repr(b_block)
+                                    + " has no lazy Tensor creation function."
+                                )
                                 with b_block.scope_context():
-                                    b_block._lazy_origin = b_block._lazy_origin_builder()
+                                    b_block._lazy_origin = (
+                                        b_block._lazy_origin_builder()
+                                    )
                             return b_block._lazy_origin
                         else:
                             return b_block.origin
@@ -198,7 +233,9 @@ class Block(object):
                         return b_block
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
-        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, name))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+        )
 
     def __repr__(self):
         lines = None
@@ -210,19 +247,29 @@ class Block(object):
                     n_str = repr(n)
                     n_str = add_indent(n_str, 2)
                     child_lines.append(n_str)
+
             _append_child(self._modules)
             _append_child(self._parameters)
             _append_child(self._buffers)
             if len(child_lines) > 0:
                 lines = child_lines
-        main_str = '(' + self._name_prefix + self._name + ':' + self._origin.__class__.__name__ + ':' + self._type + '): ('
+        main_str = (
+            "("
+            + self._name_prefix
+            + self._name
+            + ":"
+            + self._origin.__class__.__name__
+            + ":"
+            + self._type
+            + "): ("
+        )
         if lines is not None:
-            main_str += '\n  ' + '\n  '.join(lines) + '\n'
-        main_str += ')'
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
         return main_str
 
-class BlockConfig(object):
 
+class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
         self._activation_checkpointing = None
@@ -232,7 +279,7 @@ class BlockConfig(object):
         return self._stage_id
 
     @stage_id.setter
-    def stage_id(self, value: int=None):
+    def stage_id(self, value: int = None):
         self._stage_id = value
 
     @property
@@ -240,5 +287,5 @@ class BlockConfig(object):
         return self._activation_checkpointing
 
     @activation_checkpointing.setter
-    def activation_checkpointing(self, value: bool=False):
+    def activation_checkpointing(self, value: bool = False):
         self._activation_checkpointing = value
