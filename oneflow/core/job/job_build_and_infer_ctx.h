@@ -60,6 +60,7 @@ class JobBuildAndInferCtx {
       const std::string& lbn_with_hint) const;
 
   const Job& job() const;
+  int64_t job_id() const { return job_id_; }
   Maybe<void> CheckJob() const;
   std::string GetJobStructureGraphJson(const std::string& job_name) const;
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
@@ -83,7 +84,6 @@ class JobBuildAndInferCtx {
       int64_t scope_symbol_id, const LogicalBlobId& lbn) = 0;
 
   Job* mut_job() const { return job_; }
-  int64_t job_id() const { return job_id_; }
   const HashMap<LogicalBlobId, std::vector<LogicalBlobId>>& mirrored_lbi2sub_lbis() const {
     return mirrored_lbi2sub_lbis_;
   }
