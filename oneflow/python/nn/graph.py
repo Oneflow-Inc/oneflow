@@ -147,7 +147,7 @@ class Graph(object):
                     partial(graph_build_util.build_graph_state, op_name, state_tensor)
                 )
 
-            self._parameters = state_tensors
+            self._variables = state_tensors
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
@@ -188,8 +188,11 @@ class Graph(object):
         return eager_outputs
 
     def _launch(self, *args):
+        inputs = []
+        for idx, arg in enumerate(args):
+            inputs.append(arg)
         oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
-            *args, self._outputs, self._parameters, self._c_nn_graph
+            inputs, self._outputs, self._variables, self._c_nn_graph
         )
         return self._outputs
 
