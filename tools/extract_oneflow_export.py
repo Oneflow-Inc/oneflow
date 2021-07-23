@@ -145,6 +145,10 @@ class ExportVisitor(ast.NodeTransformer):
     def visit_Name(self, node: ast.AST):
         if node.id == "oneflow_export":
             return None
+        if node.id == "stable_api":
+            return None
+        if node.id == "experimental_api":
+            return None
         return node
 
     def visit_Call(self, node: ast.AST):
