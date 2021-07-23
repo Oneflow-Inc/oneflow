@@ -1,5 +1,5 @@
 # python3 -m pip install isort autoflake astpretty
-# requires python3.8 to run
+# requires python3.9 to run
 import os
 import argparse
 import ast
