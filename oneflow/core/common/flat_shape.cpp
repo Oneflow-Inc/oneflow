@@ -13,24 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
-Maybe<void> FlatShape::Init(const std::shared_ptr<const Shape>& shape) {
-  CHECK_LE_OR_RETURN(shape->NumAxes(), SHAPE_MAX_AXIS_SIZE);
-  this->set_num_axes(shape->NumAxes());
-  for (int i = 0; i < this->num_axes(); ++i) { *this->mutable_dim()->Mutable(i) = shape->At(i); }
+static Maybe<FlatShape> New(const Shape& shape) {
+	const auto& flat_shape = std::make_shared<FlatShape>();
+  JUST(flat_shape->Init(shape));
+	return flat_shape;
+}
+
+Maybe<void> FlatShape::Init(const Shape& shape) {
+  CHECK_LE_OR_RETURN(shape.NumAxes(), SHAPE_MAX_AXIS_SIZE);
+  for (int i = 0; i < shape.NumAxes(); ++i) { *this->mutable_dim()->Add() = shape.At(i); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FlatShape::Check(const std::shared_ptr<const Shape>& shape) const {
-  CHECK_EQ_OR_RETURN(this->num_axes(), shape->NumAxes());
-  for (int i = 0; i < this->num_axes(); ++i) {
-    CHECK_EQ_OR_RETURN(this->dim().Get(i), shape->At(i));
+Maybe<void> FlatShape::Check(const Shape& shape) const {
+  CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
+  for (int i = 0; i < this->dim_size(); ++i) {
+    CHECK_EQ_OR_RETURN(this->dim(i), shape.At(i));
   }
   return Maybe<void>::Ok();
 }
 
+Maybe<Shape> FlatShape::ToShape() const {
+	DimVector dim_vec;
+  for (int i = 0; i < this->dim_size(); ++i) { dim_vec.push_back(this->dim(i)); }
+	return std::make_shape<Shape>(dim_vec);
+}
 }  // namespace oneflow

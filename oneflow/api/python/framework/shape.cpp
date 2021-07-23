@@ -15,8 +15,11 @@ limitations under the License.
 */
 #include <vector>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/flat_shape.h"
+#include "oneflow/core/framework/sync_shape.h"
 
 namespace py = pybind11;
 
@@ -102,6 +105,17 @@ struct ShapeExportUtil final {
   }
 };
 
+Maybe<std::map<int64_t, std::shared_ptr<Shape>>> SyncShape(const Shape& shape) {
+	const auto& rank2flat_shape = JUST(CtrlRpc::All2AllSyncShape(shape));
+	const auto& map = std::make_shared<std::map<int64_t, std::shared_ptr<Shape>>>();
+	for (const auto& pair : *rank2flat_shape) { map->emplace(pair.first, pair.second->ToShape()); }
+	return map;
+}
+
+std::map<int64_t, std::shared_ptr<Shape>> ApiSyncShape(const Shape& shape) {
+	return *SyncShape(const Shape& shape).GetPtrOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -126,6 +140,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            })
       .def("index", &ShapeExportUtil::GetIndexOrError, py::arg(), py::arg("start") = 0,
            py::arg("end") = SHAPE_MAX_AXIS_SIZE);
+
+  m.def("sync_shape", &ApiSyncShape);
 }
 
 }  // namespace oneflow
