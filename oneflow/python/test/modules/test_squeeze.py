@@ -106,16 +106,6 @@ class TestSqueeze(flow.unittest.TestCase):
         y = torch.squeeze(x, random(1, 3).to(int))
         return y
 
-    def test_flow_tensor_squeeze_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "squeeze",
-                extra_annotations={"dim": int},
-                extra_generators={"dim": random(0, 6)},
-                device=device,
-            )
-
 
 if __name__ == "__main__":
     unittest.main()
