@@ -73,7 +73,6 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
     FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
       int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
       int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-      LOG(ERROR) << "machine_id: " << machine_id << ", device_id: " << device_id;
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
