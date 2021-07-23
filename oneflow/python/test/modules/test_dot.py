@@ -48,11 +48,11 @@ def _test_dot_backpropagation(test_case, device, dtype):
 
         if arg[0]:
             test_case.assertTrue(
-                np.allclose(np_y, x.grad.numpy(), rtol=1e-04, atol=1e-10)
+                np.allclose(np_y, x.grad.numpy(), rtol=1e-05, atol=1e-5)
             )
         if arg[1]:
             test_case.assertTrue(
-                np.allclose(np_x, y.grad.numpy(), rtol=1e-04, atol=1e-10)
+                np.allclose(np_x, y.grad.numpy(), rtol=1e-05, atol=1e-5)
             )
 
 
