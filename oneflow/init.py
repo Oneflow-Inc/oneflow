@@ -122,7 +122,6 @@ atexit.register(_SyncOnMasterFn)
 
 del atexit
 
-del absolute_import
 del oneflow
 
 import oneflow.python.framework.docstr as docstr
