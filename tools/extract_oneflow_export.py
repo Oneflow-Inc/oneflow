@@ -390,7 +390,7 @@ if __name__ == "__main__":
     src_module_added = {}
     for s in srcs:
         # src
-        append_trees(tree_dict=final_trees, module=target_module, tree=s.tree)
+        append_trees(tree_dict=final_trees, module=s.target_module, tree=s.tree)
         if (
             str(s.src) == "oneflow/python/__init__.py"
             or str(s.src) == "oneflow/compatible_single_client_python/__init__.py"
