@@ -38,23 +38,23 @@ class MaskedSelect(Module):
                 broadcast_x_axes.append(i)
             if max_dim != mask.shape[i]:
                 broadcast_mask_axes.append(i)
-        broadcast_like_tensor = flow.experimental.zeros(
+        broadcast_like_tensor = flow.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32, device=x.device,
         )
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
-            x = flow.experimental.broadcast_like(
+            x = flow.broadcast_like(
                 x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
             )
 
         if len(broadcast_mask_axes) != 0:
-            mask = flow.experimental.broadcast_like(
+            mask = flow.broadcast_like(
                 mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
             )
         mask = mask.to(dtype=x.dtype)
 
         res = flow.F.mul(x, mask)
-        indices = flow.experimental.argwhere(res)
+        indices = flow.argwhere(res)
         gather_res = flow.F.gather_nd(res, indices)
         return gather_res.flatten()
 

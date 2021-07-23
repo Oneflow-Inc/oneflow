@@ -71,15 +71,15 @@ def argsort_op(input, dim: int = -1, descending: bool = False):
         >>> x = np.array([[10, 2, 9, 3, 7],
         ...               [1, 9, 4, 3, 2]]).astype("float32")
         >>> input = flow.Tensor(x)
-        >>> output = flow.experimental.argsort(input)
+        >>> output = flow.argsort(input)
         >>> output
         tensor([[1, 3, 4, 2, 0],
                 [0, 4, 3, 2, 1]], dtype=oneflow.int32)
-        >>> output = flow.experimental.argsort(input, descending=True)
+        >>> output = flow.argsort(input, descending=True)
         >>> output
         tensor([[0, 2, 4, 3, 1],
                 [1, 2, 3, 4, 0]], dtype=oneflow.int32)
-        >>> output = flow.experimental.argsort(input, dim=0)
+        >>> output = flow.argsort(input, dim=0)
         >>> output
         tensor([[1, 0, 1, 0, 1],
                 [0, 1, 0, 1, 0]], dtype=oneflow.int32)

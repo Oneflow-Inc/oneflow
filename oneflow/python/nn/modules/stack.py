@@ -45,7 +45,7 @@ class Stack(Module):
                 current_shape
             )
             unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
-        return flow.experimental.cat(unsqueezed, dim=self.dim)
+        return flow.cat(unsqueezed, dim=self.dim)
 
 
 @oneflow_export("stack")
@@ -73,7 +73,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> import numpy as np
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
-        >>> out = flow.experimental.stack([x, y], dim = -1)
+        >>> out = flow.stack([x, y], dim = -1)
         >>> out.shape
         flow.Size([1, 3, 5, 2])
     """

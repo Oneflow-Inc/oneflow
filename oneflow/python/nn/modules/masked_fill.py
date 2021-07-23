@@ -59,7 +59,7 @@ def masked_fill_op(input, mask, value):
         >>> fill_value = 8.7654321 # random value e.g. -1e9 3.1415
         >>> input = flow.Tensor(in_arr, dtype=flow.float32)
         >>> mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
-        >>> output = flow.experimental.masked_fill(input, mask, fill_value)
+        >>> output = flow.masked_fill(input, mask, fill_value)
 
         # tensor([[[-0.1317,  8.7654,  8.7654,  8.7654],
         #  [-1.5195,  8.7654, -0.533 ,  8.7654],

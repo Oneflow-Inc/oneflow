@@ -41,7 +41,7 @@ class _InstanceNorm(_NormBase):
 
         mean = x.mean(2, keepdim=True)
         variance = x.var(2, keepdim=True)
-        normalized = (x - mean) / flow.experimental.sqrt(variance + self.eps)
+        normalized = (x - mean) / flow.sqrt(variance + self.eps)
 
         if self.weight and params_shape[0] == self.weight.nelement():
             weight = self.weight.reshape(shape=nd_params_shape)
@@ -134,9 +134,9 @@ class InstanceNorm1d(_InstanceNorm):
         >>> import numpy as np
 
         >>> # Without Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm1d(100)
+        >>> m = flow.nn.InstanceNorm1d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm1d(100, affine=True)
+        >>> m = flow.nn.InstanceNorm1d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 40))
         >>> output = m(x)
 
@@ -224,9 +224,9 @@ class InstanceNorm2d(_InstanceNorm):
         >>> import numpy as np
 
         >>> # Without Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm2d(100)
+        >>> m = flow.nn.InstanceNorm2d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm2d(100, affine=True)
+        >>> m = flow.nn.InstanceNorm2d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 35, 45))
         >>> output = m(x)
 
@@ -306,9 +306,9 @@ class InstanceNorm3d(_InstanceNorm):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> # Without Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm3d(100)
+        >>> m = flow.nn.InstanceNorm3d(100)
         >>> # With Learnable Parameters
-        >>> m = flow.experimental.nn.InstanceNorm3d(100, affine=True)
+        >>> m = flow.nn.InstanceNorm3d(100, affine=True)
         >>> x = flow.Tensor(np.random.randn(20, 100, 35, 45, 10))
         >>> output = m(x)
 

@@ -126,14 +126,14 @@ class Variance(Module):
     def forward(self, input):
         axis = _check_axis(self.dim, input.shape)
         if isinstance(axis, list) and len(axis) == 0:
-            return flow.experimental.zeros(size=input.shape)
+            return flow.zeros(size=input.shape)
         else:
-            return flow.experimental.sub(
-                flow.experimental.mean(
-                    flow.experimental.square(input), axis, self.keepdim
+            return flow.sub(
+                flow.mean(
+                    flow.square(input), axis, self.keepdim
                 ),
-                flow.experimental.square(
-                    flow.experimental.mean(input, axis, self.keepdim)
+                flow.square(
+                    flow.mean(input, axis, self.keepdim)
                 ),
             )
 
@@ -312,7 +312,7 @@ def _div(input, other):
     """
 
     if isinstance(input, (int, float)):
-        return ScalarMul(input)(flow.experimental.reciprocal(other))
+        return ScalarMul(input)(flow.reciprocal(other))
     elif isinstance(other, (int, float)):
         if other == 0 or other == 0.0:
             other = 0.0
@@ -458,7 +458,7 @@ def _add_inplace(x, y):
     elif y.shape == (1,):
         return ScalarAddByTensor(inplace=True)(x, y)
     else:
-        y = flow.experimental.broadcast_like(y, x)
+        y = flow.broadcast_like(y, x)
         return ElementwiseAdd(inplace=True)(x, y)
 
 
@@ -940,7 +940,7 @@ class Std(Module):
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.experimental.zeros(size=x.shape)
+            return flow.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelement()
@@ -949,11 +949,11 @@ class Std(Module):
                     self.reduce_count *= x.shape[i]
 
             sum = (
-                flow.experimental.sum(self.square_op(x), self.axis, self.keepdim)
+                flow.sum(self.square_op(x), self.axis, self.keepdim)
                 / self.reduce_count
             )
             square = self.square_op(
-                flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count
+                flow.sum(x, self.axis, self.keepdim) / self.reduce_count
             )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
@@ -1205,19 +1205,19 @@ def clamp_op(tensor, min=None, max=None):
         >>> import numpy as np
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.experimental.clamp(input, min=-0.5, max=0.5)
+        >>> output = flow.clamp(input, min=-0.5, max=0.5)
         >>> output
         tensor([ 0.2,  0.5, -0.5, -0.3], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.experimental.clamp(input, min=None, max=0.5)
+        >>> output = flow.clamp(input, min=None, max=0.5)
         >>> output
         tensor([ 0.2,  0.5, -1.5, -0.3], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.experimental.clamp(input, min=-0.5, max=None)
+        >>> output = flow.clamp(input, min=-0.5, max=None)
         >>> output
         tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
 
@@ -1228,7 +1228,7 @@ def clamp_op(tensor, min=None, max=None):
 @register_tensor_op("clamp")
 def clamp_op_tensor(tensor, min=None, max=None):
     r"""
-    See :func:`oneflow.experimental.clamp`
+    See :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1236,7 +1236,7 @@ def clamp_op_tensor(tensor, min=None, max=None):
 @oneflow_export("clip")
 def clip_op(tensor, min=None, max=None):
     r"""
-    Alias for :func:`oneflow.experimental.clamp`
+    Alias for :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1244,7 +1244,7 @@ def clip_op(tensor, min=None, max=None):
 @register_tensor_op("clip")
 def clip_op_tensor(tensor, min=None, max=None):
     r"""
-    See :func:`oneflow.experimental.clamp`
+    See :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
 
@@ -1594,19 +1594,19 @@ class Topk(Module):
             if self.largest:
                 indices = self._op_topk_last_dim(input)[0]
             else:
-                neg_input = flow.experimental.mul(input, -1)
+                neg_input = flow.mul(input, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            return (flow.experimental.gather(input, indices, dim=axis), indices)
+            return (flow.gather(input, indices, dim=axis), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow.F.transpose(input, perm=perm)
             if self.largest:
                 indices = self._op_topk_last_dim(x)[0]
             else:
-                neg_input = flow.experimental.mul(x, -1)
+                neg_input = flow.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.experimental.gather(input, indices, dim=axis), indices)
+            return (flow.gather(input, indices, dim=axis), indices)
 
 
 @oneflow_export("topk")

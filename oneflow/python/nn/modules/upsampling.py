@@ -111,7 +111,7 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.experimental.nn.functional.interpolate(
+        return flow.nn.functional.interpolate(
             x,
             size=self.size,
             scale_factor=self.scale_factor,

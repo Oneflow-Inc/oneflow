@@ -79,7 +79,7 @@ def gather_op(input, index, dim=0, sparse_grad=False):
         >>> import numpy as np
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.experimental.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
+        >>> output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
         >>> output.shape
         flow.Size([3, 4, 3, 5])
 

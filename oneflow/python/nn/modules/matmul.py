@@ -64,7 +64,7 @@ def matmul_op(input, other):
         >>> import numpy as np
         >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
-        >>> of_out = flow.experimental.matmul(input1, input2)
+        >>> of_out = flow.matmul(input1, input2)
         >>> of_out.shape
         flow.Size([2, 5])
 

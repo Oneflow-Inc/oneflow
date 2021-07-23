@@ -40,13 +40,13 @@ class Argmax(Module):
         if axis == num_axes - 1:
             x = flow.F.argmax(input)
             if self.keepdim == True:
-                x = flow.experimental.unsqueeze(x, -1)
+                x = flow.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow.F.transpose(input, perm=perm)
             x = flow.F.argmax(x)
-            x = flow.experimental.unsqueeze(x, -1)
+            x = flow.unsqueeze(x, -1)
             x = flow.F.transpose(x, perm=get_inversed_perm(perm))
             if self.keepdim == False:
                 x = x.squeeze(dim=[axis])

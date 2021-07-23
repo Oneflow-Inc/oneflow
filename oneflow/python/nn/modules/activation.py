@@ -679,8 +679,8 @@ class LogSigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        sigmoid_res = flow.experimental.sigmoid(x)
-        res = flow.experimental.log(sigmoid_res)
+        sigmoid_res = flow.sigmoid(x)
+        res = flow.log(sigmoid_res)
         return res
 
 
@@ -728,12 +728,12 @@ class Softplus(Module):
         self.threshold = threshold
 
     def forward(self, x):
-        return flow.experimental.where(
+        return flow.where(
             x * self.beta > self.threshold,
             x,
             1
             / self.beta
-            * flow.experimental.log(1.0 + flow.experimental.exp(self.beta * x)),
+            * flow.log(1.0 + flow.exp(self.beta * x)),
         )
 
     def extra_repr(self):
@@ -959,7 +959,7 @@ class Mish(Module):
         super().__init__()
 
     def forward(self, x):
-        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+        return x * flow.tanh(flow.softplus(x))
 
 
 @oneflow_export("mish")

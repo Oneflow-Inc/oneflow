@@ -25,13 +25,13 @@ class Less(Module):
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
-            x = flow.experimental.cast(x, flow.float32)
+            x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
         if y.dtype != flow.float32:
-            y = flow.experimental.cast(y, flow.float32)
+            y = flow.cast(y, flow.float32)
         return flow.F.broadcast_less(x, y)
 
 

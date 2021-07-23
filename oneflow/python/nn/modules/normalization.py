@@ -67,11 +67,11 @@ class GroupNorm(Module):
         >>> import numpy as np
         >>> input = flow.Tensor(np.random.randn(20, 6, 10, 10))
         >>> # Separate 6 channels into 3 groups
-        >>> m = flow.experimental.nn.GroupNorm(3, 6)
+        >>> m = flow.nn.GroupNorm(3, 6)
         >>> # Separate 6 channels into 6 groups (equivalent with InstanceNorm)
-        >>> m = flow.experimental.nn.GroupNorm(6, 6)
+        >>> m = flow.nn.GroupNorm(6, 6)
         >>> # Put all 6 channels into a single group (equivalent with LayerNorm)
-        >>> m = flow.experimental.nn.GroupNorm(1, 6)
+        >>> m = flow.nn.GroupNorm(1, 6)
         >>> # Activating the module
         >>> output = m(input)
     
@@ -109,22 +109,22 @@ class GroupNorm(Module):
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
         origin_shape = input.shape
-        reshape_to_1d = flow.experimental.reshape(
+        reshape_to_1d = flow.reshape(
             input, shape=[origin_shape[0], self.num_groups, -1]
         )
-        mean = flow.experimental.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.experimental.var(reshape_to_1d, dim=2, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(
+        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.var(reshape_to_1d, dim=2, keepdim=True)
+        normalized = (reshape_to_1d - mean) / flow.sqrt(
             variance + self.eps
         )
-        normalized = flow.experimental.reshape(
+        normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
         )
         if self.weight:
             normalized = normalized * self.weight
         if self.bias:
             normalized = normalized + self.bias
-        res = flow.experimental.reshape(normalized, shape=tuple(input.shape))
+        res = flow.reshape(normalized, shape=tuple(input.shape))
 
         return res
 

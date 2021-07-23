@@ -70,13 +70,13 @@ class PixelShufflev2(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> m = flow.experimental.nn.PixelShuffle(upscale_factor=2)
+        >>> m = flow.nn.PixelShuffle(upscale_factor=2)
         >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
         >>> y = m(x)
         >>> y.shape
         flow.Size([3, 1, 10, 10])
 
-        >>> m = flow.experimental.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
+        >>> m = flow.nn.PixelShuffle(h_upscale_factor=3, w_upscale_factor=4)
         >>> x = flow.Tensor(np.random.randn(1, 24, 2, 2))
         >>> y = m(x)
         >>> y.shape

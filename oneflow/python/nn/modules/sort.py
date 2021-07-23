@@ -42,13 +42,13 @@ class Sort(Module):
         assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
             indices = self._argsort_op(input)[0]
-            return (flow.experimental.gather(input, indices, dim), indices)
+            return (flow.gather(input, indices, dim), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
             x = flow.F.transpose(input, perm=perm)
             indices = self._argsort_op(x)[0]
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.experimental.gather(input, indices, dim), indices)
+            return (flow.gather(input, indices, dim), indices)
 
 
 @oneflow_export("sort")
@@ -74,21 +74,21 @@ def sort_op(input, dim: int = -1, descending: bool = False):
         >>> import numpy as np
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> input = flow.Tensor(x)
-        >>> (values, indices) = flow.experimental.sort(input)
+        >>> (values, indices) = flow.sort(input)
         >>> values
         tensor([[1., 2., 3., 7., 8.],
                 [1., 2., 3., 4., 9.]], dtype=oneflow.float32)
         >>> indices
         tensor([[0, 4, 1, 3, 2],
                 [0, 4, 3, 2, 1]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.experimental.sort(input, descending=True)
+        >>> (values, indices) = flow.sort(input, descending=True)
         >>> values
         tensor([[8., 7., 3., 2., 1.],
                 [9., 4., 3., 2., 1.]], dtype=oneflow.float32)
         >>> indices
         tensor([[2, 3, 1, 4, 0],
                 [1, 2, 3, 4, 0]], dtype=oneflow.int32)
-        >>> (values, indices) = flow.experimental.sort(input, dim=0)
+        >>> (values, indices) = flow.sort(input, dim=0)
         >>> values
         tensor([[1., 3., 4., 3., 2.],
                 [1., 9., 8., 7., 2.]], dtype=oneflow.float32)

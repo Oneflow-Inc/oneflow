@@ -66,26 +66,26 @@ class Where(Module):
             if max_dim != y.shape[i]:
                 broadcast_y_axes.append(i)
 
-        broadcast_like_tensor = flow.experimental.zeros(
+        broadcast_like_tensor = flow.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32
         )
         broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
         broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
 
         if len(broadcast_condition_axes) != 0:
-            condition = flow.experimental.cast(condition, flow.float32)
-            broadcast_cond = flow.experimental.broadcast_like(
+            condition = flow.cast(condition, flow.float32)
+            broadcast_cond = flow.broadcast_like(
                 condition, broadcast_like_tensor, tuple(broadcast_condition_axes)
             )
-            broadcast_cond = flow.experimental.cast(broadcast_cond, flow.int32)
+            broadcast_cond = flow.cast(broadcast_cond, flow.int32)
 
         if len(broadcast_x_axes) != 0:
-            broadcast_x = flow.experimental.broadcast_like(
+            broadcast_x = flow.broadcast_like(
                 x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
             )
 
         if len(broadcast_y_axes) != 0:
-            broadcast_y = flow.experimental.broadcast_like(
+            broadcast_y = flow.broadcast_like(
                 y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
             )
 

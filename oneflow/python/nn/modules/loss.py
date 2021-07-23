@@ -62,17 +62,17 @@ class L1Loss(Module):
         >>> import numpy as np
         >>> input = flow.Tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
         >>> target = flow.Tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
-        >>> m = flow.experimental.nn.L1Loss(reduction="none")
+        >>> m = flow.nn.L1Loss(reduction="none")
         >>> out = m(input, target)
         >>> out
         tensor([[3., 3., 3.],
                 [2., 2., 2.],
                 [3., 3., 3.]], dtype=oneflow.float32)
-        >>> m_mean = flow.experimental.nn.L1Loss(reduction="mean")
+        >>> m_mean = flow.nn.L1Loss(reduction="mean")
         >>> out = m_mean(input, target)
         >>> out
         tensor([2.6667], dtype=oneflow.float32)
-        >>> m_mean = flow.experimental.nn.L1Loss(reduction="sum")
+        >>> m_mean = flow.nn.L1Loss(reduction="sum")
         >>> out = m_mean(input, target)
         >>> out
         tensor([24.], dtype=oneflow.float32)
@@ -96,11 +96,11 @@ class L1Loss(Module):
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        l1_value = flow.experimental.abs(flow.experimental.sub(input, target))
+        l1_value = flow.abs(flow.sub(input, target))
         if self.reduction == "mean":
-            return flow.experimental.mean(l1_value)
+            return flow.mean(l1_value)
         elif self.reduction == "sum":
-            return flow.experimental.sum(l1_value)
+            return flow.sum(l1_value)
         else:
             return l1_value
 
@@ -201,19 +201,19 @@ class CrossEntropyLoss(Module):
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
-            zeros = flow.experimental.zeros(
+            zeros = flow.zeros(
                 size=out.shape, dtype=out.dtype, device=out.device
             )
-            condition = flow.experimental.eq(target, self.ignore_index)
-            ones = flow.experimental.ones(
+            condition = flow.eq(target, self.ignore_index)
+            ones = flow.ones(
                 size=condition.shape, dtype=condition.dtype, device=condition.device
             )
             condition = ones.sub(condition).reshape(tuple(out.shape))
-            out = flow.experimental.where(condition, out, zeros)
+            out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
                 reduce_sum = out.sum()
                 reduce_count = condition.argwhere().shape[0]
-                out = flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+                out = flow.mul(reduce_sum, 1.0 / reduce_count)
 
         if self.reduction == "mean":
             return out.mean()
@@ -270,20 +270,20 @@ class BCELoss(Module):
         >>> weight = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2]]).astype(np.float32))
         >>> activation = flow.nn.Sigmoid()
         >>> sigmoid_input = activation(input)
-        >>> m = flow.experimental.nn.BCELoss(weight, reduction="none")
+        >>> m = flow.nn.BCELoss(weight, reduction="none")
         >>> out = m(sigmoid_input, target)
         >>> out
         tensor([[2.9266, 1.1963, 1.1087],
                 [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
-        >>> m_sum = flow.experimental.nn.BCELoss(weight, reduction="sum")
+        >>> m_sum = flow.nn.BCELoss(weight, reduction="sum")
         >>> out = m_sum(sigmoid_input, target)
         >>> out
         tensor([12.3668], dtype=oneflow.float32)
-        >>> m_mean = flow.experimental.nn.BCELoss(weight, reduction="mean")
+        >>> m_mean = flow.nn.BCELoss(weight, reduction="mean")
         >>> out = m_mean(sigmoid_input, target)
         >>> out
         tensor([2.0611], dtype=oneflow.float32)
-        >>> m_none = flow.experimental.nn.BCELoss()
+        >>> m_none = flow.nn.BCELoss()
         >>> out = m_none(sigmoid_input, target)
         >>> out
         tensor([1.0306], dtype=oneflow.float32)
@@ -307,9 +307,9 @@ class BCELoss(Module):
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        _cross_entropy_loss = flow.experimental.negative(
-            target * flow.experimental.log(input)
-            + (1 - target) * flow.experimental.log(1 - input)
+        _cross_entropy_loss = flow.negative(
+            target * flow.log(input)
+            + (1 - target) * flow.log(1 - input)
         )
 
         if self.weight is not None:
@@ -321,9 +321,9 @@ class BCELoss(Module):
             _weighted_loss = _cross_entropy_loss
 
         if self.reduction == "mean":
-            return flow.experimental.mean(_weighted_loss)
+            return flow.mean(_weighted_loss)
         elif self.reduction == "sum":
-            return flow.experimental.sum(_weighted_loss)
+            return flow.sum(_weighted_loss)
         else:
             return _weighted_loss
 
@@ -451,19 +451,19 @@ class NLLLoss(Module):
             raise NotImplemented
 
         if self.ignore_index is not None:
-            zeros = flow.experimental.zeros(
+            zeros = flow.zeros(
                 size=res.shape, dtype=res.dtype, device=res.device
             )
-            condition = flow.experimental.eq(target, self.ignore_index)
-            ones = flow.experimental.ones(
+            condition = flow.eq(target, self.ignore_index)
+            ones = flow.ones(
                 size=condition.shape, dtype=condition.dtype, device=condition.device
             )
             condition = ones.sub(condition).reshape(tuple(res.shape))
-            res = flow.experimental.where(condition, res, zeros)
+            res = flow.where(condition, res, zeros)
             if self.reduction == "mean":
                 res = res.sum()
                 reduce_count = condition.argwhere().shape[0]
-                res = flow.experimental.mul(res, 1.0 / reduce_count)
+                res = flow.mul(res, 1.0 / reduce_count)
 
         if self.reduction == "none":
             return res
@@ -546,15 +546,15 @@ class KLDivLoss(Module):
         >>> import numpy as np
         >>> input = flow.Tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
         >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
-        >>> m = flow.experimental.nn.KLDivLoss(reduction="none", log_target=False)
+        >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
         >>> out = m(input, target)
         >>> out
         tensor([ 1.3514,  0.    , -0.0836], dtype=oneflow.float32)
-        >>> m = flow.experimental.nn.KLDivLoss(reduction="mean", log_target=False)
+        >>> m = flow.nn.KLDivLoss(reduction="mean", log_target=False)
         >>> out = m(input, target)
         >>> out
         tensor([0.4226], dtype=oneflow.float32)
-        >>> m = flow.experimental.nn.KLDivLoss(reduction="sum", log_target=True)
+        >>> m = flow.nn.KLDivLoss(reduction="sum", log_target=True)
         >>> out = m(input, target)
         >>> out
         tensor([5.7801], dtype=oneflow.float32)
@@ -574,24 +574,24 @@ class KLDivLoss(Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         if self.log_target:
-            _kl_div_loss = flow.experimental.exp(target) * (target - input)
+            _kl_div_loss = flow.exp(target) * (target - input)
         else:
-            _kl_div_out_loss = target * (flow.experimental.log(target) - input)
-            _zeros = flow.experimental.zeros(
+            _kl_div_out_loss = target * (flow.log(target) - input)
+            _zeros = flow.zeros(
                 size=_kl_div_out_loss.shape,
                 dtype=_kl_div_out_loss.dtype,
                 device=_kl_div_out_loss.device,
             )
             # when target < 0, we set to `0`, when target > 0, we set to `1`.
-            _condition = flow.experimental.gt(target, 0)
+            _condition = flow.gt(target, 0)
             # To avoid the `nan` value in log operation
             # We set those positions which `target` is less than zero as `0`
-            _kl_div_loss = flow.experimental.where(_condition, _kl_div_out_loss, _zeros)
+            _kl_div_loss = flow.where(_condition, _kl_div_out_loss, _zeros)
 
         if self.reduction == "mean":
-            return flow.experimental.mean(_kl_div_loss)
+            return flow.mean(_kl_div_loss)
         elif self.reduction == "sum":
-            return flow.experimental.sum(_kl_div_loss)
+            return flow.sum(_kl_div_loss)
         else:
             return _kl_div_loss
 
@@ -651,16 +651,16 @@ class MSELoss(Module):
         >>> target = flow.Tensor(
         ... [[-1.53105064, -0.68137555, 0.5931354],
         ... [-0.49158347, 0.93673637, 0.1324141]], dtype=flow.float32)
-        >>> m = flow.experimental.nn.MSELoss(reduction="none")
+        >>> m = flow.nn.MSELoss(reduction="none")
         >>> out = m(input, target)
         >>> out
         tensor([[2.2665, 0.5075, 0.6112],
                 [0.5589, 4.0823, 0.1173]], dtype=oneflow.float32)
-        >>> m = flow.experimental.nn.MSELoss(reduction="mean")
+        >>> m = flow.nn.MSELoss(reduction="mean")
         >>> out = m(input, target)
         >>> out
         tensor([1.3573], dtype=oneflow.float32)
-        >>> m = flow.experimental.nn.MSELoss(reduction="sum")
+        >>> m = flow.nn.MSELoss(reduction="sum")
         >>> out = m(input, target)
         >>> out
         tensor([8.1436], dtype=oneflow.float32)
@@ -679,13 +679,13 @@ class MSELoss(Module):
         self.reduction = reduction
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        mean_squared_difference = flow.experimental.square(
-            flow.experimental.sub(input, target)
+        mean_squared_difference = flow.square(
+            flow.sub(input, target)
         )
         if self.reduction == "mean":
-            return flow.experimental.mean(mean_squared_difference)
+            return flow.mean(mean_squared_difference)
         elif self.reduction == "sum":
-            return flow.experimental.sum(mean_squared_difference)
+            return flow.sum(mean_squared_difference)
         else:
             # Do no reduction
             return mean_squared_difference
@@ -727,19 +727,19 @@ class MarginRankingLoss(Module):
         >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
         >>> x2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
         >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
-        >>> m = flow.experimental.nn.MarginRankingLoss(margin =1.0, reduction="none")
+        >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
         >>> out = m(x1, x2, target)
         >>> out
         tensor([[2., 1., 0.],
                 [3., 0., 5.],
                 [0., 0., 0.]], dtype=oneflow.float32)
 
-        >>> m = flow.experimental.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
+        >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
         >>> out = m(x1, x2, target)
         >>> out
         tensor([8.2], dtype=oneflow.float32)
 
-        >>> m = flow.experimental.nn.MarginRankingLoss(margin = 10, reduction="mean")
+        >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
         >>> out = m(x1, x2, target)
         >>> out
         tensor([8.3333], dtype=oneflow.float32)
@@ -760,12 +760,12 @@ class MarginRankingLoss(Module):
         self.reduction = reduction
 
     def forward(self, input1, input2, target):
-        res = flow.experimental.clip(
-            flow.experimental.add(
+        res = flow.clip(
+            flow.add(
                 self.margin,
-                flow.experimental.mul(
+                flow.mul(
                     target,
-                    flow.experimental.mul(-1, flow.experimental.sub(input1, input2)),
+                    flow.mul(-1, flow.sub(input1, input2)),
                 ),
             ),
             min=0.0,
@@ -910,7 +910,7 @@ class CTCLoss(Module):
     ) -> Tensor:
         loss, _ = self._op(log_probs, targets, input_lengths, target_lengths)
         if self.zero_infinity:
-            cond = flow.experimental.eq(
+            cond = flow.eq(
                 loss,
                 self.constant(
                     size=loss.shape,
@@ -919,9 +919,9 @@ class CTCLoss(Module):
                     device=loss.device,
                 )(),
             )
-            loss = flow.experimental.where(
+            loss = flow.where(
                 cond,
-                flow.experimental.zeros(
+                flow.zeros(
                     size=loss.shape, dtype=loss.dtype, device=loss.device
                 ),
                 loss,
@@ -929,17 +929,17 @@ class CTCLoss(Module):
 
         if self.reduction == "mean":
 
-            return flow.experimental.mean(
+            return flow.mean(
                 self._xdivy_op(
                     loss,
-                    flow.experimental.cast(
-                        flow.experimental.clamp(target_lengths, min=1),
+                    flow.cast(
+                        flow.clamp(target_lengths, min=1),
                         dtype=log_probs.dtype,
                     ),
                 )[0]
             )
         elif self.reduction == "sum":
-            return flow.experimental.sum(loss)
+            return flow.sum(loss)
         else:
             return loss
 
@@ -994,19 +994,19 @@ class BCEWithLogitsLoss(Module):
         >>> weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]], dtype=flow.float32)
         >>> pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
-        >>> m = flow.experimental.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="none")
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="none")
         >>> out = m(input, target)
         >>> out
         tensor([[2.9266, 1.5552, 1.1087],
                 [0.9676, 2.075 , 5.9554],
                 [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
 
-        >>> m = flow.experimental.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
         >>> out = m(input, target)
         >>> out
         tensor([2.6207], dtype=oneflow.float32)
 
-        >>> m = flow.experimental.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="sum")
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="sum")
         >>> out = m(input, target)
         >>> out
         tensor([23.5865], dtype=oneflow.float32)
@@ -1044,24 +1044,24 @@ class BCEWithLogitsLoss(Module):
                 )
             )
 
-        _neg_input = flow.experimental.negative(input)
-        _max_val = flow.experimental.clip(_neg_input, 0)
-        _neg_max_val = flow.experimental.negative(_max_val)
+        _neg_input = flow.negative(input)
+        _max_val = flow.clip(_neg_input, 0)
+        _neg_max_val = flow.negative(_max_val)
 
         if self.pos_weight:
             _log_weight = ((self.pos_weight - 1) * target) + 1
             _loss = (1 - target) * input + _log_weight * (
-                flow.experimental.log(
-                    flow.experimental.exp(_neg_max_val)
-                    + flow.experimental.exp(_neg_input - _max_val)
+                flow.log(
+                    flow.exp(_neg_max_val)
+                    + flow.exp(_neg_input - _max_val)
                 )
                 + _max_val
             )
         else:
             _loss = (1 - target) * input + _max_val
-            _loss += flow.experimental.log(
-                flow.experimental.exp(_neg_max_val)
-                + flow.experimental.exp(_neg_input - _max_val)
+            _loss += flow.log(
+                flow.exp(_neg_max_val)
+                + flow.exp(_neg_input - _max_val)
             )
 
         if self.weight is not None:
@@ -1073,9 +1073,9 @@ class BCEWithLogitsLoss(Module):
             _weighted_loss = _loss
 
         if self.reduction == "mean":
-            return flow.experimental.mean(_weighted_loss)
+            return flow.mean(_weighted_loss)
         elif self.reduction == "sum":
-            return flow.experimental.sum(_weighted_loss)
+            return flow.sum(_weighted_loss)
         else:
             # Do no reduction
             return _weighted_loss
@@ -1217,9 +1217,9 @@ class SmoothL1Loss(Module):
         if self.reduction == "none":
             return loss
         elif self.reduction == "sum":
-            return flow.experimental.sum(loss)
+            return flow.sum(loss)
         elif self.reduction == "mean":
-            return flow.experimental.mean(loss)
+            return flow.mean(loss)
 
 
 if __name__ == "__main__":

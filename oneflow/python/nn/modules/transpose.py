@@ -79,7 +79,7 @@ def transpose_op(tensor, dim0, dim1):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> out = flow.experimental.transpose(input, 0, 1).shape
+        >>> out = flow.transpose(input, 0, 1).shape
         >>> out
         flow.Size([6, 2, 5, 3])
 

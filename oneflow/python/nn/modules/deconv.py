@@ -58,7 +58,7 @@ def slice(x, begin, size):
                     stop = b + s
 
         slice_tup_list.append((start, stop, step))
-    return flow.experimental.slice(x, slice_tup_list)
+    return flow.slice(x, slice_tup_list)
 
 
 class ConvUtil(object):
@@ -232,7 +232,7 @@ class ConvTranspose2d(Module):
                         ],
                     )[0]
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
         if self._bias_add_op is not None:

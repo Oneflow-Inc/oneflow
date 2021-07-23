@@ -86,7 +86,7 @@ def ones_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.experimental.ones(5)
+        >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
@@ -122,7 +122,7 @@ def zeros_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.experimental.zeros(5)
+        >>> y = flow.zeros(5)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
@@ -154,7 +154,7 @@ def zeros_like_op(other):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.experimental.zeros_like(x)
+        >>> y = flow.zeros_like(x)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
@@ -186,7 +186,7 @@ def ones_like_op(other):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.experimental.ones_like(x)
+        >>> y = flow.ones_like(x)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 

@@ -27,7 +27,7 @@ class Expand(Module):
 
     def forward(self, x):
         if x.dtype == flow.int8:
-            x = flow.experimental.cast(x, flow.int32)
+            x = flow.cast(x, flow.int32)
         return flow.F.expand(x, self.expand_size)
 
 

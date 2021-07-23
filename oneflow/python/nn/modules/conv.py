@@ -58,7 +58,7 @@ def slice(x, begin, size):
                     stop = b + s
 
         slice_tup_list.append((start, stop, step))
-    return flow.experimental.slice(x, slice_tup_list)
+    return flow.slice(x, slice_tup_list)
 
 
 class ConvUtil(object):
@@ -243,7 +243,7 @@ class Conv1d(Module):
                         groups=1,
                     )
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv1d(
                 x,
@@ -468,7 +468,7 @@ class Conv2d(Module):
                         groups=1,
                     )
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv2d(
                 x,

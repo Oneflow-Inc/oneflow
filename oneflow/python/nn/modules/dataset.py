@@ -405,10 +405,10 @@ class ImageResize(Module):
         res = self._op(input)
         res_image = res[0]
         if len(res) == 3:
-            new_size = flow.experimental.tensor_buffer_to_tensor(
+            new_size = flow.tensor_buffer_to_tensor(
                 res[1], dtype=flow.int32, instance_shape=(2,)
             )
-            scale = flow.experimental.tensor_buffer_to_tensor(
+            scale = flow.tensor_buffer_to_tensor(
                 res[2], dtype=flow.float32, instance_shape=(2,)
             )
         else:
@@ -503,7 +503,7 @@ class ImageFlip(Module):
         ...    [[[3, 4, 5], [5, 4, 3]],
         ...     [[4, 5, 6], [6, 5, 4]]]])
         >>> image_tensors = flow.Tensor(arr, device=flow.device("cpu"))
-        >>> image_tensor_buffer = flow.experimental.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
+        >>> image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
         >>> output = nn.image.flip(1)(image_tensor_buffer).numpy()
         >>> output[0]
         array([[[3., 2., 1.],
