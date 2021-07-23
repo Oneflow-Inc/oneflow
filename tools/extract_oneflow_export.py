@@ -168,7 +168,7 @@ class ExportVisitor(ast.NodeTransformer):
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
         compact_decorator_list = [d for d in compact_decorator_list if d]
         for d in node.decorator_list:
-            # if @register_tensor_op, export it in __init__.py
+            # TODO: if @register_tensor_op, export it in __init__.py
 
             if is_decorator(d, name="oneflow_export"):
                 import_from_exports = []
