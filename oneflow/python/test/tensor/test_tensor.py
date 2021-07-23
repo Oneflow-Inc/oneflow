@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.typing as oft
 
 
