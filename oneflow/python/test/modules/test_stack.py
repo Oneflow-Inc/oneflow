@@ -82,10 +82,7 @@ def _test_stack_multi_input(test_case, device, shape):
         test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestStack(flow.unittest.TestCase):
     def test_stack(test_case):
         arg_dict = OrderedDict()

@@ -77,10 +77,7 @@ def _test_sub_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestSubModule(flow.unittest.TestCase):
     def test_sub(test_case):
         arg_dict = OrderedDict()

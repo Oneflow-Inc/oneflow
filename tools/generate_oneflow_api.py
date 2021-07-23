@@ -4,6 +4,7 @@ import argparse
 import inspect
 
 import oneflow
+import oneflow.compatible.single_client
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-root", "--root_path", type=str, required=True)
@@ -118,7 +119,6 @@ def include_submodule(modname):
 
 
 def include_export(api_name_base, symbol):
-    # print(symbol._IS_VALUE)
     if symbol.__name__ == api_name_base:
         output = ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
@@ -138,9 +138,9 @@ def include_export(api_name_base, symbol):
     return output
 
 
-def exported_symbols():
+def exported_symbols(module_name):
     for mod in sys.modules.values():
-        if mod.__name__.startswith("oneflow.python"):
+        if mod.__name__.startswith(module_name):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):
@@ -148,10 +148,10 @@ def exported_symbols():
                         yield api_name, symbol, mod
 
 
-def collect_exports():
+def collect_exports(module_name):
     exports = {}
     api_name2module = {}
-    for api_name, symbol, module in exported_symbols():
+    for api_name, symbol, module in exported_symbols(module_name):
         has_another_symbol_exported = (
             api_name in exports and exports[api_name] != symbol
         )
@@ -180,8 +180,10 @@ def collect_exports():
 
 
 def main():
-    mod = collect_exports()
+    mod = collect_exports("oneflow.python")
     mod.dump(args.root_path, is_root=True)
+    mod = collect_exports("oneflow.compatible.single_client.python")
+    mod.dump(args.root_path + "/compatible/single_client", is_root=True)
 
 
 if __name__ == "__main__":

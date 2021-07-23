@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-from oneflow._oneflow_internal.exception import ValueException
+from oneflow._oneflow_internal.exception import IndexException
 
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import numpy as np
 import inspect
 from typing import Union
@@ -205,6 +206,18 @@ class Tensor:
         else:
             return self._undetermined_tensor.shape
 
+    def stride(self):
+        assert self.is_determined
+        return self._local_or_consistent_tensor.stride()
+
+    def storage_offset(self):
+        assert self.is_determined
+        return self._local_or_consistent_tensor.storage_offset()
+
+    def is_contiguous(self):
+        assert self.is_determined
+        return self._local_or_consistent_tensor.is_contiguous()
+
     @property
     def device(self):
         if self._local_or_consistent_tensor is not None:
@@ -385,7 +398,13 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
-        flow.autograd.backward(self, gradient, retain_graph, create_graph)
+        if not lazy_mode.is_enabled():
+            flow.autograd.backward(self, gradient, retain_graph, create_graph)
+        else:
+            assert (
+                self.is_lazy
+            ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
+            flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
     @register_local_tensor_method()
     def _transform_ellipsis_type(self, key):
@@ -454,44 +473,17 @@ class Tensor:
     def __getitem__(self, key):
         try:
             return flow.F.tensor_getitem(self, key)
-        except ValueException as e:
+        except IndexException as e:
             # The stop condition of for in python is IndexError,
-            # so we have to catch ValueException from C++ and throw IndexError
+            # so we have to catch IndexException from C++ and throw IndexError
             raise IndexError(e)
 
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
-        if isinstance(key, tuple):
-            key = self._transform_ellipsis_type(key)
-            unsqueeze_dims = list(
-                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
-            )
-        elif isinstance(key, int):
-            if key < 0:
-                key = self.shape[0] + key
-            unsqueeze_dims = [0]
-        else:
-            unsqueeze_dims = []
-
-        start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
-            scalar = value
-            value = flow.Tensor(*shape)
-            value.fill_(scalar)
-        else:
-            prepended_broadcasting_dims = range(
-                len(self.shape) - len(unsqueeze_dims) - len(value.shape)
-            )
-            for dim in prepended_broadcasting_dims:
-                value = flow.experimental.unsqueeze(value, dim)
-            for dim in unsqueeze_dims:
-                value = flow.experimental.unsqueeze(value, dim)
-            value = flow.experimental.expand(value, *shape)
-
-        flow.experimental.tmp.logical_slice_assign(
-            self, value, list(zip(start, stop, step))
-        )
+            value = flow.F.constant([1], value, self.dtype)
+        flow.F.tensor_setitem(self, key, value)
         return self
 
     @register_local_tensor_method()

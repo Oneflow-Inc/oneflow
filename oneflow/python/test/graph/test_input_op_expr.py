@@ -18,12 +18,6 @@ import unittest
 import numpy as np
 import os
 
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "12139"
-os.environ["WORLD_SIZE"] = "1"
-os.environ["RANK"] = "0"
-os.environ["LOCAL_RANK"] = "0"
-
 import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.session_context as session_ctx
@@ -33,10 +27,6 @@ import oneflow.python.framework.c_api_util as c_api_util
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    "default use eager mode to test this case",
-)
 class TestFeedInputTensor(unittest.TestCase):
     def test_feed_input_tensor(test_case):
         test_case.assertTrue(oneflow.distributed.is_multi_client())

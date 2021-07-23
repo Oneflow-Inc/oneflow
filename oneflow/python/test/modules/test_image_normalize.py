@@ -74,10 +74,6 @@ def _compare_image_normalize(test_case, image_files, std, mean):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestImageNormalize(flow.unittest.TestCase):
     def test_image_normalize(test_case):
         _compare_image_normalize(

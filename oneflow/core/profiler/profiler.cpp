@@ -19,6 +19,8 @@ limitations under the License.
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
+#include <cuda_profiler_api.h>
+#include "oneflow/core/device/cuda_util.h"
 #endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
@@ -104,6 +106,18 @@ void LogHostMemoryUsage(const std::string& name) {
   const int64_t page_size = sysconf(_SC_PAGE_SIZE);
   LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS "
             << rss_pages * page_size;
+#endif  // OF_ENABLE_PROFILER
+}
+
+void ProfilerStart() {
+#ifdef OF_ENABLE_PROFILER
+  OF_CUDA_CHECK(cudaProfilerStart());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void ProfilerStop() {
+#ifdef OF_ENABLE_PROFILER
+  OF_CUDA_CHECK(cudaProfilerStop());
 #endif  // OF_ENABLE_PROFILER
 }
 
