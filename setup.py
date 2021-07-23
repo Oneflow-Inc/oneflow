@@ -42,6 +42,7 @@ REQUIRED_PACKAGES = [
     "protobuf>=3.9.2",
     "tqdm",
     "requests",
+    "pillow"
 ]
 
 
