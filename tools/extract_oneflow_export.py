@@ -3,15 +3,11 @@
 import os
 import argparse
 import ast
-from posixpath import basename, relpath
 import subprocess
 import multiprocessing
-from pathlib import Path, PurePosixPath
-from functools import partial
-from collections import OrderedDict
+from pathlib import Path
 import astpretty
 import sys
-import copy
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
