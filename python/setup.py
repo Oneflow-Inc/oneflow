@@ -53,29 +53,24 @@ class BinaryDistribution(Distribution):
         return True
 
 
-python_scripts_dir = os.path.join(build_dir, "python_scripts")
-packages = find_packages(python_scripts_dir)
-package_dir = {
-    "": python_scripts_dir,
-}
-
 include_files = glob.glob(
-    "{}/python_scripts/oneflow/include/**/*".format(build_dir), recursive=True
+    "oneflow/include/**/*", recursive=True
 )
 include_files = [
-    os.path.relpath(p, "{}/python_scripts/oneflow".format(build_dir))
+    os.path.relpath(p, "oneflow")
     for p in include_files
 ]
+assert len(include_files) > 0
 
 
 def get_oneflow_internal_so_path():
     import imp
 
     fp, pathname, description = imp.find_module(
-        "_oneflow_internal", ["{}/python_scripts/oneflow".format(build_dir)]
+        "_oneflow_internal", ["oneflow"]
     )
     assert os.path.isfile(pathname)
-    return os.path.relpath(pathname, "{}/python_scripts/oneflow".format(build_dir))
+    return os.path.relpath(pathname, "oneflow")
 
 
 package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}
@@ -85,7 +80,7 @@ def get_version():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "version", os.path.join(python_scripts_dir, "oneflow", "version.py")
+        "version", os.path.join("oneflow", "version.py")
     )
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
@@ -97,8 +92,8 @@ setup(
     version=get_version(),
     url="https://www.oneflow.org/",
     install_requires=REQUIRED_PACKAGES,
-    packages=packages,
-    package_dir=package_dir,
+    packages=find_packages(),
+    package_dir={"oneflow": "oneflow"},
     package_data=package_data,
     zip_safe=False,
     distclass=BinaryDistribution,

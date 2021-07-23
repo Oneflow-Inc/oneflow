@@ -479,7 +479,7 @@ def append_trees(tree_dict: dict, module: str, tree: ast.AST):
 
 
 if __name__ == "__main__":
-    out_oneflow_dir = os.path.join(args.out_dir, "*")
+    out_oneflow_dir = os.path.join(args.out_dir, "oneflow")
     assert args.out_dir
     assert args.out_dir != "~"
     assert args.out_dir != "/"
