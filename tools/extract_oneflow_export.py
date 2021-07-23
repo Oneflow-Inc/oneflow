@@ -117,10 +117,23 @@ class ExportVisitor(ast.NodeTransformer):
         else:
             return node
 
+    def visit_Name(self, node: ast.AST):
+        if node.id == "oneflow_export":
+            return None
+        return node
+
+    def visit_Call(self, node: ast.AST):
+        if not self.visit(node.func):
+            return None
+        return node
+
     def visit_ClassDef(self, node):
         return self.visit_FunctionDef(node)
 
+
     def visit_FunctionDef(self, node):
+        compact_decorator_list = [self.visit(d) for d in node.decorator_list]
+        compact_decorator_list = [d for d in compact_decorator_list if d]
         for d in node.decorator_list:
             # if @register_tensor_op, export it in __init__.py
             if is_export_decorator(d):
@@ -144,6 +157,7 @@ class ExportVisitor(ast.NodeTransformer):
                     import_from_exports.append(import_from_export)
                 # TODO: insert "from origin_module import *" in exported func body
                 # TODO: rename function to target_name
+                node.decorator_list = compact_decorator_list
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
         return node
