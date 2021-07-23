@@ -165,6 +165,21 @@ class ExportVisitor(ast.NodeTransformer):
                 node.decorator_list = compact_decorator_list
                 self.append_export(target_module=target_module, node=node)
                 return import_from_exports
+            if is_decorator(d, name="oneflow_export_value"):
+                assert len(node.body) == 2
+                assert len(d.args) == 1
+                target_module = join_module(
+                    self.root_module, get_parent_module(d.args[0].value)
+                )
+                call = node.body[1].value
+                assign = ast.Assign(
+                    targets=[ast.Name(id=d.args[0].value.split(".")[-1], ctx=ast.Store())], value=call
+                )
+                self.append_export(target_module=target_module, node=assign)
+                # TODO: the doc is not dumped properly
+                # doc = node.body[0]
+                # self.append_export(target_module=target_module, node=doc)
+                return None
         return node
 
 
@@ -375,7 +390,7 @@ if __name__ == "__main__":
         if is_magic:
             print("[magic]", module)
         if is_leaf == False and is_magic == False:
-            print("[is_init]", module)
+            print("[init]", module)
         return is_leaf == False and is_magic == False
 
     srcs = pool.map(
