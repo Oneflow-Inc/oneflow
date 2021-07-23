@@ -19,7 +19,7 @@ parser.add_argument(
 )
 parser.add_argument("--verbose", "-v", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
-parser.add_argument("--skip_autoflake", "-sa", action="store_true")
+parser.add_argument("--autoflake", "-a", action="store_true")
 parser.add_argument("--skip_black", "-sb", action="store_true")
 parser.add_argument("--skip_isort", "-si", action="store_true")
 parser.add_argument("--save_ast", "--ast", action="store_true")
@@ -421,9 +421,10 @@ def save_trees(args=None):
     dst_full.parent.mkdir(parents=True, exist_ok=True)
     dst_full.touch(exist_ok=False)
     # TODO: append "doctest.testmod(raise_on_error=True)"
+    trees = [ast.fix_missing_locations(tree) for tree in trees]
     if SAVE_AST:
         new_txt = "\n".join(
-            [str(astpretty.pformat(ast.fix_missing_locations(tree))) for tree in trees]
+            [str(astpretty.pformat(tree)) for tree in trees]
         )
         new_txt = f"""from ast import *
 {new_txt}
@@ -510,7 +511,7 @@ if __name__ == "__main__":
     extra_arg = ""
     if args.verbose == False:
         extra_arg += "--quiet"
-    if args.skip_autoflake == False:
+    if args.autoflake == False:
         print("[postprocess]", "autoflake")
         subprocess.check_call(
             f"{sys.executable} -m autoflake --in-place --remove-all-unused-imports --exclude '**/*.ast.py' --recursive .",
