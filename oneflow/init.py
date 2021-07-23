@@ -87,8 +87,7 @@ from oneflow.python.framework.multi_client_session import MultiClientSession
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
-import oneflow.env
-oneflow.env.init()
+env_util.api_env_init()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
