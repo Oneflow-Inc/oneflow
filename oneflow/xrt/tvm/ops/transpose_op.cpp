@@ -18,7 +18,7 @@ class TransposeOp final : public TVMOpKernel {
     tvm::Array<tvm::Integer> tvm_axes;
     for (int32_t dim : axes) { tvm_axes.push_back(dim); }
     auto transpose_attrs = tvm::runtime::make_object<tvm::relay::TransposeAttrs>();
-    transpose_attrs->axes = tvm_axes;
+    transpose_attrs->axes = std::move(tvm_axes);
 
     auto op = tvm::relay::Op::Get("transpose");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(transpose_attrs), {});

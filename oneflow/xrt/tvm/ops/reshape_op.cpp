@@ -11,17 +11,18 @@ class ReshapeOp final : public TVMOpKernel {
     LOG(WARNING) << ctx->DebugStr();
     tvm::Array<tvm::relay::Expr> node_inputs;
     node_inputs.push_back(ctx->GetExpr4InputName("in_0"));
-
     const Shape& in_shape = ctx->GetShape4InputName("in_0");
-    const Shape& conf_shape = ctx->GetShape4OutputName("out_0");
-    CHECK_EQ(in_shape.elem_cnt(), conf_shape.elem_cnt());
 
-    tvm::Array<tvm::Integer> tvm_conf_shape;
-    for (int64_t dim : conf_shape.dim_vec()) {
-      tvm_conf_shape.push_back(static_cast<int32_t>(dim));
-    }
     auto reshape_attrs = tvm::runtime::make_object<tvm::relay::ReshapeAttrs>();
-    reshape_attrs->newshape = tvm_conf_shape;
+    {   
+        const Shape& conf_shape = ctx->GetShape4OutputName("out_0");
+        CHECK_EQ(in_shape.elem_cnt(), conf_shape.elem_cnt());
+        tvm::Array<tvm::Integer> tvm_conf_shape;
+        for (int64_t dim : conf_shape.dim_vec()) {
+            tvm_conf_shape.push_back(static_cast<int32_t>(dim));
+        }
+        reshape_attrs->newshape = std::move(tvm_conf_shape);
+    }
 
     auto op = tvm::relay::Op::Get("reshape");
     auto expr = tvm::relay::Call(op, node_inputs, tvm::Attrs(reshape_attrs), {});

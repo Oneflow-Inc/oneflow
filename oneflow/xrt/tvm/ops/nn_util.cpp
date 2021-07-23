@@ -20,15 +20,15 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding(const std::string& padding_type,
 
     const int32_t padding_small = padding_needed / 2;
     const int32_t padding_large = padding_needed - padding_needed / 2;        
-    int32_t padding_before;
-    int32_t padding_after;
+    int32_t padding_before = 0;
+    int32_t padding_after = 0;
     
     if (padding_type == "same_upper") {
-      if (padding_before) { padding_before = padding_small; }
-      if (padding_after) { padding_after = padding_large; }
+      padding_before = padding_small;
+      padding_after = padding_large;
     } else if (padding_type == "same_lower") {
-      if (padding_before) { padding_before = padding_large; }
-      if (padding_after) { padding_after = padding_small; }
+      padding_before = padding_large;
+      padding_after = padding_small;
     } else {
       UNIMPLEMENTED() << "padding_type " << padding_type << "not suported.";
     }

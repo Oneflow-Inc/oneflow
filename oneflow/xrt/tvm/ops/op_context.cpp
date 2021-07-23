@@ -78,7 +78,7 @@ std::string TVMOpContext::DebugStr() {
     s += pair.first;
     s += ",";
   }
-  s += "\n input_arg: ";
+  s += "\n out_arg: ";
   for(const auto& pair : output_name2arg_) {
     s += pair.first;
     s += ",";
