@@ -588,12 +588,19 @@ class TestTensor(flow.unittest.TestCase):
         of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
-
+    
     @autotest()
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
         y = x.reshape(shape=(-1, ))
+        return y
+    
+    @autotest()
+    def test_transpose_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
 
     def test_tensor_where(test_case):
