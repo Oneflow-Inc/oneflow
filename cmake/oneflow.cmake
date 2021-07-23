@@ -272,13 +272,11 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
-set(of_pyscript_dir "${PROJECT_SOURCE_DIR}/python")
-
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${of_pyscript_dir}/oneflow")
+set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
@@ -292,12 +290,12 @@ endif()
 
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${of_pyscript_dir}
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core" "${ONEFLOW_PYTHON_DIR}/oneflow/core"
+    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${ONEFLOW_PYTHON_DIR}
 )
 
 # source this file to add oneflow in PYTHONPATH
-file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH")
+file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${ONEFLOW_PYTHON_DIR}:$PYTHONPATH")
 
 add_dependencies(of_pyscript_copy of_protoobj)
 
@@ -336,7 +334,7 @@ if(BUILD_TESTING)
 endif()
 
 # build include
-set(ONEFLOW_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/python/oneflow/include")
+set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy oneflow_internal)
