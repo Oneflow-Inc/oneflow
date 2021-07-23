@@ -1,4 +1,4 @@
-# python3 -m pip install isort autoflake astpretty
+# python3 -m pip install isort autoflake astpretty black
 # requires python3.9 to run
 import os
 import argparse
@@ -20,8 +20,8 @@ parser.add_argument(
 parser.add_argument("--verbose", "-v", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--autoflake", "-a", action="store_true")
-parser.add_argument("--skip_black", "-sb", action="store_true")
-parser.add_argument("--skip_isort", "-si", action="store_true")
+parser.add_argument("--black", "-b", action="store_true")
+parser.add_argument("--isort", "-i", action="store_true")
 parser.add_argument("--save_ast", "--ast", action="store_true")
 args = parser.parse_args()
 
@@ -518,12 +518,12 @@ if __name__ == "__main__":
             shell=True,
             cwd=args.out_dir,
         )
-    if args.skip_isort == False:
+    if args.isort:
         print("[postprocess]", "isort")
         subprocess.check_call(
             f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
         )
-    if args.skip_black == False:
+    if args.black:
         print("[postprocess]", "black")
         subprocess.check_call(
             f"{sys.executable} -m black . {extra_arg}", shell=True, cwd=args.out_dir,
