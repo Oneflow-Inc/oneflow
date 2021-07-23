@@ -782,7 +782,6 @@ class FMod(Module):
 
 
 @oneflow_export("fmod")
-@experimental_api
 def fmod_op(input, other):
     r"""
     fmod(input, other, *, out=None) -> Tensor
@@ -818,7 +817,6 @@ def fmod_op(input, other):
 
 
 @register_tensor_op("fmod")
-@experimental_api
 def fmod_op_tensor(input, other):
     r"""
 
