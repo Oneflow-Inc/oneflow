@@ -3,7 +3,7 @@ include (ExternalProject)
 set(NCCL_INCLUDE_DIR ${THIRD_PARTY_DIR}/nccl/include)
 set(NCCL_LIBRARY_DIR ${THIRD_PARTY_DIR}/nccl/lib)
 
-set(NCCL_URL https://github.com/NVIDIA/nccl/archive/refs/tags/v2.9.8-1.tar.gz)
+set(NCCL_URL https://github.com/NVIDIA/nccl/archive/refs/tags/v2.7.8-1.tar.gz)
 use_mirror(VARIABLE NCCL_URL URL ${NCCL_URL})
 set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
 
@@ -34,7 +34,7 @@ ProcessorCount(PROC_NUM)
 ExternalProject_Add(nccl
     PREFIX nccl
     URL ${NCCL_URL}
-    URL_MD5 9894dffc51d9d276f01286094ac220ac
+    URL_MD5 2ad66167be386ec506426cede8a90df2
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
