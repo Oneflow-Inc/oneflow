@@ -193,12 +193,24 @@ class ExportVisitor(ast.NodeTransformer):
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
             if is_decorator(d, name="oneflow_export"):
+                is_kept_in_src = (
+                    True or
+                    has_reserved_keyword
+                    or self.src_target_module == target_module
+                    or target_module in ["oneflow", "oneflow.scope", COMPATIBLE_MODULE]
+                )
                 arg0 = d.args[0]
                 target_module0 = join_module(
                     self.root_module, get_parent_module(arg0.value)
                 )
                 target_symbol0 = arg0.value.split(".")[-1]
 
+                if is_kept_in_src:
+                    target_module = self.src_target_module
+                    target_symbol = node.name
+                else:
+                    target_module = target_module0
+                    target_symbol = target_symbol0
                 # nth export: import from first export
                 for argN in d.args[1::]:
                     target_moduleN = join_module(
@@ -207,8 +219,8 @@ class ExportVisitor(ast.NodeTransformer):
                     target_nameN = target_name = argN.value.split(".")[-1]
                     assert arg0 != argN, {"arg0": arg0, "argN": argN}
                     import_from_first_export = ast.ImportFrom(
-                        module=target_module0,
-                        names=[ast.alias(name=target_symbol0, asname=target_nameN),],
+                        module=target_module,
+                        names=[ast.alias(name=target_symbol, asname=target_nameN),],
                         level=0,
                     )
                     self.append_export(
@@ -223,18 +235,14 @@ class ExportVisitor(ast.NodeTransformer):
                     )
 
                 node.decorator_list = compact_decorator_list
-                if (
-                    has_reserved_keyword
-                    or self.src_target_module == target_module0
-                    or target_module0 in ["oneflow", "oneflow.scope", COMPATIBLE_MODULE]
-                ):
+                if is_kept_in_src:
                     import_from_src = ast.ImportFrom(
                         module=self.src_target_module,
-                        names=[ast.alias(name=node.name, asname=target_symbol0),],
+                        names=[ast.alias(name=node.name, asname=target_symbol),],
                         level=0,
                     )
                     self.append_export(
-                        target_module=target_module0, node=import_from_src
+                        target_module=target_module, node=import_from_src
                     )
                     if is_deprecated:
                         return [import_oneflow_deprecate, node]
@@ -243,13 +251,13 @@ class ExportVisitor(ast.NodeTransformer):
                 else:
                     if is_deprecated:
                         self.append_export(
-                            target_module=target_module0, node=import_oneflow_deprecate
+                            target_module=target_module, node=import_oneflow_deprecate
                         )
                     # prepend imports in target module
                     self.append_export(
-                        target_module=target_module0, node=self.top_imports
+                        target_module=target_module, node=self.top_imports
                     )
-                    if target_module0 != "oneflow":
+                    if target_module != "oneflow":
                         import_star_from_src = ast.ImportFrom(
                             module=self.src_target_module,
                             names=[ast.alias(name="*")],
@@ -257,20 +265,20 @@ class ExportVisitor(ast.NodeTransformer):
                         )
                         # node.body.insert(0, import_star_from_src)
                         self.append_export(
-                            target_module=target_module0, node=import_star_from_src
+                            target_module=target_module, node=import_star_from_src
                         )
                     # save func name for src import as before modifing node.name
                     src_asname = None
-                    if node.name != target_symbol0:
+                    if node.name != target_symbol:
                         src_asname = node.name
                     # save first export in target module
-                    node.name = target_symbol0
-                    self.append_export(target_module=target_module0, node=node)
+                    node.name = target_symbol
+                    self.append_export(target_module=target_module, node=node)
 
                     # src: import from first export
                     return ast.ImportFrom(
-                        module=target_module0,
-                        names=[ast.alias(name=target_symbol0, asname=src_asname),],
+                        module=target_module,
+                        names=[ast.alias(name=target_symbol, asname=src_asname),],
                         level=0,
                     )
             if is_decorator(d, name="oneflow_export_value"):
