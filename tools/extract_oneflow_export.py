@@ -88,7 +88,7 @@ def is_compatible_root_module(module: str):
     return False
 
 class ExportVisitor(ast.NodeTransformer):
-    def __init__(self, root_module="oneflow") -> None:
+    def __init__(self, root_module="oneflow", srcfile=None) -> None:
         super().__init__()
         self.staging_decorators = []
         self.root_module = root_module
@@ -233,7 +233,7 @@ class SrcFile:
                 or self.src.name == "single_client_main.py"
             ):
                 root_module = COMPATIBLE_MODULE
-            self.export_visitor = ExportVisitor(root_module=root_module)
+            self.export_visitor = ExportVisitor(root_module=root_module, srcfile=self)
             self.export_visitor.visit(self.tree)
 
 
