@@ -19,8 +19,7 @@ import functools
 import os
 
 import torch as torch_original
-import oneflow as flow_stable
-import oneflow.experimental as flow
+import oneflow as flow
 import numpy as np
 from .generators import generator, random_tensor, Nothing
 
@@ -233,7 +232,7 @@ def check_equality(dual_object: DualObject):
 
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
-@equality_checker(torch_original.Tensor, flow_stable._oneflow_internal.Tensor)
+@equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
 def check_tensor_equality(torch_tensor, flow_tensor):
     # TODO: check dtype
     if torch_tensor.grad is not None:

@@ -129,12 +129,8 @@ class Variance(Module):
             return flow.zeros(size=input.shape)
         else:
             return flow.sub(
-                flow.mean(
-                    flow.square(input), axis, self.keepdim
-                ),
-                flow.square(
-                    flow.mean(input, axis, self.keepdim)
-                ),
+                flow.mean(flow.square(input), axis, self.keepdim),
+                flow.square(flow.mean(input, axis, self.keepdim)),
             )
 
 
@@ -949,8 +945,7 @@ class Std(Module):
                     self.reduce_count *= x.shape[i]
 
             sum = (
-                flow.sum(self.square_op(x), self.axis, self.keepdim)
-                / self.reduce_count
+                flow.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
             )
             square = self.square_op(
                 flow.sum(x, self.axis, self.keepdim) / self.reduce_count

@@ -108,8 +108,8 @@ class AdamW(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["exp_avg"] = flow.experimental.zeros_like(param)
-                self._state[param]["exp_avg_sq"] = flow.experimental.zeros_like(param)
+                self._state[param]["exp_avg"] = flow.zeros_like(param)
+                self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
 
         self._op = (
             flow.builtin_op("adam_update")

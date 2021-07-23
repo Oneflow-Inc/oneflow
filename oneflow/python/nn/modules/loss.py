@@ -201,9 +201,7 @@ class CrossEntropyLoss(Module):
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
-            zeros = flow.zeros(
-                size=out.shape, dtype=out.dtype, device=out.device
-            )
+            zeros = flow.zeros(size=out.shape, dtype=out.dtype, device=out.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
                 size=condition.shape, dtype=condition.dtype, device=condition.device
@@ -308,8 +306,7 @@ class BCELoss(Module):
         ), "The Input shape must be the same as Target shape"
 
         _cross_entropy_loss = flow.negative(
-            target * flow.log(input)
-            + (1 - target) * flow.log(1 - input)
+            target * flow.log(input) + (1 - target) * flow.log(1 - input)
         )
 
         if self.weight is not None:
@@ -451,9 +448,7 @@ class NLLLoss(Module):
             raise NotImplemented
 
         if self.ignore_index is not None:
-            zeros = flow.zeros(
-                size=res.shape, dtype=res.dtype, device=res.device
-            )
+            zeros = flow.zeros(size=res.shape, dtype=res.dtype, device=res.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
                 size=condition.shape, dtype=condition.dtype, device=condition.device
@@ -679,9 +674,7 @@ class MSELoss(Module):
         self.reduction = reduction
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        mean_squared_difference = flow.square(
-            flow.sub(input, target)
-        )
+        mean_squared_difference = flow.square(flow.sub(input, target))
         if self.reduction == "mean":
             return flow.mean(mean_squared_difference)
         elif self.reduction == "sum":
@@ -762,11 +755,7 @@ class MarginRankingLoss(Module):
     def forward(self, input1, input2, target):
         res = flow.clip(
             flow.add(
-                self.margin,
-                flow.mul(
-                    target,
-                    flow.mul(-1, flow.sub(input1, input2)),
-                ),
+                self.margin, flow.mul(target, flow.mul(-1, flow.sub(input1, input2)),),
             ),
             min=0.0,
         )
@@ -921,9 +910,7 @@ class CTCLoss(Module):
             )
             loss = flow.where(
                 cond,
-                flow.zeros(
-                    size=loss.shape, dtype=loss.dtype, device=loss.device
-                ),
+                flow.zeros(size=loss.shape, dtype=loss.dtype, device=loss.device),
                 loss,
             )
 
@@ -933,8 +920,7 @@ class CTCLoss(Module):
                 self._xdivy_op(
                     loss,
                     flow.cast(
-                        flow.clamp(target_lengths, min=1),
-                        dtype=log_probs.dtype,
+                        flow.clamp(target_lengths, min=1), dtype=log_probs.dtype,
                     ),
                 )[0]
             )
@@ -1051,18 +1037,12 @@ class BCEWithLogitsLoss(Module):
         if self.pos_weight:
             _log_weight = ((self.pos_weight - 1) * target) + 1
             _loss = (1 - target) * input + _log_weight * (
-                flow.log(
-                    flow.exp(_neg_max_val)
-                    + flow.exp(_neg_input - _max_val)
-                )
+                flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
                 + _max_val
             )
         else:
             _loss = (1 - target) * input + _max_val
-            _loss += flow.log(
-                flow.exp(_neg_max_val)
-                + flow.exp(_neg_input - _max_val)
-            )
+            _loss += flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
 
         if self.weight is not None:
             assert (

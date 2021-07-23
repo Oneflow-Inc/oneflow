@@ -71,24 +71,14 @@ class Vector_Norm(Module):
     def _vector_norm(self, x, ord, dim, keepdim=False):
         if ord == 0:
             # TODO: fix error when input are all zero vector
-            return flow.cast(
-                flow.tensor([flow.argwhere(x).shape[0]]), flow.float32
-            )
+            return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
         elif ord == float("inf"):
-            return flow.max(
-                flow.abs(x), dim=dim, keepdim=keepdim
-            )
+            return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
         elif ord == float("-inf"):
-            return flow.min(
-                flow.abs(x), dim=dim, keepdim=keepdim
-            )
+            return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
         else:
             return flow.pow(
-                flow.sum(
-                    flow.pow(flow.abs(x), ord),
-                    dim=dim,
-                    keepdim=keepdim,
-                ),
+                flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim,),
                 1.0 / ord,
             )
 
@@ -142,29 +132,21 @@ class Matrix_Norm(Module):
         if ord == "nuc":
             raise NotImplementedError
         elif ord == "fro":
-            return flow.sqrt(
-                flow.sum(
-                    flow.square(x), dim=dim, keepdim=keepdim
-                )
-            )
+            return flow.sqrt(flow.sum(flow.square(x), dim=dim, keepdim=keepdim))
 
         elif ord in [float("inf"), float("-inf")]:
             dim_0, dim_1 = dim[0], dim[1]
             dim_0, dim_1 = dim_1, dim_0
             if dim_1 > dim_0 and not keepdim:
                 dim_1 -= 1
-            res = flow.sum(
-                flow.abs(x), dim=dim_0, keepdim=keepdim
-            )
+            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
             return _norm_min_max(res, ord, dim_1, keepdim)
 
         elif ord in [1, -1]:
             dim_0, dim_1 = dim[0], dim[1]
             if dim_1 > dim_0 and not keepdim:
                 dim_1 -= 1
-            res = flow.sum(
-                flow.abs(x), dim=dim_0, keepdim=keepdim
-            )
+            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
             return _norm_min_max(res, ord, dim_1, keepdim)
         elif ord in [2, -2]:
             raise NotImplementedError

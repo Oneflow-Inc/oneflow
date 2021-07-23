@@ -21,7 +21,7 @@ import random as random_util
 import os
 
 import numpy as np
-import oneflow.experimental as flow
+import oneflow as flow
 import torch
 import numpy as np
 

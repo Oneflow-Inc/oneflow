@@ -82,9 +82,7 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if param_group["momentum"] != 0.0:
-                    self._state[param]["momentum_buf"] = flow.experimental.zeros_like(
-                        param
-                    )
+                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
 
         self._momentum_sgd = (
             flow.builtin_op("momentum_update")

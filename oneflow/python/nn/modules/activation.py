@@ -731,9 +731,7 @@ class Softplus(Module):
         return flow.where(
             x * self.beta > self.threshold,
             x,
-            1
-            / self.beta
-            * flow.log(1.0 + flow.exp(self.beta * x)),
+            1 / self.beta * flow.log(1.0 + flow.exp(self.beta * x)),
         )
 
     def extra_repr(self):
