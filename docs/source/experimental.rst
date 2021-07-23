@@ -258,3 +258,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.bernoulli
 .. autofunction:: oneflow.experimental.in_top_k
 .. autofunction:: oneflow.experimental.Tensor.in_top_k
+.. autofunction:: oneflow.experimental.minimum
+.. autofunction:: oneflow.experimental.Tensor.minimum
+.. autofunction:: oneflow.experimental.maximum
+.. autofunction:: oneflow.experimental.Tensor.maximum

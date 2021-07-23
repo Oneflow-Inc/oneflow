@@ -729,3 +729,19 @@
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
+
+- name: "broadcast_min"
+  signature: "Tensor BroadcastMin(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_max"
+  signature: "Tensor BroadcastMax(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "elementwise_min"
+  signature: "Tensor ElementwiseMin(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "elementwise_max"
+  signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
+  bind_python: True
