@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +12,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
-#define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+"""
+import os
+import sys
 
-#include <string>
-#include <vector>
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(BASE_DIR)
 
-namespace oneflow {
 
-class NNGraphIf {
- public:
-  virtual ~NNGraphIf() = default;
-
-  virtual const std::string& job_name() const = 0;
-  virtual const std::vector<std::string>& inputs_op_names() const = 0;
-  virtual const std::vector<std::string>& outputs_op_names() const = 0;
-
- protected:
-  NNGraphIf() = default;
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_
+from test_utils.automated_test_util import *
