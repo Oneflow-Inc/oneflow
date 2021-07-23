@@ -22,7 +22,7 @@ from typing import Optional, Sequence
 
 class Transpose(Module):
     def __init__(
-        self, dim0, dim1, conjugate: bool = False, batch_axis_non_change: bool = False,
+        self, dim0 : int, dim1 : int, conjugate: bool = False, batch_axis_non_change: bool = False,
     ) -> None:
         super().__init__()
 
@@ -61,7 +61,7 @@ class Transpose(Module):
 @oneflow_export("transpose")
 @register_tensor_op("transpose")
 @experimental_api
-def transpose_op(tensor, dim0, dim1):
+def transpose_op(tensor, dim0 : int, dim1 : int):
     r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
