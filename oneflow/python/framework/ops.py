@@ -30,7 +30,6 @@ import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
 
-
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def repeat(input, repeat_num, name=None):
     assert not oneflow.eager_execution_enabled()
