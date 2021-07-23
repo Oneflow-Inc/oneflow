@@ -57,7 +57,7 @@ struct NdarrayUtil final {
   OF_PP_FOR_EACH_ATOMIC(DEFINE_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 #undef DEFINE_UNARY_FUNC
 
-#define DEFINE_ARITHMETIC_BINARY_FUNC(func_name)                                                          \
+#define DEFINE_ARITHMETIC_BINARY_FUNC(func_name)                                               \
   static void func_name(                                                                       \
       DeviceCtx* ctx,                                                                          \
       const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \
@@ -67,7 +67,7 @@ struct NdarrayUtil final {
   OF_PP_FOR_EACH_ATOMIC(DEFINE_ARITHMETIC_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_ARITHMETIC_BINARY_FUNC
 
-#define DEFINE_LOGICAL_BINARY_FUNC(func_name)                                                          \
+#define DEFINE_LOGICAL_BINARY_FUNC(func_name)                                                  \
   static void func_name(                                                                       \
       DeviceCtx* ctx,                                                                          \
       const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \
@@ -87,7 +87,7 @@ struct NdarrayUtil final {
   OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_UNARY_FUNC
 
-#define DEFINE_BROADCAST_ARITHMETIC_BINARY_FUNC(func_name)                                                \
+#define DEFINE_BROADCAST_ARITHMETIC_BINARY_FUNC(func_name)                                     \
   static void Broadcast##func_name(                                                            \
       DeviceCtx* ctx,                                                                          \
       const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \
@@ -97,7 +97,7 @@ struct NdarrayUtil final {
   OF_PP_FOR_EACH_ATOMIC(DEFINE_BROADCAST_ARITHMETIC_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
 #undef DEFINE_BROADCAST_ARITHMETIC_BINARY_FUNC
 
-#define DEFINE_BROADCAST_LOGICAL_BINARY_FUNC(func_name)                                                \
+#define DEFINE_BROADCAST_LOGICAL_BINARY_FUNC(func_name)                                        \
   static void Broadcast##func_name(                                                            \
       DeviceCtx* ctx,                                                                          \
       const XpuVarNdarray<typename BinaryFuncTrait<BinaryFunc##func_name, T>::return_type>& y, \

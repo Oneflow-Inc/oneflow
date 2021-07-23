@@ -808,19 +808,20 @@ class FMod(Module):
             raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([y],dtype=flow.float32,device=x.device)
+            y = flow.tensor([y], dtype=flow.float32, device=x.device)
         elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
             if x.dtype != y.dtype:
                 x = flow.F.cast(x, flow.float32)
                 y = flow.F.cast(y, flow.float32)
         else:
             raise ValueError("Expected type of other is Tensor or Scalar")
-       
+
         return flow.F.fmod(x, y)
+
 
 @oneflow_export("fmod")
 @experimental_api
-def fmod_op(input,other):
+def fmod_op(input, other):
     r"""
     fmod(input, other, *, out=None) -> Tensor
 
@@ -851,18 +852,18 @@ def fmod_op(input,other):
         tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
 
     """
-    return FMod()(input,other)
+    return FMod()(input, other)
 
 
 @register_tensor_op("fmod")
 @experimental_api
-def fmod_op_tensor(input,other):
+def fmod_op_tensor(input, other):
     r"""
 
     See :func:`oneflow.experimental.fmod`
     
     """
-    return FMod()(input,other)
+    return FMod()(input, other)
 
 
 class Log(Module):

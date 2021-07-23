@@ -106,7 +106,6 @@ struct BinaryFuncFloorMod final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
-
 template<typename T>
 struct BinaryFuncFMod final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {

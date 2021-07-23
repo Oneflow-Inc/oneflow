@@ -78,7 +78,6 @@ class BroadcastDivFunctor : public BinaryFunctor {
   }
 };
 
-
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
