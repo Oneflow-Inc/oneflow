@@ -176,9 +176,12 @@ class ExportVisitor(ast.NodeTransformer):
         import_star_from_src = ast.ImportFrom(
             module=self.src_target_module, names=[ast.alias(name='*')], level=0
         )
+        is_deprecated = False
+        for d in node.decorator_list:
+            if is_decorator(d, name="oneflow_deprecate"):
+                is_deprecated = True
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
-
             if is_decorator(d, name="oneflow_export"):
                 import_from_exports = []
                 target_module = None
@@ -201,6 +204,13 @@ class ExportVisitor(ast.NodeTransformer):
                 if target_name != node.name:
                     node.name = target_name
                 node.decorator_list = compact_decorator_list
+
+                # append export
+                if is_deprecated:
+                    import_oneflow_deprecate = ast.ImportFrom(
+                        module="oneflow", names=[ast.alias(name="oneflow_deprecate")], level=0
+                    )
+                    self.append_export(target_module=target_module, node=import_oneflow_deprecate)
                 # TODO: if target_module and and src_target_module is the same, no need to append there top level imports?
                 self.append_export(target_module=target_module, node=self.top_imports)
                 # TODO: insert "from origin_module import *" in exported func body
