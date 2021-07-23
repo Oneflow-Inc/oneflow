@@ -90,6 +90,9 @@ class ExportVisitor(ast.NodeTransformer):
         return node
 
     def visit_ImportFrom(self, node):
+        for name in node.names:
+            if not self.visit(name):
+                return None
         if node.module:
             if node.module == "__future__" or node.module.startswith(
                 "oneflow.python.oneflow_export"
@@ -110,8 +113,10 @@ class ExportVisitor(ast.NodeTransformer):
         if node.name.startswith("oneflow.python."):
             node.name = node.name.replace("oneflow.python.", "oneflow.")
             return node
-        if node.name == "oneflow.python":
+        elif node.name == "oneflow.python":
             node.name = "oneflow"
+        elif node.name == "oneflow_export":
+            return None
         elif "__export_symbols__" in node.name:
             return None
         else:
