@@ -16,12 +16,12 @@ class BatchNormOp final : public TVMOpKernel {
     inputs.push_back(ctx->GetExpr4InputName("beta_0"));
     inputs.push_back(ctx->GetExpr4InputName("moving_mean_0"));
     inputs.push_back(ctx->GetExpr4InputName("moving_variance_0"));
-
+    // TODO: handle training
     auto attrs = tvm::runtime::make_object<tvm::relay::BatchNormAttrs>();
     attrs->axis = ctx->Attr<int32_t>("axis");
     attrs->epsilon = ctx->Attr<float>("epsilon");
-    attrs->center = ctx->Attr<bool>("center");
-    attrs->scale = ctx->Attr<bool>("scale");
+    attrs->center = true;
+    attrs->scale = true;
 
     const auto& op = tvm::relay::Op::Get("nn.batch_norm");
     auto bn_op = tvm::relay::Call(op, inputs, tvm::Attrs(attrs), {});

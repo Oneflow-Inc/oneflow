@@ -121,8 +121,13 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
       CHECK(it != tensor_name2expr.end());
       input_arg2expr.emplace(in_arg, it->second);
     }
+    util::Vector<Argument> out_args;
+    for (const auto* out_edge : node->out_edges()) {
+      const auto& out_arg = out_edge->argument();
+      out_args.push_back(out_arg);
+    }
 
-    TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr));
+    TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr), std::move(out_args));
     auto op_kernel = BuildTVMOpKernel(node->type());
     op_kernel->Compile(&ctx);
 
