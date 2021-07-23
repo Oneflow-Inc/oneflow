@@ -2,7 +2,7 @@ oneflow.Tensor
 ===================================
 OneFlow Tensor Class
 ----------------------------------
-.. currentmodule:: oneflow.Tensor
+.. currentmodule:: oneflow
 .. autofunction:: oneflow.Tensor.acos
 .. autofunction:: oneflow.Tensor.acosh
 .. autofunction:: oneflow.Tensor.add

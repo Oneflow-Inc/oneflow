@@ -47,9 +47,12 @@ Operators for neural networks
 .. autofunction:: oneflow.nn.MaxPool2d
 .. autofunction:: oneflow.nn.MaxPool3d
 .. autofunction:: oneflow.nn.Mish
-.. autofunction:: oneflow.nn.Module
-.. autofunction:: oneflow.nn.ModuleDict
-.. autofunction:: oneflow.nn.ModuleList
+.. autoclass:: oneflow.nn.Module
+    :members:
+.. autoclass:: oneflow.nn.ModuleDict
+    :members:
+.. autoclass:: oneflow.nn.ModuleList
+    :members:
 .. autofunction:: oneflow.nn.MSELoss
 .. autofunction:: oneflow.nn.NLLLoss
 .. autofunction:: oneflow.nn.Parameter

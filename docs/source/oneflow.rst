@@ -1,7 +1,6 @@
 oneflow
 ===================================
-The oneflow package contains data structures for multi-dimensional 
-tensors and defines mathematical operations over these tensors.
+oneflow
 ----------------------------------
 .. currentmodule:: oneflow
 .. autofunction:: oneflow.acos
@@ -13,13 +12,11 @@ tensors and defines mathematical operations over these tensors.
 .. autofunction:: oneflow.addmm
 .. autofunction:: oneflow.arange
 .. autofunction:: oneflow.arccosh
-.. autofunction:: oneflow.arcsin
 .. autofunction:: oneflow.arcsinh
 .. autofunction:: oneflow.arctan
 .. autofunction:: oneflow.arctanh
 .. autofunction:: oneflow.argmax
 .. autofunction:: oneflow.argwhere
-.. autofunction:: oneflow.asin
 .. autofunction:: oneflow.asinh
 .. autofunction:: oneflow.atan
 .. autofunction:: oneflow.atan2
@@ -91,7 +88,6 @@ tensors and defines mathematical operations over these tensors.
 .. autofunction:: oneflow.sub
 .. autofunction:: oneflow.sum
 .. autofunction:: oneflow.tan
-.. autofunction:: oneflow.tanh
 .. autofunction:: oneflow.tensor_buffer_to_tensor
 .. autofunction:: oneflow.tensor_to_tensor_buffer
 .. autofunction:: oneflow.tile
