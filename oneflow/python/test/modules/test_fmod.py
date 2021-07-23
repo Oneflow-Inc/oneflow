@@ -74,7 +74,6 @@ def _test_fmod_tensor_vs_scalar(test_case, shape, device):
 
 
 class TestFmodModule(flow.unittest.TestCase):
-    @unittest.skip("grad of broadcast_fmod cannot be found")
     def test_fmod(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [_test_fmod_same_shape_tensor, _test_fmod_tensor_vs_scalar]
