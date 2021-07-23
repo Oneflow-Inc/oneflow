@@ -11,7 +11,7 @@ from functools import partial
 from collections import OrderedDict
 import astpretty
 import sys
-
+import copy
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--out_dir", type=str, default="python",
@@ -201,13 +201,6 @@ class ExportVisitor(ast.NodeTransformer):
                 )
                 target_name0 = arg0.value.split(".")[-1]
 
-                # src: import from first export
-                ret = ast.ImportFrom(
-                    module=target_module0,
-                    names=[ast.alias(name=target_name0, asname=node.name),],
-                    level=0,
-                )
-
                 # nth export: import from first export
                 for argN in d.args[1::]:
                     target_moduleN = join_module(
@@ -224,6 +217,7 @@ class ExportVisitor(ast.NodeTransformer):
                     )
                     self.append_export(target_module=target_moduleN, node=import_from_first_export)
 
+                original_func_name = node.name
                 # finalize function for first export
                 node.name = target_name0
                 node.decorator_list = compact_decorator_list
@@ -241,7 +235,16 @@ class ExportVisitor(ast.NodeTransformer):
 
                 # save first export in target module
                 self.append_export(target_module=target_module0, node=node)
-                return ret
+
+                # src: import from first export
+                asname = None
+                if original_func_name != node.name:
+                    asname = original_func_name
+                return ast.ImportFrom(
+                    module=target_module0,
+                    names=[ast.alias(name=target_name0, asname=asname),],
+                    level=0,
+                )
             if is_decorator(d, name="oneflow_export_value"):
                 assert len(node.body) == 2
                 assert len(d.args) == 1
