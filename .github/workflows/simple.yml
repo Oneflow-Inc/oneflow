@@ -24,11 +24,12 @@ jobs:
           access_token: ${{ github.token }}
   hosted:
     name: CPU-only
-    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
+    timeout-minutes: 120
     strategy:
-      fail-fast: false
+      fail-fast: true
       max-parallel: 3
       matrix:
         test_suite: ["conda", "mac", "ubuntu"]
@@ -48,6 +49,11 @@ jobs:
         exclude:
           - test_suite: conda
             cmake_generator: "Ninja"
+          - test_suite: mac
+            cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Ninja"
+            cmake_build_type: "Debug"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -180,7 +186,7 @@ jobs:
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash -l {0}
       - name: "Tar logs"
-        if: always()
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
         continue-on-error: true
         run: |
           set -ex
@@ -193,7 +199,7 @@ jobs:
               tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
           fi
       - name: Upload logs
-        if: always()
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
         uses: actions/upload-artifact@v2
         with:
           name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}

@@ -111,9 +111,10 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
   JUST(WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape));
-  JUST(WithOpGraphAndMutJobBuilder(job, &AutoSourceAndSinkTick));
-  JUST(WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections));
-  JUST(WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections));
+  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAutoSourceAndSinkTick));
+  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
+  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
+  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT

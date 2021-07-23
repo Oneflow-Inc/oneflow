@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/framework/device.h"
@@ -165,16 +166,23 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device)
+    : TensorMeta(shape, dtype),
+      device_(device),
+      stride_(std::make_shared<const Stride>(*shape)),
+      storage_offset_(0) {}
+
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && *this->device() == *other.device();
+         && *this->device() == *other.device() && this->stride() == other.stride();
 }
 
 size_t MirroredTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Device>()(*device());
+         ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride());
 }
 
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {

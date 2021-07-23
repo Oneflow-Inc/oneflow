@@ -45,12 +45,6 @@ def EnvResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
-def InitDefaultEnv(env_proto):
-    assert type(env_proto) is env_pb2.EnvProto
-    env_proto_str = text_format.MessageToString(env_proto)
-    oneflow._oneflow_internal.InitDefaultEnv(env_proto_str)
-
-
 def InitEnv(env_proto, is_multi_client):
     assert type(env_proto) is env_pb2.EnvProto
     env_proto_str = text_format.MessageToString(env_proto)
