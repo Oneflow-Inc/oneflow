@@ -217,11 +217,6 @@ class ExportVisitor(ast.NodeTransformer):
                     )
                     self.append_export(target_module=target_moduleN, node=import_from_first_export)
 
-                original_func_name = node.name
-                # finalize function for first export
-                node.name = target_name0
-                node.decorator_list = compact_decorator_list
-
                 # prepend imports in target module
                 if is_deprecated:
                     import_oneflow_deprecate = ast.ImportFrom(
@@ -233,16 +228,20 @@ class ExportVisitor(ast.NodeTransformer):
                 # TODO: insert "from origin_module import *" in exported func body
                 self.append_export(target_module=target_module0, node=import_star_from_src)
 
+                # save func name for src import as before modifing node.name
+                src_asname = None
+                if node.name != target_name0:
+                    src_asname = node.name
+
                 # save first export in target module
+                node.name = target_name0
+                node.decorator_list = compact_decorator_list
                 self.append_export(target_module=target_module0, node=node)
 
                 # src: import from first export
-                asname = None
-                if original_func_name != node.name:
-                    asname = original_func_name
                 return ast.ImportFrom(
                     module=target_module0,
-                    names=[ast.alias(name=target_name0, asname=asname),],
+                    names=[ast.alias(name=target_name0, asname=src_asname),],
                     level=0,
                 )
             if is_decorator(d, name="oneflow_export_value"):
