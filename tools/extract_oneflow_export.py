@@ -211,8 +211,8 @@ class ExportVisitor(ast.NodeTransformer):
                         "arg0": arg0, "argN": argN
                     }
                     import_from_first_export = ast.ImportFrom(
-                        module=target_moduleN,
-                        names=[ast.alias(name=target_nameN, asname=target_nameN),],
+                        module=target_module0,
+                        names=[ast.alias(name=target_module0, asname=target_nameN),],
                         level=0,
                     )
                     self.append_export(target_module=target_moduleN, node=import_from_first_export)
