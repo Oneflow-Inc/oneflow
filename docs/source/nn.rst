@@ -29,7 +29,6 @@ Operators for neural networks
         Embedding, 
         Flatten, 
         GELU, 
-        Graph, 
         GroupNorm, 
         Hardsigmoid, 
         Hardswish, 
@@ -76,6 +75,4 @@ Operators for neural networks
         UpsamplingBilinear2d, 
         UpsamplingNearest2d, 
         ZeroPad2d, 
-        ctc_greedy_decoder, 
-        graph, 
-        image
+        ctc_greedy_decoder
