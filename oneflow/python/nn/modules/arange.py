@@ -17,7 +17,7 @@ from typing import Union
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -58,7 +58,6 @@ class Arange(Module):
 
 
 @oneflow_export("arange")
-@experimental_api
 def arange_op(
     start: int = 0,
     end: int = None,
@@ -89,9 +88,8 @@ def arange_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> y = flow.arange(0, 5)
         >>> y
         tensor([0, 1, 2, 3, 4], dtype=oneflow.int64)

@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 import oneflow.python.framework.id_util as id_util
 from typing import Optional, Sequence
@@ -46,7 +46,6 @@ class MatMul(Module):
 
 @oneflow_export("matmul")
 @register_tensor_op("matmul")
-@experimental_api
 def matmul_op(input, other):
     r"""This operator applies matrix multiplication to two Tensor.
 
@@ -61,9 +60,8 @@ def matmul_op(input, other):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.matmul(input1, input2)
