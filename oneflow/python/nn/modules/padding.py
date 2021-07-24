@@ -16,12 +16,11 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.ReplicationPad2d")
-@experimental_api
 class ReplicationPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -44,9 +43,8 @@ class ReplicationPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -113,7 +111,6 @@ class ReplicationPad2d(Module):
 
 
 @oneflow_export("nn.ReflectionPad2d")
-@experimental_api
 class ReflectionPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -140,9 +137,8 @@ class ReflectionPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
@@ -191,7 +187,6 @@ class ReflectionPad2d(Module):
 
 
 @oneflow_export("nn.ConstantPad2d")
-@experimental_api
 class ConstantPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -216,9 +211,8 @@ class ConstantPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -275,7 +269,6 @@ class ConstantPad2d(Module):
 
 
 @oneflow_export("nn.ConstantPad3d")
-@experimental_api
 class ConstantPad3d(Module):
     r"""Pads the input tensor boundaries with a constant value.
     The interface is consistent with PyTorch, and referenced from:
@@ -304,7 +297,7 @@ class ConstantPad3d(Module):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
 
         >>> input = flow.tensor(np.arange(8).reshape(1,1,2,2,2).astype(np.int32))

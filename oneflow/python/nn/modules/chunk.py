@@ -17,7 +17,7 @@ from typing import Optional
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.ops.array_ops import check_slice_tup_list
@@ -87,12 +87,11 @@ class Chunk(Module):
 
 @oneflow_export("chunk")
 @register_tensor_op("chunk")
-@experimental_api
 def chunk_op(input, chunks, dim):
     r"""Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
     Args:
-        input (oneflow.experimental.Tensor): The tensor to split.
+        input (oneflow.Tensor): The tensor to split.
         chunks (int): Number of chunks to return.
         dim (int): Dimension along which to split the tensor.
 
@@ -103,10 +102,9 @@ def chunk_op(input, chunks, dim):
 
     .. code-block:: python
     
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-       
+               
         >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> of_out = []

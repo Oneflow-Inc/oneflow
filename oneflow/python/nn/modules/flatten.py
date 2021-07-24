@@ -15,12 +15,11 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
 @oneflow_export("nn.Flatten")
-@experimental_api
 class Flatten(Module):
     """Flattens a contiguous range of dims into a tensor. For use with: nn.Sequential.
 
@@ -33,13 +32,12 @@ class Flatten(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
-        
-        input = flow.Tensor(32, 1, 5, 5)
-        m = flow.nn.Flatten()
-        output = m(input)
-        output.size()
-        # out flow.Size([32, 25])
+        >>> import oneflow as flow
+        >>> input = flow.Tensor(32, 1, 5, 5)
+        >>> m = flow.nn.Flatten()
+        >>> output = m(input)
+        >>> output.shape
+        flow.Size([32, 25])
 
     """
 
@@ -57,7 +55,6 @@ class Flatten(Module):
 
 @oneflow_export("flatten")
 @register_tensor_op("flatten")
-@experimental_api
 def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     """Flattens a contiguous range of dims into a tensor.
 
@@ -70,12 +67,10 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     .. code-block:: python 
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> input = flow.Tensor(32, 1, 5, 5)
         >>> output = input.flatten(start_dim=1)
-        >>> output.size()
+        >>> output.shape
         flow.Size([32, 25])
 
     """
