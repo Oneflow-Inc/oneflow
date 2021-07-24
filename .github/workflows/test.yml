@@ -334,7 +334,15 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite:
-          ["cuda", "cuda_op", "cuda_new_interface", "cpu", "xla", "xla_cpu"]
+          [
+            "cuda",
+            "cuda_op",
+            "cuda_new_interface",
+            "cpu_new_interface",
+            "cpu",
+            "xla",
+            "xla_cpu",
+          ]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
@@ -349,6 +357,10 @@ jobs:
             allow_fail: false
             build_env: build.cuda.env
           - test_suite: "cpu"
+            os: [self-hosted, linux, cpu]
+            allow_fail: false
+            build_env: build.cpu.env
+          - test_suite: "cpu_new_interface"
             os: [self-hosted, linux, cpu]
             allow_fail: false
             build_env: build.cpu.env
@@ -495,7 +507,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Set environment variables (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           set -x
           echo "image_tag=oneflow-test-v2:0.1" >> $GITHUB_ENV
@@ -505,19 +517,19 @@ jobs:
           pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
       - name: Check image (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           if [[ "$(docker images -q ${{ env.image_tag }} 2> /dev/null)" == "" ]]; then
             echo "should_load_img=1" >> $GITHUB_ENV
           fi
       - name: Load image (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface' && env.should_load_img == '1'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && env.should_load_img == '1'
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
       - name: Module API test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -526,7 +538,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
       - name: Dataloader API test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -535,7 +547,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -543,7 +555,7 @@ jobs:
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Graph API test
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -551,7 +563,7 @@ jobs:
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Checkout Oneflow-Inc/models
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
@@ -559,7 +571,7 @@ jobs:
           path: oneflow-models
       - name: Speed test
         id: speed
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -567,7 +579,7 @@ jobs:
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/test_speed.sh"
       - name: Post speed stats
-        if: matrix.test_suite == 'cuda_new_interface'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         continue-on-error: true
         uses: actions/github-script@v4
         with:
@@ -637,7 +649,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: Remove automerge
-        if: matrix.test_suite == 'cuda_new_interface' && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
         uses: actions/github-script@v4
         with:
           script: |
