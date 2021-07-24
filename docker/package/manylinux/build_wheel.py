@@ -138,7 +138,7 @@ def get_common_docker_args(
     current_dir=None,
     house_dir=None,
     use_system_proxy=True,
-    inplace=False
+    inplace=False,
 ):
     root = Path(cache_dir)
     child = Path(current_dir)
@@ -262,7 +262,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
-        inplace=inplace
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
