@@ -180,7 +180,7 @@ class Graph(object):
             self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
             self._c_nn_graph.register_output_op_names(eager_output_op_names)
             self._c_nn_graph.register_variable_op_names_and_tensors(
-                state_op_names, state_tensors
+                state_op_names, self._variables
             )
 
             # Save job proto for debug
