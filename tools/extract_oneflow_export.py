@@ -545,6 +545,7 @@ if __name__ == "__main__":
             f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
         )
     if args.license:
+        print("[postprocess]", "license")
         subprocess.check_call(
             f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix --silent", shell=True,
         )
