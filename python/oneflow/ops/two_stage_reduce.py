@@ -21,8 +21,8 @@ import oneflow.framework.distribute as distribute_util
 import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.lib.core.enable_if as enable_if
 import oneflow.ops.user_op_builder as user_op_builder
+import oneflow.support.enable_if as enable_if
 
 
 def api_two_stage_reduce_max(

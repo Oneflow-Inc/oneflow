@@ -35,8 +35,8 @@ from oneflow.compatible.single_client.framework import scope_util as scope_util
 from oneflow.compatible.single_client.framework import session_context as session_ctx
 from oneflow.compatible.single_client.framework import typing as oft
 from oneflow.compatible.single_client.framework import typing_util as oft_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.lib.core import (
+from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.compatible.single_client.support import (
     func_inspect_util as func_inspect_util,
 )
 

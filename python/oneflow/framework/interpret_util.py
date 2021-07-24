@@ -19,7 +19,7 @@ import oneflow.eager.gradient_util as gradient_util
 import oneflow.eager.op_executor as op_executor
 import oneflow.framework.compile_context as compile_ctx
 import oneflow.framework.hob as hob
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

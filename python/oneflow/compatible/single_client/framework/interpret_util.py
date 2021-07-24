@@ -19,7 +19,7 @@ from oneflow.compatible.single_client.eager import gradient_util as gradient_uti
 from oneflow.compatible.single_client.eager import op_executor as op_executor
 from oneflow.compatible.single_client.framework import compile_context as compile_ctx
 from oneflow.compatible.single_client.framework import hob as hob
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

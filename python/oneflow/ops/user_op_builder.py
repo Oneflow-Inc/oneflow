@@ -37,7 +37,7 @@ import oneflow.framework.distribute as distribute
 import oneflow.framework.hob as hob
 import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

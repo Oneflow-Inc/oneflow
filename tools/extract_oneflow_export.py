@@ -94,7 +94,9 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
         if node.id in self.keywords:
             self.has_reserved_keyword = True
 
-def replace_str(name):
+
+def replace_str(name: str):
+    name = name.replace("lib.core", "support")
     if name.startswith("oneflow.python."):
         return name.replace("oneflow.python.", "oneflow.")
     elif name == "oneflow.python":
@@ -103,6 +105,7 @@ def replace_str(name):
         return name.replace("single_client.python", "single_client")
     else:
         return name
+
 
 class ExportVisitor(ast.NodeTransformer):
     def __init__(self, root_module="oneflow", src_target_module: str = None) -> None:
@@ -205,9 +208,7 @@ class ExportVisitor(ast.NodeTransformer):
         for d in node.decorator_list:
             if is_decorator(d, name="register_tensor_op"):
                 import_src = ast.parse(f"import {self.src_target_module}")
-                self.append_export(
-                    target_module=self.root_module, node=import_src
-                )
+                self.append_export(target_module=self.root_module, node=import_src)
             if is_decorator(d, name="oneflow_export"):
                 is_kept_in_src = (
                     True
@@ -330,6 +331,7 @@ class SrcFile:
         self.dst = Path(spec["dst"])
         self.src: Path = spec["src"]
         self.target_module = module_from_path(self.dst)
+        self.target_module = replace_str(self.target_module)
         if is_test and args.verbose:
             print("[skip test]", self.src)
         else:
@@ -502,7 +504,7 @@ if __name__ == "__main__":
     assert args.out_dir != "/"
     subprocess.check_call(f"mkdir -p {OUT_PATH}", shell=True)
 
-    for py_f in Path(out_oneflow_dir).glob('**/*.py'):
+    for py_f in Path(out_oneflow_dir).glob("**/*.py"):
         if py_f.name != "version.py":
             py_f.unlink()
 
@@ -579,5 +581,7 @@ if __name__ == "__main__":
     if args.black:
         print("[postprocess]", "black")
         subprocess.check_call(
-            f"`which python3` -m black --exclude '\\.ast\\.py' . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"`which python3` -m black --exclude '\\.ast\\.py' . {extra_arg}",
+            shell=True,
+            cwd=args.out_dir,
         )

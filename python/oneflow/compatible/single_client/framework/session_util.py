@@ -46,7 +46,7 @@ from oneflow.compatible.single_client.framework.pull_util import (
     LazyFutureRemoteBlobs,
 )
 from oneflow.compatible.single_client.framework.session_context import SessionStatus
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 class Session(object):

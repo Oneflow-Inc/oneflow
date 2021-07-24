@@ -34,8 +34,8 @@ from oneflow.compatible.single_client.framework import tensor_str as tensor_str_
 from oneflow.compatible.single_client.framework.function_util import (
     global_function_or_identity,
 )
-from oneflow.compatible.single_client.lib.core import async_util as async_util
 from oneflow.compatible.single_client.ops import initializer_util as initializer_util
+from oneflow.compatible.single_client.support import async_util as async_util
 
 
 def register_local_tensor_method(name=None):

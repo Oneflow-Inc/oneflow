@@ -39,7 +39,7 @@ from oneflow.compatible.single_client.framework import session_context as sessio
 from oneflow.compatible.single_client.framework import typing as oft
 from oneflow.compatible.single_client.framework import typing_util as oft_util
 from oneflow.compatible.single_client.framework import watcher as watcher_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def Watch(

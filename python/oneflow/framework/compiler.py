@@ -32,9 +32,9 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.framework.typing as oft
 import oneflow.framework.typing_util as oft_util
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.lib.core.func_inspect_util as func_inspect_util
 import oneflow.ops as ops
+import oneflow.support.enable_if as enable_if
+import oneflow.support.func_inspect_util as func_inspect_util
 
 
 def Compile(session, function_desc, config_proto):

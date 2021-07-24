@@ -33,7 +33,7 @@ from oneflow.compatible.single_client.framework import input_blob_def as input_b
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.framework import scope_util as scope_util
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

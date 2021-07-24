@@ -33,7 +33,7 @@ import oneflow.framework.session_context as session_ctx
 import oneflow.framework.typing as oft
 import oneflow.framework.typing_util as oft_util
 import oneflow.framework.watcher as watcher_util
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 

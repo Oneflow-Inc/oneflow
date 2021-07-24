@@ -40,8 +40,8 @@ from oneflow.compatible.single_client.framework import (
 )
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import id_util as id_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.lib.core import high_order_bool as high_order_bool
+from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.compatible.single_client.support import high_order_bool as high_order_bool
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):

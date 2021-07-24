@@ -35,9 +35,9 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.async_util as async_util
 import oneflow.ops.get_variable as get_variable
 import oneflow.ops.initializer_util as initializer_util
+import oneflow.support.async_util as async_util
 from oneflow._oneflow_internal import EagerBlobTrait
 from oneflow.experimental import interface_op_read_and_write
 

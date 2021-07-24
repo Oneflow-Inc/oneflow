@@ -41,7 +41,7 @@ from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

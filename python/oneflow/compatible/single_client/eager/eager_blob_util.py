@@ -21,7 +21,7 @@ from oneflow.compatible.single_client.framework import (
 from oneflow.compatible.single_client.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible.single_client.lib.core import async_util as async_util
+from oneflow.compatible.single_client.support import async_util as async_util
 
 
 @property

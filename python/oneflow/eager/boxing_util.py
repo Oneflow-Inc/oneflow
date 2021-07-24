@@ -31,8 +31,8 @@ import oneflow.eager.symbol as symbol_util
 import oneflow.framework.balanced_splitter as balanced_splitter
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.id_util as id_util
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.lib.core.high_order_bool as high_order_bool
+import oneflow.support.enable_if as enable_if
+import oneflow.support.high_order_bool as high_order_bool
 from oneflow.eager.boxing_hob import BoxingHobContext
 
 

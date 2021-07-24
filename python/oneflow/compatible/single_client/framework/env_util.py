@@ -32,7 +32,7 @@ from oneflow.compatible.single_client.framework import (
 )
 from oneflow.compatible.single_client.framework import scope_util as scope_util
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def api_all_device_placement(device_type: str) -> None:

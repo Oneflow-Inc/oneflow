@@ -25,7 +25,7 @@ from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import id_util as id_util
 from oneflow.compatible.single_client.framework import interpret_util as interpret_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def api_distribute_clone(

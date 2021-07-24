@@ -22,7 +22,7 @@ import oneflow.framework.hob as hob
 import oneflow.framework.placement_context as placement_ctx
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 

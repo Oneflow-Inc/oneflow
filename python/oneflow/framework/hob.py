@@ -17,7 +17,7 @@ import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
-from oneflow.lib.core.high_order_bool import bool_functor
+from oneflow.support.high_order_bool import bool_functor
 
 
 @bool_functor("Current mode is %s" % rt_mode.NORMAL_MODE)

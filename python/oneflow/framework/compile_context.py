@@ -23,7 +23,7 @@ import oneflow.framework.distribute_context as distribute_ctx
 import oneflow.framework.hob as hob
 import oneflow.framework.placement_context as placement_context
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 
 def GetCurJobConfigProto():

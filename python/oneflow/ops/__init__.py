@@ -29,7 +29,7 @@ import oneflow.framework.input_blob_def as input_blob_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

@@ -30,8 +30,8 @@ import oneflow.framework.ofblob as ofblob_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.tensor_str as tensor_str_util
-import oneflow.lib.core.async_util as async_util
 import oneflow.ops.initializer_util as initializer_util
+import oneflow.support.async_util as async_util
 from oneflow._oneflow_internal.exception import IndexException
 from oneflow.framework.function_util import global_function_or_identity
 

@@ -17,7 +17,7 @@ import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core.high_order_bool import bool_functor
+from oneflow.compatible.single_client.support.high_order_bool import bool_functor
 
 
 @bool_functor("Current mode is %s" % rt_mode.NORMAL_MODE)

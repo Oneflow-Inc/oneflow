@@ -28,7 +28,7 @@ from oneflow.compatible.single_client.framework import (
     placement_context as placement_ctx,
 )
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def assign(ref, value, dtype=None, name=None):

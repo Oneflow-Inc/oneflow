@@ -45,9 +45,9 @@ from oneflow.compatible.single_client.framework import id_util as id_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import async_util as async_util
 from oneflow.compatible.single_client.ops import get_variable as get_variable
 from oneflow.compatible.single_client.ops import initializer_util as initializer_util
+from oneflow.compatible.single_client.support import async_util as async_util
 
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"

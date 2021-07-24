@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.lib.core.high_order_bool import (
+from oneflow.compatible.single_client.support.high_order_bool import (
     BoolFunctor,
     bool_functor,
     hob_context_attr,

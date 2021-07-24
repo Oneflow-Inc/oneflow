@@ -21,8 +21,8 @@ from oneflow.compatible.single_client.framework import distribute as distribute_
 from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import id_util as id_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 from oneflow.compatible.single_client.ops import user_op_builder as user_op_builder
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def api_two_stage_reduce_max(

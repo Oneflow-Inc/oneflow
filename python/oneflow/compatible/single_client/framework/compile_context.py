@@ -27,7 +27,7 @@ from oneflow.compatible.single_client.framework import (
     placement_context as placement_context,
 )
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 def GetCurJobConfigProto():

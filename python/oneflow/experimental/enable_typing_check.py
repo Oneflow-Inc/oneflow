@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow.framework.hob as hob
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 
 def api_enable_typing_check(val: bool = True) -> None:

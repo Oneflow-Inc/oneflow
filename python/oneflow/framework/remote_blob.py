@@ -29,7 +29,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.placement_context as placement_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 from oneflow.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()

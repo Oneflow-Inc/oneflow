@@ -18,7 +18,7 @@ import oneflow.eager.gradient_util as gradient_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.hob as hob
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 
 def api_add_loss(loss: oneflow._oneflow_internal.BlobDesc) -> None:

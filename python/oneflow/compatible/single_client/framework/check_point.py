@@ -26,7 +26,7 @@ from oneflow.compatible.single_client.framework import config_util as config_uti
 from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import job_instance as job_instance
 from oneflow.compatible.single_client.framework import session_context as session_ctx
-from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.support import enable_if as enable_if
 
 
 class CheckPoint(object):

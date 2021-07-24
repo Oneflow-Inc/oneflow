@@ -29,8 +29,8 @@ import oneflow.framework.placement_context as placement_ctx
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
 import oneflow.framework.typing_util as oft_util
-import oneflow.lib.core.enable_if as enable_if
-import oneflow.lib.core.pb_util as pb_util
+import oneflow.support.enable_if as enable_if
+import oneflow.support.pb_util as pb_util
 from oneflow import oneflow_deprecate
 from oneflow.framework.function_desc import FunctionDesc
 

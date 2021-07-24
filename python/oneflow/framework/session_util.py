@@ -36,7 +36,7 @@ import oneflow.framework.module as module_util
 import oneflow.framework.push_util as push_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.framework.typing_util as oft_util
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.experimental import interface_op_read_and_write

@@ -33,7 +33,7 @@ import oneflow.framework.hob as hob
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

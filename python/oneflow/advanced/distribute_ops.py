@@ -23,7 +23,7 @@ import oneflow.framework.hob as hob
 import oneflow.framework.id_util as id_util
 import oneflow.framework.interpret_util as interpret_util
 import oneflow.framework.remote_blob as remote_blob_util
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 
 def api_distribute_clone(

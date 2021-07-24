@@ -26,7 +26,7 @@ import oneflow.framework.config_util as config_util
 import oneflow.framework.hob as hob
 import oneflow.framework.job_instance as job_instance
 import oneflow.framework.session_context as session_ctx
-import oneflow.lib.core.enable_if as enable_if
+import oneflow.support.enable_if as enable_if
 
 
 class CheckPoint(object):
