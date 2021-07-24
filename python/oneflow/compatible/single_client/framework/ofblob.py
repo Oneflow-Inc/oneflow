@@ -24,7 +24,6 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible.single_client.lib.core.box import Box
 
 
 class OfBlob(object):
