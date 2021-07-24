@@ -21,7 +21,6 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible.single_client.eager import op_executor as op_executor
 from oneflow.compatible.single_client.framework import dtype as dtype_util
 from oneflow.compatible.single_client.framework import (
     input_blob_def as input_blob_def_util,

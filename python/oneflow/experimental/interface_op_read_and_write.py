@@ -19,7 +19,6 @@ import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.eager.op_executor as op_executor
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.input_blob_def as input_blob_def_util
 import oneflow.framework.push_util as push_util
