@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -29,7 +29,6 @@ class Exp(Module):
 
 @oneflow_export("exp")
 @register_tensor_op("exp")
-@experimental_api
 def exp_op(x):
     """This operator computes the exponential of Tensor.
 
@@ -50,9 +49,8 @@ def exp_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = x.exp()
         >>> y

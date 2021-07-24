@@ -20,7 +20,7 @@ from typing import Union, Optional, Iterator, Set
 
 import oneflow._oneflow_internal
 import oneflow.python.framework.graph_build_util as graph_build_util
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter
@@ -35,7 +35,6 @@ class BlockType:
 
 
 @oneflow_export("nn.graph.Block")
-@experimental_api
 class Block(object):
     def __init__(
         self,
@@ -308,7 +307,6 @@ class Block(object):
 
 
 @oneflow_export("nn.graph.BlockConfig")
-@experimental_api
 class BlockConfig(object):
     def __init__(self):
         self._stage_id = None
