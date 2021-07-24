@@ -125,7 +125,28 @@ register_docstr()
 del register_docstr
 del docstr
 import oneflow.nn.image
+import oneflow.nn.modules.acosh
+import oneflow.nn.modules.activation
+import oneflow.nn.modules.argwhere
+import oneflow.nn.modules.atan2
+import oneflow.nn.modules.atanh
+import oneflow.nn.modules.bmm
+import oneflow.nn.modules.constant
+import oneflow.nn.modules.diag
+import oneflow.nn.modules.flip
+import oneflow.nn.modules.floor
+import oneflow.nn.modules.greater
+import oneflow.nn.modules.greater_equal
+import oneflow.nn.modules.in_top_k
+import oneflow.nn.modules.masked_select
+import oneflow.nn.modules.math_ops
+import oneflow.nn.modules.norm
 import oneflow.nn.modules.permute
+import oneflow.nn.modules.round
+import oneflow.nn.modules.sign
+import oneflow.nn.modules.sinh
+import oneflow.nn.modules.tan
+import oneflow.nn.modules.tensor_ops
 import oneflow.tmp
 from oneflow.advanced.distribute_ops import cast_to_current_logical_view
 from oneflow.deprecated.initializer_util import (

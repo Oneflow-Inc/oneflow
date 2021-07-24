@@ -205,6 +205,11 @@ class ExportVisitor(ast.NodeTransformer):
                 is_deprecated = True
         for d in node.decorator_list:
             # TODO: if @register_tensor_op, export it in __init__.py
+            if is_decorator(d, name="register_tensor_op"):
+                import_src = ast.parse(f"import {self.src_target_module}")
+                self.append_export(
+                    target_module=self.root_module, node=import_src
+                )
             if is_decorator(d, name="oneflow_export"):
                 is_kept_in_src = (
                     True
