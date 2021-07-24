@@ -16,7 +16,7 @@ OneFlow API Reference
     nn
     module
     F
-    linagl
+    linalg
     image
     optim
 
