@@ -570,7 +570,7 @@ if __name__ == "__main__":
     if args.isort:
         print("[postprocess]", "isort")
         subprocess.check_call(
-            f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"{sys.executable} -m isort --skip oneflow/utils/data/__init__.py . {extra_arg}", shell=True, cwd=args.out_dir,
         )
     if args.license:
         print("[postprocess]", "license")
