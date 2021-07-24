@@ -22,7 +22,11 @@ from typing import Optional, Sequence
 
 class Transpose(Module):
     def __init__(
-        self, dim0 : int, dim1 : int, conjugate: bool = False, batch_axis_non_change: bool = False,
+        self,
+        dim0: int,
+        dim1: int,
+        conjugate: bool = False,
+        batch_axis_non_change: bool = False,
     ) -> None:
         super().__init__()
 

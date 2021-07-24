@@ -588,35 +588,40 @@ class TestTensor(flow.unittest.TestCase):
         of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
-    
+
     @autotest()
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = x.reshape(shape=(-1, ))
+        y = x.reshape(shape=(-1,))
         return y
-    
+
     @autotest()
     def test_tensor_squeeze_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.squeeze(random().to(int))
         return y
-    
+
     @autotest()
     def test_flow_unsqueeze_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.unsqueeze(random(1, 3).to(int))
         return y
-    
+
     @autotest()
     def test_permute_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = x.permute(random(0, 4).to(int), random(0, 4).to(int), random(0, 4).to(int), random(0, 4).to(int))
+        y = x.permute(
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+        )
         return y
-    
+
     @autotest()
     def test_transpose_tensor_with_random_data(test_case):
         device = random_device()

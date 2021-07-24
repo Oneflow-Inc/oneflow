@@ -77,5 +77,6 @@ class TestUnsqueeze(flow.unittest.TestCase):
         y = torch.unsqueeze(x, random(1, 3).to(int))
         return y
 
+
 if __name__ == "__main__":
     unittest.main()

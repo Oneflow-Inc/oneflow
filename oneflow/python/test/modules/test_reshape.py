@@ -73,12 +73,12 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest()
     def test_reshape_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = torch.reshape(x, shape=(-1, ))
+        y = torch.reshape(x, shape=(-1,))
         return y
 
 
