@@ -86,6 +86,9 @@ if __name__ == "__main__":
         "-v", "--verbose", default=False, action="store_true", required=False
     )
     parser.add_argument(
+        "--silent", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
         "-c", "--check", default=False, action="store_true", required=False
     )
     parser.add_argument(
@@ -109,4 +112,5 @@ if __name__ == "__main__":
                     if args.verbose:
                         print("license already added:", p)
                 else:
-                    print("license just added:", p)
+                    if args.silent == False:
+                        print("license just added:", p)

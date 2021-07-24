@@ -545,7 +545,7 @@ if __name__ == "__main__":
         )
     if args.license:
         subprocess.check_call(
-            f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix", shell=True,
+            f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix --silent", shell=True,
         )
     if args.black:
         print("[postprocess]", "black")
