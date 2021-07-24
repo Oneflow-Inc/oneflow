@@ -99,8 +99,8 @@ def replace_str(name):
         return name.replace("oneflow.python.", "oneflow.")
     elif name == "oneflow.python":
         return "oneflow"
-    elif "single_client.python." in name:
-        return name.replace("single_client.python.", "single_client.")
+    elif "single_client.python." in name or name.endswith("single_client.python"):
+        return name.replace("single_client.python", "single_client")
     else:
         return name
 
@@ -146,14 +146,7 @@ class ExportVisitor(ast.NodeTransformer):
                 "oneflow.python.oneflow_export"
             ):
                 return None
-            if "flow.python." in node.module:
-                node.module = node.module.replace("oneflow.python.", "oneflow.")
-            if "single_client.python." in node.module or node.module.endswith(
-                "single_client.python"
-            ):
-                node.module = node.module.replace(
-                    "single_client.python", "single_client"
-                )
+            node.module = replace_str(node.module)
         self.top_imports.append(node)
         return node
 
@@ -586,5 +579,5 @@ if __name__ == "__main__":
     if args.black:
         print("[postprocess]", "black")
         subprocess.check_call(
-            f"`which python3` -m black --exclude '**/*.ast.py' . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"`which python3` -m black --exclude '\\.ast\\.py' . {extra_arg}", shell=True, cwd=args.out_dir,
         )
