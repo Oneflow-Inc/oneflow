@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import unittest
 from collections import OrderedDict
@@ -23,6 +24,7 @@ import test_global_storage
 from test_util import GenArgList
 
 import oneflow._oneflow_internal
+import oneflow.unittest
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 

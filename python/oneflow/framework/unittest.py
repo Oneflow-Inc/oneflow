@@ -28,6 +28,7 @@ from typing import Any, Callable, Dict
 import google.protobuf.text_format as pbtxt
 
 import oneflow
+import oneflow.env
 import oneflow.framework.env_util as env_util
 from oneflow.core.job.env_pb2 import EnvProto
 

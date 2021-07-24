@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import math
 import os
 import unittest
@@ -22,6 +23,7 @@ import numpy as np
 import tensorflow as tf
 from test_util import GenArgDict, RunOneflowOp
 
+import oneflow.unittest
 from oneflow.compatible import single_client as flow
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

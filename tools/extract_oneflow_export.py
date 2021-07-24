@@ -471,7 +471,12 @@ def save_trees(args=None):
 {new_txt}
 """
         dst_full.with_suffix(".ast.py").write_text(new_txt)
-    new_txt = "\n".join([ast.unparse(tree) for tree in trees])
+    new_txt = ""
+    if dst.name.startswith("test_"):
+        new_txt += """
+import oneflow.unittest
+"""
+    new_txt += "\n".join([ast.unparse(tree) for tree in trees])
     dst_full.write_text(new_txt)
 
 

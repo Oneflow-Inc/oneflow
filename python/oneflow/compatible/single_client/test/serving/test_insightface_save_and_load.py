@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import argparse
 import os
 import shutil
@@ -23,6 +24,7 @@ import numpy as np
 from insightface_resnet100 import Resnet100
 from ofrecord_dataset import FaceEmoreRecordDataset
 
+import oneflow.unittest
 from oneflow.compatible import single_client as flow
 
 

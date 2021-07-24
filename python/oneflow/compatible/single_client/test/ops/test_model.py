@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import tempfile
 import unittest
 
 import numpy as np
 
+import oneflow.unittest
 from oneflow.compatible.single_client import experimental as flow
 from oneflow.compatible.single_client.nn.parameter import Parameter
 

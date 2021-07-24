@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import time
 import unittest
 from typing import Tuple
 
 import numpy as np
 
+import oneflow.unittest
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 

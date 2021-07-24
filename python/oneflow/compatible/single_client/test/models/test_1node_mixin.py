@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import oneflow.unittest
+
 
 class Test1NodeMixin:
     def test_1n1c(self):

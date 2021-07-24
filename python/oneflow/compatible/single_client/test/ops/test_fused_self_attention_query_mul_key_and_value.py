@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import typing
 import unittest
@@ -20,6 +21,7 @@ import unittest
 import numpy as np
 import test_global_storage
 
+import oneflow.unittest
 from oneflow.compatible import single_client as flow
 
 

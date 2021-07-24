@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
 
 import cv2
 import numpy as np
 
 import oneflow as flow
+import oneflow.unittest
 
 
 def _of_image_normalize(images, image_static_shape, std, mean):

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import unittest
 
@@ -20,6 +21,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.typing as oft
+import oneflow.unittest
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

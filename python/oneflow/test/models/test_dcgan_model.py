@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import unittest
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.unittest
 
 
 class DCGAN(flow.model.Model):

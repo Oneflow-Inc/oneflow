@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import unittest
 from datetime import datetime
@@ -20,6 +21,7 @@ from datetime import datetime
 import oneflow as flow
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.unittest
 
 _DATA_DIR = "/dataset/PNGS/PNG227/of_record_repeated"
 _MODEL_SAVE_DIR = "./model_save-{}".format(

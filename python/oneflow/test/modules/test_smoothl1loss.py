@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
 from collections import OrderedDict
 
@@ -20,6 +21,7 @@ import numpy as np
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 import oneflow as flow
+import oneflow.unittest
 
 
 def _np_smoothl1loss(np_input, np_target, beta=1.0):

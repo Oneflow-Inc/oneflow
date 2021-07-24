@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import copy
 import os
 import sys
@@ -23,6 +24,7 @@ from absl import flags
 from pretrain import PreTrain
 
 import oneflow as flow
+import oneflow.unittest
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")

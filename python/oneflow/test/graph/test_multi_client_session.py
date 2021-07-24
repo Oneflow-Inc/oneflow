@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import unittest
 
 import oneflow
 import oneflow as flow
 import oneflow.framework.session_context as session_ctx
+import oneflow.unittest
 from oneflow.framework.multi_client_session import MultiClientSession
 
 

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import itertools
 import os
 from collections import OrderedDict
@@ -21,6 +22,7 @@ from collections.abc import Iterable
 import numpy as np
 
 import oneflow as flow
+import oneflow.unittest
 
 
 def GenCartesianProduct(sets):
