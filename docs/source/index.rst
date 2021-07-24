@@ -14,8 +14,10 @@ OneFlow API Reference
     oneflow
     tensor
     nn
+    module
     F
     linagl
+    image
     optim
 
 

@@ -3,13 +3,16 @@ oneflow.optim
 Optimizers
 ----------------------------------
 .. currentmodule:: oneflow.optim
-.. autofunction:: oneflow.optim.Adam
-.. autofunction:: oneflow.optim.AdamW
-.. autofunction:: oneflow.optim.lr_scheduler.CosineAnnealingLR
-.. autofunction:: oneflow.optim.lr_scheduler.LambdaLR
-.. autofunction:: oneflow.optim.lr_scheduler.StepLR
-.. autofunction:: oneflow.optim.Optimizer.zero_grad
-.. autofunction:: oneflow.optim.RMSprop
-.. autofunction:: oneflow.optim.SGD
+.. automodule:: oneflow.optim
+    :members: Adam, 
+        AdamW, 
+        Optimizer, 
+        RMSprop, 
+        SGD, 
+        lr_scheduler
 
-
+.. automodule:: oneflow.optim.lr_scheduler
+    :members: CosineAnnealingLR, 
+            LambdaLR, 
+            LrScheduler, 
+            StepLR

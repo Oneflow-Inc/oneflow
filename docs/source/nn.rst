@@ -3,73 +3,79 @@ oneflow.nn
 Operators for neural networks
 ----------------------------------
 .. currentmodule:: oneflow.nn
-.. autofunction:: oneflow.nn.AdaptiveAvgPool1d
-.. autofunction:: oneflow.nn.AdaptiveAvgPool2d
-.. autofunction:: oneflow.nn.AdaptiveAvgPool3d
-.. autofunction:: oneflow.nn.AvgPool1d
-.. autofunction:: oneflow.nn.AvgPool2d
-.. autofunction:: oneflow.nn.AvgPool3d
-.. autofunction:: oneflow.nn.BatchNorm1d
-.. autofunction:: oneflow.nn.BatchNorm2d
-.. autofunction:: oneflow.nn.BCELoss
-.. autofunction:: oneflow.nn.BCEWithLogitsLoss
-.. autofunction:: oneflow.nn.ConstantPad2d
-.. autofunction:: oneflow.nn.ConstantPad3d
-.. autofunction:: oneflow.nn.Conv1d
-.. autofunction:: oneflow.nn.Conv2d
-.. autofunction:: oneflow.nn.ConvTranspose2d
-.. autofunction:: oneflow.nn.CrossEntropyLoss
-.. autofunction:: oneflow.nn.CTCLoss
-.. autofunction:: oneflow.nn.Dropout
-.. autofunction:: oneflow.nn.ELU
-.. autofunction:: oneflow.nn.Embedding
-.. autofunction:: oneflow.nn.Flatten
-.. autofunction:: oneflow.nn.functional.interpolate
-.. autofunction:: oneflow.nn.GELU
-.. autofunction:: oneflow.nn.GroupNorm
-.. autofunction:: oneflow.nn.Hardsigmoid
-.. autofunction:: oneflow.nn.Hardswish
-.. autofunction:: oneflow.nn.Hardtanh
-.. autofunction:: oneflow.nn.Identity
-.. autofunction:: oneflow.nn.image.flip
-.. autofunction:: oneflow.nn.InstanceNorm1d
-.. autofunction:: oneflow.nn.InstanceNorm2d
-.. autofunction:: oneflow.nn.InstanceNorm3d
-.. autofunction:: oneflow.nn.KLDivLoss
-.. autofunction:: oneflow.nn.L1Loss
-.. autofunction:: oneflow.nn.LayerNorm
-.. autofunction:: oneflow.nn.LeakyReLU
-.. autofunction:: oneflow.nn.Linear
-.. autofunction:: oneflow.nn.LogSigmoid
-.. autofunction:: oneflow.nn.LogSoftmax
-.. autofunction:: oneflow.nn.MarginRankingLoss
-.. autofunction:: oneflow.nn.MaxPool1d
-.. autofunction:: oneflow.nn.MaxPool2d
-.. autofunction:: oneflow.nn.MaxPool3d
-.. autofunction:: oneflow.nn.Mish
-.. autoclass:: oneflow.nn.Module
-    :members:
-.. autoclass:: oneflow.nn.ModuleDict
-    :members:
-.. autoclass:: oneflow.nn.ModuleList
-    :members:
-.. autofunction:: oneflow.nn.MSELoss
-.. autofunction:: oneflow.nn.NLLLoss
-.. autofunction:: oneflow.nn.Parameter
-.. autofunction:: oneflow.nn.ParameterDict
-.. autofunction:: oneflow.nn.ParameterList
-.. autofunction:: oneflow.nn.PixelShuffle
-.. autofunction:: oneflow.nn.PReLU
-.. autofunction:: oneflow.nn.ReflectionPad2d
-.. autofunction:: oneflow.nn.ReLU
-.. autofunction:: oneflow.nn.ReLU6
-.. autofunction:: oneflow.nn.ReplicationPad2d
-.. autofunction:: oneflow.nn.Sequential
-.. autofunction:: oneflow.nn.Sigmoid
-.. autofunction:: oneflow.nn.SmoothL1Loss
-.. autofunction:: oneflow.nn.Softplus
-.. autofunction:: oneflow.nn.Tanh
-.. autofunction:: oneflow.nn.Upsample
-.. autofunction:: oneflow.nn.UpsamplingBilinear2d
-.. autofunction:: oneflow.nn.UpsamplingNearest2d
-.. autofunction:: oneflow.nn.ZeroPad2d
+.. automodule:: oneflow.nn
+    :members: AdaptiveAvgPool1d, 
+        AdaptiveAvgPool2d, 
+        AdaptiveAvgPool3d, 
+        AvgPool1d, 
+        AvgPool2d, 
+        AvgPool3d, 
+        BCELoss, 
+        BCEWithLogitsLoss, 
+        BatchNorm1d, 
+        BatchNorm2d, 
+        COCOReader, 
+        CTCLoss, 
+        CoinFlip, 
+        ConstantPad2d, 
+        ConstantPad3d, 
+        Conv1d, 
+        Conv2d, 
+        ConvTranspose2d, 
+        CropMirrorNormalize, 
+        CrossEntropyLoss, 
+        Dropout, 
+        ELU, 
+        Embedding, 
+        Flatten, 
+        GELU, 
+        Graph, 
+        GroupNorm, 
+        Hardsigmoid, 
+        Hardswish, 
+        Hardtanh, 
+        Identity, 
+        InstanceNorm1d, 
+        InstanceNorm2d, 
+        InstanceNorm3d, 
+        KLDivLoss, 
+        L1Loss, 
+        LayerNorm, 
+        LeakyReLU, 
+        Linear, 
+        LogSigmoid, 
+        LogSoftmax, 
+        MSELoss, 
+        MarginRankingLoss, 
+        MaxPool1d, 
+        MaxPool2d, 
+        MaxPool3d, 
+        Mish, 
+        NLLLoss, 
+        OFRecordImageDecoder, 
+        OFRecordImageDecoderRandomCrop, 
+        OfrecordRawDecoder, 
+        OfrecordReader, 
+        PReLU, 
+        Parameter, 
+        ParameterDict, 
+        ParameterList, 
+        PixelShuffle, 
+        PixelShufflev2, 
+        ReLU, 
+        ReLU6, 
+        ReflectionPad2d, 
+        ReplicationPad2d, 
+        Sequential, 
+        Sigmoid, 
+        SmoothL1Loss, 
+        Softmax, 
+        Softplus, 
+        Tanh, 
+        Upsample, 
+        UpsamplingBilinear2d, 
+        UpsamplingNearest2d, 
+        ZeroPad2d, 
+        ctc_greedy_decoder, 
+        graph, 
+        image
