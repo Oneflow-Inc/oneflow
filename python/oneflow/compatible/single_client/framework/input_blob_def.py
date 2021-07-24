@@ -30,20 +30,16 @@ from oneflow.compatible.single_client.core.operator import (
     interface_blob_conf_pb2 as inter_face_blob_conf_util,
 )
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import (
     compile_context as compile_context,
 )
-from oneflow.compatible.single_client.python.framework import (
-    distribute as distribute_util,
-)
-from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import distribute as distribute_util
+from oneflow.compatible.single_client.framework import id_util as id_util
+from oneflow.compatible.single_client.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 
 
 class ArgBlobDef(object):

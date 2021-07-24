@@ -17,18 +17,12 @@ from typing import Optional, Sequence, Union
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import (
-    distribute as distribute_util,
-)
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.python.ops import (
-    user_op_builder as user_op_builder,
-)
+from oneflow.compatible.single_client.framework import distribute as distribute_util
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import id_util as id_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.ops import user_op_builder as user_op_builder
 
 
 def api_two_stage_reduce_max(

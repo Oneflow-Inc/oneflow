@@ -17,10 +17,10 @@ import collections
 from typing import Optional, Sequence, Union
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
-from oneflow.compatible.single_client.python.nn.module import Module
-from oneflow.compatible.single_client.python.nn.modules.utils import _check_axis
-from oneflow.compatible.single_client.python.ops.transpose_util import (
+from oneflow.compatible.single_client.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.nn.module import Module
+from oneflow.compatible.single_client.nn.modules.utils import _check_axis
+from oneflow.compatible.single_client.ops.transpose_util import (
     get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )

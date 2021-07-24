@@ -19,7 +19,7 @@ import unittest
 import numpy as np
 
 from oneflow.compatible.single_client import experimental as flow
-from oneflow.compatible.single_client.python.nn.parameter import Parameter
+from oneflow.compatible.single_client.nn.parameter import Parameter
 
 
 @unittest.skipIf(

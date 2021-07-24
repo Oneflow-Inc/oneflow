@@ -23,7 +23,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
-from oneflow.compatible.single_client.python.ops.transpose_util import (
+from oneflow.compatible.single_client.ops.transpose_util import (
     get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )

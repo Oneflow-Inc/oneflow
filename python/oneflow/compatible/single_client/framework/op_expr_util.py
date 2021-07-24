@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework.attr_util import (
+from oneflow.compatible.single_client.framework.attr_util import (
     convert_to_user_attr_value,
 )
 

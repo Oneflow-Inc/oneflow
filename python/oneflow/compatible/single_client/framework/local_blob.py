@@ -18,9 +18,7 @@ import traceback
 import numpy as np
 
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 
 
 class LocalBlob(object):

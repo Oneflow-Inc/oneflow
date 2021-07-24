@@ -33,10 +33,8 @@ from oneflow.compatible.single_client.core.register import (
 from oneflow.compatible.single_client.core.serving import (
     saved_model_pb2 as saved_model_pb,
 )
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import session_context as session_ctx
 
 
 class ModelBuilder(object):

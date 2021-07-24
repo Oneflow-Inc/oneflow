@@ -35,26 +35,18 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible.single_client.python.eager import (
-    eager_blob_util as eager_blob_util,
-)
-from oneflow.compatible.single_client.python.eager import gradient_util as gradient_util
-from oneflow.compatible.single_client.python.experimental import (
-    name_scope as name_scope,
-)
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.eager import eager_blob_util as eager_blob_util
+from oneflow.compatible.single_client.eager import gradient_util as gradient_util
+from oneflow.compatible.single_client.experimental import name_scope as name_scope
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import (
     compile_context as compile_context,
 )
-from oneflow.compatible.single_client.python.framework import distribute as distribute
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import (
-    interpret_util as interpret_util,
-)
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework import distribute as distribute
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import interpret_util as interpret_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

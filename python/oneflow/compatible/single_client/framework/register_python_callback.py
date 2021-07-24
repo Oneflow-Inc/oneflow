@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.python.eager import (
+from oneflow.compatible.single_client.eager import (
     interpreter_callback as interpreter_callback,
 )
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import (
     python_callback as python_callback,
 )
 

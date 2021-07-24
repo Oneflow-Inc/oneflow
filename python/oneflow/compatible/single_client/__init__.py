@@ -36,7 +36,7 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import (
     env_util,
     session_context,
     session_util,
@@ -57,8 +57,7 @@ oneflow._oneflow_internal.EnableEagerEnvironment(False)
 del env_util
 del session_util
 del session_context
-import oneflow.compatible.single_client.python.framework.c_api_util
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import (
     python_callback,
     register_python_callback,
 )
@@ -68,30 +67,30 @@ oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
 )
 del python_callback
 del register_python_callback
-from oneflow.compatible.single_client.python.framework import watcher
+from oneflow.compatible.single_client.framework import watcher
 
 oneflow._oneflow_internal.RegisterWatcherOnlyOnce(watcher._global_watcher)
 del watcher
-from oneflow.compatible.single_client.python.eager import boxing_util
+from oneflow.compatible.single_client.eager import boxing_util
 
 oneflow._oneflow_internal.deprecated.RegisterBoxingUtilOnlyOnce(
     boxing_util._global_boxing_util
 )
 del boxing_util
-from oneflow.compatible.single_client.python.ops.util import custom_op_module
+from oneflow.compatible.single_client.ops.util import custom_op_module
 
 oneflow._oneflow_internal.RegisterPyKernels(
     custom_op_module._python_kernel_reg.kernels_
 )
 del custom_op_module
-from oneflow.compatible.single_client.python.framework import register_class_method_util
+from oneflow.compatible.single_client.framework import register_class_method_util
 
 register_class_method_util.RegisterMethod4Class()
 del register_class_method_util
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 import atexit
 
-from oneflow.compatible.single_client.python.framework.session_context import (
+from oneflow.compatible.single_client.framework.session_context import (
     TryCloseAllSession,
 )
 

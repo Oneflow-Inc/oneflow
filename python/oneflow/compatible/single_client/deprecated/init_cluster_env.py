@@ -26,7 +26,7 @@ from oneflow.compatible.single_client.core.control.ctrl_bootstrap_pb2 import (
     BootstrapConf,
 )
 from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
-from oneflow.compatible.single_client.python.framework import env_util as env_util
+from oneflow.compatible.single_client.framework import env_util as env_util
 
 
 def delete_worker_by_bootstrap(ssh_port=22) -> None:

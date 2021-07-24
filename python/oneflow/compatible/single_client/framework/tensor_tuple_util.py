@@ -17,7 +17,7 @@ import collections
 from typing import Optional, Sequence, Tuple, Union
 
 from oneflow._oneflow_internal import Tensor, TensorTuple
-from oneflow.compatible.single_client.python.framework.tensor import Tensor as PyTensor
+from oneflow.compatible.single_client.framework.tensor import Tensor as PyTensor
 
 
 def convert_to_tensor_tuple(

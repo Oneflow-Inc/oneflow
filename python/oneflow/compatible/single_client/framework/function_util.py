@@ -24,21 +24,19 @@ from typing import Any, Callable, Optional, Union
 import oneflow._oneflow_internal
 from oneflow import oneflow_deprecate
 from oneflow._oneflow_internal.oneflow.core.common import data_type as data_type_cfg
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import (
     distribute_context as distribute_ctx,
 )
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.framework import typing_util as oft_util
-from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
-from oneflow.compatible.single_client.python.lib.core import pb_util as pb_util
+from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.framework import typing_util as oft_util
+from oneflow.compatible.single_client.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.lib.core import pb_util as pb_util
 
 
 class FunctionConfig(object):

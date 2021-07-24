@@ -17,8 +17,8 @@ import random
 import sys
 import typing
 
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 
 def api_gen_random_seed(seed: typing.Optional[int] = None):

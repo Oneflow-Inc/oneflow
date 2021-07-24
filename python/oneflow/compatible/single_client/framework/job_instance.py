@@ -17,7 +17,7 @@ import sys
 import traceback
 
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.python.framework import ofblob as ofblob
+from oneflow.compatible.single_client.framework import ofblob as ofblob
 
 
 def MakeUserJobInstance(job_name, finish_cb=None):

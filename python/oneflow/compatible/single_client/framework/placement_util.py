@@ -19,15 +19,13 @@ import traceback
 import oneflow._oneflow_internal
 from oneflow import oneflow_deprecate
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework import scope_util as scope_util
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 
 @oneflow_deprecate()

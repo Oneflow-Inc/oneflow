@@ -22,7 +22,7 @@ from oneflow._oneflow_internal.oneflow.core.job import scope as scope_cfg
 from oneflow._oneflow_internal.oneflow.core.operator import (
     op_attribute as op_attribute_cfg,
 )
-from oneflow.compatible.single_client.python.framework import ofblob as ofblob
+from oneflow.compatible.single_client.framework import ofblob as ofblob
 
 
 def GetIdForRegisteredCallback(cb):

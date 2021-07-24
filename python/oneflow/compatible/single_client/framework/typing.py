@@ -19,9 +19,7 @@ import typing
 from typing import Optional, Sequence
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import (
-    input_blob_def as input_blob_def,
-)
+from oneflow.compatible.single_client.framework import input_blob_def as input_blob_def
 
 
 class PyStructCompatibleToBlob(object):

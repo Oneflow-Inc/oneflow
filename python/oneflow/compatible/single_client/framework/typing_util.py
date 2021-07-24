@@ -17,17 +17,13 @@ import inspect
 import typing
 
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.python.experimental import (
+from oneflow.compatible.single_client.experimental import (
     enable_typing_check as enable_typing_check,
 )
-from oneflow.compatible.single_client.python.framework import (
-    local_blob as local_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import pull_util as pull_util
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import typing as oft
+from oneflow.compatible.single_client.framework import local_blob as local_blob_util
+from oneflow.compatible.single_client.framework import pull_util as pull_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.framework import typing as oft
 
 
 def CheckGlobalFunctionAnnotation(signature):

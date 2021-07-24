@@ -25,9 +25,7 @@ import numpy
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import (
-    sysconfig as oneflow_sysconfig,
-)
+from oneflow.compatible.single_client.framework import sysconfig as oneflow_sysconfig
 
 
 def run_cmd(cmd, cwd=None):

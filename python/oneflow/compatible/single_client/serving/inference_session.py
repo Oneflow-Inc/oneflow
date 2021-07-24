@@ -38,27 +38,15 @@ from oneflow.compatible.single_client.core.operator import (
 from oneflow.compatible.single_client.core.serving import (
     saved_model_pb2 as saved_model_pb,
 )
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
-    compile_context as compile_ctx,
-)
-from oneflow.compatible.single_client.python.framework import dtype as dtype_util
-from oneflow.compatible.single_client.python.framework import (
-    input_blob_def as input_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import (
-    job_instance as job_instance_util,
-)
-from oneflow.compatible.single_client.python.framework import (
-    placement_util as placement_util,
-)
-from oneflow.compatible.single_client.python.framework import (
-    runtime_mode as runtime_mode,
-)
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow.compatible.single_client.python.framework import (
-    session_util as session_util,
-)
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import compile_context as compile_ctx
+from oneflow.compatible.single_client.framework import dtype as dtype_util
+from oneflow.compatible.single_client.framework import input_blob_def as input_blob_util
+from oneflow.compatible.single_client.framework import job_instance as job_instance_util
+from oneflow.compatible.single_client.framework import placement_util as placement_util
+from oneflow.compatible.single_client.framework import runtime_mode as runtime_mode
+from oneflow.compatible.single_client.framework import scope_util as scope_util
+from oneflow.compatible.single_client.framework import session_util as session_util
 
 
 def _is_int(val):

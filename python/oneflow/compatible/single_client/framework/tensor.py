@@ -24,26 +24,18 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.job import (
     initializer_conf_pb2 as initializer_conf_util,
 )
-from oneflow.compatible.single_client.python.framework import (
-    check_point_v2 as check_point_v2,
-)
-from oneflow.compatible.single_client.python.framework import dtype as dtype_util
-from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import ofblob as ofblob_util
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
-from oneflow.compatible.single_client.python.framework import (
-    tensor_str as tensor_str_util,
-)
-from oneflow.compatible.single_client.python.framework.function_util import (
+from oneflow.compatible.single_client.framework import check_point_v2 as check_point_v2
+from oneflow.compatible.single_client.framework import dtype as dtype_util
+from oneflow.compatible.single_client.framework import id_util as id_util
+from oneflow.compatible.single_client.framework import ofblob as ofblob_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.framework import tensor_str as tensor_str_util
+from oneflow.compatible.single_client.framework.function_util import (
     global_function_or_identity,
 )
-from oneflow.compatible.single_client.python.lib.core import async_util as async_util
-from oneflow.compatible.single_client.python.ops import (
-    initializer_util as initializer_util,
-)
+from oneflow.compatible.single_client.lib.core import async_util as async_util
+from oneflow.compatible.single_client.ops import initializer_util as initializer_util
 
 
 def register_local_tensor_method(name=None):

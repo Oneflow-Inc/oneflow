@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.nn.modules.batchnorm import _NormBase
+from oneflow.compatible.single_client.nn.modules.batchnorm import _NormBase
 
 
 class _InstanceNorm(_NormBase):

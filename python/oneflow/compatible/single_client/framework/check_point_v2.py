@@ -36,26 +36,18 @@ from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_con
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible.single_client.python.eager import boxing_util as boxing_util
-from oneflow.compatible.single_client.python.eager import op_infer_util as op_infer_util
-from oneflow.compatible.single_client.python.experimental import (
-    interface_op_read_and_write,
-)
-from oneflow.compatible.single_client.python.framework import config_util as config_util
-from oneflow.compatible.single_client.python.framework import dtype as dtype_util
-from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.lib.core import async_util as async_util
-from oneflow.compatible.single_client.python.ops import get_variable as get_variable
-from oneflow.compatible.single_client.python.ops import (
-    initializer_util as initializer_util,
-)
+from oneflow.compatible.single_client.eager import boxing_util as boxing_util
+from oneflow.compatible.single_client.eager import op_infer_util as op_infer_util
+from oneflow.compatible.single_client.experimental import interface_op_read_and_write
+from oneflow.compatible.single_client.framework import config_util as config_util
+from oneflow.compatible.single_client.framework import dtype as dtype_util
+from oneflow.compatible.single_client.framework import id_util as id_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.lib.core import async_util as async_util
+from oneflow.compatible.single_client.ops import get_variable as get_variable
+from oneflow.compatible.single_client.ops import initializer_util as initializer_util
 
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"

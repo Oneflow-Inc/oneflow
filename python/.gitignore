@@ -130,5 +130,6 @@ dmypy.json
 
 /oneflow/include
 /oneflow/core
+/oneflow/compatible/single_client/core
 /oneflow/version.py
 *.ast.py

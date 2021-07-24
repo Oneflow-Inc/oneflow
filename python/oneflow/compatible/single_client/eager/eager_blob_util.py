@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.python.framework import blob_trait as blob_trait
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import blob_trait as blob_trait
+from oneflow.compatible.single_client.framework import (
     python_callback as python_callback,
 )
-from oneflow.compatible.single_client.python.framework.dtype import (
+from oneflow.compatible.single_client.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
-from oneflow.compatible.single_client.python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.lib.core import async_util as async_util
 
 
 @property

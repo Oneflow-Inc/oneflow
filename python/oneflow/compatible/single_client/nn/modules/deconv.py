@@ -16,10 +16,10 @@ limitations under the License.
 import math
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.nn import init
-from oneflow.compatible.single_client.python.nn.common_types import _size_2_t
-from oneflow.compatible.single_client.python.nn.module import Module
-from oneflow.compatible.single_client.python.nn.modules.utils import _pair
+from oneflow.compatible.single_client.nn import init
+from oneflow.compatible.single_client.nn.common_types import _size_2_t
+from oneflow.compatible.single_client.nn.module import Module
+from oneflow.compatible.single_client.nn.modules.utils import _pair
 
 
 def slice(x, begin, size):

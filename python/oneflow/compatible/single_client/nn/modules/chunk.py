@@ -16,12 +16,9 @@ limitations under the License.
 from typing import Optional
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework.tensor import (
-    Tensor,
-    register_tensor_op,
-)
-from oneflow.compatible.single_client.python.nn.module import Module
-from oneflow.compatible.single_client.python.ops.array_ops import check_slice_tup_list
+from oneflow.compatible.single_client.framework.tensor import Tensor, register_tensor_op
+from oneflow.compatible.single_client.nn.module import Module
+from oneflow.compatible.single_client.ops.array_ops import check_slice_tup_list
 
 
 class Chunk(Module):

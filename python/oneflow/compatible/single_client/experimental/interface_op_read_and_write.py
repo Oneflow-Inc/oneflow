@@ -21,20 +21,16 @@ from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.register import (
     logical_blob_id_pb2 as logical_blob_id_util,
 )
-from oneflow.compatible.single_client.python.eager import op_executor as op_executor
-from oneflow.compatible.single_client.python.framework import dtype as dtype_util
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.eager import op_executor as op_executor
+from oneflow.compatible.single_client.framework import dtype as dtype_util
+from oneflow.compatible.single_client.framework import (
     input_blob_def as input_blob_def_util,
 )
-from oneflow.compatible.single_client.python.framework import push_util as push_util
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
-from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.lib.core import async_util as async_util
+from oneflow.compatible.single_client.framework import push_util as push_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.lib.core import async_util as async_util
 
 
 def sync_default_session_if_normal():

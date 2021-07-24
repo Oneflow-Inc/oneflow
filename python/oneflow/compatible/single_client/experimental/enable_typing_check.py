@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 
 def api_enable_typing_check(val: bool = True) -> None:

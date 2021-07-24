@@ -13,10 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
+from oneflow.compatible.single_client.framework import scope_util as scope_util
+from oneflow.compatible.single_client.framework import session_context as session_ctx
 
 
 class DistributeStrategy(object):

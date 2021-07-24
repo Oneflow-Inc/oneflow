@@ -29,7 +29,7 @@ from google.protobuf import text_format as pbtxt
 
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
-from oneflow.compatible.single_client.python.framework import env_util as env_util
+from oneflow.compatible.single_client.framework import env_util as env_util
 
 
 class _ClearDefaultSession(object):

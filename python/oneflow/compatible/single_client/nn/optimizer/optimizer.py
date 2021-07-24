@@ -17,8 +17,8 @@ import collections
 import warnings
 from typing import Any, Callable, Dict, Iterator, Union
 
-from oneflow.compatible.single_client.python.framework.tensor import Tensor
-from oneflow.compatible.single_client.python.nn.parameter import Parameter
+from oneflow.compatible.single_client.framework.tensor import Tensor
+from oneflow.compatible.single_client.nn.parameter import Parameter
 
 
 class ParamGroup(object):

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.python.ops.initializer_util import CalcGain
+from oneflow.compatible.single_client.ops.initializer_util import CalcGain
 
 
 def calculate_gain(nonlinearity, param=None):

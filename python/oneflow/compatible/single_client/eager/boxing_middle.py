@@ -21,7 +21,7 @@ from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cf
 from oneflow.compatible.single_client.core.job import (
     sbp_parallel_pb2 as sbp_parallel_pb,
 )
-from oneflow.compatible.single_client.python.eager import symbol as symbol_util
+from oneflow.compatible.single_client.eager import symbol as symbol_util
 
 
 class BoxingToMiddle(object):

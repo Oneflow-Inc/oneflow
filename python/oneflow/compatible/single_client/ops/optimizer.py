@@ -24,11 +24,9 @@ from oneflow._oneflow_internal.oneflow.core.job import (
     learning_rate_schedule_conf as learning_rate_schedule_conf_cfg,
 )
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.framework import session_context as session_ctx
 
 
 def GetVariablesForCurrentJob() -> List[Text]:

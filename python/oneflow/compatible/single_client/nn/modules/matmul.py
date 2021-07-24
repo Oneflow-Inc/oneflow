@@ -16,9 +16,9 @@ limitations under the License.
 from typing import Optional, Sequence
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework import id_util as id_util
-from oneflow.compatible.single_client.python.framework.tensor import register_tensor_op
-from oneflow.compatible.single_client.python.nn.module import Module
+from oneflow.compatible.single_client.framework import id_util as id_util
+from oneflow.compatible.single_client.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.nn.module import Module
 
 
 class MatMul(Module):

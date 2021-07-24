@@ -26,39 +26,27 @@ from oneflow import oneflow_deprecate
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.job import job_set_pb2 as job_set_util
 from oneflow.compatible.single_client.core.job.job_set_pb2 import ConfigProto
-from oneflow.compatible.single_client.python.eager import op_executor as op_executor
-from oneflow.compatible.single_client.python.experimental import (
-    interface_op_read_and_write,
-)
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import (
-    check_point_v2 as check_point_v2,
-)
-from oneflow.compatible.single_client.python.framework import compiler as compiler
-from oneflow.compatible.single_client.python.framework import config_util as config_util
-from oneflow.compatible.single_client.python.framework import env_util as env_util
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import (
-    job_instance as job_instance_util,
-)
-from oneflow.compatible.single_client.python.framework import module as module_util
-from oneflow.compatible.single_client.python.framework import push_util as push_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.framework import typing_util as oft_util
-from oneflow.compatible.single_client.python.framework.check_point import (
-    SnapshotManager,
-)
-from oneflow.compatible.single_client.python.framework.function_desc import FunctionDesc
-from oneflow.compatible.single_client.python.framework.pull_util import (
+from oneflow.compatible.single_client.eager import op_executor as op_executor
+from oneflow.compatible.single_client.experimental import interface_op_read_and_write
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import check_point_v2 as check_point_v2
+from oneflow.compatible.single_client.framework import compiler as compiler
+from oneflow.compatible.single_client.framework import config_util as config_util
+from oneflow.compatible.single_client.framework import env_util as env_util
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import job_instance as job_instance_util
+from oneflow.compatible.single_client.framework import module as module_util
+from oneflow.compatible.single_client.framework import push_util as push_util
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.framework import typing_util as oft_util
+from oneflow.compatible.single_client.framework.check_point import SnapshotManager
+from oneflow.compatible.single_client.framework.function_desc import FunctionDesc
+from oneflow.compatible.single_client.framework.pull_util import (
     EagerFutureRemoteBlobs,
     LazyFutureRemoteBlobs,
 )
-from oneflow.compatible.single_client.python.framework.session_context import (
-    SessionStatus,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework.session_context import SessionStatus
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 
 class Session(object):

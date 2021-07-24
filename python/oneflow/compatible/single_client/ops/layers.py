@@ -24,12 +24,8 @@ from oneflow.compatible.single_client.core.job import (
     regularizer_conf_pb2 as regularizer_conf_util,
 )
 from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.python.framework import (
-    distribute as distribute_util,
-)
-from oneflow.compatible.single_client.python.framework import (
-    remote_blob as remote_blob_util,
-)
+from oneflow.compatible.single_client.framework import distribute as distribute_util
+from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 
 IntPair = Tuple[int, int]
 

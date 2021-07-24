@@ -20,14 +20,14 @@ from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar
 import numpy as np
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.python.framework.check_point_v2 import (
+from oneflow.compatible.single_client.framework.check_point_v2 import (
     FeedValueToVariable,
 )
-from oneflow.compatible.single_client.python.framework.function_util import (
+from oneflow.compatible.single_client.framework.function_util import (
     global_function_or_identity,
 )
-from oneflow.compatible.single_client.python.framework.tensor import Tensor
-from oneflow.compatible.single_client.python.nn.parameter import Parameter
+from oneflow.compatible.single_client.framework.tensor import Tensor
+from oneflow.compatible.single_client.nn.parameter import Parameter
 
 
 class _IncompatibleKeys(

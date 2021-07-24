@@ -25,16 +25,14 @@ from oneflow.compatible.single_client.core.control import (
 )
 from oneflow.compatible.single_client.core.job import env_pb2 as env_pb
 from oneflow.compatible.single_client.core.job import resource_pb2 as resource_util
-from oneflow.compatible.single_client.python.framework import c_api_util as c_api_util
-from oneflow.compatible.single_client.python.framework import hob as hob
-from oneflow.compatible.single_client.python.framework import (
+from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.compatible.single_client.framework import hob as hob
+from oneflow.compatible.single_client.framework import (
     placement_context as placement_ctx,
 )
-from oneflow.compatible.single_client.python.framework import scope_util as scope_util
-from oneflow.compatible.single_client.python.framework import (
-    session_context as session_ctx,
-)
-from oneflow.compatible.single_client.python.lib.core import enable_if as enable_if
+from oneflow.compatible.single_client.framework import scope_util as scope_util
+from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.compatible.single_client.lib.core import enable_if as enable_if
 
 
 def api_all_device_placement(device_type: str) -> None:
