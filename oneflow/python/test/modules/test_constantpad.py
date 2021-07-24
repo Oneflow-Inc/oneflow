@@ -97,25 +97,19 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5))
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestConstantPad1d(flow.unittest.TestCase):
-    def test_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            spatial_size = np.random.randint(1, 6)
-            test_module_against_pytorch(
-                test_case,
-                "nn.ConstantPad1d",
-                extra_annotations={"padding": int, "value": float},
-                extra_generators={
-                    "input": random_tensor(ndim=3, dim2=spatial_size),
-                    "padding": random(0, 3),
-                    "value": random(0, 10),
-                },
-                device=device,
-            )
+    @autotest(rtol=1e-4, atol=1e-4)
+    def test_constantpad1d_with_random_data(test_case):
+        m = torch.nn.ConstantPad1d(padding=random().to(int), value=random().to(float))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(
+            device
+        )
+        y = m(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -148,10 +142,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
             )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestConstantPad3d(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
