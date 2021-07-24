@@ -4,8 +4,8 @@ import unittest
 import numpy as np
 
 import oneflow
+import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow.experimental as flow
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
@@ -50,6 +50,7 @@ class TestFeedVariableTensor(unittest.TestCase):
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)
             test_case.assertTrue(out_tensor.is_local)
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 if __name__ == "__main__":
