@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Sequence
 
@@ -31,7 +31,6 @@ class Reshape(Module):
 
 @oneflow_export("reshape")
 @register_tensor_op("reshape")
-@experimental_api
 def reshape_op(x, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.
 
@@ -48,9 +47,7 @@ def reshape_op(x, shape: Sequence[int] = None):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = np.array(
         ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ... ).astype(np.float32)
@@ -66,7 +63,6 @@ def reshape_op(x, shape: Sequence[int] = None):
 
 @oneflow_export("view")
 @register_tensor_op("view")
-@experimental_api
 def view_op(x, shape: Sequence[int] = None):
     r"""
     The interface is consistent with PyTorch.
@@ -103,9 +99,8 @@ def view_op(x, shape: Sequence[int] = None):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> x = np.array(
         ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ... ).astype(np.float32)
