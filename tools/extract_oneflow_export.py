@@ -493,7 +493,8 @@ if __name__ == "__main__":
     subprocess.check_call(f"mkdir -p {OUT_PATH}", shell=True)
 
     for py_f in Path(out_oneflow_dir).glob('**/*.py'):
-        py_f.unlink()
+        if py_f.name != "version.py":
+            py_f.unlink()
 
     srcs = get_files()
     final_trees = {}
