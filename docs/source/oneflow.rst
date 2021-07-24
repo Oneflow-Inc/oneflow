@@ -3,100 +3,40 @@ oneflow
 oneflow
 ----------------------------------
 .. currentmodule:: oneflow
-.. autofunction:: oneflow.acos
-.. autofunction:: oneflow.acosh
-.. autofunction:: oneflow.adaptive_avg_pool1d
-.. autofunction:: oneflow.adaptive_avg_pool2d
-.. autofunction:: oneflow.adaptive_avg_pool3d
-.. autofunction:: oneflow.add
-.. autofunction:: oneflow.addmm
-.. autofunction:: oneflow.arange
-.. autofunction:: oneflow.arccosh
-.. autofunction:: oneflow.arcsinh
-.. autofunction:: oneflow.arctan
-.. autofunction:: oneflow.arctanh
-.. autofunction:: oneflow.argmax
-.. autofunction:: oneflow.argwhere
-.. autofunction:: oneflow.asinh
-.. autofunction:: oneflow.atan
-.. autofunction:: oneflow.atan2
-.. autofunction:: oneflow.atanh
-.. autofunction:: oneflow.bernoulli
-.. autofunction:: oneflow.bmm
-.. autofunction:: oneflow.cast
-.. autofunction:: oneflow.cat
-.. autofunction:: oneflow.ceil
-.. autofunction:: oneflow.chunk
-.. autofunction:: oneflow.clamp
-.. autofunction:: oneflow.clip
-.. autofunction:: oneflow.cos
-.. autofunction:: oneflow.cosh
-.. autofunction:: oneflow.diag
-.. autofunction:: oneflow.div
-.. autofunction:: oneflow.eq
-.. autofunction:: oneflow.equal
-.. autofunction:: oneflow.erf
-.. autofunction:: oneflow.erfc
-.. autofunction:: oneflow.exp
-.. autofunction:: oneflow.expm1
-.. autofunction:: oneflow.flatten
-.. autofunction:: oneflow.flip
-.. autofunction:: oneflow.floor
-.. autofunction:: oneflow.fmod
-.. autofunction:: oneflow.gather
-.. autofunction:: oneflow.gather_nd
-.. autofunction:: oneflow.ge
-.. autofunction:: oneflow.gelu
-.. autofunction:: oneflow.gt
-.. autofunction:: oneflow.in_top_k
-.. autofunction:: oneflow.le
-.. autofunction:: oneflow.log
-.. autofunction:: oneflow.log1p
-.. autofunction:: oneflow.lt
-.. autofunction:: oneflow.masked_fill
-.. autofunction:: oneflow.masked_select
-.. autofunction:: oneflow.matmul
-.. autofunction:: oneflow.max
-.. autofunction:: oneflow.mean
-.. autofunction:: oneflow.meshgrid
-.. autofunction:: oneflow.min
-.. autofunction:: oneflow.mish
-.. autofunction:: oneflow.mul
-.. autofunction:: oneflow.ne
-.. autofunction:: oneflow.neg
-.. autofunction:: oneflow.negative
-.. autofunction:: oneflow.not_equal
-.. autofunction:: oneflow.ones
-.. autofunction:: oneflow.ones_like
-.. autofunction:: oneflow.pow
-.. autofunction:: oneflow.reciprocal
-.. autofunction:: oneflow.repeat
-.. autofunction:: oneflow.reshape
-.. autofunction:: oneflow.round
-.. autofunction:: oneflow.scatter_nd
-.. autofunction:: oneflow.sigmoid
-.. autofunction:: oneflow.sign
-.. autofunction:: oneflow.sin
-.. autofunction:: oneflow.sinh
-.. autofunction:: oneflow.slice
-.. autofunction:: oneflow.softmax
-.. autofunction:: oneflow.softplus
-.. autofunction:: oneflow.sqrt
-.. autofunction:: oneflow.square
-.. autofunction:: oneflow.squeeze
-.. autofunction:: oneflow.std
-.. autofunction:: oneflow.sub
-.. autofunction:: oneflow.sum
-.. autofunction:: oneflow.tan
-.. autofunction:: oneflow.tensor_buffer_to_tensor
-.. autofunction:: oneflow.tensor_to_tensor_buffer
-.. autofunction:: oneflow.tile
-.. autofunction:: oneflow.to
-.. autofunction:: oneflow.topk
-.. autofunction:: oneflow.transpose
-.. autofunction:: oneflow.unsqueeze
-.. autofunction:: oneflow.var
-.. autofunction:: oneflow.view
-.. autofunction:: oneflow.where
-.. autofunction:: oneflow.zeros
-.. autofunction:: oneflow.zeros_like
+.. automodule:: oneflow
+    :members: advanced, 
+            argsort, 
+            argwhere, 
+            clamp, 
+            clip, 
+            diag, 
+            enable_eager_execution, 
+            expand, 
+            flatten, 
+            function_config, 
+            gather, 
+            gather_nd, 
+            in_top_k, 
+            load, 
+            masked_fill, 
+            matmul, 
+            ones, 
+            ones_like, 
+            repeat, 
+            reshape, 
+            save, 
+            saved_model, 
+            scatter_nd, 
+            slice, 
+            slice_update, 
+            sort, 
+            squeeze, 
+            stack, 
+            tensor, 
+            to, 
+            transpose, 
+            where, 
+            zeros, 
+            zeros_like
+
+.. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')

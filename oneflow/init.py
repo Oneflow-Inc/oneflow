@@ -99,6 +99,21 @@ oneflow._oneflow_internal.EnableEagerEnvironment(True)
 
 del env_util
 
+# NOTE(chengcheng): register ForeignCallback and Watcher used by nn.Graph train job compelete
+from oneflow.python.framework import register_python_callback
+from oneflow.python.framework import python_callback
+
+oneflow._oneflow_internal.RegisterGlobalForeignCallback(
+    python_callback.global_python_callback
+)
+del python_callback
+del register_python_callback
+
+from oneflow.python.framework import watcher
+
+oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
+del watcher
+
 
 def _SyncOnMasterFn():
     import oneflow
