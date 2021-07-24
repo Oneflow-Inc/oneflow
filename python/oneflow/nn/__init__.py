@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 from oneflow.nn.graph import Graph
 from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
@@ -106,3 +105,5 @@ from oneflow.ops.domain_ops import (
     api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,
 )
 from oneflow.ops.loss_ops import ctc_greedy_decoder
+
+from . import functional
