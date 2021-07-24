@@ -347,6 +347,13 @@ class SrcFile:
                 root_module=root_module, src_target_module=self.target_module
             )
             self.export_visitor.visit(self.tree)
+            # if self.target_module == root_module:
+            #     self.export_visitor.append_export(
+            #         target_module=".".join([root_module, "lib"]), node=ast.parse(f"from . import core")
+            #     )
+            #     self.export_visitor.append_export(
+            #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
+            #     )
 
 
 def get_specs_under_python(python_path=None, dst_path=None):
