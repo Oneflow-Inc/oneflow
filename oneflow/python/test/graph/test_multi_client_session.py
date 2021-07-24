@@ -17,7 +17,7 @@ import unittest
 import os
 
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.multi_client_session import MultiClientSession
 
@@ -48,8 +48,9 @@ class TestMultiClientSession(unittest.TestCase):
         sess.TryInit()
         self.assertEqual(sess.status, sess.Status.INITED)
 
-        sess.TryClose()
-        self.assertEqual(sess.status, sess.Status.CLOSED)
+        # oneflow will close default session with atexit in init.py
+        # sess.TryClose()
+        # self.assertEqual(sess.status, sess.Status.CLOSED)
 
 
 if __name__ == "__main__":

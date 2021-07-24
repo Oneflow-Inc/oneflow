@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
 
@@ -60,8 +60,7 @@ class Transpose(Module):
 
 @oneflow_export("transpose")
 @register_tensor_op("transpose")
-@experimental_api
-def transpose_op(tensor, dim0 : int, dim1 : int):
+def transpose_op(tensor, dim0, dim1):
     r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
@@ -78,9 +77,7 @@ def transpose_op(tensor, dim0 : int, dim1 : int):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = flow.transpose(input, 0, 1).shape
         >>> out

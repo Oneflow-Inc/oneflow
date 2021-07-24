@@ -16,7 +16,7 @@ limitations under the License.
 from typing import Union
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor, register_tensor_op
 
 
@@ -40,7 +40,6 @@ class Tile(Module):
 
 @oneflow_export("tile")
 @register_tensor_op("tile")
-@experimental_api
 def tile_op(x, reps):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -69,10 +68,9 @@ def tile_op(x, reps):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> x = np.array([1, 2]).astype(np.int32)
         >>> input = flow.Tensor(x, dtype=flow.int32)
         >>> out = input.tile(reps=(2,))

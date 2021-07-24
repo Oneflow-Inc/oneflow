@@ -16,11 +16,10 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.python.nn.optimizer.optimizer import Optimizer
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("nn.graph.OptimizerConfig")
-@experimental_api
 class OptimizerConfig(object):
     def __init__(
         self,
