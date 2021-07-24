@@ -18,11 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
@@ -164,6 +167,14 @@ inline Maybe<std::string> JobBuildAndInferCtx_GetOpBlobLbn(const std::string& jo
                                                            const std::string bn_in_op) {
   const auto* job_ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return job_ctx->GetOpBlobLbn(op_name, bn_in_op);
+}
+
+inline Maybe<void> AddTensorAsGraphLoss(const std::shared_ptr<one::Tensor>& t) {
+  CHECK_OR_RETURN(t->is_lazy());
+  CHECK_OR_RETURN(LazyMode::is_enabled());
+  const std::string& loss_lbn = one::TensorNameScope::Global()->Lookup(t);
+  CHECK_OR_RETURN("" != loss_lbn);
+  return JUST(GetCurInferCtx())->AddLossLogicalBlobName(loss_lbn);
 }
 
 }  // namespace oneflow
