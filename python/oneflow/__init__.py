@@ -126,6 +126,7 @@ del register_docstr
 del docstr
 import oneflow.nn.image
 import oneflow.nn.modules.permute
+import oneflow.tmp
 from oneflow.advanced.distribute_ops import cast_to_current_logical_view
 from oneflow.deprecated.initializer_util import (
     truncated_normal_initializer as truncated_normal,

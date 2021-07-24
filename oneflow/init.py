@@ -152,3 +152,4 @@ from . import autograd
 from . import optim
 import oneflow.nn.image
 import oneflow.nn.modules.permute
+import oneflow.tmp
