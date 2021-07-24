@@ -16,7 +16,7 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _getint, _single, _pair, _triple
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -24,7 +24,6 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSeq
 
 
 @oneflow_export("nn.AvgPool1d")
-@experimental_api
 class AvgPool1d(Module):
     r"""Applies a 1D average pooling over an input signal composed of several input planes.
 
@@ -69,7 +68,6 @@ class AvgPool1d(Module):
 
 
 @oneflow_export("nn.AvgPool2d")
-@experimental_api
 class AvgPool2d(Module):
     r"""Performs the 2d-average pooling on the input.
 
@@ -92,7 +90,7 @@ class AvgPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
         import numpy as np
 
 
@@ -158,7 +156,6 @@ class AvgPool2d(Module):
 
 
 @oneflow_export("nn.AvgPool3d")
-@experimental_api
 class AvgPool3d(Module):
     r"""Applies a 3D average pooling over an input signal composed of several input planes.
 
@@ -202,10 +199,9 @@ class AvgPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
@@ -264,7 +260,6 @@ class AvgPool3d(Module):
 
 
 @oneflow_export("nn.MaxPool1d")
-@experimental_api
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
@@ -316,44 +311,26 @@ class MaxPool1d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        self.kernel_size = _getint(kernel_size)
-        self.stride = _getint(stride) if stride is not None else self.kernel_size
-        data_format = "NCL"  # Only suport "NCL" for now!
+        self.kernel_size = _single(kernel_size)
+        self.stride = _single(stride) if stride is not None else self.kernel_size
+        data_format = "NCL"  # only support "NCL" for now !
         self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
-        self.dilation = _getint(dilation)
-        self.padding = _getint(padding)
+        self.dilation = _single(dilation)
+        self.padding = _single(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
-        if self.channel_pos == "channels_first":
-            padding = (0, 0, self.padding, 0)
-        else:
-            raise ValueError("error padding param!")
-
-        self.padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(self.channel_pos), 2
-        )
-        self.padding_before = [pad[0] for pad in pads_list]
-        self.padding_after = [pad[1] for pad in pads_list]
-
     def forward(self, x):
-        expand_x = x.unsqueeze(dim=-1)
-
-        expand_y, expand_indice = flow.F.maxpool_2d(
-            expand_x,
+        y, indice = flow.F.maxpool_1d(
+            x,
             data_format=self.channel_pos,
-            padding=self.padding_type,
-            padding_before=self.padding_before,
-            padding_after=self.padding_after,
-            kernel_size=[self.kernel_size, 1],
-            stride=[self.stride, 1],
-            dilation=[self.dilation, 1],
+            padding=self.padding,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
         )
-
-        y = expand_y.squeeze(dim=-1)
-        indice = expand_indice.squeeze(dim=-1)
         if self.return_indices:
             return y, indice
         else:
@@ -366,7 +343,6 @@ class MaxPool1d(Module):
 
 
 @oneflow_export("nn.MaxPool2d")
-@experimental_api
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
@@ -420,10 +396,8 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> kernel_size, stride, padding = (3, 4), (1, 1), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
         >>> np.random.seed(0)
@@ -454,45 +428,27 @@ class MaxPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
-        data_format = "NCHW"  # Only suport "NCHW" for now!
+        data_format = "NCHW"  # only support "NCHW" for now !
         self.channel_pos = (
             "channels_first" if data_format == "NCHW" else "channels_last"
         )
+        self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         self.dilation = _GetSequence(dilation, 2, "dilation")
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
-
-        padding = _pair(padding)
-        self.padding = padding
-        if len(padding) == 2:
-            if data_format == "NCHW":
-                padding = (0, 0, padding[0], padding[1])
-            else:
-                raise ValueError("error padding param!")
-        else:
-            raise ValueError("error padding param!")
-
-        self.padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(self.channel_pos), 2
-        )
-        self.padding_before = [pad[0] for pad in pads_list]
-        self.padding_after = [pad[1] for pad in pads_list]
+        self.padding = _pair(padding)
 
     def forward(self, x):
         y, indice = flow.F.maxpool_2d(
             x,
             data_format=self.channel_pos,
-            padding=self.padding_type,
-            padding_before=self.padding_before,
-            padding_after=self.padding_after,
+            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
         )
-
         if self.return_indices:
             return y, indice
         else:
@@ -505,7 +461,6 @@ class MaxPool2d(Module):
 
 
 @oneflow_export("nn.MaxPool3d")
-@experimental_api
 class MaxPool3d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
@@ -566,10 +521,8 @@ class MaxPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> kernel_size, stride, padding = (3, 3, 4), (1, 1, 1), (1, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
         >>> np.random.seed(0)
@@ -605,32 +558,15 @@ class MaxPool3d(Module):
             "channels_last" if data_format == "NDHWC" else "channels_first"
         )
         self.dilation = _GetSequence(dilation, 3, "dilation")
-        padding = _triple(padding)
-        self.padding = padding
+        self.padding = _triple(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
-
-        if len(padding) == 3:
-            if data_format == "NCDHW":
-                padding = (0, 0, padding[0], padding[1], padding[2])
-            else:
-                raise ValueError("error padding param!")
-        else:
-            raise ValueError("error padding param!")
-
-        self.padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(self.channel_pos), 3
-        )
-        self.padding_before = [pad[0] for pad in pads_list]
-        self.padding_after = [pad[1] for pad in pads_list]
 
     def forward(self, x):
         y, indice = flow.F.maxpool_3d(
             x,
             data_format=self.channel_pos,
-            padding=self.padding_type,
-            padding_before=self.padding_before,
-            padding_after=self.padding_after,
+            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
             dilation=self.dilation,

@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible_single_client_python.framework import runtime_mode as rt_mode
-from oneflow.compatible_single_client_python.framework import (
+from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
+from oneflow.compatible.single_client.python.framework import (
     session_context as session_ctx,
 )
 from oneflow.compatible import single_client as flow
-from oneflow.compatible_single_client_python.lib.core.high_order_bool import (
+from oneflow.compatible.single_client.python.lib.core.high_order_bool import (
     bool_functor,
 )
 import oneflow._oneflow_internal

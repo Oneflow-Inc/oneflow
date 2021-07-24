@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.common_types import _size_any_t
 from oneflow.python.nn.modules.utils import _single
 
@@ -64,7 +64,6 @@ class Ones(_ConstantBase):
 
 
 @oneflow_export("ones")
-@experimental_api
 def ones_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -86,9 +85,7 @@ def ones_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
@@ -103,7 +100,6 @@ class Zeros(_ConstantBase):
 
 
 @oneflow_export("zeros")
-@experimental_api
 def zeros_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
@@ -125,9 +121,7 @@ def zeros_op(
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> y = flow.zeros(5)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
@@ -145,7 +139,6 @@ class ZerosLike(Module):
 
 
 @oneflow_export("zeros_like")
-@experimental_api
 def zeros_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 0, with the same size as input.
@@ -158,12 +151,12 @@ def zeros_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        x = flow.Tensor(np.random.rand([5]))
-        y = flow.zeros_like(x)
-        # [0. 0. 0. 0. 0. ]
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.random.rand(5))
+        >>> y = flow.zeros_like(x)
+        >>> y
+        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
     return ZerosLike()(other)
@@ -178,7 +171,6 @@ class OnesLike(Module):
 
 
 @oneflow_export("ones_like")
-@experimental_api
 def ones_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 1, with the same size as input.
@@ -191,12 +183,12 @@ def ones_like_op(other):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        x = flow.Tensor(np.random.rand([5]))
-        y = flow.ones_like(x)
-        # [1. 1. 1. 1. 1. ]
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.random.rand(5))
+        >>> y = flow.ones_like(x)
+        >>> y
+        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
     return OnesLike()(other)
@@ -254,7 +246,6 @@ class NewOnes(Module):
 
 
 @register_tensor_op("new_ones")
-@experimental_api
 def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     r"""
     
@@ -271,9 +262,8 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
         >>> y = x.new_ones((2, 2))
         >>> y

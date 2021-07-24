@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
@@ -22,7 +22,6 @@ import math
 
 
 @oneflow_export("nn.Identity")
-@experimental_api
 class Identity(Module):
     """A placeholder identity operator that is argument-insensitive.
 
@@ -54,7 +53,6 @@ class Identity(Module):
 
 
 @oneflow_export("nn.Linear")
-@experimental_api
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
@@ -84,9 +82,8 @@ class Linear(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
 
         >>> m = flow.nn.Linear(20, 30, False)
         >>> input = flow.Tensor(np.random.randn(128, 20))

@@ -16,14 +16,8 @@ limitations under the License.
 import unittest
 import os
 
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "12139"
-os.environ["WORLD_SIZE"] = "1"
-os.environ["RANK"] = "0"
-os.environ["LOCAL_RANK"] = "0"
-
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.framework.multi_client_session import MultiClientSession
 
@@ -54,8 +48,9 @@ class TestMultiClientSession(unittest.TestCase):
         sess.TryInit()
         self.assertEqual(sess.status, sess.Status.INITED)
 
-        sess.TryClose()
-        self.assertEqual(sess.status, sess.Status.CLOSED)
+        # oneflow will close default session with atexit in init.py
+        # sess.TryClose()
+        # self.assertEqual(sess.status, sess.Status.CLOSED)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
@@ -199,7 +199,6 @@ class _BatchNorm(_NormBase):
 
 
 @oneflow_export("nn.BatchNorm1d")
-@experimental_api
 class BatchNorm1d(_BatchNorm):
     r"""Applies Batch Normalization over a 2D or 3D input (a mini-batch of 1D
     inputs with optional additional channel dimension) as described in the paper
@@ -261,10 +260,9 @@ class BatchNorm1d(_BatchNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> x = flow.Tensor(np.random.randn(20, 100))
         >>> m = flow.nn.BatchNorm1d(100)
         >>> y = m(x)
@@ -279,7 +277,6 @@ class BatchNorm1d(_BatchNorm):
 
 
 @oneflow_export("nn.BatchNorm2d")
-@experimental_api
 class BatchNorm2d(_BatchNorm):
     r"""Applies Batch Normalization over a 4D input (a mini-batch of 2D inputs
     with additional channel dimension) as described in the paper
@@ -341,10 +338,9 @@ class BatchNorm2d(_BatchNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3))
         >>> m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         >>> y = m(x)
