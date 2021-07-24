@@ -17,10 +17,9 @@ import os
 import time
 import unittest
 
-import oneflow.experimental as flow
-import oneflow.experimental.nn as nn
+import oneflow as flow
+import oneflow.nn as nn
 import oneflow.python.utils.vision.transforms as transforms
-import oneflow.experimental.optim as optim
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
@@ -126,7 +125,7 @@ def test_train_and_eval(test_case):
     loss.to(device)
 
     lr, num_epochs = 0.02, 1
-    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
+    optimizer = flow.optim.SGD(net.parameters(), lr=lr, momentum=0.9)
     final_accuracy = 0
 
     for epoch in range(num_epochs):

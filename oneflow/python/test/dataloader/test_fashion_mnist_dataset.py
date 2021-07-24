@@ -17,8 +17,8 @@ import os
 import unittest
 import time
 
-import oneflow.experimental as flow
-import oneflow.experimental.nn as nn
+import oneflow as flow
+import oneflow.nn as nn
 import oneflow.python.utils.vision.transforms as transforms
 
 

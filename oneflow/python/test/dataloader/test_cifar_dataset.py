@@ -16,7 +16,7 @@ limitations under the License.
 import os
 import unittest
 
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.experimental.nn as nn
 import oneflow.python.utils.vision.transforms as transforms
 import oneflow.experimental.optim as optim
