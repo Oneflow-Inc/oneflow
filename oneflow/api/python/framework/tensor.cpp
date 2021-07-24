@@ -214,6 +214,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init(&MakeLocalTensor))
       .def(py::init(&MakeConsistentTensor))
       // Properties of pytorch
+      .def_property_readonly("ndim", &Tensor::ndim)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
       .def_property_readonly("is_cuda", &Tensor::is_cuda)

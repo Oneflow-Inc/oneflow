@@ -60,7 +60,7 @@ class Shape final {
   int64_t At(int64_t index) const { return dim_vec_.at(index); }
   void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
-    if (is_scalar_) { return 0; }
+    // if (is_scalar_) { return 0; }
     return dim_vec_.size();
   }
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
