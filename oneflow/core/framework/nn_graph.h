@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 
@@ -58,9 +59,8 @@ class NNGraph final : public NNGraphIf {
   bool runtime_inited_;
 };
 
-Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph);
 
 }  // namespace oneflow
