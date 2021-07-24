@@ -150,3 +150,4 @@ del docstr
 from . import linalg
 from . import autograd
 from . import optim
+import oneflow.nn.image
