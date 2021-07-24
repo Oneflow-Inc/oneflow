@@ -46,6 +46,7 @@ def main():
     if args.doctor:
         import oneflow
         import oneflow.sysconfig
+
         print("path:", oneflow.__path__)
         print("version:", oneflow.__version__)
         print("cmake_build_type:", oneflow.sysconfig.cmake_build_type())

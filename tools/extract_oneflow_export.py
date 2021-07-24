@@ -507,6 +507,7 @@ if __name__ == "__main__":
             ModuleNode.add_sub_module(root=root_module, module=export_path)
     leaf_modules = set([leaf.full_name for leaf in root_module.leafs])
     pool = multiprocessing.Pool()
+
     def is_init(module: str):
         is_leaf = module in leaf_modules
         is_magic = module.endswith("__")

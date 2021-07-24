@@ -52,6 +52,7 @@ from oneflow.core.job.job_conf_pb2 import JobConfigProto
 
 _DEPRECATED = set()
 
+
 def oneflow_deprecate(*api_names, **kwargs):
     def Decorator(func_or_class):
         _DEPRECATED.add(func_or_class)
@@ -59,10 +60,12 @@ def oneflow_deprecate(*api_names, **kwargs):
 
     return Decorator
 
+
 def is_deprecated(func_or_class):
     return (
         isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
     )
+
 
 import oneflow.python.framework.register_python_callback
 
