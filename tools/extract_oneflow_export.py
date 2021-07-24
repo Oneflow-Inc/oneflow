@@ -137,8 +137,14 @@ class ExportVisitor(ast.NodeTransformer):
                 "oneflow.python.oneflow_export"
             ):
                 return None
-            if node.module.startswith("oneflow.python."):
+            if "flow.python." in node.module:
                 node.module = node.module.replace("oneflow.python.", "oneflow.")
+            if "single_client.python." in node.module or node.module.endswith(
+                "single_client.python"
+            ):
+                node.module = node.module.replace(
+                    "single_client.python", "single_client"
+                )
         self.top_imports.append(node)
         return node
 
@@ -155,6 +161,8 @@ class ExportVisitor(ast.NodeTransformer):
             return node
         elif node.name == "oneflow.python":
             node.name = "oneflow"
+        elif "single_client.python." in node.name:
+            node.name = node.name.replace("single_client.python.", "single_client.")
         elif node.name == "oneflow_export":
             return None
         elif "__export_symbols__" in node.name:
@@ -547,7 +555,8 @@ if __name__ == "__main__":
     if args.license:
         print("[postprocess]", "license")
         subprocess.check_call(
-            f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix --silent", shell=True,
+            f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix --silent",
+            shell=True,
         )
     if args.black:
         print("[postprocess]", "black")
