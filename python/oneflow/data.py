@@ -14,21 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.experimental.load_mnist import load_mnist
-from oneflow.ops.data_ops import (
-    BlobConf,
-    ImageCodec,
-    ImagePreprocessor,
-    ImageResizePreprocessor,
-    NormByChannelPreprocessor,
-    RawCodec,
-    decode_ofrecord,
-    decode_random,
-)
-from oneflow.ops.data_ops import image_decoder_random_crop_resize
-from oneflow.ops.data_ops import (
-    image_decoder_random_crop_resize as ImageDecoderRandomCropResize,
-)
-from oneflow.ops.data_ops import ofrecord_loader, ofrecord_reader, onerec_reader
 from oneflow.ops.user_data_ops import OFRecordBytesDecoder
 from oneflow.ops.user_data_ops import OFRecordBytesDecoder as ofrecord_bytes_decoder
 from oneflow.ops.user_data_ops import OFRecordImageDecoder

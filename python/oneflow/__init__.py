@@ -287,27 +287,9 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.array_ops import (
-    amp_white_identity,
-    cast_to_static_shape,
-    concat,
-    dim_gather,
-    dynamic_reshape,
-    elem_cnt,
-    expand_dims,
-    identity,
-    identity_n,
-    reshape_like,
-    reverse,
-    slice_v2,
-    sync_dynamic_resize,
-    tensor_scatter_nd_add,
-    tensor_scatter_nd_update,
-)
 from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
-from oneflow.ops.combined_margin_loss import combined_margin_loss
 from oneflow.ops.constant_op import constant, constant_like, constant_scalar
 from oneflow.ops.count_not_finite import count_not_finite, multi_count_not_finite
 from oneflow.ops.eager_nccl_ops import eager_nccl_all_reduce
@@ -331,14 +313,6 @@ from oneflow.ops.initializer_util import (
     zeros_initializer,
 )
 from oneflow.ops.loss_ops import ctc_loss, smooth_l1_loss
-from oneflow.ops.math_ops import (
-    broadcast_to_compatible_with as broadcast_to_compatible_with,
-)
-from oneflow.ops.math_ops import (
-    unsorted_batch_segment_sum as unsorted_batch_segment_sum,
-)
-from oneflow.ops.math_ops import unsorted_segment_sum as unsorted_segment_sum
-from oneflow.ops.math_ops import unsorted_segment_sum_like as unsorted_segment_sum_like
 from oneflow.ops.one_hot import one_hot
 from oneflow.ops.pad import (
     constant_pad2d,
