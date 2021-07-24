@@ -17,7 +17,6 @@ from contextlib import contextmanager
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.experimental import name_scope as name_scope
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import (
     distribute_context as distribute_ctx,

@@ -17,7 +17,6 @@ from contextlib import contextmanager
 
 import oneflow
 import oneflow._oneflow_internal
-import oneflow.experimental.name_scope as name_scope
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.distribute_context as distribute_ctx
 import oneflow.framework.hob as hob
