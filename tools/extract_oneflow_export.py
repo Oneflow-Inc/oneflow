@@ -18,11 +18,12 @@ parser.add_argument("--debug", "-d", action="store_true")
 parser.add_argument("--autoflake", "-a", action="store_true")
 parser.add_argument("--black", "-b", action="store_true")
 parser.add_argument("--isort", "-i", action="store_true")
-parser.add_argument("--save_ast", "--ast", action="store_true")
+parser.add_argument("--license", "-l", action="store_true")
+parser.add_argument("--ast", action="store_true")
 args = parser.parse_args()
 
 OUT_PATH = Path(args.out_dir)
-SAVE_AST = args.save_ast
+SHOULD_SAVE_AST = args.ast
 COMPATIBLE_MODULE = "oneflow.compatible.single_client"
 
 
@@ -456,7 +457,7 @@ def save_trees(args=None):
     dst_full.touch(exist_ok=False)
     # TODO: append "doctest.testmod(raise_on_error=True)"
     trees = [ast.fix_missing_locations(tree) for tree in trees]
-    if SAVE_AST:
+    if SHOULD_SAVE_AST:
         new_txt = "\n".join([str(astpretty.pformat(tree)) for tree in trees])
         new_txt = f"""from ast import *
 {new_txt}
@@ -541,6 +542,10 @@ if __name__ == "__main__":
         print("[postprocess]", "isort")
         subprocess.check_call(
             f"{sys.executable} -m isort . {extra_arg}", shell=True, cwd=args.out_dir,
+        )
+    if args.license:
+        subprocess.check_call(
+            f"`which python3` ci/check/run_license_format.py -i {OUT_PATH} --fix", shell=True,
         )
     if args.black:
         print("[postprocess]", "black")
