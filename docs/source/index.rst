@@ -12,28 +12,10 @@ OneFlow API Reference
     :caption: OneFlow Python API
 
     oneflow
-    env
-    config
-    optimizer
-    losses
-    math
+    tensor
     nn
-    layers
-    data
-    distribute
-    advanced 
-    typing
-    tensorrt 
-    deprecated  
-    experimental 
     F
-    scope 
-    sysconfig    
-    random 
-    system 
-    regularizers  
-    image
-    train
+    linagl
     optim
 
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow.python.oneflow_export import experimental_api, oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 from .lr_scheduler import LrScheduler
 
 

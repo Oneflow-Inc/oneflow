@@ -16,7 +16,7 @@ limitations under the License.
 
 import types
 
-from oneflow.python.oneflow_export import experimental_api, oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 from .lr_scheduler import LrScheduler
 
 

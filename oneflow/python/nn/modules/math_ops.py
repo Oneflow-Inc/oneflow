@@ -803,8 +803,7 @@ def fmod_op(input, other):
 
     Example::
 
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
         >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2)
         tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
         >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
@@ -820,7 +819,7 @@ def fmod_op(input, other):
 def fmod_op_tensor(input, other):
     r"""
 
-    See :func:`oneflow.experimental.fmod`
+    See :func:`oneflow.fmod`
     
     """
     return FMod()(input, other)

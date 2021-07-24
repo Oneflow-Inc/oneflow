@@ -17,7 +17,7 @@ import unittest
 import os
 
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 
 
 class SubModule(flow.nn.Module):

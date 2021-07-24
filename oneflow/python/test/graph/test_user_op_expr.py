@@ -19,7 +19,7 @@ import numpy as np
 import os
 
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
 import oneflow._oneflow_internal
 from oneflow.python.framework.multi_client_session import MultiClientSession
@@ -134,6 +134,8 @@ class TestUserOpGraph(unittest.TestCase):
             eager_output = output_op.apply([y1], attrs)[0]
             test_case.assertEqual(eager_output.shape, (20, 70))
             test_case.assertTrue(not eager_output.is_lazy)
+
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 if __name__ == "__main__":

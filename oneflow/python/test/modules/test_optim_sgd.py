@@ -18,13 +18,21 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+
 import oneflow as flow
-from test_util import GenArgList
+from test_util import GenArgDict
 from oneflow.python.nn.parameter import Parameter
 
 
 def compare_with_numpy_sgd(
-    test_case, device, x_shape, scale, momentum, learning_rate, train_iters,
+    test_case,
+    device,
+    x_shape,
+    scale,
+    momentum,
+    weight_decay,
+    learning_rate,
+    train_iters,
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -36,7 +44,15 @@ def compare_with_numpy_sgd(
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         sgd = flow.optim.SGD(
-            [{"params": [x], "lr": learning_rate, "momentum": momentum, "scale": scale}]
+            [
+                {
+                    "params": [x],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                    "weight_decay": weight_decay,
+                }
+            ]
         )
 
         def train_one_iter(grad):
@@ -57,8 +73,9 @@ def compare_with_numpy_sgd(
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
-            v = momentum * vt + learning_rate * scale * grad
-            param = x - v
+            grad = grad * scale + weight_decay * x
+            v = momentum * vt - learning_rate * grad
+            param = x + v
             return param, v
 
         for i in range(train_iters):
@@ -80,10 +97,11 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["momentum"] = [0.0, 0.9]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["weight_decay"] = [0.0, 0.9]
+        arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["train_iters"] = [10]
-        for arg in GenArgList(arg_dict):
-            compare_with_numpy_sgd(test_case, *arg)
+        for arg in GenArgDict(arg_dict):
+            compare_with_numpy_sgd(test_case, **arg)
 
 
 if __name__ == "__main__":
