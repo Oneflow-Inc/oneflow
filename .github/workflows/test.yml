@@ -523,7 +523,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
       - name: Dataloader API test
@@ -532,7 +532,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/dataloader \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/dataloader \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
@@ -541,7 +541,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Graph API test
@@ -549,7 +549,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/graph \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Checkout Oneflow-Inc/models
