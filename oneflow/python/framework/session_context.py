@@ -29,6 +29,8 @@ class SessionStatus:
 def GetDefaultSession():
     global _sess_id2sess
     default_sess_id = oneflow._oneflow_internal.GetDefaultSessionId()
+    print("default_sess_id >>>>>> ", default_sess_id)
+    print("_sess_id2sess >>>>>> ", _sess_id2sess)
     assert default_sess_id in _sess_id2sess
     return _sess_id2sess[default_sess_id]
 
