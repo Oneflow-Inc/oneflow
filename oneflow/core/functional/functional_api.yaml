@@ -36,7 +36,7 @@
   bind_python: True
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "sub_scalar_by_tensor"
@@ -142,6 +142,10 @@
 
 - name: "cosh"
   signature: "Tensor Cosh(Tensor x)"
+  bind_python: True
+
+- name: "fmod"
+  signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "log"
@@ -403,6 +407,25 @@
                       Int32List padding_before, Int32List padding_after,
                       String data_format=\"channels_first\", Bool ceil_mode=False)"
   bind_python: True
+
+- name: "adaptive_avg_pool1d"
+  signature:
+    "Tensor AdaptiveAvgPool1D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_avg_pool2d"
+  signature:
+    "Tensor AdaptiveAvgPool2D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_avg_pool3d"
+  signature:
+    "Tensor AdaptiveAvgPool3D(Tensor x, *, Int64List output_size)"
+  bind_python: True
+
+- name: "adaptive_pool_grad"
+  signature:
+    "Tensor AdaptivePoolNdGrad(Tensor x, Tensor dy, *, String mode, Int32 ndims)"
 
 - name: "pool_grad"
   signature:

@@ -67,12 +67,30 @@ class TestFlattenModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_with_random_data(test_case):
-        test_module_against_pytorch(
-            test_case,
-            "nn.Flatten",
-            extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
+    # Our flatten produces a new tensor if flatten is effectively a no-op,
+    # while pytorch's flatten returns the input tensor itself,
+    # leading to the inconsistency on the leaf-ness of x and thus the existence of x's grad
+    @autotest(auto_backward=False)
+    def test_against_pytorch(test_case):
+        m = torch.nn.Flatten(
+            start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
         )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_tensor_against_pytorch(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.flatten(
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
+        return y
 
 
 if __name__ == "__main__":

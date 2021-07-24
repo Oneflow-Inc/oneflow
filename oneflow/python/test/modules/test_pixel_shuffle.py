@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _np_pixel_shuffle(input, h_factor, w_factor):
@@ -88,6 +89,18 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         arg_dict["w_upscale_factor"] = [5]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_pixel_shuffle_with_random_data(test_case):
+        upscale_factor = random().to(int)
+        num_channels = upscale_factor * upscale_factor * random().to(int)
+        m = torch.nn.PixelShuffle(upscale_factor=upscale_factor)
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=num_channels).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

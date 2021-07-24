@@ -18,12 +18,6 @@ import unittest
 import numpy as np
 import os
 
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "12139"
-os.environ["WORLD_SIZE"] = "1"
-os.environ["RANK"] = "0"
-os.environ["LOCAL_RANK"] = "0"
-
 import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.session_context as session_ctx
@@ -140,6 +134,8 @@ class TestUserOpGraph(unittest.TestCase):
             eager_output = output_op.apply([y1], attrs)[0]
             test_case.assertEqual(eager_output.shape, (20, 70))
             test_case.assertTrue(not eager_output.is_lazy)
+
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 if __name__ == "__main__":
