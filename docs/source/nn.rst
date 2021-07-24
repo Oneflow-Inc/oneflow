@@ -17,6 +17,7 @@ Operators for neural networks
         COCOReader, 
         CTCLoss, 
         CoinFlip, 
+        ConstantPad1d, 
         ConstantPad2d, 
         ConstantPad3d, 
         Conv1d, 
