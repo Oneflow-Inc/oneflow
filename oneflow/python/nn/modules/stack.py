@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from typing import List, Tuple
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
@@ -45,12 +45,11 @@ class Stack(Module):
                 current_shape
             )
             unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
-        return flow.experimental.cat(unsqueezed, dim=self.dim)
+        return flow.cat(unsqueezed, dim=self.dim)
 
 
 @oneflow_export("stack")
 @register_tensor_op("stack")
-@experimental_api
 def stack(inputs: Tensor, dim: int = 0) -> None:
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
@@ -70,9 +69,8 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
         >>> out = flow.stack([x, y], dim = -1)
