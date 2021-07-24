@@ -44,6 +44,8 @@ from oneflow.compatible.single_client.framework import (
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 from oneflow.core.job.job_set_pb2 import ConfigProto
 
+oneflow._oneflow_internal.DestroyGlobalWatcher()
+oneflow._oneflow_internal.DestroyGlobalForeignCallback()
 oneflow._oneflow_internal.DestroyEnv()
 import time
 
@@ -62,14 +64,14 @@ from oneflow.compatible.single_client.framework import (
     register_python_callback,
 )
 
-oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
+oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
 del register_python_callback
 from oneflow.compatible.single_client.framework import watcher
 
-oneflow._oneflow_internal.RegisterWatcherOnlyOnce(watcher._global_watcher)
+oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
 del watcher
 from oneflow.compatible.single_client.eager import boxing_util
 

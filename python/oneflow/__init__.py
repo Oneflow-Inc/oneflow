@@ -85,6 +85,17 @@ session_ctx.OpenDefaultSession(
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
+from oneflow.framework import python_callback, register_python_callback
+
+oneflow._oneflow_internal.RegisterGlobalForeignCallback(
+    python_callback.global_python_callback
+)
+del python_callback
+del register_python_callback
+from oneflow.framework import watcher
+
+oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
+del watcher
 
 
 def _SyncOnMasterFn():
@@ -266,7 +277,7 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.round import round_op as round
-from oneflow.nn.modules.scatter_nd import Scatter_nd as scatter_nd
+from oneflow.nn.modules.scatter_nd import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.sign import sign_op as sign
 from oneflow.nn.modules.sinh import sinh_op as sinh
 from oneflow.nn.modules.slice import slice_op as slice
@@ -353,3 +364,5 @@ from oneflow.ops.user_op_builder import (
 )
 from oneflow.ops.watch import Watch as watch
 from oneflow.ops.watch import WatchDiff as watch_diff
+
+from . import autograd, linalg, optim

@@ -79,7 +79,7 @@ def load_mnist(
         out_dir (str, optional): dir to save downloaded file. Defaults to "./".
 
     Returns:
-        [type]: (train_images, train_labels), (test_images, test_labels)
+        (train_images, train_labels), (test_images, test_labels)
     """
     path = get_mnist_file(hash_check, url, out_dir)
     with np.load(path, allow_pickle=True) as f:

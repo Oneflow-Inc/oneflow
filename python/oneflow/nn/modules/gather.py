@@ -47,7 +47,7 @@ class Gather(Module):
 def gather_op(input, index, dim=0, sparse_grad=False):
     """Gathers values along an axis specified by `dim`.
 
-    For a 3-D tensor the output is specified by:
+    For a 3-D tensor the output is specified by::
 
         out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
         out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1

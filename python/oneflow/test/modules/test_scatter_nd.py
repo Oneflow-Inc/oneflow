@@ -25,7 +25,6 @@ import oneflow.unittest
 
 
 def _test_scatter_nd(test_case, device):
-    scatter_nd_layer = flow.scatter_nd([8])
     indices = flow.Tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)
     )
@@ -33,12 +32,11 @@ def _test_scatter_nd(test_case, device):
         np.array([10.2, 5.1, 12.7]), dtype=flow.float, device=flow.device(device)
     )
     np_out = np.array([0.0, 10.2, 0.0, 0.0, 12.7, 0.0, 5.1, 0.0])
-    output = scatter_nd_layer(indices, update)
+    output = flow.scatter_nd(indices, update, [8])
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
 
 
 def _test_scatter_nd_t(test_case, device):
-    scatter_nd_layer = flow.scatter_nd([5, 3])
     indices = flow.Tensor(
         np.array([[0], [4], [2]]), dtype=flow.int, device=flow.device(device)
     )
@@ -56,12 +54,11 @@ def _test_scatter_nd_t(test_case, device):
             [2.0, 2.0, 2.0],
         ]
     )
-    output = scatter_nd_layer(indices, update)
+    output = flow.scatter_nd(indices, update, [5, 3])
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
 
 
 def _test_scatter_nd_backward(test_case, device):
-    scatter_nd_layer = flow.scatter_nd([8])
     indices = flow.Tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)
     )
@@ -73,7 +70,7 @@ def _test_scatter_nd_backward(test_case, device):
     )
     np_out = np.array([0.0, 10.2, 0.0, 0.0, 12.7, 0.0, 5.1, 0.0])
     np_grad = np.array([1.0, 1.0, 1.0])
-    output = scatter_nd_layer(indices, of_update)
+    output = flow.scatter_nd(indices, of_update, [8])
     out_sum = output.sum()
     out_sum.backward()
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
