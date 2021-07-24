@@ -414,7 +414,7 @@ jobs:
           if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "xla_cpu" ]; then
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_new_interface" ] || [ "$test_suite" == "xla_cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
           fi
