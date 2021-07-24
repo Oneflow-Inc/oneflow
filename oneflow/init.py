@@ -132,3 +132,6 @@ from oneflow.python.framework.docstr.utils import register_docstr
 register_docstr()
 del register_docstr
 del docstr
+from . import linalg
+from . import autograd
+from . import optim
