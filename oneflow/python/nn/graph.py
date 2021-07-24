@@ -189,6 +189,7 @@ class Graph(object):
         # Complie and init Runtime
         self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
+        return eager_outputs
 
     def _launch(self, *args):
         # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
