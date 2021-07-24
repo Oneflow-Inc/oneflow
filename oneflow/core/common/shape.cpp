@@ -50,18 +50,30 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) { UpdateElemCnt(); }
-
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
-
-Shape::Shape(const ShapeProto& shape_proto) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
+Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) {
+  is_scalar_ = true;
   UpdateElemCnt();
 }
 
+Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) {
+  is_scalar_ = false;
+  UpdateElemCnt();
+}
+Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) {
+  is_scalar_ = false;
+  UpdateElemCnt();
+}
+Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) {
+  is_scalar_ = false;
+  UpdateElemCnt();
+}
+Shape::Shape(const ShapeProto& shape_proto) {
+  is_scalar_ = false;
+  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
+  UpdateElemCnt();
+}
 Shape::Shape(const cfg::ShapeProto& shape_proto) {
+  is_scalar_ = false;
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }

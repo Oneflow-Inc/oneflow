@@ -69,14 +69,16 @@ struct ShapeExportUtil final {
   static std::string ToString(const Shape& shape) {
     std::stringstream ss;
     int32_t idx = 0;
-    if (shape.IsScalar()) {
-      ss << "flow.Size()";
-      return ss.str();
-    }
     ss << "flow.Size([";
-    for (int64_t dim : shape.dim_vec()) {
-      ss << dim;
-      if (++idx != shape.dim_vec().size()) { ss << ", "; }
+    if (shape.IsScalar()) {
+      printf("\n Shape to string >>>>>>>> is scalar \n");
+    } else {
+      if (shape.dim_vec().size() > 0) {
+        for (int64_t dim : shape.dim_vec()) {
+          ss << dim;
+          if (++idx != shape.dim_vec().size()) { ss << ", "; }
+        }
+      }
     }
     ss << "])";
     return ss.str();

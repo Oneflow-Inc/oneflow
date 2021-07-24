@@ -58,9 +58,11 @@ def _local_tensor_numpy(eager_local_tensor):
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
+
     n_shape = (
-        () if eager_local_tensor.ndimension() == 0 else tuple(eager_local_tensor.shape)
+        () if len(eager_local_tensor.shape) == 0 else tuple(eager_local_tensor.shape)
     )
+
     ndarray = np.empty(
         n_shape,
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
@@ -228,10 +230,13 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    @register_local_tensor_method("ndim")
     @property
     def ndim(self):
-        return len(self.shape)
+        # return len(self.shape)
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.ndim
+        else:
+            return len(self._undetermined_tensor.shape)
 
     @property
     def is_cuda(self):
