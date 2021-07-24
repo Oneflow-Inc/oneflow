@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_unsqueeze(test_case, device):
@@ -68,6 +69,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.unsqueeze(x, random(1, 3).to(int))
+        return y
 
 
 if __name__ == "__main__":
