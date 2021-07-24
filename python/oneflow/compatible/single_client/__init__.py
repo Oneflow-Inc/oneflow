@@ -59,6 +59,7 @@ oneflow._oneflow_internal.EnableEagerEnvironment(False)
 del env_util
 del session_util
 del session_context
+import oneflow.compatible.single_client.framework.c_api_util
 from oneflow.compatible.single_client.framework import (
     python_callback,
     register_python_callback,

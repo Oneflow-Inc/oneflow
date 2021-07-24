@@ -94,6 +94,15 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
         if node.id in self.keywords:
             self.has_reserved_keyword = True
 
+def replace_str(name):
+    if name.startswith("oneflow.python."):
+        return name.replace("oneflow.python.", "oneflow.")
+    elif name == "oneflow.python":
+        return "oneflow"
+    elif "single_client.python." in name:
+        return name.replace("single_client.python.", "single_client.")
+    else:
+        return name
 
 class ExportVisitor(ast.NodeTransformer):
     def __init__(self, root_module="oneflow", src_target_module: str = None) -> None:
@@ -157,17 +166,14 @@ class ExportVisitor(ast.NodeTransformer):
 
     def visit_alias(self, node: ast.alias) -> ast.alias:
         if node.name.startswith("oneflow.python."):
-            node.name = node.name.replace("oneflow.python.", "oneflow.")
+            node.name = replace_str(node.name)
             return node
-        elif node.name == "oneflow.python":
-            node.name = "oneflow"
-        elif "single_client.python." in node.name:
-            node.name = node.name.replace("single_client.python.", "single_client.")
         elif node.name == "oneflow_export":
             return None
         elif "__export_symbols__" in node.name:
             return None
         else:
+            node.name = replace_str(node.name)
             return node
 
     def visit_Name(self, node: ast.AST):
@@ -580,5 +586,5 @@ if __name__ == "__main__":
     if args.black:
         print("[postprocess]", "black")
         subprocess.check_call(
-            f"`which python3` -m black . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"`which python3` -m black --exclude '**/*.ast.py' . {extra_arg}", shell=True, cwd=args.out_dir,
         )
