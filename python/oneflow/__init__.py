@@ -389,4 +389,4 @@ from oneflow.ops.user_op_builder import (
 from oneflow.ops.watch import Watch as watch
 from oneflow.ops.watch import WatchDiff as watch_diff
 
-from . import autograd, distributed, linalg, optim
+from . import autograd, distributed, linalg, optim, saved_model

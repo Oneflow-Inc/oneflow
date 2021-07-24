@@ -352,6 +352,10 @@ class SrcFile:
                 self.export_visitor.append_export(
                     target_module=root_module, node=ast.parse(f"from . import distributed")
                 )
+                if self.target_module == "oneflow":
+                    self.export_visitor.append_export(
+                        target_module=root_module, node=ast.parse(f"from . import saved_model")
+                    )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
             #     )
