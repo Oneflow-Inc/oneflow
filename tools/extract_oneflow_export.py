@@ -348,10 +348,10 @@ class SrcFile:
                 root_module=root_module, src_target_module=self.target_module
             )
             self.export_visitor.visit(self.tree)
-            # if self.target_module == root_module:
-            #     self.export_visitor.append_export(
-            #         target_module=".".join([root_module, "lib"]), node=ast.parse(f"from . import core")
-            #     )
+            if self.target_module == root_module:
+                self.export_visitor.append_export(
+                    target_module=root_module, node=ast.parse(f"from . import distributed")
+                )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
             #     )

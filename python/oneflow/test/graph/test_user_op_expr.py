@@ -32,9 +32,7 @@ from oneflow.framework.multi_client_session import MultiClientSession
 class TestUserOpGraph(unittest.TestCase):
     def test_user_op_graph(test_case):
         test_case.assertTrue(oneflow.distributed.is_multi_client())
-        test_case.assertTrue(
-            oneflow.python.framework.env_util.HasAllMultiClientEnvVars()
-        )
+        test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
         x0 = flow.Tensor(20, 30)
         weight0 = flow.Tensor(30, 50)
         x1 = flow.Tensor(50, 70)
