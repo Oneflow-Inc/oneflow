@@ -16,7 +16,7 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -29,7 +29,6 @@ class Round(Module):
 
 
 @oneflow_export("round")
-@experimental_api
 def round_op(x):
     """This operator rounds the value of Blob to the nearest integer.
     Args:
@@ -40,9 +39,8 @@ def round_op(x):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
         >>> out1 = flow.round(x1)
         >>> out1.numpy()
@@ -58,12 +56,11 @@ def round_op(x):
 
 
 @register_tensor_op("round")
-@experimental_api
 def round_op_tensor(x):
     r"""
     round() -> Tensor
 
-    See :func:`oneflow.experimental.round`
+    See :func:`oneflow.round`
 
     """
 

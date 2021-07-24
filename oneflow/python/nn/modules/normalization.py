@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn import init
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from typing import Tuple, Union
 
@@ -24,7 +24,6 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 @oneflow_export("nn.GroupNorm")
-@experimental_api
 class GroupNorm(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -64,10 +63,8 @@ class GroupNorm(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> input = flow.Tensor(np.random.randn(20, 6, 10, 10))
         >>> # Separate 6 channels into 3 groups
         >>> m = flow.nn.GroupNorm(3, 6)
@@ -112,22 +109,20 @@ class GroupNorm(Module):
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
         origin_shape = input.shape
-        reshape_to_1d = flow.experimental.reshape(
+        reshape_to_1d = flow.reshape(
             input, shape=[origin_shape[0], self.num_groups, -1]
         )
-        mean = flow.experimental.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.experimental.var(reshape_to_1d, dim=2, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(
-            variance + self.eps
-        )
-        normalized = flow.experimental.reshape(
+        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.var(reshape_to_1d, dim=2, keepdim=True)
+        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
+        normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
         )
         if self.weight:
             normalized = normalized * self.weight
         if self.bias:
             normalized = normalized + self.bias
-        res = flow.experimental.reshape(normalized, shape=tuple(input.shape))
+        res = flow.reshape(normalized, shape=tuple(input.shape))
 
         return res
 
@@ -138,7 +133,6 @@ class GroupNorm(Module):
 
 
 @oneflow_export("nn.LayerNorm")
-@experimental_api
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
     the paper `Layer Normalization <https://arxiv.org/abs/1607.06450>`__
@@ -186,9 +180,8 @@ class LayerNorm(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input_arr = np.array(
         ...     [
         ...         [

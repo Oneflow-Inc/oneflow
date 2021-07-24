@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
 
@@ -27,13 +27,12 @@ class Expand(Module):
 
     def forward(self, x):
         if x.dtype == flow.int8:
-            x = flow.experimental.cast(x, flow.int32)
+            x = flow.cast(x, flow.int32)
         return flow.F.expand(x, self.expand_size)
 
 
 @oneflow_export("expand")
 @register_tensor_op("expand")
-@experimental_api
 def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.
 
@@ -54,10 +53,8 @@ def expand_op(x, *sizes):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> x = np.array([[[[0, 1]],
         ...               [[2, 3]],
         ...               [[4, 5]]]]).astype(np.int32)

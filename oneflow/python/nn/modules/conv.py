@@ -15,7 +15,7 @@ limitations under the License.
 """
 import math
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _single, _pair
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t
@@ -58,7 +58,7 @@ def slice(x, begin, size):
                     stop = b + s
 
         slice_tup_list.append((start, stop, step))
-    return flow.experimental.slice(x, slice_tup_list)
+    return flow.slice(x, slice_tup_list)
 
 
 class ConvUtil(object):
@@ -77,7 +77,6 @@ class ConvUtil(object):
 
 
 @oneflow_export("nn.Conv1d")
-@experimental_api
 class Conv1d(Module):
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
@@ -155,10 +154,9 @@ class Conv1d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv1d(16, 33, 3, stride=2)
@@ -245,7 +243,7 @@ class Conv1d(Module):
                         groups=1,
                     )
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv1d(
                 x,
@@ -277,7 +275,6 @@ class Conv1d(Module):
 
 
 @oneflow_export("nn.Conv2d")
-@experimental_api
 class Conv2d(Module):
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
@@ -381,10 +378,9 @@ class Conv2d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
@@ -472,7 +468,7 @@ class Conv2d(Module):
                         groups=1,
                     )
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv2d(
                 x,
