@@ -20,7 +20,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
-
 class ScatterNd(Module):
     def __init__(self, shape: list):
         super().__init__()
@@ -40,6 +39,7 @@ class ScatterNd(Module):
 
         res = self._op(index, updates)[0]
         return res
+
 
 @oneflow_export("scatter_nd")
 def _scatter_nd_op(index, update, shape):
@@ -65,7 +65,8 @@ def _scatter_nd_op(index, update, shape):
     """
     return ScatterNd(shape)(index, update)
 
+
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
