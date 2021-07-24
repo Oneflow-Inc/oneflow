@@ -1155,7 +1155,7 @@ def _test_conv2d(test_case, conv, data, weight, output, bias=None, device="cuda"
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
     conv.to(to_device)
     of_out = conv(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=0.0001, atol=1e-08))
+    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=0.001, atol=1e-07))
 
 
 def _test_conv2d_backward(
@@ -1535,7 +1535,7 @@ def _test_conv2d_large_out_channel(test_case, device):
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-05, 1e-06))
     output = output.sum()
     output.backward()
     np_grad = np.array(
