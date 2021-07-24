@@ -22,6 +22,7 @@ from google.protobuf import text_format
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+from oneflow.lib.core.box import Box
 
 
 class OfBlob(object):
