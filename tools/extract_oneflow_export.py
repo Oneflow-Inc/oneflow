@@ -491,8 +491,10 @@ if __name__ == "__main__":
     assert args.out_dir != "~"
     assert args.out_dir != "/"
     subprocess.check_call(f"mkdir -p {OUT_PATH}", shell=True)
-    subprocess.check_call(f"rm -rf {out_oneflow_dir}", shell=True)
-    # step 0: parse and load all segs into memory
+
+    for py_f in Path(out_oneflow_dir).glob('**/*.py'):
+        py_f.unlink()
+
     srcs = get_files()
     final_trees = {}
 
