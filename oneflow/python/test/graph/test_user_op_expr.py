@@ -19,7 +19,7 @@ import numpy as np
 import os
 
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
 import oneflow._oneflow_internal
 from oneflow.python.framework.multi_client_session import MultiClientSession

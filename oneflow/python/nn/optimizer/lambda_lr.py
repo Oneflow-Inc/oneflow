@@ -16,12 +16,11 @@ limitations under the License.
 
 import types
 
-from oneflow.python.oneflow_export import experimental_api, oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 from .lr_scheduler import LrScheduler
 
 
 @oneflow_export("optim.lr_scheduler.LambdaLR")
-@experimental_api
 class LambdaLR(LrScheduler):
     r"""
     Sets the learning rate of each parameter group to the initial lr times a given function.
@@ -42,7 +41,7 @@ class LambdaLR(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
 
         ...
         lambda1 = lambda step: step // 30

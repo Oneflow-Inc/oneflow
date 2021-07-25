@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 def _generate_output_size(input_size, output_size):
@@ -41,7 +41,6 @@ def _generate_output_size(input_size, output_size):
 
 
 @oneflow_export("nn.AdaptiveAvgPool1d")
-@experimental_api
 class AdaptiveAvgPool1d(Module):
     r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
@@ -56,10 +55,9 @@ class AdaptiveAvgPool1d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> m = nn.AdaptiveAvgPool1d(5)
         >>> input = flow.Tensor(np.random.randn(1, 64, 8))
         >>> output = m(input)
@@ -84,11 +82,10 @@ class AdaptiveAvgPool1d(Module):
 
 
 @oneflow_export("adaptive_avg_pool1d")
-@experimental_api
 def adaptive_avg_pool1d(input, output_size):
     r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool1d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool1d`
 
     Args:
         input: input tensor
@@ -98,7 +95,6 @@ def adaptive_avg_pool1d(input, output_size):
 
 
 @oneflow_export("nn.AdaptiveAvgPool2d")
-@experimental_api
 class AdaptiveAvgPool2d(Module):
     r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
@@ -116,10 +112,9 @@ class AdaptiveAvgPool2d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
         >>> output = m(input)
@@ -151,11 +146,10 @@ class AdaptiveAvgPool2d(Module):
 
 
 @oneflow_export("adaptive_avg_pool2d")
-@experimental_api
 def adaptive_avg_pool2d(input, output_size):
     r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool2d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool2d`
 
     Args:
         input: input tensor
@@ -165,7 +159,6 @@ def adaptive_avg_pool2d(input, output_size):
 
 
 @oneflow_export("nn.AdaptiveAvgPool3d")
-@experimental_api
 class AdaptiveAvgPool3d(Module):
     r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
@@ -183,10 +176,9 @@ class AdaptiveAvgPool3d(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> m = nn.AdaptiveAvgPool3d((5,7,9))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
         >>> output = m(input)
@@ -218,11 +210,10 @@ class AdaptiveAvgPool3d(Module):
 
 
 @oneflow_export("adaptive_avg_pool3d")
-@experimental_api
 def adaptive_avg_pool3d(input, output_size):
     r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
-    See :mod:`oneflow.experimental.nn.AdaptiveAvgPool3d`
+    See :mod:`oneflow.nn.AdaptiveAvgPool3d`
 
     Args:
         input: input tensor

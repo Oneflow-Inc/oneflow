@@ -48,7 +48,12 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(
       status->out_num_ = conf.id_list(status->in_id_).value_size();
     }
   }
-  *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);
+
+  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    *BnInOp2Blob("out")->mut_dptr<T>() = 0;
+  } else {
+    *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);
+  }
   ++status->out_idx_;
 }
 

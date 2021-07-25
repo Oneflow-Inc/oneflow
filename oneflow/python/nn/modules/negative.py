@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -29,7 +29,6 @@ class Negative(Module):
 
 @oneflow_export("negative", "neg")
 @register_tensor_op("negative")
-@experimental_api
 def negative_op(x):
     """This operator computes the negative value of Tensor.
 
@@ -44,9 +43,8 @@ def negative_op(x):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor(
         ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
         ... )

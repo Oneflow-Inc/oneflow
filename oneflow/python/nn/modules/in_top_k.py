@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
@@ -42,7 +42,6 @@ class InTopk(Module):
 
 
 @oneflow_export("in_top_k")
-@experimental_api
 def in_top_k_op(targets, predictions, k):
     r"""Says whether the targets are in the top K predictions.
 
@@ -58,9 +57,8 @@ def in_top_k_op(targets, predictions, k):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> targets1 = flow.Tensor(np.array([3, 1]), dtype=flow.int32)
         >>> predictions1 = flow.Tensor(np.array([[0.0, 1.0, 2.0, 3.0], [3.0, 2.0, 1.0, 0.0],]), dtype=flow.float32)
         >>> out1 = flow.in_top_k(targets1, predictions1, k=1)
@@ -81,13 +79,12 @@ def in_top_k_op(targets, predictions, k):
 
 
 @register_tensor_op("in_top_k")
-@experimental_api
 def in_top_k_op_tensor(targets, predictions, k):
     r"""
 
     in_top_k() -> Tensor
 
-    See :func:`oneflow.experimental.in_top_k`
+    See :func:`oneflow.in_top_k`
 
     """
 
