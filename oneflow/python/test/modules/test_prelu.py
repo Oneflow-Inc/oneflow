@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _prelu(input, alpha):
@@ -84,6 +85,17 @@ class TestPReLU(flow.unittest.TestCase):
             _test_prelu(test_case, *arg)
             _test_prelu_ndims(test_case, *arg)
             _test_prelu_grad(test_case, *arg)
+
+    @unittest.skip("prelu has bug")
+    @autotest()
+    def test_prelu_module_with_random_data(test_case):
+        m = torch.nn.PReLU(num_parameters=random().to(int), init=random().to(float))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
