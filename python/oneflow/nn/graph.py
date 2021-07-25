@@ -275,6 +275,5 @@ class GraphConfig(FunctionConfig):
 
 
 from oneflow.nn.graph import Graph as Graph
-from oneflow.nn.graph import GraphConfig
 from oneflow.nn.graph_block import Block, BlockConfig
 from oneflow.nn.graph_optimizer import OptimizerConfig

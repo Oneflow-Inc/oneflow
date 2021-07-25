@@ -253,14 +253,17 @@ class ExportVisitor(ast.NodeTransformer):
                     asname = target_symbol0
                     if node.name == target_symbol0:
                         asname = None
-                    import_from_src = ast.ImportFrom(
-                        module=self.src_target_module,
-                        names=[ast.alias(name=node.name, asname=asname),],
-                        level=0,
-                    )
-                    self.append_export(
-                        target_module=target_module0, node=import_from_src
-                    )
+                    if target_module0 == target_module and node.name == target_symbol0:
+                        print("[skip]", target_module0, target_symbol0)
+                    else:
+                        import_from_src = ast.ImportFrom(
+                            module=self.src_target_module,
+                            names=[ast.alias(name=node.name, asname=asname),],
+                            level=0,
+                        )
+                        self.append_export(
+                            target_module=target_module0, node=import_from_src
+                        )
                     if is_deprecated:
                         return [import_oneflow_deprecate, node]
                     else:

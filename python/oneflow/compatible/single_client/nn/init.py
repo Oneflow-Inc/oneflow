@@ -75,17 +75,3 @@ def _calculate_fan_in_and_fan_out(tensor):
     fan_in = num_input_fmaps * receptive_field_size
     fan_out = num_output_fmaps * receptive_field_size
     return (fan_in, fan_out)
-
-
-from oneflow.compatible.single_client.nn.init import (
-    calculate_gain,
-    constant_,
-    kaiming_normal_,
-    kaiming_uniform_,
-    normal_,
-    ones_,
-    uniform_,
-    xavier_normal_,
-    xavier_uniform_,
-    zeros_,
-)
