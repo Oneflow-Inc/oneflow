@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "OneFlow/OneFlowOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -23,6 +21,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/PassManager.h"
@@ -30,6 +29,8 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Translation.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -40,6 +41,9 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/Passes.h"
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -55,12 +59,6 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-#include "OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/Passes.h"
 
 namespace mlir {
 
@@ -965,9 +963,6 @@ void RoundTripOneFlowJob(
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
-  context.loadDialect<memref::MemRefDialect>();
-  context.loadDialect<tosa::TosaDialect>();
-  context.loadDialect<linalg::LinalgDialect>();
 
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
