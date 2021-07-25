@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
@@ -52,11 +52,10 @@ class Gather(Module):
 
 @oneflow_export("gather")
 @register_tensor_op("gather")
-@experimental_api
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.
 
-    For a 3-D tensor the output is specified by:
+    For a 3-D tensor the output is specified by::
 
         out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
         out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
@@ -76,10 +75,8 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
         >>> output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)

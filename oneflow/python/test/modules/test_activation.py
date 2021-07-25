@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 from scipy import special
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
@@ -737,9 +737,15 @@ class TestHardswishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_hardswish_impl(test_case, *arg)
 
+    @autotest()
     def test_hardswish_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Hardswish", device=device, n=2)
+        m = torch.nn.Hardswish()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def _np_hardtanh_grad(x):

@@ -27,7 +27,7 @@ def _test_stack(test_case, device, shape):
     x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y_tensor = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
     out_np = np.stack([x, y], axis=1)
-    out_of = flow.experimental.stack([x_tensor, y_tensor], dim=1).numpy()
+    out_of = flow.stack([x_tensor, y_tensor], dim=1).numpy()
     test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
 
@@ -37,7 +37,7 @@ def _test_stack_tuple_input(test_case, device, shape):
     x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y_tensor = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
     out_np = np.stack([x, y], axis=0)
-    out_of = flow.experimental.stack((x_tensor, y_tensor), dim=0).numpy()
+    out_of = flow.stack((x_tensor, y_tensor), dim=0).numpy()
     test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
 
@@ -46,7 +46,7 @@ def _test_stack_backward(test_case, device, shape):
     y = np.random.rand(*shape)
     x_tensor = flow.Tensor(x, device=flow.device(device), requires_grad=True)
     y_tensor = flow.Tensor(y, device=flow.device(device), requires_grad=True)
-    out_of = flow.experimental.stack([x_tensor, y_tensor]).sum()
+    out_of = flow.stack([x_tensor, y_tensor]).sum()
     out_of.backward()
     test_case.assertTrue(
         np.allclose(x_tensor.grad.numpy(), np.ones(x_tensor.shape), 1e-5, 1e-5)
@@ -62,7 +62,7 @@ def _test_stack_different_dim(test_case, device, shape):
     x_tensor = flow.Tensor(x, device=flow.device(device))
     y_tensor = flow.Tensor(y, device=flow.device(device))
     for axis in range(-len(x.shape) - 1, len(x.shape) + 1):
-        out_of = flow.experimental.stack([x_tensor, y_tensor], dim=axis)
+        out_of = flow.stack([x_tensor, y_tensor], dim=axis)
         out_np = np.stack([x, y], axis=axis)
         test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 
@@ -77,7 +77,7 @@ def _test_stack_multi_input(test_case, device, shape):
             tmp = np.random.rand(*shape)
             x.append(tmp)
             x_tensor.append(flow.Tensor(tmp, device=flow.device(device)))
-        out_of = flow.experimental.stack(x_tensor, dim=-1)
+        out_of = flow.stack(x_tensor, dim=-1)
         out_np = np.stack(x, axis=-1)
         test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 

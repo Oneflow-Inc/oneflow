@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
@@ -29,7 +29,6 @@ class Gather_nd(Module):
 
 
 @oneflow_export("gather_nd")
-@experimental_api
 def gather_nd_op(input, index):
     r"""This operator is a high-dimensional extension of `gather`, `index` is a K-dimensional
     tensor, which is regarded as a index of input Tensor `input`.
@@ -49,10 +48,8 @@ def gather_nd_op(input, index):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> input = flow.Tensor(np.array([[1, 2,3], [4, 5,6],[7,8,9]]), dtype=flow.float)
         >>> index_1 = flow.Tensor(np.array([[0], [2]]), dtype=flow.int)
         >>> out_1 = flow.gather_nd(input,index_1)

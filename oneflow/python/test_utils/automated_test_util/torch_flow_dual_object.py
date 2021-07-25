@@ -19,8 +19,7 @@ import functools
 import os
 
 import torch as torch_original
-import oneflow as flow_stable
-import oneflow.experimental as flow
+import oneflow as flow
 import numpy as np
 from .generators import generator, random_tensor, Nothing
 
@@ -233,7 +232,7 @@ def check_equality(dual_object: DualObject, rtol=1e-4, atol=1e-5):
 
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
-@equality_checker(torch_original.Tensor, flow_stable._oneflow_internal.Tensor)
+@equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
 def check_tensor_equality(torch_tensor, flow_tensor, rtol=1e-4, atol=1e-5):
     # TODO: check dtype
     if torch_tensor.grad is not None:
@@ -301,14 +300,25 @@ def autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-5):
 
 
 def random_pytorch_tensor(
-    ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None, requires_grad=True
+    ndim=None,
+    dim0=1,
+    dim1=None,
+    dim2=None,
+    dim3=None,
+    dim4=None,
+    low=0,
+    high=1,
+    dtype=float,
+    requires_grad=True,
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4)
+        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
         .value()
-        .requires_grad_(requires_grad)
+        .requires_grad_(
+            requires_grad and dtype != int
+        )  # Only Tensors of floating point dtype can require gradients
     )
     flow_tensor = flow.tensor(pytorch_tensor.detach().cpu().numpy(), requires_grad=True)
     return GetDualObject("unused", pytorch_tensor, flow_tensor)

@@ -19,7 +19,7 @@ import numpy as np
 import os
 
 import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
 import oneflow._oneflow_internal
 from oneflow.python.framework.multi_client_session import MultiClientSession
@@ -82,12 +82,14 @@ class TestFetchOutputTensor(unittest.TestCase):
             lazy_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
             test_case.assertEqual(lazy_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(lazy_tensor.is_lazy)
-            test_case.assertTrue(lazy_tensor.is_consistent)
+            test_case.assertTrue(lazy_tensor.is_local)
 
             eager_tensor = output_op.apply([lazy_tensor], attrs)[0]
             test_case.assertEqual(eager_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(not eager_tensor.is_lazy)
-            test_case.assertTrue(eager_tensor.is_consistent)
+            test_case.assertTrue(eager_tensor.is_local)
+
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 if __name__ == "__main__":
