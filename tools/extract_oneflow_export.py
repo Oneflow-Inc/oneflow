@@ -555,8 +555,10 @@ if __name__ == "__main__":
     )
     pool.close()
     # TODO: touch __init__.py, oneflow/F/__init__.py
-    Path(os.path.join(OUT_PATH, "oneflow/F")).mkdir(exist_ok=True)
-    Path(os.path.join(OUT_PATH, "oneflow/F/__init__.py")).touch()
+    for root in [COMPATIBLE_MODULE]:
+        root = root.replace(".", "/")
+        Path(os.path.join(OUT_PATH, f"{root}/experimental/F")).mkdir(exist_ok=True)
+        Path(os.path.join(OUT_PATH, f"{root}/experimental/F/__init__.py")).touch()
     # step 1: extract all exports
     # step 2: merge exports into src in python/
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__
