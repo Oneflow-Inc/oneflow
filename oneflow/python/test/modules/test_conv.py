@@ -1764,6 +1764,7 @@ class TestConv2d(flow.unittest.TestCase):
                 device=device,
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_kernel(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
@@ -1777,8 +1778,10 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_kernel_data,
                 test_conv2d_kernel_weight,
                 test_conv2d_kernel_output,
+                device=device
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_kernel_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
@@ -1793,6 +1796,7 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_kernel_weight,
                 test_conv2d_kernel_data_grad,
                 test_conv2d_kernel_weight_grad,
+                device=device
             )
 
     def test_conv2d_dilation(test_case):
