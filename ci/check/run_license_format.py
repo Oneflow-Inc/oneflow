@@ -85,9 +85,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-v", "--verbose", default=False, action="store_true", required=False
     )
-    parser.add_argument(
-        "--silent", default=False, action="store_true", required=False
-    )
+    parser.add_argument("--silent", default=False, action="store_true", required=False)
     parser.add_argument(
         "-c", "--check", default=False, action="store_true", required=False
     )

@@ -91,8 +91,10 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
         if node.id in self.keywords:
             self.has_reserved_keyword = True
 
+
 def replace_filename(name: str):
     return name.replace("name_scope", "namescope")
+
 
 def replace_str(name: str):
     name = replace_filename(name)
@@ -190,7 +192,9 @@ class ExportVisitor(ast.NodeTransformer):
         return self.visit_FunctionDef(node)
 
     def visit_FunctionDef(self, node):
-        is_compatible_and_experimental = is_compatible_root_module(self.root_module) and is_experimental(node)
+        is_compatible_and_experimental = is_compatible_root_module(
+            self.root_module
+        ) and is_experimental(node)
         if not is_compatible_root_module(self.root_module) and is_stable(node):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
@@ -224,7 +228,9 @@ class ExportVisitor(ast.NodeTransformer):
                 target_symbol0 = arg0.value.split(".")[-1]
 
                 if ".".join([target_module0, target_symbol0]) == self.src_target_module:
-                    raise ValueError("[colition][both func and module]", self.src_target_module)
+                    raise ValueError(
+                        "[colition][both func and module]", self.src_target_module
+                    )
                 if is_kept_in_src:
                     target_module = self.src_target_module
                     target_symbol = node.name
@@ -234,7 +240,9 @@ class ExportVisitor(ast.NodeTransformer):
                 # nth export: import from first export
                 for argN in d.args[1::]:
                     target_moduleN = join_module(
-                        self.root_module, experimental_module, get_parent_module(argN.value)
+                        self.root_module,
+                        experimental_module,
+                        get_parent_module(argN.value),
                     )
                     target_nameN = argN.value.split(".")[-1]
                     assert arg0 != argN, {"arg0": arg0, "argN": argN}
@@ -357,15 +365,20 @@ class SrcFile:
             self.export_visitor.visit(self.tree)
             if self.target_module == root_module:
                 self.export_visitor.append_export(
-                    target_module=root_module, node=ast.parse(f"from . import distributed")
+                    target_module=root_module,
+                    node=ast.parse(f"from . import distributed"),
                 )
                 if self.target_module == "oneflow":
                     self.export_visitor.append_export(
-                        target_module=root_module, node=ast.parse(f"from . import saved_model")
+                        target_module=root_module,
+                        node=ast.parse(f"from . import saved_model"),
                     )
                 else:
                     self.export_visitor.append_export(
-                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env, scope, math, optimizer, losses")
+                        target_module="oneflow.compatible.single_client",
+                        node=ast.parse(
+                            f"from . import env, scope, math, optimizer, losses"
+                        ),
                     )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
@@ -502,7 +515,7 @@ def save_trees(args=None):
     new_txt = ""
     if dst.name.startswith("test_"):
         if "compatible" in str(dst):
-           new_txt += f"""
+            new_txt += f"""
 import {COMPATIBLE_MODULE}.unittest
 """
         else:
@@ -594,7 +607,9 @@ if __name__ == "__main__":
     if args.isort:
         print("[postprocess]", "isort")
         subprocess.check_call(
-            f"{sys.executable} -m isort --skip oneflow/utils/data/__init__.py . {extra_arg}", shell=True, cwd=args.out_dir,
+            f"{sys.executable} -m isort --skip oneflow/utils/data/__init__.py . {extra_arg}",
+            shell=True,
+            cwd=args.out_dir,
         )
     if args.license:
         print("[postprocess]", "license")
