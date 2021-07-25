@@ -59,7 +59,7 @@ class TestGraph(flow.unittest.TestCase):
         m = CustomModule()
         y = m(x)
 
-        class CustomGraph(flow.nn.Graph):
+        class CustomGraphNestedModule(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
@@ -67,7 +67,7 @@ class TestGraph(flow.unittest.TestCase):
             def build(self, x):
                 return self.m(x)
 
-        g = CustomGraph()
+        g = CustomGraphNestedModule()
         test_case.assertEqual(g.name, g._c_nn_graph.name)
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         test_case.assertEqual(g.m.type, "MODULE")
@@ -87,7 +87,9 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
     def test_graph_config(test_case):
-        class CustomGraph(flow.nn.Graph):
+        print("cclog: CustomGraphConfig begin")
+
+        class CustomGraphConfig(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModule()
@@ -97,15 +99,18 @@ class TestGraph(flow.unittest.TestCase):
                 x = self.m(x)
                 return x
 
-        g = CustomGraph()
+        g = CustomGraphConfig()
         test_case.assertEqual(g.config.training, False)
         g.config.enable_fuse_add_to_output(True)
         g.config.enable_fuse_add_to_output(False)
         for s in g._state():
             print("g state: ", repr(s))
         print(repr(g))
+        print("cclog: CustomGraphConfig done")
 
     def test_graph_name(test_case):
+        print("cclog: GraphName begin")
+
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -138,6 +143,7 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.Graph._child_init_cnt.clear()
         for i in range(0, 3):
             create_graph(i)
+        print("cclog: GraphName done")
 
     def test_graph_build_ctx(test_case):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
@@ -148,12 +154,12 @@ class TestGraph(flow.unittest.TestCase):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
-        class CustomGraph(flow.nn.Graph):
+        class CustomGraphGraphBuildCtx(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.config.enable_auto_mixed_precision(True)
 
-            def build(self):
+            def build(self, x):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
                 import oneflow.framework.session_context as session_ctx
                 from oneflow.framework.multi_client_session import MultiClientSession
@@ -169,11 +175,14 @@ class TestGraph(flow.unittest.TestCase):
                     oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName(),
                     self.name,
                 )
+                return x
 
         test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
-        g = CustomGraph()
+        g = CustomGraphGraphBuildCtx()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        g._compile()
+        data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
+        x = flow.tensor(data, dtype=flow.float32)
+        g._compile(x)
         print("graph proto", g._graph_proto)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
@@ -183,7 +192,7 @@ class TestGraph(flow.unittest.TestCase):
                 super().__init__()
                 self.conv1 = flow.nn.Conv2d(1, 1, 5)
 
-            def forward(self):
+            def forward(self, x):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
@@ -192,16 +201,17 @@ class TestGraph(flow.unittest.TestCase):
                     "pipeline_stage_id_hint"
                 ].at_int64
                 test_case.assertEqual(stage_int, 0)
-                x = self.conv1.weight
-                test_case.assertEqual(type(x), flow.nn.graph.Block)
+                weight = self.conv1.weight
+                test_case.assertEqual(type(weight), flow.nn.graph.Block)
+                return self.conv1(x)
 
         class SubModule1(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.fc1 = flow.nn.Linear(36, 4)
+                self.fc1 = flow.nn.Linear(36, 4, False)
                 self.register_buffer("dummy_buff", flow.Tensor(1, 4))
 
-            def forward(self):
+            def forward(self, x):
                 scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(
@@ -219,13 +229,15 @@ class TestGraph(flow.unittest.TestCase):
                     prefixes.append(prefix)
                 name_in_scope = ".".join(prefixes)
                 test_case.assertEqual(name, name_in_scope)
-                x = self.dummy_buff
+                b = self.dummy_buff
                 dummy_buff_scope_proto = graph_build_util.scope_to_proto(
                     self._buffers["dummy_buff"].scope
                 )
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
                 )
+                x = self.fc1(x)
+                return x + b
 
         class CustomModule1(flow.nn.Module):
             def __init__(self):
@@ -233,13 +245,18 @@ class TestGraph(flow.unittest.TestCase):
                 self.layer0 = SubModule0()
                 self.layer1 = SubModule1()
 
-            def forward(self):
-                x = self.layer0()
-                y = self.layer1()
+            def forward(self, x, y):
+                print("x0: ", x.shape)
+                x = self.layer0(x)
+                print("x1: ", x.shape)
+                print("y0: ", y.shape)
+                y = self.layer1(y)
+                print("y1: ", y.shape)
+                return (x, y)
 
         m = CustomModule1()
 
-        class CustomGraph1(flow.nn.Graph):
+        class CustomGraphBlockScope(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
@@ -247,13 +264,15 @@ class TestGraph(flow.unittest.TestCase):
                 self.m.layer0.config.activation_checkpointing = True
                 self.m.layer1.config.stage_id = 1
 
-            def build(self):
-                return self.m()
+            def build(self, x, y):
+                return self.m(x, y)
 
-        g = CustomGraph1()
-        x = flow.Tensor(1, 1, 10, 10)
-        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        g._compile()
+        g = CustomGraphBlockScope()
+        x = np.ones((1, 1, 10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        y = np.ones((16, 36))
+        y = flow.tensor(y, dtype=flow.float32)
+        g._compile(x, y)
 
 
 if __name__ == "__main__":

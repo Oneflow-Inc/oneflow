@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from automated_test_util import *
 from test_util import GenArgList
 
 import oneflow as flow
@@ -72,6 +73,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.unsqueeze(x, random(1, 3).to(int))
+        return y
 
 
 if __name__ == "__main__":

@@ -101,25 +101,12 @@ class TestSqueeze(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
     def test_flow_squeeze_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case,
-                "squeeze",
-                extra_annotations={"dim": int},
-                extra_generators={"dim": random(0, 6)},
-                device=device,
-            )
-
-    def test_flow_tensor_squeeze_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(
-                test_case,
-                "squeeze",
-                extra_annotations={"dim": int},
-                extra_generators={"dim": random(0, 6)},
-                device=device,
-            )
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.squeeze(x, random(1, 3).to(int))
+        return y
 
 
 if __name__ == "__main__":

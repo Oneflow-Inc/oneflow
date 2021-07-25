@@ -530,6 +530,55 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.numpy(), np.zeros(shape), 0.0001, 0.0001)
         )
 
+    def _test_tensor_reshape(test_case):
+        x = np.array(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ).astype(np.float32)
+        input = flow.Tensor(x)
+        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        np_shape = (2, 2, 2, 2)
+        test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+    @autotest()
+    def test_reshape_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.reshape(shape=(-1,))
+        return y
+
+    @autotest()
+    def test_tensor_squeeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.squeeze(random().to(int))
+        return y
+
+    @autotest()
+    def test_flow_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.unsqueeze(random(1, 3).to(int))
+        return y
+
+    @autotest()
+    def test_permute_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.permute(
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+        )
+        return y
+
+    @autotest()
+    def test_transpose_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        return y
+
     def test_tensor_where(test_case):
         x = flow.Tensor(
             np.array([[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),

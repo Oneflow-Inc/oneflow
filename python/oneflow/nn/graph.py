@@ -24,6 +24,7 @@ import oneflow.framework.session_context as session_ctx
 from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
+from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig
 from oneflow.nn.module import Module
@@ -135,6 +136,7 @@ class Graph(object):
                 state_block.set_lazy_origin_builder(
                     partial(graph_build_util.build_graph_state, op_name, state_tensor)
                 )
+            self._variables = convert_to_tensor_tuple(state_tensors)
             outputs = self.build(*lazy_args)
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
@@ -154,15 +156,31 @@ class Graph(object):
                 eager_outputs = eager_outputs[0]
             else:
                 eager_outputs = tuple(eager_outputs)
+            self._outputs = convert_to_tensor_tuple(eager_outputs)
+            self._eager_outputs = eager_outputs
+            self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
+            self._c_nn_graph.register_output_op_names(eager_output_op_names)
+            self._c_nn_graph.register_variable_op_names_and_tensors(
+                state_op_names, self._variables
+            )
             self._job_proto = c_api_util.GetCurrentJob()
+        self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
         return eager_outputs
 
-    def _launch(self):
-        ...
+    def _launch(self, *args):
+        oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
+            convert_to_tensor_tuple(args),
+            self._outputs,
+            self._variables,
+            self._c_nn_graph,
+        )
+        return self._eager_outputs
 
     def __call__(self, *args):
-        ...
+        if not self._is_compiled:
+            self._compile(*args)
+        return self._launch(*args)
 
     def _add_block(self, name: str, module: Module = None) -> None:
         """Adds a module to the current graph as a block.

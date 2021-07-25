@@ -79,6 +79,7 @@ from oneflow.nn.modules.loss import (
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (
+    ConstantPad1d,
     ConstantPad2d,
     ConstantPad3d,
     ReflectionPad2d,
