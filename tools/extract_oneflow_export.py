@@ -91,8 +91,11 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
         if node.id in self.keywords:
             self.has_reserved_keyword = True
 
+def replace_filename(name: str):
+    return name.replace("name_scope", "namescope")
 
 def replace_str(name: str):
+    name = replace_filename(name)
     name = name.replace("lib.core", "support")
     name = name.replace("enable_typing_check", "typing_check")
     if name.startswith("oneflow.python."):
@@ -362,7 +365,7 @@ class SrcFile:
                     )
                 else:
                     self.export_visitor.append_export(
-                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env, scope, math")
+                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env, scope, math, optimizer, losses")
                     )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
@@ -376,6 +379,7 @@ def get_specs_under_python(python_path=None, dst_path=None):
             continue
         rel = p.relative_to(python_path)
         dst = Path(dst_path).joinpath(rel)
+        dst = Path(replace_filename(str(dst)))
         spec = {"src": p, "dst": dst}
         if rel.parts[0] == "test":
             spec["is_test"] = True

@@ -23,7 +23,7 @@ from oneflow.compatible.single_client.experimental.interface_op_read_and_write i
 from oneflow.compatible.single_client.experimental.interface_op_read_and_write import (
     GetInterfaceBlobValue as get_interface_blob_value,
 )
-from oneflow.compatible.single_client.experimental.name_scope import (
+from oneflow.compatible.single_client.experimental.namescope import (
     deprecated_name_scope as name_scope,
 )
 from oneflow.compatible.single_client.experimental.square_sum_op import square_sum

@@ -21,7 +21,7 @@ from oneflow.experimental.interface_op_read_and_write import (
 from oneflow.experimental.interface_op_read_and_write import (
     GetInterfaceBlobValue as get_interface_blob_value,
 )
-from oneflow.experimental.name_scope import deprecated_name_scope as name_scope
+from oneflow.experimental.namescope import deprecated_name_scope as name_scope
 from oneflow.experimental.square_sum_op import square_sum
 from oneflow.experimental.ssp_variable_proxy_op import ssp_variable_proxy
 from oneflow.experimental.typing_check import (

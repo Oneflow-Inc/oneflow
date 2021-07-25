@@ -30,7 +30,7 @@ import oneflow.eager.blob_register as blob_register_util
 import oneflow.eager.boxing_util as boxing_util
 import oneflow.eager.op_infer_util as op_infer_util
 import oneflow.eager.symbol_storage as symbol_storage
-import oneflow.experimental.name_scope as name_scope
+import oneflow.experimental.namescope as name_scope
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.python_callback as python_callback
 import oneflow.framework.remote_blob as remote_blob_util

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.experimental.name_scope import name_scope as namespace
+from oneflow.experimental.namescope import name_scope as namespace
 from oneflow.framework.distribute import (
     ConsistentStrategyEnabled as consistent_view_enabled,
 )

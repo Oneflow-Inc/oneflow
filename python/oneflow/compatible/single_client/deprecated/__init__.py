@@ -18,6 +18,6 @@ from oneflow.compatible.single_client.deprecated.init_cluster_env import (
     delete_worker_by_bootstrap,
     delete_worker_of_multi_process,
 )
-from oneflow.compatible.single_client.experimental.name_scope import (
+from oneflow.compatible.single_client.experimental.namescope import (
     deprecated_name_scope as variable_scope,
 )

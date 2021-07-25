@@ -141,7 +141,7 @@ from oneflow.compatible.single_client.advanced.distribute_ops import (
 from oneflow.compatible.single_client.deprecated.initializer_util import (
     truncated_normal_initializer as truncated_normal,
 )
-from oneflow.compatible.single_client.experimental.name_scope import (
+from oneflow.compatible.single_client.experimental.namescope import (
     deprecated_name_scope as name_scope,
 )
 from oneflow.compatible.single_client.framework.check_point_v2 import (
@@ -410,4 +410,4 @@ from oneflow.compatible.single_client.ops.user_op_builder import (
 from oneflow.compatible.single_client.ops.watch import Watch as watch
 from oneflow.compatible.single_client.ops.watch import WatchDiff as watch_diff
 
-from . import distributed, env, math, scope
+from . import distributed, env, losses, math, optimizer, scope

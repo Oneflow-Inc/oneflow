@@ -36,7 +36,7 @@ from oneflow.compatible.single_client.eager import blob_register as blob_registe
 from oneflow.compatible.single_client.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.eager import op_infer_util as op_infer_util
 from oneflow.compatible.single_client.eager import symbol_storage as symbol_storage
-from oneflow.compatible.single_client.experimental import name_scope as name_scope
+from oneflow.compatible.single_client.experimental import namescope as name_scope
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import (
     python_callback as python_callback,

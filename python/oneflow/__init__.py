@@ -152,7 +152,7 @@ from oneflow.advanced.distribute_ops import cast_to_current_logical_view
 from oneflow.deprecated.initializer_util import (
     truncated_normal_initializer as truncated_normal,
 )
-from oneflow.experimental.name_scope import deprecated_name_scope as name_scope
+from oneflow.experimental.namescope import deprecated_name_scope as name_scope
 from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import LoadVariables as load_variables

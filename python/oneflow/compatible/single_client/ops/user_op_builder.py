@@ -37,7 +37,7 @@ from oneflow.compatible.single_client.core.register import (
 )
 from oneflow.compatible.single_client.eager import eager_blob_util as eager_blob_util
 from oneflow.compatible.single_client.eager import gradient_util as gradient_util
-from oneflow.compatible.single_client.experimental import name_scope as name_scope
+from oneflow.compatible.single_client.experimental import namescope as name_scope
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import (
     compile_context as compile_context,

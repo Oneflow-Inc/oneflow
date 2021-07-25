@@ -30,7 +30,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.eager.eager_blob_util as eager_blob_util
 import oneflow.eager.gradient_util as gradient_util
-import oneflow.experimental.name_scope as name_scope
+import oneflow.experimental.namescope as name_scope
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.compile_context as compile_context
 import oneflow.framework.distribute as distribute

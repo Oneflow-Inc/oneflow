@@ -26,7 +26,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.eager.boxing_util as boxing_util
 import oneflow.eager.gradient_util as gradient_util
 import oneflow.eager.op_executor as op_executor
-import oneflow.experimental.name_scope as name_scope
+import oneflow.experimental.namescope as name_scope
 import oneflow.framework.compile_context as compile_context
 import oneflow.framework.distribute as distribute_util
 import oneflow.framework.hob as hob
