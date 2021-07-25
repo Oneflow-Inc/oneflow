@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
 #include "oneflow/api/python/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
@@ -57,7 +58,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__int__", [](Symbol<Device> p) { return reinterpret_cast<const int64_t>(&*p); })
       .def("__eq__", [](const Symbol<Device>& d1, const Symbol<Device>& d2) { return *d1 == *d2; })
       .def("__str__", [](const Symbol<Device>& d) { return d->ToString(); })
-      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); });
+      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
 }
 
 }  // namespace oneflow

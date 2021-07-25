@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
@@ -92,7 +93,9 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
              return reinterpret_cast<const int64_t>(&*sym);
            })
       .def("__str__", &SbpParallelSymbolToString)
-      .def("__repr__", &SbpParallelSymbolToString);
+      .def("__repr__", &SbpParallelSymbolToString)
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
   m.def(
       "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });

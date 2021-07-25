@@ -43,6 +43,8 @@ class _ConstantBase(Module):
         ), "shape should be int or tuple int!"
 
         self.device = device
+        if isinstance(self.device, str):
+            self.device = flow.device(self.device)
         self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
@@ -61,7 +63,7 @@ class _ConstantBase(Module):
                 self.sbp = (self.sbp,)
             else:
                 for elem in sbp:
-                    assert isinstance(sbp, flow.sbp.sbp), "sbp: %s" % sbp
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
             assert len(self.sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
@@ -258,6 +260,8 @@ class NewOnes(Module):
         super().__init__()
 
         self.device = device
+        if isinstance(self.device, str):
+            self.device = flow.device(self.device)
         self.placement = placement
         self.sbp = sbp
         self.requires_grad = requires_grad
@@ -299,15 +303,17 @@ class NewOnes(Module):
         assert isinstance(
             new_dtype, (flow.dtype)
         ), f"dtype parameter not correct, please check!"
-        assert isinstance(
-            new_device, (str, flow.device)
-        ), f"device parameter not correct, please check!"
-        assert isinstance(
-            new_placement, flow.placement
-        ), f"device parameter not correct, please check!"
-        assert isinstance(
-            new_sbp, flow.sbp.sbp
-        ), f"device parameter not correct, please check!"
+        if new_placement is not None:
+            assert isinstance(
+                new_placement, flow.placement
+            ), f"device parameter not correct, please check!"
+            assert isinstance(
+                new_sbp, flow.sbp.sbp
+            ), f"device parameter not correct, please check!"
+        else:
+            assert isinstance(
+                new_device, (str, flow.device)
+            ), f"device parameter not correct, please check!"
         assert isinstance(
             new_requires_grad, bool
         ), f"requires_grad parameter not correct, please check!"
