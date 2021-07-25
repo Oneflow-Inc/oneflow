@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/OneFlowDialect.h"
+#include "mlir/Parser.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/ir/include/OneFlow/Passes.h"
 
 namespace oneflow {
 
@@ -55,6 +58,13 @@ class MlirJitKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "MlirJitKernel::Compute";
     LOG(ERROR) << ctx->Attr<std::string>("mlir_assembly");
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect>();
+    mlir::MLIRContext mlir_ctx(registry);
+
+    mlir::OwningModuleRef module =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    module->dump();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
