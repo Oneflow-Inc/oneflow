@@ -52,6 +52,7 @@ def _test(test_case, per_channel, symmetric, target_backend, build_backbone_fn):
 
     res_qat = run_with_func_config(build_backbone_fn, qat_func_config)
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_DRY_RUN"), "can't run in dry run")
 class TestQAT(flow.unittest.TestCase):
     def test_qat(test_case):
