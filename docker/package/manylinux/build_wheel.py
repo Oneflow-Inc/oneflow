@@ -88,6 +88,7 @@ def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
+    return ""
     build_dir_real = os.path.join(cache_dir, "build")
     build_dir_mount = os.path.join(oneflow_src_dir, "build")
     return f"-v {build_dir_real}:{build_dir_mount}"
