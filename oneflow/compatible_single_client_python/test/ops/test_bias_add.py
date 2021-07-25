@@ -100,10 +100,10 @@ def CompareBiasAddWithTensorFlow(
     op_args=None,
     input_minval=-10,
     input_maxval=10,
-    y_rtol=1e-5,
-    y_atol=1e-5,
-    x_diff_rtol=1e-5,
-    x_diff_atol=1e-5,
+    y_rtol=1e-3,
+    y_atol=1e-3,
+    x_diff_rtol=1e-2,
+    x_diff_atol=1e-2,
 ):
     assert device_type in ["gpu", "cpu"]
     if op_args is None:
