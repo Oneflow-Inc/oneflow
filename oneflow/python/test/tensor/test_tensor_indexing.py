@@ -42,7 +42,7 @@ def test_basic_slice(test_case, numpy_x):
 
     test_case.assertTrue(np.array_equal(numpy_x[:], x[:].numpy()))
     test_case.assertTrue(np.array_equal(numpy_x[:1], x[:1].numpy()))
-    test_case.assertTrue(np.array_equal(numpy_x[:1], x[:1].numpy()))
+    test_case.assertTrue(np.array_equal(numpy_x[0:1], x[0:1].numpy()))
     test_case.assertTrue(np.array_equal(numpy_x[-2:-1], x[-2:-1].numpy()))
     test_case.assertTrue(np.array_equal(numpy_x[2:100:200], x[2:100:200].numpy()))
 
@@ -82,6 +82,13 @@ def test_advanced_indexing(test_case, numpy_x):
             x[[[[0], [1]], [[0], [1]], [0, 1]]].numpy(),
         )
     )
+    test_case.assertTrue(
+        np.array_equal(
+            numpy_x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]],
+            x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]].numpy(),
+        )
+    )
+
     # Tensor index
     test_case.assertTrue(
         np.array_equal(
@@ -91,8 +98,12 @@ def test_advanced_indexing(test_case, numpy_x):
     )
     test_case.assertTrue(
         np.array_equal(
-            numpy_x[:, np.array([0, 1]), np.array([1, 0])],
-            x[:, flow.Tensor([0, 1]).long(), flow.Tensor([1, 0]).long()].numpy(),
+            numpy_x[:, np.array([[0, 1], [1, 1]]), np.array([[1, 0], [1, 1]])],
+            x[
+                :,
+                flow.Tensor([[0, 1], [1, 1]]).long(),
+                flow.Tensor([[1, 0], [1, 1]]).long(),
+            ].numpy(),
         )
     )
 
