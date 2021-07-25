@@ -349,33 +349,7 @@ from oneflow.ops.initializer_util import (
 )
 from oneflow.ops.loss_ops import ctc_loss, smooth_l1_loss
 from oneflow.ops.one_hot import one_hot
-from oneflow.ops.pad import (
-    constant_pad2d,
-    pad,
-    pad_grad,
-    replication_pad2d,
-    same_padding,
-    zero_pad2d,
-)
 from oneflow.ops.partial_fc_sample import distributed_partial_fc_sample
-from oneflow.ops.user_data_ops import api_image_random_crop as image_random_crop
-from oneflow.ops.user_data_ops import api_image_resize as image_resize
-from oneflow.ops.user_data_ops import api_image_target_resize as image_target_resize
-from oneflow.ops.user_data_ops import image_batch_align as image_batch_align
-from oneflow.ops.user_data_ops import image_decode as image_decode
-from oneflow.ops.user_data_ops import image_flip as image_flip
-from oneflow.ops.user_data_ops import image_normalize as image_normalize
-from oneflow.ops.user_data_ops import object_bbox_flip as object_bbox_flip
-from oneflow.ops.user_data_ops import object_bbox_scale as object_bbox_scale
-from oneflow.ops.user_data_ops import (
-    object_segm_poly_flip as object_segmentation_polygon_flip,
-)
-from oneflow.ops.user_data_ops import (
-    object_segm_poly_scale as object_segmentation_polygon_scale,
-)
-from oneflow.ops.user_data_ops import (
-    object_segm_poly_to_mask as object_segmentation_polygon_to_mask,
-)
 from oneflow.ops.user_op_builder import (
     api_consistent_user_op_builder as consistent_user_op_builder,
 )
@@ -386,7 +360,5 @@ from oneflow.ops.user_op_builder import api_user_op_builder as user_op_builder
 from oneflow.ops.user_op_builder import (
     api_user_op_module_builder as user_op_module_builder,
 )
-from oneflow.ops.watch import Watch as watch
-from oneflow.ops.watch import WatchDiff as watch_diff
 
 from . import autograd, distributed, linalg, optim, saved_model
