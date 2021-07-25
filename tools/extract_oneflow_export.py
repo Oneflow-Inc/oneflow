@@ -362,7 +362,7 @@ class SrcFile:
                     )
                 else:
                     self.export_visitor.append_export(
-                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env")
+                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env, scope, math")
                     )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")

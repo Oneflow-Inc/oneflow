@@ -410,4 +410,4 @@ from oneflow.compatible.single_client.ops.user_op_builder import (
 from oneflow.compatible.single_client.ops.watch import Watch as watch
 from oneflow.compatible.single_client.ops.watch import WatchDiff as watch_diff
 
-from . import distributed, env
+from . import distributed, env, math, scope

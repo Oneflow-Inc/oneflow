@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow.compatible.single_client.experimental.enable_typing_check import (
-    api_enable_typing_check as enable_typing_check,
-)
 from oneflow.compatible.single_client.experimental.indexed_slices_ops import (
     indexed_slices_reduce_sum,
 )
@@ -32,6 +29,9 @@ from oneflow.compatible.single_client.experimental.name_scope import (
 from oneflow.compatible.single_client.experimental.square_sum_op import square_sum
 from oneflow.compatible.single_client.experimental.ssp_variable_proxy_op import (
     ssp_variable_proxy,
+)
+from oneflow.compatible.single_client.experimental.typing_check import (
+    api_enable_typing_check as enable_typing_check,
 )
 from oneflow.compatible.single_client.experimental.unique_op import unique_with_counts
 from oneflow.compatible.single_client.framework.c_api_util import (

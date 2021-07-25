@@ -17,7 +17,7 @@ import inspect
 import typing
 
 import oneflow._oneflow_internal
-import oneflow.experimental.enable_typing_check as enable_typing_check
+import oneflow.experimental.typing_check as enable_typing_check
 import oneflow.framework.local_blob as local_blob_util
 import oneflow.framework.pull_util as pull_util
 import oneflow.framework.remote_blob as remote_blob_util

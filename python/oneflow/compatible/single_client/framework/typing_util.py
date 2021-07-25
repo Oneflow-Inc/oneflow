@@ -18,7 +18,7 @@ import typing
 
 import oneflow._oneflow_internal
 from oneflow.compatible.single_client.experimental import (
-    enable_typing_check as enable_typing_check,
+    typing_check as enable_typing_check,
 )
 from oneflow.compatible.single_client.framework import local_blob as local_blob_util
 from oneflow.compatible.single_client.framework import pull_util as pull_util
