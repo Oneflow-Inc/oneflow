@@ -20,7 +20,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
 
 
@@ -90,13 +90,13 @@ def _test_zeros_like(test_case, device, shape):
 
 
 def _test_new_ones(test_case, device, shape):
-    x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    x = flow.ones(shape, device=flow.device("cpu"))
     y = x.new_ones(shape, device=device)
     test_case.assertTrue(x.dtype == y.dtype)
-    test_case.assertTrue(x.device == y.device)
+    test_case.assertEqual(x.device, y.device)
     test_case.assertTrue(x.requires_grad == y.requires_grad)
 
-    x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    x = flow.ones(shape, device=flow.device("cpu"))
     y = x.new_ones(x.shape, device=device)
     test_case.assertTrue(x.dtype == y.dtype)
     test_case.assertTrue(x.device == y.device)
@@ -111,6 +111,13 @@ def _test_new_ones(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
+    def test_consistent_naive(test_case):
+        placement = flow.placement("cpu", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        x = flow.ones((16, 16), placement=placement, sbp=sbp)
+        test_case.assertEqual(x.sbp, sbp)
+        test_case.assertEqual(x.placement, placement)
+
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [

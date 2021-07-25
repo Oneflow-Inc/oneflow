@@ -16,12 +16,11 @@ limitations under the License.
 
 import math
 
-from oneflow.python.oneflow_export import experimental_api, oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 from .lr_scheduler import LrScheduler
 
 
 @oneflow_export("optim.lr_scheduler.CosineAnnealingLR")
-@experimental_api
 class CosineAnnealingLR(LrScheduler):
     r"""This operator creates a Cosine decayed learning rate scheduler.
 
@@ -56,7 +55,7 @@ class CosineAnnealingLR(LrScheduler):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow as flow
 
         ...
         cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, steps=100, alpha=0.0)

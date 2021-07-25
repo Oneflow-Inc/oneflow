@@ -215,6 +215,19 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
 
+Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
+  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
+  }
+  return tuple;
+}
+
+py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
+  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -299,7 +312,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
-      .def_property_readonly("placement", &TensorGetParallelDesc);
+      .def_property_readonly("placement", &TensorGetParallelDesc)
+      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
 }
 
 }  // namespace one

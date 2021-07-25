@@ -29,25 +29,38 @@ limitations under the License.
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
-#include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace one {
 
+namespace {
+
+Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
+                                            const OpExprInterpContext& ctx) {
+  if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
+  return ctx.parallel_desc;
+}
+
+}  // namespace
+
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
-  const auto& infer_args =
-      JUST(ConsistentTensorMetaInferArgs::New(inputs, placement_scope, ctx.attrs));
-  const auto& result =
-      JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
+  std::shared_ptr<const ConsistentTensorInferResult> result;
+  if (inputs.empty()) {
+    const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
+        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution)));
+    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  } else {
+    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
+    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  }
   const auto& output_tensor_metas = result->output_tensor_metas();
-  const auto& parallel_desc = JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name()));
   int64_t parallel_id = -1;
-  const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
+  const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   using TensorImpl = EagerConsistentTensorImpl;
   TensorImpl::NewMethod New =
       (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
@@ -85,8 +98,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-  JUST(Interpret(op_expr, inputs, outputs, ctx));
-  return Maybe<void>::Ok();
+  return Interpret(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,

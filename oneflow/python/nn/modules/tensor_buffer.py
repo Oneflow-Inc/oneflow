@@ -17,7 +17,7 @@ from typing import Sequence, Optional
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class TensorBufferToTensor(Module):
@@ -37,7 +37,6 @@ class TensorBufferToTensor(Module):
 
 
 @oneflow_export("tensor_buffer_to_tensor")
-@experimental_api
 def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[int]):
     """This operator converts the Tensor's type from TensorBuffer to original type.
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
@@ -59,9 +58,7 @@ def tensor_buffer_to_tensor_op(x, dtype: flow.dtype, instance_shape: Sequence[in
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)
         >>> x = flow.Tensor(x)
         >>> x = flow.tensor_to_tensor_buffer(x, instance_dims=2)
@@ -89,7 +86,6 @@ class TensorToTensorBuffer(Module):
 
 
 @oneflow_export("tensor_to_tensor_buffer")
-@experimental_api
 def tensor_to_tensor_buffer(x, instance_dims: int):
     """This operator converts the Tensor's type to TensorBuffer.
 
@@ -108,9 +104,7 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = np.random.randn(4, 16, 64, 64).astype(np.float32)
         >>> x = flow.Tensor(x)
         >>> x = flow.tensor_to_tensor_buffer(x, instance_dims=2)
@@ -141,7 +135,6 @@ class GenTensorBuffer(Module):
 
 
 @oneflow_export("gen_tensor_buffer")
-@experimental_api
 def gen_tensor_buffer(
     shape: Sequence[int],
     shape_list: Sequence[Sequence[int]],

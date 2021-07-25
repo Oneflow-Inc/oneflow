@@ -134,6 +134,9 @@ class ParallelDesc final {
   bool containing_current_rank_;
 };
 
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                  int64_t* parallel_id);
+
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
 }
