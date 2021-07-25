@@ -17,15 +17,11 @@ from typing import Optional, Sequence
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import (
-    initializer_conf_pb2 as initializer_conf_util,
-)
-from oneflow.compatible.single_client.core.job import (
-    regularizer_conf_pb2 as regularizer_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.framework import distribute as distribute_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 
 def prelu(

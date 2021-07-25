@@ -19,16 +19,6 @@ from typing import Optional, Sequence, Union
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import (
-    initializer_conf_pb2 as initializer_conf_util,
-)
-from oneflow.compatible.single_client.core.job import (
-    regularizer_conf_pb2 as regularizer_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.eager import gradient_util as gradient_util
 from oneflow.compatible.single_client.eager import op_executor as op_executor
@@ -42,6 +32,10 @@ from oneflow.compatible.single_client.framework import remote_blob as remote_blo
 from oneflow.compatible.single_client.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.framework import session_context as session_ctx
 from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

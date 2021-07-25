@@ -18,10 +18,8 @@ import random
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
-from oneflow.compatible.single_client.core.job import (
-    sbp_parallel_pb2 as sbp_parallel_pb,
-)
 from oneflow.compatible.single_client.eager import symbol as symbol_util
+from oneflow.core.job import sbp_parallel_pb2 as sbp_parallel_pb
 
 
 class BoxingToMiddle(object):

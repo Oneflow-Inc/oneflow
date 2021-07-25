@@ -20,10 +20,8 @@ from datetime import datetime
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import (
-    initializer_conf_pb2 as initializer_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 _DATA_DIR = "/dataset/PNGS/PNG227/of_record_repeated"
 _MODEL_SAVE_DIR = "./model_save-{}".format(

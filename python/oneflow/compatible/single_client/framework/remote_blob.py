@@ -20,9 +20,6 @@ import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.eager import eager_blob_util as eager_blob_util
 from oneflow.compatible.single_client.eager import gradient_util as gradient_util
@@ -37,6 +34,7 @@ from oneflow.compatible.single_client.framework.dtype import (
     convert_proto_dtype_to_oneflow_dtype,
 )
 from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

@@ -25,16 +25,6 @@ from oneflow._oneflow_internal.oneflow.core.framework import (
     user_op_attr as user_op_attr_cfg,
 )
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.eager import (
-    eager_symbol_pb2 as eager_symbol_util,
-)
-from oneflow.compatible.single_client.core.framework import (
-    user_op_attr_pb2 as attr_value_pb,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.eager import eager_blob_util as eager_blob_util
 from oneflow.compatible.single_client.eager import gradient_util as gradient_util
 from oneflow.compatible.single_client.experimental import namescope as name_scope
@@ -47,6 +37,10 @@ from oneflow.compatible.single_client.framework import hob as hob
 from oneflow.compatible.single_client.framework import interpret_util as interpret_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.core.eager import eager_symbol_pb2 as eager_symbol_util
+from oneflow.core.framework import user_op_attr_pb2 as attr_value_pb
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

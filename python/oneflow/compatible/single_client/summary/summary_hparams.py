@@ -21,13 +21,11 @@ import numpy as np
 import six
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.summary import event_pb2 as event_pb2
-from oneflow.compatible.single_client.core.summary import (
-    plugin_data_pb2 as plugin_data_pb2,
-)
-from oneflow.compatible.single_client.core.summary import projector_pb2 as projector_pb2
-from oneflow.compatible.single_client.core.summary import summary_pb2 as summary_pb2
-from oneflow.compatible.single_client.core.summary import tensor_pb2 as tensor_pb2
+from oneflow.core.summary import event_pb2 as event_pb2
+from oneflow.core.summary import plugin_data_pb2 as plugin_data_pb2
+from oneflow.core.summary import projector_pb2 as projector_pb2
+from oneflow.core.summary import summary_pb2 as summary_pb2
+from oneflow.core.summary import tensor_pb2 as tensor_pb2
 
 
 def text(text, tag=None):

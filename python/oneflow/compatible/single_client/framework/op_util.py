@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-from oneflow.compatible.single_client.core.operator.op_conf_pb2 import OperatorConf
+from oneflow.core.operator.op_conf_pb2 import OperatorConf
 
 
 def IsOpConfOnlyCpuSupported(op_conf):

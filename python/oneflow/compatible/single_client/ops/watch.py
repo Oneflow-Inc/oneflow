@@ -23,10 +23,6 @@ import oneflow._oneflow_internal
 from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import eager as eager_util
-from oneflow.compatible.single_client.core.job.lbi_diff_watcher_info_pb2 import (
-    LbiAndDiffWatcherUuidPair,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import (
     compile_context as compile_context,
@@ -40,6 +36,8 @@ from oneflow.compatible.single_client.framework import typing as oft
 from oneflow.compatible.single_client.framework import typing_util as oft_util
 from oneflow.compatible.single_client.framework import watcher as watcher_util
 from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 
 def Watch(

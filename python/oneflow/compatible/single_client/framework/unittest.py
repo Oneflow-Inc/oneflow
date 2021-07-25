@@ -28,8 +28,8 @@ from typing import Any, Callable, Dict
 from google.protobuf import text_format as pbtxt
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
 from oneflow.compatible.single_client.framework import env_util as env_util
+from oneflow.core.job.env_pb2 import EnvProto
 
 
 class _ClearDefaultSession(object):

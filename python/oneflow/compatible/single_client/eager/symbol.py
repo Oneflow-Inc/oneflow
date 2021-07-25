@@ -15,8 +15,8 @@ limitations under the License.
 """
 import functools
 
-from oneflow.compatible.single_client.core.job import placement_pb2 as placement_pb
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
+from oneflow.core.job import placement_pb2 as placement_pb
 
 
 class Symbol(object):

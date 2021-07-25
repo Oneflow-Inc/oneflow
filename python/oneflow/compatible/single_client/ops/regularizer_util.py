@@ -13,10 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.core.job import (
-    regularizer_conf_pb2 as regularizer_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.job import regularizer_conf_pb2 as regularizer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 
 def l1_l2_regularizer(

@@ -22,16 +22,6 @@ import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import (
-    interface_blob_conf_pb2 as inter_face_blob_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.operator import (
-    op_node_signature_pb2 as op_node_signature_pb,
-)
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.eager import blob_register as blob_register_util
 from oneflow.compatible.single_client.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.eager import op_infer_util as op_infer_util
@@ -44,6 +34,10 @@ from oneflow.compatible.single_client.framework import (
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.framework import scope_util as scope_util
 from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.core.operator import interface_blob_conf_pb2 as inter_face_blob_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.operator import op_node_signature_pb2 as op_node_signature_pb
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 default_blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 

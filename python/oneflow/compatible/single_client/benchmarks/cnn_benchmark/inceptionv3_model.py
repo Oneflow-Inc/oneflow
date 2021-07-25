@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
 
 
 def _conv2d_layer(

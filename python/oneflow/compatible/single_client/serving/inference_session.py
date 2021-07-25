@@ -31,13 +31,6 @@ from oneflow._oneflow_internal.oneflow.core.operator import (
     interface_blob_conf as interface_blob_conf_proto_cfg,
 )
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import job_conf_pb2 as job_conf_proto
-from oneflow.compatible.single_client.core.operator import (
-    interface_blob_conf_pb2 as interface_blob_conf_proto,
-)
-from oneflow.compatible.single_client.core.serving import (
-    saved_model_pb2 as saved_model_pb,
-)
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import compile_context as compile_ctx
 from oneflow.compatible.single_client.framework import dtype as dtype_util
@@ -47,6 +40,9 @@ from oneflow.compatible.single_client.framework import placement_util as placeme
 from oneflow.compatible.single_client.framework import runtime_mode as runtime_mode
 from oneflow.compatible.single_client.framework import scope_util as scope_util
 from oneflow.compatible.single_client.framework import session_util as session_util
+from oneflow.core.job import job_conf_pb2 as job_conf_proto
+from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_proto
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
 
 
 def _is_int(val):

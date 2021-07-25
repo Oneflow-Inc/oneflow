@@ -17,7 +17,7 @@ import os
 import time
 
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.summary import projector_pb2 as projector_pb2
+from oneflow.core.summary import projector_pb2 as projector_pb2
 
 
 class Projector(object):

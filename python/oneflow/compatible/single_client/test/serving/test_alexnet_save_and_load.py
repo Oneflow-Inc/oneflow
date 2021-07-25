@@ -25,9 +25,7 @@ from ofrecord_dataset import ImageNetRecordDataset
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.serving import (
-    saved_model_pb2 as saved_model_pb,
-)
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
 
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"

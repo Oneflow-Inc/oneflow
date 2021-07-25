@@ -20,21 +20,13 @@ from google.protobuf import text_format
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import job_conf_pb2 as job_conf_pb
-from oneflow.compatible.single_client.core.job import (
-    sbp_parallel_pb2 as sbp_parallel_pb,
-)
-from oneflow.compatible.single_client.core.operator import (
-    interface_blob_conf_pb2 as interface_blob_conf_pb,
-)
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_pb,
-)
-from oneflow.compatible.single_client.core.serving import (
-    saved_model_pb2 as saved_model_pb,
-)
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
 from oneflow.compatible.single_client.framework import session_context as session_ctx
+from oneflow.core.job import job_conf_pb2 as job_conf_pb
+from oneflow.core.job import sbp_parallel_pb2 as sbp_parallel_pb
+from oneflow.core.operator import interface_blob_conf_pb2 as interface_blob_conf_pb
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_pb
+from oneflow.core.serving import saved_model_pb2 as saved_model_pb
 
 
 class ModelBuilder(object):

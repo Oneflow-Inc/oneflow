@@ -22,11 +22,9 @@ from tempfile import NamedTemporaryFile
 
 from google.protobuf import text_format as pbtxt
 
-from oneflow.compatible.single_client.core.control.ctrl_bootstrap_pb2 import (
-    BootstrapConf,
-)
-from oneflow.compatible.single_client.core.job.env_pb2 import EnvProto
 from oneflow.compatible.single_client.framework import env_util as env_util
+from oneflow.core.control.ctrl_bootstrap_pb2 import BootstrapConf
+from oneflow.core.job.env_pb2 import EnvProto
 
 
 def delete_worker_by_bootstrap(ssh_port=22) -> None:

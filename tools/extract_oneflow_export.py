@@ -99,6 +99,7 @@ def replace_filename(name: str):
 def replace_str(name: str):
     name = replace_filename(name)
     name = name.replace("lib.core", "support")
+    name = name.replace("compatible.single_client.core", "core")
     name = name.replace("enable_typing_check", "typing_check")
     if name.startswith("oneflow.python."):
         return name.replace("oneflow.python.", "oneflow.")
@@ -596,7 +597,7 @@ if __name__ == "__main__":
     )
     pool.close()
     # TODO: touch __init__.py, oneflow/F/__init__.py
-    Path(os.path.join(OUT_PATH, "oneflow", "F")).mkdir()
+    Path(os.path.join(OUT_PATH, "oneflow", "F")).mkdir(exist_ok=True)
     Path(os.path.join(OUT_PATH, "oneflow", "F/__init__.py")).touch()
     Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F")).mkdir(
         parents=True

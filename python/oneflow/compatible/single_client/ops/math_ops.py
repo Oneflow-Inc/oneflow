@@ -18,10 +18,6 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.framework import id_util as id_util
 from oneflow.compatible.single_client.framework import interpret_util as interpret_util
 from oneflow.compatible.single_client.framework import module as module_util
@@ -33,6 +29,8 @@ from oneflow.compatible.single_client.ops.transpose_util import (
     get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 
 def add(

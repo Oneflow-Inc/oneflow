@@ -24,8 +24,6 @@ from google.protobuf import text_format
 import oneflow._oneflow_internal
 from oneflow import oneflow_deprecate
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import job_set_pb2 as job_set_util
-from oneflow.compatible.single_client.core.job.job_set_pb2 import ConfigProto
 from oneflow.compatible.single_client.eager import op_executor as op_executor
 from oneflow.compatible.single_client.experimental import interface_op_read_and_write
 from oneflow.compatible.single_client.framework import c_api_util as c_api_util
@@ -47,6 +45,8 @@ from oneflow.compatible.single_client.framework.pull_util import (
 )
 from oneflow.compatible.single_client.framework.session_context import SessionStatus
 from oneflow.compatible.single_client.support import enable_if as enable_if
+from oneflow.core.job import job_set_pb2 as job_set_util
+from oneflow.core.job.job_set_pb2 import ConfigProto
 
 
 class Session(object):

@@ -19,14 +19,12 @@ from typing import Optional
 
 import oneflow._oneflow_internal
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_util
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.framework import id_util as id_util
 from oneflow.compatible.single_client.framework import interpret_util as interpret_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 from oneflow.compatible.single_client.ops import user_op_builder as user_op_builder
+from oneflow.core.operator import op_conf_pb2 as op_conf_util
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 
 def build_unary_elemwise_math_op(math_op, x, name=None):

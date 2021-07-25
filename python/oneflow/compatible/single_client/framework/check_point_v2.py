@@ -23,19 +23,6 @@ import oneflow._oneflow_internal
 from oneflow._oneflow_internal import EagerBlobTrait
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.framework import (
-    user_op_attr_pb2 as attr_value_pb,
-)
-from oneflow.compatible.single_client.core.framework import (
-    variable_meta_info_pb2 as variable_meta_info_pb,
-)
-from oneflow.compatible.single_client.core.job import (
-    initializer_conf_pb2 as initializer_conf_util,
-)
-from oneflow.compatible.single_client.core.operator import op_conf_pb2 as op_conf_pb
-from oneflow.compatible.single_client.core.register import (
-    logical_blob_id_pb2 as logical_blob_id_util,
-)
 from oneflow.compatible.single_client.eager import boxing_util as boxing_util
 from oneflow.compatible.single_client.eager import op_infer_util as op_infer_util
 from oneflow.compatible.single_client.experimental import interface_op_read_and_write
@@ -48,6 +35,11 @@ from oneflow.compatible.single_client.framework import session_context as sessio
 from oneflow.compatible.single_client.ops import get_variable as get_variable
 from oneflow.compatible.single_client.ops import initializer_util as initializer_util
 from oneflow.compatible.single_client.support import async_util as async_util
+from oneflow.core.framework import user_op_attr_pb2 as attr_value_pb
+from oneflow.core.framework import variable_meta_info_pb2 as variable_meta_info_pb
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
+from oneflow.core.operator import op_conf_pb2 as op_conf_pb
+from oneflow.core.register import logical_blob_id_pb2 as logical_blob_id_util
 
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"

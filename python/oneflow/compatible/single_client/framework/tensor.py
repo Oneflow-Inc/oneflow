@@ -21,9 +21,6 @@ import numpy as np
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client.core.job import (
-    initializer_conf_pb2 as initializer_conf_util,
-)
 from oneflow.compatible.single_client.framework import check_point_v2 as check_point_v2
 from oneflow.compatible.single_client.framework import dtype as dtype_util
 from oneflow.compatible.single_client.framework import id_util as id_util
@@ -36,6 +33,7 @@ from oneflow.compatible.single_client.framework.function_util import (
 )
 from oneflow.compatible.single_client.ops import initializer_util as initializer_util
 from oneflow.compatible.single_client.support import async_util as async_util
+from oneflow.core.job import initializer_conf_pb2 as initializer_conf_util
 
 
 def register_local_tensor_method(name=None):
