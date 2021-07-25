@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
@@ -28,7 +28,6 @@ class Atanh(Module):
 
 
 @oneflow_export("atanh")
-@experimental_api
 def atanh_op(input):
     r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
@@ -42,9 +41,8 @@ def atanh_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.atanh(input)
@@ -57,11 +55,10 @@ def atanh_op(input):
 
 
 @register_tensor_op("atanh")
-@experimental_api
 def atanh_op_tensor(x):
     r"""
     atanh() -> Tensor
-    See :func:`oneflow.experimental.atanh`
+    See :func:`oneflow.atanh`
 
     """
 
@@ -69,22 +66,20 @@ def atanh_op_tensor(x):
 
 
 @oneflow_export("arctanh")
-@experimental_api
 def arctanh_op(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.atanh`
     """
 
     return Atanh()(input)
 
 
 @register_tensor_op("arctanh")
-@experimental_api
 def arctanh_op_tensor(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.atanh`
+    Alias for :func:`oneflow.atanh`
     """
 
     return Atanh()(input)

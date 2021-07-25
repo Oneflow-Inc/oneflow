@@ -17,9 +17,11 @@ from collections import OrderedDict
 
 import unittest
 import numpy as np
+import torch
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_matmul(test_case, device):
@@ -332,6 +334,14 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_matmul_with_random_data(test_case):
+        k = random(1, 6)
+        x = random_pytorch_tensor(ndim=2, dim1=k)
+        y = random_pytorch_tensor(ndim=2, dim0=k)
+        z = torch.matmul(x, y)
+        return z
 
 
 if __name__ == "__main__":

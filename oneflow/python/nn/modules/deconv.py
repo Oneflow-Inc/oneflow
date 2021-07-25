@@ -16,7 +16,7 @@ limitations under the License.
 import math
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.modules.utils import _pair
 from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
@@ -58,7 +58,7 @@ def slice(x, begin, size):
                     stop = b + s
 
         slice_tup_list.append((start, stop, step))
-    return flow.experimental.slice(x, slice_tup_list)
+    return flow.slice(x, slice_tup_list)
 
 
 class ConvUtil(object):
@@ -77,7 +77,6 @@ class ConvUtil(object):
 
 
 @oneflow_export("nn.ConvTranspose2d")
-@experimental_api
 class ConvTranspose2d(Module):
     r"""
     
@@ -128,10 +127,9 @@ class ConvTranspose2d(Module):
     Examples::
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding
         >>> m = nn.ConvTranspose2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2))
@@ -234,7 +232,7 @@ class ConvTranspose2d(Module):
                         ],
                     )[0]
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
         if self._bias_add_op is not None:
