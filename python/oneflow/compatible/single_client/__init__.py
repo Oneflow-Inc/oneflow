@@ -414,6 +414,7 @@ from . import (
     checkpoint,
     config,
     data,
+    distribute,
     distributed,
     env,
     layers,
