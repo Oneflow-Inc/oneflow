@@ -712,4 +712,28 @@ const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t j
   }
 }
 
+void PlanUtil::PopulateOpAttibute(
+    Plan* plan,
+    const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
+  for (auto& task : *plan->mutable_task()) {
+    if (task.exec_sequence().exec_node_size() == 1
+        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
+      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+      auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
+      CHECK(table_it != job_id2op_attribute_ref_table.end())
+          << "op attribute ref table not found for job id: " << task.job_id();
+      auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+      CHECK(it != table_it->second.op_name2op_attribute().end())
+          << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+      *kernel_conf->mutable_op_attribute() = it->second;
+      kernel_conf->clear_op_attribute_ref();
+    } else {
+      for (auto& exec_node : task.exec_sequence().exec_node()) {
+        CHECK(exec_node.kernel_conf().has_op_attribute())
+            << "op_attribute absent, exec_node: " << exec_node.DebugString();
+      }
+    }
+  }
+}
+
 }  // namespace oneflow

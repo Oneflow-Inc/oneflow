@@ -77,6 +77,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
 
+  // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
+  if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
+
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
@@ -103,6 +106,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     OF_SESSION_BARRIER();
   }
+  // NOTE(chengcheng): recovery op_attr
+  PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
+
   NewRuntimeBuffers();
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
   runtime_inited_ = true;
@@ -144,7 +150,7 @@ void NNGraph::CloseRuntimeBuffers() {
 namespace {
 
 Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObject>>* blob_list,
-                                    const std::vector<std::shared_ptr<one::Tensor>>& tensor_list) {
+                                    const one::TensorTuple& tensor_list) {
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
@@ -158,9 +164,8 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
 
 }  // namespace
 
-Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
