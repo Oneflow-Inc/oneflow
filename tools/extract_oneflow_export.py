@@ -94,6 +94,7 @@ class ReservedKeywordsVisitor(ast.NodeVisitor):
 
 def replace_str(name: str):
     name = name.replace("lib.core", "support")
+    name = name.replace("enable_typing_check", "typing_check")
     if name.startswith("oneflow.python."):
         return name.replace("oneflow.python.", "oneflow.")
     elif name == "oneflow.python":
@@ -219,6 +220,8 @@ class ExportVisitor(ast.NodeTransformer):
                 )
                 target_symbol0 = arg0.value.split(".")[-1]
 
+                if ".".join([target_module0, target_symbol0]) == self.src_target_module:
+                    raise ValueError("[colition][both func and module]", self.src_target_module)
                 if is_kept_in_src:
                     target_module = self.src_target_module
                     target_symbol = node.name
@@ -254,7 +257,8 @@ class ExportVisitor(ast.NodeTransformer):
                     if node.name == target_symbol0:
                         asname = None
                     if target_module0 == target_module and node.name == target_symbol0:
-                        print("[skip]", target_module0, target_symbol0)
+                        # print("[skip]", target_module0, target_symbol0)
+                        pass
                     else:
                         import_from_src = ast.ImportFrom(
                             module=self.src_target_module,
