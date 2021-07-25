@@ -174,7 +174,7 @@ class StackFunctor {
       CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
           << "The input dimensions are not equal.";
     }
-    CHECK_OR_RETURN(dim >= 0 && dim < ndims)
+    CHECK_OR_RETURN(dim >= 0 && dim <= ndims)
         << "The stack dim has to be between 0 and the input dimensions of " << ndims;
     TensorTuple expand_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
