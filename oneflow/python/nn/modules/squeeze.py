@@ -63,7 +63,6 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         dim = [dim]
     elif dim is None:
         dim = range(input.ndim)
-
     dim = list(filter(lambda i: input.size(i) == 1, dim))
     return Squeeze(dim=dim)(input)
 
