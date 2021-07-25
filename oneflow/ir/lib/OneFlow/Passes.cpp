@@ -43,26 +43,6 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
-LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
-  mlir::PassManager pm(context);
-  pm.addPass(createLowerOneFlowToTosaPass());
-  pm.addPass(createCSEPass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
-  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
-  pm.addPass(createTensorConstantBufferizePass());
-  pm.addPass(createFuncBufferizePass());
-  pm.addPass(createBufferResultsToOutParamsPass());
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
-  // pm.addNestedPass<FuncOp>(createLowerToCFGPass());
-  // pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
-  // pm.addPass(createMemRefToLLVMPass());
-  // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
-  return pm.run(module.get());
-}
-
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
                                                       mlir::OpResult mul_res,
                                                       mlir::OpResult cast_res) {
@@ -165,6 +145,26 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
 namespace mlir {
 
 namespace oneflow {
+
+LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
+  mlir::PassManager pm(context);
+  pm.addPass(createLowerOneFlowToTosaPass());
+  pm.addPass(createCSEPass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
+  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
+  pm.addPass(createTensorConstantBufferizePass());
+  pm.addPass(createFuncBufferizePass());
+  pm.addPass(createBufferResultsToOutParamsPass());
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
+  // pm.addNestedPass<FuncOp>(createLowerToCFGPass());
+  // pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
+  // pm.addPass(createMemRefToLLVMPass());
+  // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
+  return pm.run(module.get());
+}
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<OutlineFuseCastScale>(patterns.getContext());

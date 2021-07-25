@@ -15,6 +15,7 @@ namespace mlir {
 
 namespace oneflow {
 
+LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module);
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow
