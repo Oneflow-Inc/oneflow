@@ -55,11 +55,8 @@ def get_parent_module(value):
     return ".".join(value.split(".")[0:-1])
 
 
-def join_module(parent, child):
-    if child:
-        return ".".join([parent, child])
-    else:
-        return parent
+def join_module(*args):
+    return ".".join([m for m in args if m])
 
 
 def path_from_module(module, is_init=False):
@@ -191,7 +188,8 @@ class ExportVisitor(ast.NodeTransformer):
         return self.visit_FunctionDef(node)
 
     def visit_FunctionDef(self, node):
-        if is_compatible_root_module(self.root_module) and is_experimental(node):
+        is_compatible_and_experimental = is_compatible_root_module(self.root_module) and is_experimental(node)
+        if is_compatible_and_experimental:
             return None
         if not is_compatible_root_module(self.root_module) and is_stable(node):
             return None
