@@ -89,7 +89,7 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "sbp")
       .def("__int__",
            [](Symbol<cfg::SbpParallel> sym) -> int64_t {
-             return *reinterpret_cast<const int64_t*>(&*sym);
+             return reinterpret_cast<const int64_t>(&*sym);
            })
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString);

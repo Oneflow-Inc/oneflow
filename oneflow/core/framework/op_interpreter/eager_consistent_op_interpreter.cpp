@@ -35,7 +35,7 @@ namespace {
 
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
-  if (inputs.empty()) { return inputs.at(0)->parallel_desc(); }
+  if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
   return ctx.parallel_desc;
 }
 

@@ -461,7 +461,7 @@ Maybe<void> MultiClientAddCallbackNotifier(JobBuilder* job_builder, int64_t mach
     callback_notify_op_conf.set_name(std::string("System-Sink-CallbackNotify_") + NewUniqueId());
     callback_notify_op_conf.set_pass_tag(kMainOp);
     auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
-    callback_notify_conf->set_in(GenLogicalBlobName(sink_op_name, "/out"));
+    callback_notify_conf->set_in(GenLogicalBlobName(sink_op_name, "out"));
     // callback_notify_conf->callback_buffer_name() is unused in multi-client mode.
   }
   JUST(job_builder->AddOp(parallel_conf, callback_notify_op_conf));

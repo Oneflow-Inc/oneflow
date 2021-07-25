@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -66,26 +66,26 @@ class Where(Module):
             if max_dim != y.shape[i]:
                 broadcast_y_axes.append(i)
 
-        broadcast_like_tensor = flow.experimental.zeros(
+        broadcast_like_tensor = flow.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32
         )
         broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
         broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
 
         if len(broadcast_condition_axes) != 0:
-            condition = flow.experimental.cast(condition, flow.float32)
-            broadcast_cond = flow.experimental.broadcast_like(
+            condition = flow.cast(condition, flow.float32)
+            broadcast_cond = flow.broadcast_like(
                 condition, broadcast_like_tensor, tuple(broadcast_condition_axes)
             )
-            broadcast_cond = flow.experimental.cast(broadcast_cond, flow.int32)
+            broadcast_cond = flow.cast(broadcast_cond, flow.int32)
 
         if len(broadcast_x_axes) != 0:
-            broadcast_x = flow.experimental.broadcast_like(
+            broadcast_x = flow.broadcast_like(
                 x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
             )
 
         if len(broadcast_y_axes) != 0:
-            broadcast_y = flow.experimental.broadcast_like(
+            broadcast_y = flow.broadcast_like(
                 y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
             )
 
@@ -94,7 +94,6 @@ class Where(Module):
 
 @oneflow_export("where")
 @register_tensor_op("where")
-@experimental_api
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
@@ -120,9 +119,7 @@ def where_op(condition, x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
         >>> x = flow.Tensor(
         ...    np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         ...    dtype=flow.float32,

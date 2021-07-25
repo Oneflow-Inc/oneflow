@@ -414,8 +414,9 @@ class NormalizationFunctor {
 class PadFunctor {
  public:
   PadFunctor() {
+    constant_pad_1d_ = CHECK_JUST(one::OpBuilder("constant_pad1d").Input("x").Output("y").Build());
+    constant_pad_2d_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
     constant_pad_3d_ = CHECK_JUST(one::OpBuilder("constant_pad3d").Input("x").Output("y").Build());
-    constant_pad_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
     reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
     replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
@@ -437,7 +438,8 @@ class PadFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
       switch (x->shape()->NumAxes()) {
-        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+        case 3: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_1d_, {x}, attrs);
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_2d_, {x}, attrs);
         case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_, {x}, attrs);
         default:
           UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but " << x->shape()->NumAxes()
@@ -455,7 +457,8 @@ class PadFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> constant_pad_;
+  std::shared_ptr<OpExpr> constant_pad_1d_;
+  std::shared_ptr<OpExpr> constant_pad_2d_;
   std::shared_ptr<OpExpr> constant_pad_3d_;
   std::shared_ptr<OpExpr> reflect_pad_;
   std::shared_ptr<OpExpr> replicate_pad_;

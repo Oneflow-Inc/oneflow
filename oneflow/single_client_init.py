@@ -50,6 +50,9 @@ from oneflow.compatible.single_client.python.framework import session_context
 from oneflow.compatible.single_client.python.framework import env_util
 
 
+# NOTE(chengcheng): Destroy ForeignCallback and Watcher for created by Multi-Client init.
+oneflow._oneflow_internal.DestroyGlobalWatcher()
+oneflow._oneflow_internal.DestroyGlobalForeignCallback()
 oneflow._oneflow_internal.DestroyEnv()
 import time
 
@@ -76,7 +79,7 @@ import oneflow.compatible.single_client.python.framework.c_api_util
 from oneflow.compatible.single_client.python.framework import register_python_callback
 from oneflow.compatible.single_client.python.framework import python_callback
 
-oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
+oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
@@ -85,7 +88,7 @@ del register_python_callback
 # register Watcher
 from oneflow.compatible.single_client.python.framework import watcher
 
-oneflow._oneflow_internal.RegisterWatcherOnlyOnce(watcher._global_watcher)
+oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
 del watcher
 
 # register BoxingUtil

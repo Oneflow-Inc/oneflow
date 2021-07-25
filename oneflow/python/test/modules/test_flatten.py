@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
@@ -80,6 +80,16 @@ class TestFlattenModule(flow.unittest.TestCase):
         m.to(device)
         x = random_pytorch_tensor().to(device)
         y = m(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_tensor_against_pytorch(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.flatten(
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
         return y
 
 

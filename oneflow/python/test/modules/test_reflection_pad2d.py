@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
-import oneflow.experimental as flow
+import oneflow as flow
 import numpy as np
 
 from test_util import (
