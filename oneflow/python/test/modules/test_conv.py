@@ -1835,7 +1835,7 @@ class TestConv2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_conv2d_large_in_channel,
         ]
-        arg_dict["device"] = DEVICES
+        arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -1844,7 +1844,7 @@ class TestConv2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_conv2d_large_out_channel,
         ]
-        arg_dict["device"] = DEVICES
+        arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
