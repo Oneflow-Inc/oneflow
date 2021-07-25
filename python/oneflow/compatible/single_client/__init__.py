@@ -411,6 +411,7 @@ from oneflow.compatible.single_client.ops.watch import Watch as watch
 from oneflow.compatible.single_client.ops.watch import WatchDiff as watch_diff
 
 from . import (
+    checkpoint,
     config,
     data,
     distributed,
