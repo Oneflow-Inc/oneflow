@@ -195,9 +195,11 @@ class ConstantPad1d(Module):
     For `N`-dimensional padding, use :func:`torch.nn.functional.pad()`.
 
     Args:
-        padding (int, tuple): the size of the padding. If is `int`, uses the same
+        padding (int, list, tuple): the size of the padding. If is `int`, uses the same
             padding in both boundaries. If a 2-`tuple`, uses
-            (:math:`\text{padding\_left}`, :math:`\text{padding\_right}`)
+            (:math:`\text{padding_left}`, :math:`\text{padding_right}`)
+
+        value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
         - Input: :math:`(N, C, W_{in})`
@@ -252,20 +254,23 @@ class ConstantPad2d(Module):
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
 
-    This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    This operator pads the input with constant value that user specifies. 
+    User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
-        padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
-        
-        value (Union[int, float]): The constant value used for padding. Defaults to 0.
+        padding (int, tuple, list):  the size of the padding.
+            If is `int`, uses the same padding in all boundaries. 
+            If a 4-`tuple`, uses 
+            (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
+
+        value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
         - Input: :math:`(N, C, H_{in}, W_{in})`
         - Output: :math:`(N, C, H_{out}, W_{out})` where
 
-            :math:`H_{out} = H_{in} + \mathrm{padding_{top}} + \mathrm{padding_{bottom}}`
-
-            :math:`W_{out} = W_{in} + \mathrm{padding_{left}} + \mathrm{padding_{right}}`
+          :math:`H_{out} = H_{in} + \mathrm{padding_{top}} + \mathrm{padding_{bottom}}`
+          :math:`W_{out} = W_{in} + \mathrm{padding_{left}} + \mathrm{padding_{right}}`
 
     For example:
 
@@ -273,10 +278,7 @@ class ConstantPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-<<<<<<< HEAD
 
-=======
->>>>>>> master
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -308,6 +310,7 @@ class ConstantPad2d(Module):
                   [ 1.,  1., 12., 13., 14.,  1.,  1.],
                   [ 1.,  1., 15., 16., 17.,  1.,  1.],
                   [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
+
     """
 
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
@@ -347,7 +350,7 @@ class ConstantPad3d(Module):
             :math:`\text{padding_top}`, :math:`\text{padding_bottom}`,
             :math:`\text{padding_front}`, :math:`\text{padding_back}`)
         
-        value (Union[int, float]): The constant value used for padding. Defaults to 0.
+        value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
         - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`
