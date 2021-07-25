@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from oneflow.compatible.single_client import unittest
 from oneflow.compatible.single_client.experimental.indexed_slices_ops import (
     indexed_slices_reduce_sum,
 )

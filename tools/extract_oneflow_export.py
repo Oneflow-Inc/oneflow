@@ -383,7 +383,9 @@ class SrcFile:
                     )
                     self.export_visitor.append_export(
                         target_module="oneflow.compatible.single_client.experimental",
-                        node=ast.parse(f"from . import scope"),
+                        node=ast.parse(f"""from . import scope
+from oneflow.compatible.single_client import unittest
+"""),
                     )
                     self.export_visitor.append_export(
                         target_module="oneflow.compatible.single_client.deprecated",
