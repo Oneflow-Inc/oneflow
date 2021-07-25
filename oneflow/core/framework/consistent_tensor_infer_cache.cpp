@@ -63,9 +63,10 @@ bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferAr
          && this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
 }
 
-bool SrcOpConsistentTensorMetaInferArgs::operator==(const SrcOpConsistentTensorMetaInferArgs& other) const {
+bool SrcOpConsistentTensorMetaInferArgs::operator==(
+    const SrcOpConsistentTensorMetaInferArgs& other) const {
   return this->attrs_ == other.attrs_ && this->parallel_desc_ == other.parallel_desc_
-      && this->parallel_distribution_ == other.parallel_distribution_;
+         && this->parallel_distribution_ == other.parallel_distribution_;
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionConstraints(
@@ -111,19 +112,19 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
 }
 
 Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
-    const AttrMap& attrs, const TensorTuple& input_tensors, Symbol<ParallelDesc> parallel_desc) {
+    const AttrMap& attrs, const TensorTuple& input_tensors) {
   std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
   infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
-  infer_args->parallel_desc_ = parallel_desc;
   JUST(infer_args->InitInputConsistentTensorMetas(input_tensors));
   return infer_args;
 }
 
 Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
     const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
-      Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(new SrcOpConsistentTensorMetaInferArgs());
+    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
+      new SrcOpConsistentTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
   infer_args->parallel_desc_ = parallel_desc;
   infer_args->parallel_distribution_ = parallel_distribution;
@@ -152,18 +153,19 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 }
 
 Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs& infer_args) {
-	if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
-	const auto& first_parallel_desc =
-			infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
-	for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
-		CHECK_OR_RETURN(first_parallel_desc, input_meta->tensor_meta()->parallel_desc());
-	}
-	return Maybe<void>::Ok();
+  if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
+  const auto& first_parallel_desc =
+      infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
+  for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
+    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+  }
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc, const std::string& op_type_name) {
-	if (IsCpuOnly(op_type_name)) { CHECK_OR_RETURN(parallel_desc.device_tag(), "cpu"); }
-	return Maybe<void>::Ok();
+Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
+                                       const std::string& op_type_name) {
+  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(parallel_desc.device_tag(), "cpu"); }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -172,9 +174,9 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc, const 
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
   CHECK_GT_OR_RETURN(infer_args.input_consistent_tensor_metas().size(), 0);
   Symbol<ParallelDesc> parallel_desc =
-    infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
-	JUST(CheckInputParallelDescIdentical(infer_args));
-	JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
+      infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
+  JUST(CheckInputParallelDescIdentical(infer_args));
+  JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
     // Infer OpArgMutConsistentTensorMeta.
@@ -230,7 +232,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc, const 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const SrcOpConsistentTensorMetaInferArgs& infer_args) {
   Symbol<ParallelDesc> parallel_desc = infer_args.parallel_desc();
-	JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
+  JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
     // Infer OpArgMutConsistentTensorMeta.
@@ -249,7 +251,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc, const 
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
-    const auto& parallel_distribution = JUST(input_args.parallel_distribution());
+    const auto& parallel_distribution = infer_args.parallel_distribution();
     ConsistentTensorMeta tensor_meta(shape, data_type, parallel_distribution, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
@@ -270,12 +272,12 @@ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
 
 Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
     const SrcOpConsistentTensorMetaInferArgs& infer_args) {
-  auto iter = src_cache_.find(infer_args);
-  if (iter == src_cache_.end()) {
+  auto iter = src_op_cache_.find(infer_args);
+  if (iter == src_op_cache_.end()) {
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
-    iter = src_cache_.emplace(infer_args, output_tensor_metas).first;
+    iter = src_op_cache_.emplace(infer_args, output_tensor_metas).first;
   }
   return iter->second;
 }

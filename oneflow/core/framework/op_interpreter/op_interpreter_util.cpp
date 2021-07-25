@@ -45,48 +45,48 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
-Maybe<AutogradInterpreter> GetInterpreter(
-		const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
+                                          const OpExprInterpContext& ctx) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (!LazyMode::is_enabled()) {
-		if (inputs.empty()) {
-			if (TRY(ctx.parallel_desc).IsOk()) {
+    if (inputs.empty()) {
+      if (TRY(ctx.parallel_desc).IsOk()) {
         JUST(ctx.parallel_distribution);
         CHECK_OR_RETURN(!TRY(ctx.device).IsOk());
-      	return g_eager_consistent_interpreter;
-			} else {
+        return g_eager_consistent_interpreter;
+      } else {
         CHECK_OR_RETURN(!TRY(ctx.parallel_distribution).IsOk());
-      	return g_eager_mirrored_interpreter;
-			}
-		} else {
-			if (inputs.at(0)->is_consistent()) {
-				if (inputs.size() == 1) {
-					// do nothing
-				} else if (inputs.size() == 2) {
-					CHECK_OR_RETURN(inputs.at(1)->is_consistent()); // unroll loop for efficiency
-				} else {
-					CHECK_OR_RETURN(inputs.at(1)->is_consistent()); // unroll loop for efficiency
-					CHECK_OR_RETURN(inputs.at(2)->is_consistent()); // unroll loop for efficiency
-				} else if (inputs.size() == 2) {
-					for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_consistent()); }
-				}
-      	return g_eager_consistent_interpreter;
-			} else {
-				if (inputs.size() == 1) {
-					// do nothing
-				} else if (inputs.size() == 2) {
-					CHECK_OR_RETURN(inputs.at(1)->is_local()); // unroll loop for efficiency
-				} else {
-					CHECK_OR_RETURN(inputs.at(1)->is_local()); // unroll loop for efficiency
-					CHECK_OR_RETURN(inputs.at(2)->is_local()); // unroll loop for efficiency
-				} else if (inputs.size() == 2) {
-					for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_local()); }
-				}
-      	return g_eager_mirrored_interpreter;
-			}
-		}
+        return g_eager_mirrored_interpreter;
+      }
+    } else {
+      if (inputs.at(0)->is_consistent()) {
+        if (inputs.size() == 1) {
+          // do nothing
+        } else if (inputs.size() == 2) {
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
+        } else if (inputs.size() == 3) {
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_consistent());  // unroll loop for efficiency
+        } else {
+          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_consistent()); }
+        }
+        return g_eager_consistent_interpreter;
+      } else {
+        if (inputs.size() == 1) {
+          // do nothing
+        } else if (inputs.size() == 2) {
+          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
+        } else if (inputs.size() == 3) {
+          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_local());  // unroll loop for efficiency
+        } else {
+          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_local()); }
+        }
+        return g_eager_mirrored_interpreter;
+      }
+    }
     UNIMPLEMENTED_THEN_RETURN();
   }
   return g_lazy_interpreter;
@@ -109,8 +109,9 @@ template<>
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
-/* static */ Maybe<void> OpInterpUtil::Dispatch(
-    const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs, const OpExprInterpContext& ctx) {
+/* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                                                TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) {
   return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
 }
 

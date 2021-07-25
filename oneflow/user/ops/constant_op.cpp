@@ -51,14 +51,15 @@ REGISTER_NO_GRAD_USER_OP("constant")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&InferConstantParallelDistribution)
-    ;
+    .SetParallelDistributionInferFn(&InferConstantParallelDistribution);
 
 Maybe<void> InferConstantParallelDistribution(user_op::InferParallelDistributionFnContext* ctx) {
   cfg::ParallelDistribution* out = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
   if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    const auto& pb_str = ctx->user_op_conf().Attr<std::string>("nd_sbp");
-    CHECK_OR_RETURN(TxtString2PbMessage(pb_str, out));
+    const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
+    ParallelDistribution pb;
+    CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
+    out->InitFromProto(pb);
   } else {
     out->mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }

@@ -31,7 +31,9 @@ class _ConstantBase(Module):
         dtype: Optional[flow.dtype],
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+        sbp: Union[
+            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
+        ] = None,
         requires_grad: bool = False,
     ) -> None:
         super().__init__()
@@ -54,15 +56,15 @@ class _ConstantBase(Module):
         self.placement = placement
         self.sbp = sbp
         if placement is not None:
-            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s"%sbp
-            if isinstance(self.sbp, flow.sbp.sbp)
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
                 self.sbp = (self.sbp,)
             else:
                 for elem in sbp:
-                    assert isinstance(sbp, flow.sbp.sbp), "sbp: %s"sbp
+                    assert isinstance(sbp, flow.sbp.sbp), "sbp: %s" % sbp
             assert len(self.sbp) == len(placement.hierarchy)
         else:
-            assert sbp is None, "sbp: %s"%sbp
+            assert sbp is None, "sbp: %s" % sbp
 
         self.shape = size
         self.value = value
@@ -70,17 +72,29 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-        res = flow.F.consistent_constant(
-            self.shape, self.value, self.dtype, int(self.placement), tuple(map(int, self.sbp))
-        )
-		else: 
+            res = flow.F.consistent_constant(
+                self.shape,
+                self.value,
+                self.dtype,
+                int(self.placement),
+                list(map(int, self.sbp)),
+            )
+        else:
             res = flow.F.constant(self.shape, self.value, self.dtype, int(self.device))
         res.requires_grad = self.requires_grad
         return res
 
 
 class Ones(_ConstantBase):
-    def __init__(self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
+    def __init__(
+        self,
+        size,
+        dtype=None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
@@ -91,7 +105,7 @@ def ones_op(
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
-    sbp: flow.sbp.sbp = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
 ):
     r"""
@@ -123,7 +137,15 @@ def ones_op(
 
 
 class Zeros(_ConstantBase):
-    def __init__(self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
+    def __init__(
+        self,
+        size,
+        dtype=None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ):
         super().__init__(size, 0, dtype, device, placement, sbp, requires_grad)
 
 
@@ -134,7 +156,7 @@ def zeros_op(
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
-    sbp: flow.sbp.sbp = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
 ):
     r"""
@@ -238,7 +260,7 @@ class NewOnes(Module):
         dtype: Optional[flow.dtype] = None,
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: flow.sbp = None,
+        sbp: flow._oneflow_internal.sbp.sbp = None,
         requires_grad: bool = False,
     ):
         super().__init__()
@@ -300,7 +322,7 @@ class NewOnes(Module):
 
         if self.placement is not None:
             res = flow.F.consistent_constant(
-                    new_size, 1.0, new_dtype, int(self.placement), tuple(map(int, self.sbp))
+                new_size, 1.0, new_dtype, int(self.placement), tuple(map(int, self.sbp))
             )
         else:
             res = flow.F.constant(new_size, 1.0, new_dtype, int(new_device))
@@ -310,7 +332,9 @@ class NewOnes(Module):
 
 @register_tensor_op("new_ones")
 @experimental_api
-def new_ones_op(x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
+def new_ones_op(
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+):
     r"""
     
     Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
@@ -337,9 +361,14 @@ def new_ones_op(x, size=None, dtype=None, device=None, placement=None, sbp=None,
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
     """
-    return NewOnes(size=size, dtype=dtype, device=device, placement=placement, sbp=sbp, requires_grad=requires_grad)(
-        x
-    )
+    return NewOnes(
+        size=size,
+        dtype=dtype,
+        device=device,
+        placement=placement,
+        sbp=sbp,
+        requires_grad=requires_grad,
+    )(x)
 
 
 if __name__ == "__main__":

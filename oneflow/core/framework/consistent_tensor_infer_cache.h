@@ -115,10 +115,11 @@ class SrcOpConsistentTensorMetaInferArgs final {
 
   size_t hash_value() const;
 
-  bool operator==(const ConsistentTensorMetaInferArgs& other) const;
+  bool operator==(const SrcOpConsistentTensorMetaInferArgs& other) const;
 
-  static Maybe<SrcOpConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
-      Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
+  static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
+      const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
+      Symbol<cfg::ParallelDistribution> parallel_distribution);
 
  private:
   SrcOpConsistentTensorMetaInferArgs() = default;
@@ -223,7 +224,8 @@ class ConsistentTensorInferCache final {
  private:
   std::weak_ptr<const UserOpExpr> user_op_expr_;
   HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;
-  HashMap<SrcOpConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> src_op_cache_;
+  HashMap<SrcOpConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>>
+      src_op_cache_;
 };
 
 }  // namespace one

@@ -238,9 +238,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                return device_type;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
-			.def("__int__", [](Symbol<ParallelDesc> p) {
-					return *reinterpret_cast<int64_t*>(&p);
-			})
+      .def("__int__", [](Symbol<ParallelDesc> p) { return *reinterpret_cast<const int64_t*>(&*p); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
       .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);

@@ -38,12 +38,12 @@ namespace impl {
 class ConsistentConstantFunctor {
  public:
   ConsistentConstantFunctor() {
-		op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
-	}
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype, const int64_t& placement, const std::vector<int64_t>& sbp_tuple) const {
-		CHECK_NE_OR_RETURN(placement, 0);
-		Symbol<ParallelDesc> parallel_desc =
-			*reinterpret_cast<const Symbol<ParallelDesc>*>(&placement);
+    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const int64_t& placement, const std::vector<int64_t>& sbp_tuple) const {
+    CHECK_NE_OR_RETURN(placement, 0);
+    Symbol<ParallelDesc> parallel_desc = *reinterpret_cast<const Symbol<ParallelDesc>*>(&placement);
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -58,11 +58,12 @@ class ConsistentConstantFunctor {
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-        OpExprInterpContext{.attrs = attrs, .parallel_desc = parallel_desc, .parallel_distribution=parallel_distribution});
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution));
   }
 
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(const std::vector<int64_t>& sbp_tuple) const {
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<int64_t>& sbp_tuple) const {
     static thread_local std::map<std::vector<int64_t>, Symbol<cfg::ParallelDistribution>> map;
     auto iter = map.find(sbp_tuple);
     if (iter == map.end()) {
@@ -70,8 +71,8 @@ class ConsistentConstantFunctor {
       for (int64_t sbp_val : sbp_tuple) {
         CHECK_NE_OR_RETURN(sbp_val, 0);
         Symbol<cfg::SbpParallel> sbp_parallel =
-          *reinterpret_cast<Symbol<cfg::SbpParallel>*>(&sbp_val);
-          *parallel_distribution->mutable_sbp_parallel()->Add() = sbp_parallel;
+            *reinterpret_cast<Symbol<cfg::SbpParallel>*>(&sbp_val);
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
       }
       iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
     }
@@ -85,7 +86,8 @@ class ConsistentConstantFunctor {
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype, const int64_t& device) const {
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const int64_t& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -98,16 +100,15 @@ class ConstantFunctor {
     }
     {
       ParallelDistribution parallel_distribution;
-      parallel_distribution->mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution.DebugString()));
     }
-		if (device) {
-			return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
-		} else {
-			Symbol<Device> device_symbol = *reinterpret_cast<const Symbol<Device>*>(&device);
-			return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-					OpExprInterpContext{.attrs = attrs, .device = device_symbol});
-		}
+    if (device) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    } else {
+      Symbol<Device> device_symbol = *reinterpret_cast<const Symbol<Device>*>(&device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    }
   }
 
  private:

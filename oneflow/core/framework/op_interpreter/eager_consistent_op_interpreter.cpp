@@ -33,12 +33,13 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
-	if (inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-	return ctx.parallel_desc();
+Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
+                                            const OpExprInterpContext& ctx) {
+  if (inputs.empty()) { return inputs.at(0)->parallel_desc(); }
+  return ctx.parallel_desc;
 }
 
-}
+}  // namespace
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
@@ -46,12 +47,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
-    const auto& infer_args =
-        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution)));
+    const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
+        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
-    const auto& infer_args =
-        JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
+    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
@@ -84,7 +84,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, parallel_desc.shared_from_this(), instr_type_name);
+                                      ctx, parallel_desc.shared_from_symbol(), instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
@@ -92,7 +92,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-	return Interpret(op_expr, inputs, outputs, ctx);
+  return Interpret(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,

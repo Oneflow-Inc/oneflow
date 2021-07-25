@@ -150,8 +150,8 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 };
 
 inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
-	static thread_local const auto& error = Error::ValueError("uninitialized value");
-	return error;
+  static thread_local const auto& error = Error::ValueError("uninitialized value").error_proto();
+  return error;
 }
 
 template<typename T>
@@ -160,7 +160,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
-	Maybe(): error_or_scalar_(UninitializedValueError()) {}
+  Maybe() : error_or_scalar_(UninitializedValueError()) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
