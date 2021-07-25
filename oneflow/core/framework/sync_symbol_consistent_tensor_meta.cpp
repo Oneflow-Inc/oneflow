@@ -32,6 +32,7 @@ struct FlatConsistentTensorMeta final {
   }
 
   Maybe<void> Init(uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+    this->symbol_id = symbol_id;
     JUST(this->shape.Init(consistent_tensor_meta->shape_ptr()));
     this->dtype = static_cast<int32_t>(consistent_tensor_meta->dtype());
     this->is_dynamic = consistent_tensor_meta->is_dynamic();
@@ -43,6 +44,7 @@ struct FlatConsistentTensorMeta final {
   }
 
   Maybe<void> Check(uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+    CHECK_EQ_OR_RETURN(this->symbol_id, symbol_id);
     JUST(this->shape.Check(consistent_tensor_meta->shape_ptr()));
     CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), consistent_tensor_meta->dtype());
     CHECK_EQ_OR_RETURN(this->is_dynamic, consistent_tensor_meta->is_dynamic());
@@ -56,6 +58,7 @@ struct FlatConsistentTensorMeta final {
     return Maybe<void>::Ok();
   }
 
+  uint64_t symbol_id;
   FlatShape shape;
   int32_t dtype;
   bool is_dynamic;

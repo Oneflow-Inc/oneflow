@@ -16,51 +16,83 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
+#include "oneflow/core/framework/sync_symbol_parallel_distribution.h"
 #include "oneflow/core/framework/synced_symbol_map.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 
 namespace oneflow {
 
-struct FlatTensorConsistency final {
-  static Maybe<FlatTensorConsistency> New(Symbol<one::ConsistentTensorMeta> tensor_meta,
+// clang-format off
+FLAT_MSG_BEGIN(FlatTensorConsistency);
+  OF_PUBLIC static Maybe<FlatTensorConsistency> New() {
+    const auto& consistency = std::make_shared<FlatTensorConsistency>();
+    consistency->clear();
+    return consistency;
+  }
+  OF_PUBLIC static Maybe<FlatTensorConsistency> New(
+      Symbol<one::ConsistentTensorMeta> tensor_meta,
+      const Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint,
                                           const RpcToken& tensor_rpc_token) {
     const auto& consistency = std::make_shared<FlatTensorConsistency>();
-    JUST(consistency->Init(tensor_meta, tensor_rpc_token));
+    consistency->clear();
+    JUST(consistency->Init(tensor_meta, consumer_parallel_distribution_constraint, tensor_rpc_token));
     return consistency;
   }
 
-  Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
-                   const RpcToken& tensor_rpc_token) {
-    this->synced_tensor_meta = JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
-        tensor_meta, &SyncSymbolConsistentTensorMeta));
-    this->tensor_rpc_token = static_cast<uint64_t>(tensor_rpc_token);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
+  OF_PUBLIC Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
+    const Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint,
                     const RpcToken& tensor_rpc_token) {
     const auto& this_synced_tensor_meta =
         JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            this->synced_tensor_meta));
+            this->synced_tensor_meta()));
     CHECK_OR_RETURN(this_synced_tensor_meta == tensor_meta);
-    CHECK_EQ_OR_RETURN(this->tensor_rpc_token, tensor_rpc_token);
+    CHECK_EQ_OR_RETURN(consumer_parallel_distribution_constraint.has_value(),
+                       this->has_consumer_parallel_distribution_constraint());
+    if (this->has_consumer_parallel_distribution_constraint()) {
+      const auto& that_rank_constaint =
+          JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
+            this->consumer_parallel_distribution_constraint()));
+      const auto& this_rank_constaint = JUST(consumer_parallel_distribution_constraint.value());
+      CHECK_OR_RETURN(this_rank_constaint == that_rank_constaint);
+    }
+    CHECK_EQ_OR_RETURN(this->tensor_rpc_token(), tensor_rpc_token);
     return Maybe<void>::Ok();
   }
 
-  uint64_t synced_tensor_meta;
-  uint64_t tensor_rpc_token;
-};
+  OF_PRIVATE Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
+    const Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint,
+                   const RpcToken& tensor_rpc_token) {
+    this->set_synced_tensor_meta(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
+        tensor_meta, &SyncSymbolConsistentTensorMeta)));
+    if (consumer_parallel_distribution_constraint.has_value()) {
+      const auto& this_rank_constaint = JUST(consumer_parallel_distribution_constraint.value());
+      this->set_consumer_parallel_distribution_constraint(
+        JUST(SyncedSymbolMap<cfg::ParallelDistribution>::FindOrSync(
+              this_rank_constaint, &SyncSymbolParallelDistribution)));
+    } else {
+      this->clear_consumer_parallel_distribution_constraint();
+    }
+    this->set_tensor_rpc_token(static_cast<uint64_t>(tensor_rpc_token));
+    return Maybe<void>::Ok();
+  }
+  
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, synced_tensor_meta);
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, consumer_parallel_distribution_constraint);
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, tensor_rpc_token);
+FLAT_MSG_END(FlatTensorConsistency);
+// clang-format off
 
 CheckConsistencyAsyncRpcCtx::~CheckConsistencyAsyncRpcCtx() {}
 
 Maybe<void> CheckConsistencyAsyncRpcCtx::MakeDataBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
-  const auto& flat_tensor_consistency = std::make_shared<FlatTensorConsistency>();
+  const auto& flat_tensor_consistency = JUST(FlatTensorConsistency::New());
   *buffer = flat_tensor_consistency.get();
   *size = sizeof(FlatTensorConsistency);
   *Callback = [flat_tensor_consistency]() {};
@@ -69,7 +101,7 @@ Maybe<void> CheckConsistencyAsyncRpcCtx::MakeDataBufferAndCallback(
 }
 
 Maybe<void> CheckConsistencyAsyncRpcCtx::Check() const {
-  JUST(flat_tensor_consistency_->Check(tensor_meta_, tensor_rpc_token_));
+  JUST(flat_tensor_consistency_->Check(tensor_meta_, consumer_parallel_distribution_constraint_, tensor_rpc_token_));
   return Maybe<void>::Ok();
 }
 
@@ -78,11 +110,12 @@ namespace {
 Maybe<void> SendTensorMetaToNextRankInRing(const one::Tensor& tensor, Symbol<RankGroup> rank_group,
                                            const RpcToken& rpc_token) {
   const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
+  const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
   const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
   NaiveAsyncRpcCtx ctx(
       [&](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
         const auto& tensor_consistency =
-            JUST(FlatTensorConsistency::New(tensor_meta, tensor_rpc_token));
+            JUST(FlatTensorConsistency::New(tensor_meta, constaint, tensor_rpc_token));
         *buffer = tensor_consistency.get();
         *size = sizeof(FlatTensorConsistency);
         *Callback = [tensor_consistency] {};
@@ -96,8 +129,9 @@ Maybe<CheckConsistencyAsyncRpcCtx> ReceiveTensorMetaFromPrevRankInRing(const one
                                                                        Symbol<RankGroup> rank_group,
                                                                        const RpcToken& rpc_token) {
   const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
+  const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
   const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
-  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(tensor_meta, tensor_rpc_token);
+  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(tensor_meta, constaint, tensor_rpc_token);
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
   return ctx;
 }

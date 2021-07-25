@@ -70,8 +70,8 @@ class Tensor {
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
-      const {
+  virtual Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
@@ -236,8 +236,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const override {
     return impl_->consumer_parallel_distribution_constraint();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {

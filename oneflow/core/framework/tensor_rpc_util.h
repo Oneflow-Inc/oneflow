@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/rpc_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -25,9 +26,13 @@ class FlatTensorConsistency;
 
 class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
  public:
-  CheckConsistencyAsyncRpcCtx(Symbol<one::ConsistentTensorMeta> tensor_meta,
-                              const RpcToken& tensor_rpc_token)
-      : tensor_meta_(tensor_meta), tensor_rpc_token_(tensor_rpc_token) {}
+  CheckConsistencyAsyncRpcCtx(
+      Symbol<one::ConsistentTensorMeta> tensor_meta,
+      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint,
+      const RpcToken& tensor_rpc_token)
+      : tensor_meta_(tensor_meta),
+        consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint),
+        tensor_rpc_token_(tensor_rpc_token) {}
 
   ~CheckConsistencyAsyncRpcCtx() override;
 
@@ -38,6 +43,7 @@ class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
 
  private:
   Symbol<one::ConsistentTensorMeta> tensor_meta_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
   RpcToken tensor_rpc_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };
