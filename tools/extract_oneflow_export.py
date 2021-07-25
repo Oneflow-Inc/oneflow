@@ -142,9 +142,7 @@ class ExportVisitor(ast.NodeTransformer):
             if not self.visit(name):
                 return None
         if node.module:
-            if node.module == "__future__" or node.module.startswith(
-                "oneflow.python.oneflow_export"
-            ):
+            if node.module == "__future__" or "oneflow_export" in node.module:
                 return None
             node.module = replace_str(node.module)
         self.top_imports.append(node)
@@ -189,8 +187,6 @@ class ExportVisitor(ast.NodeTransformer):
 
     def visit_FunctionDef(self, node):
         is_compatible_and_experimental = is_compatible_root_module(self.root_module) and is_experimental(node)
-        if is_compatible_and_experimental:
-            return None
         if not is_compatible_root_module(self.root_module) and is_stable(node):
             return None
         compact_decorator_list = [self.visit(d) for d in node.decorator_list]
@@ -215,8 +211,11 @@ class ExportVisitor(ast.NodeTransformer):
                     or target_module in ["oneflow", "oneflow.scope", COMPATIBLE_MODULE]
                 )
                 arg0 = d.args[0]
+                experimental_module = None
+                if is_compatible_and_experimental:
+                    experimental_module = "experimental"
                 target_module0 = join_module(
-                    self.root_module, get_parent_module(arg0.value)
+                    self.root_module, experimental_module, get_parent_module(arg0.value)
                 )
                 target_symbol0 = arg0.value.split(".")[-1]
 
@@ -229,7 +228,7 @@ class ExportVisitor(ast.NodeTransformer):
                 # nth export: import from first export
                 for argN in d.args[1::]:
                     target_moduleN = join_module(
-                        self.root_module, get_parent_module(argN.value)
+                        self.root_module, experimental_module, get_parent_module(argN.value)
                     )
                     target_nameN = argN.value.split(".")[-1]
                     assert arg0 != argN, {"arg0": arg0, "argN": argN}
