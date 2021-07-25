@@ -21,3 +21,5 @@ from oneflow.compatible.single_client.deprecated.init_cluster_env import (
 from oneflow.compatible.single_client.experimental.namescope import (
     deprecated_name_scope as variable_scope,
 )
+
+from . import nn

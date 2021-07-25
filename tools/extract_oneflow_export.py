@@ -378,8 +378,20 @@ class SrcFile:
                     self.export_visitor.append_export(
                         target_module="oneflow.compatible.single_client",
                         node=ast.parse(
-                            f"from . import env, scope, math, optimizer, losses"
+                            f"from . import env, scope, math, optimizer, losses, config, layers, summary, random, typing, train, data, profiler"
                         ),
+                    )
+                    self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client.experimental",
+                        node=ast.parse(f"from . import scope"),
+                    )
+                    self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client.deprecated",
+                        node=ast.parse(f"from . import nn"),
+                    )
+                    self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client.unittest",
+                        node=ast.parse(f"from . import env"),
                     )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
@@ -600,14 +612,14 @@ if __name__ == "__main__":
     Path(os.path.join(OUT_PATH, "oneflow", "F")).mkdir(exist_ok=True)
     Path(os.path.join(OUT_PATH, "oneflow", "F/__init__.py")).touch()
     Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F")).mkdir(
-        parents=True
+        parents=True, exist_ok=True
     )
     Path(
         os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F/__init__.py")
     ).touch()
     Path(
         os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F")
-    ).mkdir(parents=True)
+    ).mkdir(parents=True, exist_ok=True)
     Path(
         os.path.join(
             OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F/__init__.py"

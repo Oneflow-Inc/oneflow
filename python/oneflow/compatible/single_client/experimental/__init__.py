@@ -173,3 +173,5 @@ from oneflow.compatible.single_client.ops.assign_op import (
 from oneflow.compatible.single_client.ops.util.custom_op_module import (
     CustomOpModule as custom_op_module,
 )
+
+from . import scope

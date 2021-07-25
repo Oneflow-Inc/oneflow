@@ -24,3 +24,5 @@ from oneflow.compatible.single_client.framework.unittest import (
     skip_unless_2n2d,
     skip_unless_2n4d,
 )
+
+from . import env

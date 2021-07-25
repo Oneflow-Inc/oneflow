@@ -410,4 +410,19 @@ from oneflow.compatible.single_client.ops.user_op_builder import (
 from oneflow.compatible.single_client.ops.watch import Watch as watch
 from oneflow.compatible.single_client.ops.watch import WatchDiff as watch_diff
 
-from . import distributed, env, losses, math, optimizer, scope
+from . import (
+    config,
+    data,
+    distributed,
+    env,
+    layers,
+    losses,
+    math,
+    optimizer,
+    profiler,
+    random,
+    scope,
+    summary,
+    train,
+    typing,
+)

@@ -20,8 +20,8 @@ from oneflow.ops.summary_ops import write_image as image
 from oneflow.ops.summary_ops import write_pb as pb
 from oneflow.ops.summary_ops import write_scalar as scalar
 from oneflow.summary.summary_graph import Graph
-from oneflow.summary.summary_hparams import HParam as Hparam
 from oneflow.summary.summary_hparams import (
+    HParam,
     IntegerRange,
     Metric,
     RealRange,
