@@ -54,6 +54,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })
+			.def("__int__", [](Symbol<ParallelDesc> p) {
+					return *reinterpret_cast<int64_t*>(&p);
+			})
       .def("__eq__", [](const Symbol<Device>& d1, const Symbol<Device>& d2) { return *d1 == *d2; })
       .def("__str__", [](const Symbol<Device>& d) { return d->ToString(); })
       .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); });

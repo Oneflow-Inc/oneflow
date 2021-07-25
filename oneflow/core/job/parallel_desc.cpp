@@ -159,6 +159,24 @@ Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* paralle
   }
 }
 
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc, int64_t* parallel_id) {
+	static thread_local HashMap<Symbol<ParallelDesc>, int64_t> parallel_desc2parallel_id;
+	static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
+	auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);
+	auto device_iter = parallel_desc2device.find(parallel_desc);
+	if (device_iter == parallel_desc2device.end()) {
+		CHECK_OR_RETURN(parallel_id_iter == parallel_desc2parallel_id.end());
+		int64_t id_val = 0; 
+		const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
+		parallel_id_iter = parallel_desc2parallel_id.emplace(parallel_desc, id_val).first;
+		device_iter = parallel_desc2device.emplace(parallel_desc, device).first;
+	} else {
+		CHECK_OR_RETURN(parallel_id_iter != parallel_desc2parallel_id.end());
+	}
+	*parallel_id = parallel_id_iter->second;
+	return iter->second;
+}
+
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
                                     int64_t* parallel_id) const {
   const auto& machine_iter = machine_id2device_id2parallel_id_.find(machine_id);

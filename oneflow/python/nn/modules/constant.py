@@ -20,7 +20,7 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.common_types import _size_any_t
 from oneflow.python.nn.modules.utils import _single
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 
 class _ConstantBase(Module):
@@ -30,6 +30,8 @@ class _ConstantBase(Module):
         value: Union[float, int],
         dtype: Optional[flow.dtype],
         device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
     ) -> None:
         super().__init__()
@@ -44,23 +46,42 @@ class _ConstantBase(Module):
         if dtype is None:
             dtype = flow.float32
 
-        if device is None:
-            self.device = flow.device("cpu")
+        if placement is None:
+            if device is None:
+                self.device = flow.device("cpu")
+        else:
+            assert device is None
+        self.placement = placement
+        self.sbp = sbp
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s"%sbp
+            if isinstance(self.sbp, flow.sbp.sbp)
+                self.sbp = (self.sbp,)
+            else:
+                for elem in sbp:
+                    assert isinstance(sbp, flow.sbp.sbp), "sbp: %s"sbp
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s"%sbp
 
         self.shape = size
         self.value = value
         self.dtype = dtype
 
     def forward(self):
-        res = flow.F.constant(self.shape, self.value, self.dtype)
-        res = res.to(device=self.device)
+        if self.placement is not None:
+        res = flow.F.consistent_constant(
+            self.shape, self.value, self.dtype, int(self.placement), tuple(map(int, self.sbp))
+        )
+		else: 
+            res = flow.F.constant(self.shape, self.value, self.dtype, int(self.device))
         res.requires_grad = self.requires_grad
         return res
 
 
 class Ones(_ConstantBase):
-    def __init__(self, size, dtype=None, device=None, requires_grad=False):
-        super().__init__(size, 1, dtype, device, requires_grad)
+    def __init__(self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
+        super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
 @oneflow_export("ones")
@@ -69,6 +90,8 @@ def ones_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow.sbp.sbp = None,
     requires_grad: bool = False,
 ):
     r"""
@@ -79,7 +102,9 @@ def ones_op(
         size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -94,12 +119,12 @@ def ones_op(
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
-    return Ones(size, dtype, device, requires_grad)()
+    return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
 class Zeros(_ConstantBase):
-    def __init__(self, size, dtype=None, device=None, requires_grad=False):
-        super().__init__(size, 0, dtype, device, requires_grad)
+    def __init__(self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
+        super().__init__(size, 0, dtype, device, placement, sbp, requires_grad)
 
 
 @oneflow_export("zeros")
@@ -108,6 +133,8 @@ def zeros_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow.sbp.sbp = None,
     requires_grad: bool = False,
 ):
     r"""
@@ -118,7 +145,9 @@ def zeros_op(
         size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -133,7 +162,7 @@ def zeros_op(
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
-    return Zeros(size, dtype, device, requires_grad)()
+    return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 
 class ZerosLike(Module):
@@ -208,11 +237,15 @@ class NewOnes(Module):
         size: Union[_size_any_t, flow.Size] = None,
         dtype: Optional[flow.dtype] = None,
         device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: flow.sbp = None,
         requires_grad: bool = False,
     ):
         super().__init__()
 
         self.device = device
+        self.placement = placement
+        self.sbp = sbp
         self.requires_grad = requires_grad
         if size != None:
             size = _single(size)
@@ -223,6 +256,8 @@ class NewOnes(Module):
         new_size = self.size
         new_dtype = self.dtype
         new_device = self.device
+        new_placement = self.placement
+        new_sbp = self.sbp
         new_requires_grad = self.requires_grad
 
         if self.size is None:
@@ -232,7 +267,17 @@ class NewOnes(Module):
             new_dtype = x.dtype
 
         if self.device is None:
-            new_device = x.device
+            new_device = x.device if x.is_local else None
+
+        if self.placement is None:
+            new_placement = x.placement if x.is_consistent else None
+
+        if self.sbp is None:
+            new_sbp = x.sbp if x.is_consistent else None
+
+        if new_placement is not None:
+            assert self.device is None
+            assert new_sbp is not None
 
         assert isinstance(
             new_size, (int, tuple, flow.Size)
@@ -244,18 +289,28 @@ class NewOnes(Module):
             new_device, (str, flow.device)
         ), f"device parameter not correct, please check!"
         assert isinstance(
+            new_placement, flow.placement
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_sbp, flow.sbp.sbp
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
             new_requires_grad, bool
         ), f"requires_grad parameter not correct, please check!"
 
-        res = flow.F.constant(new_size, 1.0, new_dtype)
-        res = res.to(new_device)
+        if self.placement is not None:
+            res = flow.F.consistent_constant(
+                    new_size, 1.0, new_dtype, int(self.placement), tuple(map(int, self.sbp))
+            )
+        else:
+            res = flow.F.constant(new_size, 1.0, new_dtype, int(new_device))
         res.requires_grad = new_requires_grad
         return res
 
 
 @register_tensor_op("new_ones")
 @experimental_api
-def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
+def new_ones_op(x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False):
     r"""
     
     Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
@@ -264,6 +319,8 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
         dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
     
     For example:
@@ -280,7 +337,7 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
     """
-    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
+    return NewOnes(size=size, dtype=dtype, device=device, placement=placement, sbp=sbp, requires_grad=requires_grad)(
         x
     )
 

@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
@@ -37,7 +38,10 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
+	if (TRY(ctx.device).IsOk()) { return ctx.device; }
+	return Device::New("cpu", 0);
+}
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
@@ -155,7 +159,7 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   Symbol<Device> default_device;
   if (inputs.empty()) {
-    default_device = JUST(GetDefaultDevice());
+    default_device = JUST(GetDefaultDevice(ctx));
   } else {
     default_device = JUST(inputs.at(0)->device());
   }

@@ -42,7 +42,13 @@ class OpExprInterpState {
   TensorTuple saved_tensors_;
 };
 
+class Device;
+class ParallelDesc;
+
 struct OpExprInterpContext {
+	Maybe<Symbol<Device>> device; // for local op
+	Maybe<Symbol<ParallelDesc>> parallel_desc; // for consistent op
+	Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution; // for consistent op
   AttrMap attrs;
   std::shared_ptr<user_op::OpKernelState> state;
 };

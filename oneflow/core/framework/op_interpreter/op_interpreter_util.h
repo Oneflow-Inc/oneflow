@@ -31,8 +31,6 @@ namespace one {
 
 class OpInterpUtil {
  public:
-  static Maybe<AutogradInterpreter> GetInterpreter();
-
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs) {
     return Dispatch<T>(op_expr, inputs, OpExprInterpContext{attrs, nullptr});
@@ -45,6 +43,17 @@ class OpInterpUtil {
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const OpExprInterpContext& ctx);
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs, const AttrMap& attrs) {
+    return Dispatch<T>(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+  }
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) {
+    return Dispatch<T>(op_expr, inputs, outputs, OpExprInterpContext{AttrMap{}, nullptr});
+  }
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                            const OpExprInterpContext& ctx);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
