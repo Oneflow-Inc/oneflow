@@ -543,10 +543,15 @@ if __name__ == "__main__":
             py_f.unlink()
     for pyc in Path(out_oneflow_dir).glob("**/*.pyc"):
         pyc.unlink()
-    for d in reversed([Path(dirpath) for dirpath, dirnames, files in os.walk(out_oneflow_dir) if not files and not dirnames]):
+    for d in reversed(
+        [
+            Path(dirpath)
+            for dirpath, dirnames, files in os.walk(out_oneflow_dir)
+            if not files and not dirnames
+        ]
+    ):
         if "include" not in str(d) and "core" not in str(d):
             d.rmdir()
-
 
     srcs = get_files()
     final_trees = {}
@@ -593,10 +598,20 @@ if __name__ == "__main__":
     # TODO: touch __init__.py, oneflow/F/__init__.py
     Path(os.path.join(OUT_PATH, "oneflow", "F")).mkdir()
     Path(os.path.join(OUT_PATH, "oneflow", "F/__init__.py")).touch()
-    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F")).mkdir(parents=True)
-    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F/__init__.py")).touch()
-    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F")).mkdir(parents=True)
-    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F/__init__.py")).touch()
+    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F")).mkdir(
+        parents=True
+    )
+    Path(
+        os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F/__init__.py")
+    ).touch()
+    Path(
+        os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F")
+    ).mkdir(parents=True)
+    Path(
+        os.path.join(
+            OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F/__init__.py"
+        )
+    ).touch()
     Path(os.path.join(OUT_PATH, f"oneflow/compatible/__init__.py")).touch()
     # step 1: extract all exports
     # step 2: merge exports into src in python/
