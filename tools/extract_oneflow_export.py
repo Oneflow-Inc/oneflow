@@ -378,7 +378,7 @@ class SrcFile:
                     self.export_visitor.append_export(
                         target_module="oneflow.compatible.single_client",
                         node=ast.parse(
-                            f"from . import env, scope, math, optimizer, losses, config, layers, summary, random, typing, train, data, profiler"
+                            f"from . import env, scope, math, optimizer, losses, config, layers, summary, random, typing, train, data, profiler, sysconfig"
                         ),
                     )
                     self.export_visitor.append_export(
