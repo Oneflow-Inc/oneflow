@@ -593,6 +593,8 @@ if __name__ == "__main__":
     # TODO: touch __init__.py, oneflow/F/__init__.py
     Path(os.path.join(OUT_PATH, "oneflow", "F")).mkdir()
     Path(os.path.join(OUT_PATH, "oneflow", "F/__init__.py")).touch()
+    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F")).mkdir(parents=True)
+    Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "F/__init__.py")).touch()
     Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F")).mkdir(parents=True)
     Path(os.path.join(OUT_PATH, COMPATIBLE_MODULE.replace(".", "/"), "experimental/F/__init__.py")).touch()
     Path(os.path.join(OUT_PATH, f"oneflow/compatible/__init__.py")).touch()
