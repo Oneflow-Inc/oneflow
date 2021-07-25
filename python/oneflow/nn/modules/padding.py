@@ -23,7 +23,7 @@ class ReplicationPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.ReplicationPad2d.html?highlight=replicationpad2d#torch.nn.ReplicationPad2d
-    
+
     Pads the input tensor using the replication of the input boundary.
 
     Args:
@@ -143,7 +143,7 @@ class ReflectionPad2d(Module):
                   [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
                   [ 8.,  7.,  6.,  7.,  8.,  7.,  6.],
                   [ 5.,  4.,  3.,  4.,  5.,  4.,  3.]],
-        <BLANKLINE>         
+        <BLANKLINE>
                  [[14., 13., 12., 13., 14., 13., 12.],
                   [11., 10.,  9., 10., 11., 10.,  9.],
                   [14., 13., 12., 13., 14., 13., 12.],
@@ -205,7 +205,7 @@ class ConstantPad1d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
 
         >>> input = flow.tensor(np.arange(8).reshape(2,2,2).astype(np.float32))
@@ -245,13 +245,13 @@ class ConstantPad2d(Module):
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
 
-    This operator pads the input with constant value that user specifies. 
+    This operator pads the input with constant value that user specifies.
     User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
         padding (int, tuple, list):  the size of the padding.
-            If is `int`, uses the same padding in all boundaries. 
-            If a 4-`tuple`, uses 
+            If is `int`, uses the same padding in all boundaries.
+            If a 4-`tuple`, uses
             (:math:`\\mathrm{padding_{left}}`, :math:`\\mathrm{padding_{right}}`, :math:`\\mathrm{padding_{top}}`, :math:`\\mathrm{padding_{bottom}}`)
 
         value (int, float): The constant value used for padding. Defaults to 0.
@@ -337,7 +337,7 @@ class ConstantPad3d(Module):
             (:math:`\\text{padding_left}`, :math:`\\text{padding_right}`,
             :math:`\\text{padding_top}`, :math:`\\text{padding_bottom}`,
             :math:`\\text{padding_front}`, :math:`\\text{padding_back}`)
-        
+
         value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
