@@ -18,13 +18,6 @@ import os
 
 import numpy as np
 
-# To enable MultiClient
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "12139"
-os.environ["WORLD_SIZE"] = "1"
-os.environ["RANK"] = "0"
-os.environ["LOCAL_RANK"] = "0"
-
 import oneflow
 import oneflow.experimental as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
@@ -189,7 +182,6 @@ class TestGraph(flow.unittest.TestCase):
             def build(self):
                 # check lazy mode in nn.Graph._compile
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-                print("graph proto", self._graph_proto)
 
                 # check session type
                 import oneflow.python.framework.session_context as session_ctx
@@ -217,6 +209,7 @@ class TestGraph(flow.unittest.TestCase):
         g = CustomGraph()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         g._compile()
+        print("graph proto", g._graph_proto)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
 
     def test_block_scope(test_case):
@@ -241,7 +234,6 @@ class TestGraph(flow.unittest.TestCase):
                 # weight is not get in conv1's forward, so it will return a Block
                 x = self.conv1.weight
                 test_case.assertEqual(type(x), flow.nn.graph.Block)
-                return x
 
         class SubModule1(flow.nn.Module):
             def __init__(self):
@@ -283,7 +275,6 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
                 )
-                return x
 
         class CustomModule1(flow.nn.Module):
             def __init__(self):
@@ -294,7 +285,6 @@ class TestGraph(flow.unittest.TestCase):
             def forward(self):
                 x = self.layer0()
                 y = self.layer1()
-                return x, y
 
         m = CustomModule1()
 
@@ -313,7 +303,7 @@ class TestGraph(flow.unittest.TestCase):
         g = CustomGraph1()
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        z = g._compile()
+        g._compile()
 
 
 if __name__ == "__main__":
