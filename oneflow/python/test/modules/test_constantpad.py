@@ -98,7 +98,22 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestConstantPad2dModule(flow.unittest.TestCase):
+class TestConstantPad1d(flow.unittest.TestCase):
+    @autotest(rtol=1e-4, atol=1e-4)
+    def test_constantpad1d_with_random_data(test_case):
+        m = torch.nn.ConstantPad1d(padding=random().to(int), value=random().to(float))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(
+            device
+        )
+        y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestConstantPad2d(flow.unittest.TestCase):
     def test_ConstantPad2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
@@ -127,11 +142,8 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
             )
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-class TestConstantPad3dModule(flow.unittest.TestCase):
+@flow.unittest.skip_unless_1n1d()
+class TestConstantPad3d(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             spatial_size = np.random.randint(1, 6)
