@@ -27,6 +27,29 @@ class Log1p(Module):
         return self._op(x)[0]
 
 
+@register_tensor_op("log1p")
+def log1p_op(input):
+    """Returns a new tensor with the natural logarithm of (1 + input).
+
+    .. math::
+        \\text{out}_{i}=\\log_e(1+\\text{input}_{i})
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> out = flow.log1p(x).numpy()
+        >>> out
+        array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
+
+    """
+    return Log1p()(input)
+
+
 if __name__ == "__main__":
     import doctest
 

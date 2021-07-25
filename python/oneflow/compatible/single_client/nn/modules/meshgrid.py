@@ -46,6 +46,47 @@ class MeshGrid(Module):
         return outputs
 
 
+def meshgrid_op(*inputs):
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/_modules/torch/functional.html#meshgrid
+    
+    Take :math:`N` tensors, each of which can be either scalar or 1-dimensional
+    vector, and create :math:`N` N-dimensional grids, where the :math:`i` :sup:`th` grid is defined by
+    expanding the :math:`i` :sup:`th` input over dimensions defined by other inputs.
+
+    Args:
+        tensors (list of Tensor): list of scalars or 1 dimensional tensors. Scalars will be
+            treated as tensors of size :math:`(1,)` automatically
+
+    Returns:
+        seq (sequence of Tensors): If the input has :math:`k` tensors of size
+        :math:`(N_1,), (N_2,), \\ldots , (N_k,)`, then the output would also have :math:`k` tensors,
+        where all tensors are of size :math:`(N_1, N_2, \\ldots , N_k)`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input1 = flow.Tensor(np.array([1, 2, 3]), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([4, 5, 6]), dtype=flow.float32)
+        >>> of_x, of_y = flow.meshgrid(input1, input2)
+        >>> of_x
+        tensor([[1., 1., 1.],
+                [2., 2., 2.],
+                [3., 3., 3.]], dtype=oneflow.float32)
+        >>> of_y
+        tensor([[4., 5., 6.],
+                [4., 5., 6.],
+                [4., 5., 6.]], dtype=oneflow.float32)
+    """
+    return MeshGrid()(inputs)
+
+
 if __name__ == "__main__":
     import doctest
 

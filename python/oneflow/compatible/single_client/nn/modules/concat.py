@@ -47,6 +47,38 @@ class Cat(Module):
         return flow.F.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
 
 
+def concat_op(inputs, dim=0):
+    """Concatenate two or more `Tensor` s at specified axis.
+
+    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
+
+    Args:
+        inputs: a `list` of `Tensor`
+        dim: a `int`.
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import numpy as np
+
+        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+
+        >>> out = flow.cat([input1, input2, input3], dim=1)
+        >>> out.shape
+        flow.Size([2, 18, 5, 3])
+
+    """
+    return Cat(dim=dim)(inputs)
+
+
 if __name__ == "__main__":
     import doctest
 

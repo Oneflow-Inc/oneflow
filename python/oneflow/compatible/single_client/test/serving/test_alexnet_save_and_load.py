@@ -23,7 +23,7 @@ from alexnet import alexnet, load_data
 from google.protobuf import text_format as text_format
 from ofrecord_dataset import ImageNetRecordDataset
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client.core.serving import (
     saved_model_pb2 as saved_model_pb,

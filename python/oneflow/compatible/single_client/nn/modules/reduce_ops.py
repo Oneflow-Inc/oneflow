@@ -48,6 +48,28 @@ class Sum(Module):
         return self._op(input, axis=axis_checked)[0]
 
 
+@register_tensor_op("sum")
+def _sum(input, dim=None, keepdim=False):
+    """Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> flow.sum(input)
+        tensor([21.], dtype=oneflow.float32)
+        >>> flow.sum(input, dim=0)
+        tensor([5., 7., 9.], dtype=oneflow.float32)
+        >>> flow.sum(input, dim=1)
+        tensor([ 6., 15.], dtype=oneflow.float32)
+
+    """
+    return Sum(dim, keepdim)(input)
+
+
 class Mean(Module):
     def __init__(
         self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
@@ -75,6 +97,28 @@ class Mean(Module):
         return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
 
 
+@register_tensor_op("mean")
+def _mean(input, dim=None, keepdim=False):
+    """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> flow.mean(input)
+        tensor([3.5], dtype=oneflow.float32)
+        >>> flow.mean(input, dim=0)
+        tensor([2.5, 3.5, 4.5], dtype=oneflow.float32)
+        >>> flow.mean(input, dim=1)
+        tensor([2., 5.], dtype=oneflow.float32)
+
+    """
+    return Mean(dim, keepdim)(input)
+
+
 class Min(Module):
     def __init__(
         self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
@@ -91,6 +135,28 @@ class Min(Module):
         return self._op(input, axis=axis_checked)[0]
 
 
+@register_tensor_op("min")
+def _min(input, dim=None, keepdim=False):
+    """Computes the minimum value of all elements in the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.min(input)
+        tensor([1.], dtype=oneflow.float32)
+        >>> flow.min(input, dim=0)
+        tensor([2., 1., 3.], dtype=oneflow.float32)
+        >>> flow.min(input, dim=1)
+        tensor([1., 2.], dtype=oneflow.float32)
+
+    """
+    return Min(dim, keepdim)(input)
+
+
 class Max(Module):
     def __init__(
         self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
@@ -105,6 +171,28 @@ class Max(Module):
         if len(axis_checked) == 0:
             return input
         return self._op(input, axis=axis_checked)[0]
+
+
+@register_tensor_op("max")
+def _max(input, dim=None, keepdim=False):
+    """Computes the maximum value of all elements in the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
+        >>> flow.max(input)
+        tensor([6.], dtype=oneflow.float32)
+        >>> flow.max(input, dim=0)
+        tensor([4., 6., 5.], dtype=oneflow.float32)
+        >>> flow.max(input, dim=1)
+        tensor([5., 6.], dtype=oneflow.float32)
+
+    """
+    return Max(dim, keepdim)(input)
 
 
 if __name__ == "__main__":

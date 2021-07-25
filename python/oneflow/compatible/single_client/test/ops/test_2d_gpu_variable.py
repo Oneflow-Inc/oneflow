@@ -17,7 +17,7 @@ limitations under the License.
 import os
 import unittest
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 

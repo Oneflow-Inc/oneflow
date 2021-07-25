@@ -59,6 +59,37 @@ class Repeat(Module):
         return out
 
 
+@register_tensor_op("repeat")
+def repeat_op(x, sizes):
+    """This operator repeat the input tensor to a larger size along the specified dimensions.
+
+    Args:
+        x (oneflow.compatible.single_client.Tensor): The input Tensor.
+        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+
+    Returns:
+        oneflow.compatible.single_client.Tensor: The result Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([[[[0, 1]],
+        ...               [[2, 3]],
+        ...               [[4, 5]]]]).astype(np.int32)
+
+        >>> input = flow.Tensor(x)
+        >>> out = input.repeat(sizes=(1, 1, 2, 2))
+        >>> out.shape
+        flow.Size([1, 3, 2, 4])
+    """
+    return Repeat(sizes=sizes)(x)
+
+
 if __name__ == "__main__":
     import doctest
 

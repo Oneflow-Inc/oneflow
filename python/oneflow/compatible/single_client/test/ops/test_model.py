@@ -19,7 +19,7 @@ import unittest
 
 import numpy as np
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible.single_client import experimental as flow
 from oneflow.compatible.single_client.nn.parameter import Parameter
 

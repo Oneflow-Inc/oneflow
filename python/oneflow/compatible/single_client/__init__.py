@@ -116,6 +116,25 @@ def custom_exit(returncode):
 sys.exit = custom_exit
 del custom_exit
 del sys
+import oneflow.compatible.single_client.nn.modules.acosh
+import oneflow.compatible.single_client.nn.modules.activation
+import oneflow.compatible.single_client.nn.modules.argwhere
+import oneflow.compatible.single_client.nn.modules.atan2
+import oneflow.compatible.single_client.nn.modules.atanh
+import oneflow.compatible.single_client.nn.modules.bmm
+import oneflow.compatible.single_client.nn.modules.constant
+import oneflow.compatible.single_client.nn.modules.floor
+import oneflow.compatible.single_client.nn.modules.greater
+import oneflow.compatible.single_client.nn.modules.greater_equal
+import oneflow.compatible.single_client.nn.modules.masked_select
+import oneflow.compatible.single_client.nn.modules.math_ops
+import oneflow.compatible.single_client.nn.modules.norm
+import oneflow.compatible.single_client.nn.modules.permute
+import oneflow.compatible.single_client.nn.modules.round
+import oneflow.compatible.single_client.nn.modules.sign
+import oneflow.compatible.single_client.nn.modules.sinh
+import oneflow.compatible.single_client.nn.modules.tan
+import oneflow.compatible.single_client.nn.modules.tensor_ops
 from oneflow.compatible.single_client.advanced.distribute_ops import (
     cast_to_current_logical_view,
 )
@@ -391,4 +410,4 @@ from oneflow.compatible.single_client.ops.user_op_builder import (
 from oneflow.compatible.single_client.ops.watch import Watch as watch
 from oneflow.compatible.single_client.ops.watch import WatchDiff as watch_diff
 
-from . import distributed
+from . import distributed, env

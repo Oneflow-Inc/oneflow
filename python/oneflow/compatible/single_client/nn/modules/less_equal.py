@@ -34,6 +34,36 @@ class LessEqual(Module):
         return flow.F.broadcast_less_equal(x, y)
 
 
+@register_tensor_op("le")
+def less_equal_op(x, y):
+    """Returns the truth value of :math:`x <= y` element-wise.
+
+    Args:
+        x (oneflow.compatible.single_client.Tensor): A Tensor
+        y (oneflow.compatible.single_client.Tensor): A Tensor
+
+    Returns:
+        oneflow.compatible.single_client.Tensor: A Tensor with int8 type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+
+        >>> out = flow.le(input1, input2)
+        >>> out
+        tensor([1, 0, 1], dtype=oneflow.int8)
+
+    """
+    return LessEqual()(x, y)
+
+
 if __name__ == "__main__":
     import doctest
 

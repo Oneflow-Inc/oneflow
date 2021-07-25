@@ -53,6 +53,36 @@ class Transpose(Module):
         return flow.F.transpose(x, perm=perm)
 
 
+@register_tensor_op("transpose")
+def transpose_op(tensor, dim0, dim1):
+    """Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+
+    The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
+
+    Args:
+        tensor (oneflow.compatible.single_client.Tensor): The input tensor.
+        dim0 (int): the first dimension to be transposed.
+        dim1 (int): the second dimension to be transposed.
+    Returns:
+        Tensor: A transposed tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = flow.transpose(input, 0, 1).shape
+        >>> out
+        flow.Size([6, 2, 5, 3])
+
+    """
+    return Transpose(dim0=dim0, dim1=dim1)(tensor)
+
+
 if __name__ == "__main__":
     import doctest
 

@@ -16,7 +16,7 @@ limitations under the License.
 
 from absl import flags
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 
 FLAGS = flags.FLAGS
 

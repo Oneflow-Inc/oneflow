@@ -353,6 +353,10 @@ class SrcFile:
                     self.export_visitor.append_export(
                         target_module=root_module, node=ast.parse(f"from . import saved_model")
                     )
+                else:
+                    self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client", node=ast.parse(f"from . import env")
+                    )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
             #     )
@@ -486,7 +490,12 @@ def save_trees(args=None):
         dst_full.with_suffix(".ast.py").write_text(new_txt)
     new_txt = ""
     if dst.name.startswith("test_"):
-        new_txt += """
+        if "compatible" in str(dst):
+           new_txt += f"""
+import {COMPATIBLE_MODULE}.unittest
+"""
+        else:
+            new_txt += """
 import oneflow.unittest
 """
     new_txt += "\n".join([ast.unparse(tree) for tree in trees])
@@ -556,6 +565,7 @@ if __name__ == "__main__":
         root = root.replace(".", "/")
         Path(os.path.join(OUT_PATH, f"{root}/experimental/F")).mkdir(exist_ok=True)
         Path(os.path.join(OUT_PATH, f"{root}/experimental/F/__init__.py")).touch()
+    Path(os.path.join(OUT_PATH, f"oneflow/compatible/__init__.py")).touch()
     # step 1: extract all exports
     # step 2: merge exports into src in python/
     # step 4: finalize __all__, if it is imported by another module or wrapped in 'oneflow.export', it should appears in __all__

@@ -38,6 +38,30 @@ class Permute(Module):
         return flow.F.transpose(x, perm=new_perm)
 
 
+@register_tensor_op("permute")
+def permute_op(tensor, *dims):
+    """Returns a view of the original tensor with its dimensions permuted.
+
+    Args:
+        *dims (int...): The desired ordering of dimensions
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = input.permute(1, 0, 2, 3).shape
+        >>> out
+        flow.Size([6, 2, 5, 3])
+
+    """
+    return Permute(dims)(tensor)
+
+
 if __name__ == "__main__":
     import doctest
 

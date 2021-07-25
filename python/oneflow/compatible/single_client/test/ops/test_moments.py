@@ -23,7 +23,7 @@ import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 gpus = tf.config.experimental.list_physical_devices("GPU")

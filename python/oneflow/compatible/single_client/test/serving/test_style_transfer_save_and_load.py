@@ -23,7 +23,7 @@ import cv2
 import numpy as np
 import style_model
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 

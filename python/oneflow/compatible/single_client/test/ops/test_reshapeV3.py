@@ -20,7 +20,7 @@ from collections import OrderedDict
 
 from test_util import GenArgList
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 

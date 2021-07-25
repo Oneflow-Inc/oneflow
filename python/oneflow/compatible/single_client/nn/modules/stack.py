@@ -45,6 +45,38 @@ class Stack(Module):
         return flow.experimental.cat(unsqueezed, dim=self.dim)
 
 
+@register_tensor_op("stack")
+def stack(inputs: Tensor, dim: int = 0) -> None:
+    """Concatenates a sequence of tensors along a new dimension.
+    The returned tensor shares the same underlying data with input tensors.
+
+    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1]`
+    can be used. Negative :attr:`dim` will correspond to :meth:`stack`
+    applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
+
+    Args:
+        inputs (List[oneflow.compatible.single_client.Tensor]): the list of input tensors. Each tensor should have the same shape.
+        dim (int): the index at which to insert the concatenated dimension.
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x = flow.Tensor(np.random.rand(1, 3, 5))
+        >>> y = flow.Tensor(np.random.rand(1, 3, 5))
+        >>> out = flow.stack([x, y], dim = -1)
+        >>> out.shape
+        flow.Size([1, 3, 5, 2])
+    """
+    return Stack(dim)(inputs)
+
+
 if __name__ == "__main__":
     import doctest
 

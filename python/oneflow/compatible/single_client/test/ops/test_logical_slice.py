@@ -20,7 +20,7 @@ import numpy as np
 import test_global_storage
 from test_util import GenArgDict
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as oft
 

@@ -41,6 +41,39 @@ class Ne(Module):
         return flow.F.broadcast_not_equal(input, other)
 
 
+@register_tensor_op("ne")
+def ne_op(input, other):
+    """
+    Computes element-wise not equality.
+    The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
+
+    Args:
+        input (oneflow.compatible.single_client.Tensor): the tensor to compare
+        other (oneflow.compatible.single_client.Tensor, float or int): the target to compare
+
+    Returns:
+
+        - A boolean tensor that is True where :attr:`input` is not equal to :attr:`other` and False elsewhere
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+
+        >>> y = flow.ne(input, other)
+        >>> y
+        tensor([0, 0, 0, 1], dtype=oneflow.int8)
+
+    """
+    return Ne()(input, other)
+
+
 if __name__ == "__main__":
     import doctest
 

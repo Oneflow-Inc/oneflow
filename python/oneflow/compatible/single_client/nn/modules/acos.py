@@ -26,6 +26,35 @@ class Acos(Module):
         return flow.F.acos(x)
 
 
+@register_tensor_op("acos")
+def acos_op(tensor):
+    """
+    Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\arccos(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> arr = np.array([0.5, 0.6, 0.7])
+        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> output = flow.acos(input)
+        >>> print(output.numpy())
+        [1.0471976  0.9272952  0.79539883]
+
+    """
+    return Acos()(tensor)
+
+
 if __name__ == "__main__":
     import doctest
 

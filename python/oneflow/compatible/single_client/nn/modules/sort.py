@@ -50,6 +50,56 @@ class Sort(Module):
             return (flow.experimental.gather(input, indices, dim), indices)
 
 
+@register_tensor_op("sort")
+def sort_op(input, dim: int = -1, descending: bool = False):
+    """Sorts the elements of the input tensor along a given dimension in ascending order by value.
+
+    Args:
+        input (oneflow.compatible.single_client.Tensor): The input Tensor.
+        dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
+        descending (bool, optional): controls the sorting order (ascending or descending).
+
+    Returns:
+        Tuple(oneflow.compatible.single_client.Tensor, oneflow.compatible.single_client.Tensor(dtype=int32)): A tuple of (values, indices), where
+        where the values are the sorted values and the indices are the indices of the elements
+        in the original input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
+        >>> input = flow.Tensor(x)
+        >>> (values, indices) = flow.sort(input)
+        >>> values
+        tensor([[1., 2., 3., 7., 8.],
+                [1., 2., 3., 4., 9.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[0, 4, 1, 3, 2],
+                [0, 4, 3, 2, 1]], dtype=oneflow.int32)
+        >>> (values, indices) = flow.sort(input, descending=True)
+        >>> values
+        tensor([[8., 7., 3., 2., 1.],
+                [9., 4., 3., 2., 1.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[2, 3, 1, 4, 0],
+                [1, 2, 3, 4, 0]], dtype=oneflow.int32)
+        >>> (values, indices) = flow.sort(input, dim=0)
+        >>> values
+        tensor([[1., 3., 4., 3., 2.],
+                [1., 9., 8., 7., 2.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[0, 0, 1, 1, 0],
+                [1, 1, 0, 0, 1]], dtype=oneflow.int32)
+ 
+    """
+    return Sort(dim=dim, descending=descending)(input)
+
+
 if __name__ == "__main__":
     import doctest
 

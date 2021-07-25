@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 import test_global_storage
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 

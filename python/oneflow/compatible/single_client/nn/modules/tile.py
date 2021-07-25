@@ -38,6 +38,55 @@ class Tile(Module):
         return input.repeat(reps)
 
 
+@register_tensor_op("tile")
+def tile_op(x, reps):
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.tile.html
+
+    Constructs a tensor by repeating the elements of ``input``.  The ``reps`` argument specifies the number
+    of repetitions in each dimension.
+
+    If ``reps`` specifies fewer dimensions than ``input`` has, then ones are prepended to ``reps`` until
+    all dimensions are specified.  For example, if ``input`` has shape (8, 6, 4, 2) and ``reps`` is (2, 2),
+    then ``reps`` is treated as (1, 1, 2, 2).
+
+    Analogously, if ``input`` has fewer dimensions than ``reps`` specifies, then ``input`` is treated as
+    if it were unsqueezed at dimension zero until it has as many dimensions as ``reps`` specifies.
+    For example, if ``input`` has shape (4, 2) and ``reps`` is (3, 3, 2, 2), then ``input`` is treated as
+    if it had the shape (1, 1, 4, 2).
+
+    .. note::
+        This function is similar to NumPy’s tile function.
+
+    Args:
+        input (oneflow.compatible.single_client.Tensor): the tensor whose elements to repeat.
+        reps (tuple): the number of repetitions per dimension.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2]).astype(np.int32)
+        >>> input = flow.Tensor(x, dtype=flow.int32)
+        >>> out = input.tile(reps=(2,))
+        >>> out
+        tensor([1, 2, 1, 2], dtype=oneflow.int32)
+
+        >>> x = np.random.randn(5, 2, 1)
+        >>> input = flow.Tensor(x)
+        >>> out = input.tile(reps=(3, 4))
+        >>> out.size()
+        flow.Size([5, 6, 4])
+
+    """
+    return Tile(reps=reps)(x)
+
+
 if __name__ == "__main__":
     import doctest
 

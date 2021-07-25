@@ -34,6 +34,47 @@ class Greater(Module):
         return flow.F.broadcast_greater(x, y)
 
 
+def greater_op(x, y):
+    """Returns the truth value of :math:`x > y` element-wise.
+
+    Args:
+        x (oneflow.compatible.single_client.Tensor): A Tensor
+        y (oneflow.compatible.single_client.Tensor): A Tensor
+
+    Returns:
+        oneflow.compatible.single_client.Tensor: A Tensor with int8 type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+
+        >>> out = flow.gt(input1, input2).shape
+        >>> out
+        flow.Size([2, 6, 5, 3])
+
+    """
+    return Greater()(x, y)
+
+
+@register_tensor_op("gt")
+def greater_op_tensor(x, y):
+    """
+
+    gt() -> Tensor
+
+    See :func:`oneflow.compatible.single_client.experimental.gt`
+
+    """
+    return Greater()(x, y)
+
+
 if __name__ == "__main__":
     import doctest
 

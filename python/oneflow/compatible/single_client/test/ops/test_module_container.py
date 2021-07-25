@@ -17,7 +17,7 @@ limitations under the License.
 import unittest
 from typing import Tuple
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible.single_client import experimental as flow
 from oneflow.compatible.single_client import typing as tp
 

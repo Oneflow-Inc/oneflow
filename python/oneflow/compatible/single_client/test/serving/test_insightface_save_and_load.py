@@ -24,7 +24,7 @@ import numpy as np
 from insightface_resnet100 import Resnet100
 from ofrecord_dataset import FaceEmoreRecordDataset
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 

@@ -27,6 +27,33 @@ class Triu(Module):
         return flow.F.triu(x, self.diagonal)
 
 
+@register_tensor_op("triu")
+def triu_op(x, diagonal=0):
+    """Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
+    the other elements of the result tensor out are set to 0.
+    
+    Args:
+        input (Tensor): the input tensor. 
+        diagonal (int, optional): the diagonal to consider
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
+        >>> flow.triu(x)
+        tensor([[1., 1., 1.],
+                [0., 1., 1.],
+                [0., 0., 1.]], dtype=oneflow.float32)
+
+    """
+    return Triu(diagonal)(x)
+
+
 if __name__ == "__main__":
     import doctest
 

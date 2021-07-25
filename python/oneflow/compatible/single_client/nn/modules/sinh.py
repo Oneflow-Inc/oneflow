@@ -26,6 +26,50 @@ class Sinh(Module):
         return flow.F.sinh(x)
 
 
+def sinh_op(x):
+    """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\sinh(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+
+        >>> x1 = flow.Tensor(np.array([1, 2, 3]))
+        >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
+        >>> x3 = flow.Tensor(np.array([1,0,-1]))
+
+        >>> flow.enable_eager_execution()
+        >>> flow.sinh(x1).numpy()
+        array([ 1.1752012,  3.6268604, 10.017875 ], dtype=float32)
+        >>> flow.sinh(x2).numpy()
+        array([2.20381  , 0.5694193, 0.1517483], dtype=float32)
+        >>> flow.sinh(x3).numpy()
+        array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
+
+    """
+    return Sinh()(x)
+
+
+@register_tensor_op("sinh")
+def sinh_op_tensor(x):
+    """
+
+    sinh() -> Tensor
+
+    See :func:`oneflow.compatible.single_client.experimental.sinh`
+
+    """
+    return Sinh()(x)
+
+
 if __name__ == "__main__":
     import doctest
 

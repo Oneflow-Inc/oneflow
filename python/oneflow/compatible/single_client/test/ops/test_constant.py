@@ -22,7 +22,7 @@ from collections import OrderedDict
 import numpy as np
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 
 func_config = flow.FunctionConfig()

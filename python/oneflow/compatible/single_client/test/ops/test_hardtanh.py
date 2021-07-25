@@ -23,7 +23,7 @@ from typing import Dict
 import numpy as np
 from test_util import GenArgList
 
-import oneflow.unittest
+import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
 from oneflow.compatible.single_client import typing as tp
 

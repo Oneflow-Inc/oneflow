@@ -24,3 +24,7 @@ class BroadCastLike(Module):
 
     def forward(self, x, like_tensor):
         return flow.F.broadcast_like(x, like_tensor, broadcast_axes=self.broadcast_axes)
+
+
+def broadcast_like_op(x, like_tensor, broadcast_axes: None):
+    return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)

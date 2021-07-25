@@ -59,9 +59,73 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, requires_grad)
 
 
+def ones_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
+    """
+    Returns a tensor filled with the scalar value 1,
+    with the shape defined by the variable argument `size`.
+
+    Args:
+        size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \\
+         a variable number of arguments or a collection like a list or tuple.
+        dtype (flow.dtype, optional) – the desired data type of returned tensor.
+        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> y = flow.ones(5)
+        >>> y
+        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
+
+    """
+    return Ones(size, dtype, device, requires_grad)()
+
+
 class Zeros(_ConstantBase):
     def __init__(self, size, dtype=None, device=None, requires_grad=False):
         super().__init__(size, 0, dtype, device, requires_grad)
+
+
+def zeros_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
+    """
+    Returns a tensor filled with the scalar value 0,
+    with the shape defined by the variable argument `size`.
+
+    Args:
+        size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \\
+         a variable number of arguments or a collection like a list or tuple.
+        dtype (flow.dtype, optional) – the desired data type of returned tensor.
+        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> y = flow.zeros(5)
+        >>> y
+        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
+
+    """
+    return Zeros(size, dtype, device, requires_grad)()
 
 
 class ZerosLike(Module):
@@ -72,12 +136,58 @@ class ZerosLike(Module):
         return flow.F.zeros_like(other)
 
 
+def zeros_like_op(other):
+    """
+    Returns a tensor filled with the scalar value 0, with the same size as input.
+    flow.zeros_like(input) is equivalent to flow.zeros(input.shape, dtype=input.dtype)
+
+    Args:
+        other(Tensor): The size of input will determine size of the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.compatible.single_client.experimental as flow
+        import numpy as np
+
+        x = flow.Tensor(np.random.rand([5]))
+        y = flow.zeros_like(x)
+        # [0. 0. 0. 0. 0. ]
+
+    """
+    return ZerosLike()(other)
+
+
 class OnesLike(Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, other):
         return flow.F.ones_like(other)
+
+
+def ones_like_op(other):
+    """
+    Returns a tensor filled with the scalar value 1, with the same size as input.
+    flow.ones_like(input) is equivalent to flow.ones(input.shape, dtype=input.dtype)
+
+    Args:
+        other(Tensor): The size of input will determine size of the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.compatible.single_client.experimental as flow
+        import numpy as np
+
+        x = flow.Tensor(np.random.rand([5]))
+        y = flow.ones_like(x)
+        # [1. 1. 1. 1. 1. ]
+
+    """
+    return OnesLike()(other)
 
 
 class NewOnes(Module):
@@ -123,6 +233,37 @@ class NewOnes(Module):
         res = res.to(new_device)
         res.requires_grad = new_requires_grad
         return res
+
+
+@register_tensor_op("new_ones")
+def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
+    """
+    
+    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.ones((1, 2, 3)))
+        >>> y = x.new_ones((2, 2))
+        >>> y
+        tensor([[1., 1.],
+                [1., 1.]], dtype=oneflow.float32)
+    """
+    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
+        x
+    )
 
 
 if __name__ == "__main__":

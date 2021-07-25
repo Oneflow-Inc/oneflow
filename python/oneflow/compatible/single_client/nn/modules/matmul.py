@@ -41,6 +41,34 @@ class MatMul(Module):
         return res
 
 
+@register_tensor_op("matmul")
+def matmul_op(a, b):
+    """This operator applies matrix multiplication to two Tensor.
+
+    Args:
+        a (oneflow.compatible.single_client.Tensor): A Tensor
+        b (oneflow.compatible.single_client.Tensor): A Tensor
+
+    Returns:
+        oneflow.compatible.single_client.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.compatible.single_client.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> of_out = flow.matmul(input1, input2)
+        >>> of_out.shape
+        flow.Size([2, 5])
+
+    """
+    return MatMul()(a, b)
+
+
 if __name__ == "__main__":
     import doctest
 
