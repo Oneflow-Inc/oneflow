@@ -23,7 +23,6 @@ import os
 import numpy as np
 import oneflow.experimental as flow
 import torch
-import numpy as np
 
 py_tuple = tuple
 

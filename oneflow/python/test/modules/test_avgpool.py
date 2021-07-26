@@ -605,7 +605,7 @@ class TestPoolingModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=random(1, 2), dim2=random(1, 3), dim3=random(5, 7), dim4=random(5, 7)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim0=random(1, 2), dim1=random(1, 3), dim2=random(5, 7), dim4=random(5, 7)).to(device)
         y = m(x)
         return y
 
@@ -619,8 +619,8 @@ class TestPoolingModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim1=random(3, 4), dim2=random(3, 4), dim3=random(5, 7),
-                                  dim4=random(4, 7), dim5=random(4, 7)).to(device)
+        x = random_pytorch_tensor(ndim=5, dim0=random(3, 4), dim1=random(3, 4), dim2=random(5, 7),
+                                  dim3=random(4, 7), dim4=random(4, 7)).to(device)
         y = m(x)
         return y
 
