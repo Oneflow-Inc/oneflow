@@ -27,13 +27,21 @@ namespace one {
 
 /*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
-    bool is_lazy, bool requires_grad, bool is_leaf) {
+    bool is_lazy, bool requires_grad, bool is_leaf, bool enable_dtr) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
     const auto& impl =
         std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
+  } else if (enable_dtr) {
+    const auto& impl =
+        std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& tensor = std::make_shared<DTRMirroredTensor>(impl);
+    const auto& outputs = std::make_shared<TensorTuple>();
+    outputs->push_back(tensor);
+    JUST(RunEmptyOp(outputs.get()));
+    return static_cast<std::shared_ptr<MirroredTensor>>(tensor);
   } else {
     const auto& impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);

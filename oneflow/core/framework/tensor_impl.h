@@ -86,6 +86,7 @@ class TensorImpl {
 };
 
 class EagerMirroredTensorImpl;
+class DTREagerMirroredTensorImpl;
 class MirroredTensorImpl : public TensorImpl {
  public:
   virtual ~MirroredTensorImpl() = default;
@@ -113,6 +114,7 @@ class MirroredTensorImpl : public TensorImpl {
 };
 
 class MirroredTensor;
+class DTRMirroredTensor;
 
 class ConsistentTensorImpl : public TensorImpl {
  public:
@@ -175,7 +177,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<MirroredTensorImpl> detach() const override;
 };
 
-class EagerMirroredTensorImpl final : public MirroredTensorImpl {
+class EagerMirroredTensorImpl : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl();
@@ -213,12 +215,26 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       const std::shared_ptr<TensorStorage>& tensor_storage);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
- private:
+ protected:
   Maybe<void> UpdateTensorStorage();
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
+};
+
+class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
+public:
+  OF_DISALLOW_COPY_AND_MOVE(DTREagerMirroredTensorImpl);
+  DTREagerMirroredTensorImpl() {}
+  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          const std::shared_ptr<AutogradMeta>& autograd_meta) : EagerMirroredTensorImpl(tensor_meta, autograd_meta) {}
+  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          bool requires_grad, bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
+  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
+                          bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
+  ~DTREagerMirroredTensorImpl() {std::cout << "DTREagerMirroredTensorImpl is being deleted." << std::endl;}
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {

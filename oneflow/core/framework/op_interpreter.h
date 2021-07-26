@@ -139,6 +139,15 @@ class EagerMirroredInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
+class DTREagerMirroredInterpreter : public EagerMirroredInterpreter {
+ public:
+  DTREagerMirroredInterpreter() : EagerMirroredInterpreter() {}
+  ~DTREagerMirroredInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
 #undef DECLARE_OVERRIDE_APPLY_FUNC
 #undef DECLARE_PURE_VIRTUAL_APPLY_FUNC
 #undef DECLARE_NORMAL_APPLY_FUNC

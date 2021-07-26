@@ -37,6 +37,7 @@ class FunctionNode;
 
 class ConsistentTensor;
 class MirroredTensor;
+class DTRMirroredTensor;
 
 class Tensor {
  public:
@@ -144,7 +145,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor> {
+class MirroredTensor : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -198,7 +199,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const Symbol<Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf);
+                                          bool requires_grad, bool is_leaf, bool enable_dtr=true);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
@@ -209,8 +210,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
       const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
 
- private:
+ protected:
   std::shared_ptr<MirroredTensorImpl> impl_;
+};
+
+class DTRMirroredTensor final : public MirroredTensor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
+  DTRMirroredTensor() = default;
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; }
+  ~DTRMirroredTensor() {std::cout << "DTRMirroredTensor is being deleted." << std::endl;}
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor> {
@@ -255,7 +264,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
       Symbol<cfg::ParallelDistribution> val) override {
     impl_->set_consumer_parallel_distribution_constraint(val);
     return Maybe<void>::Ok();
-  }
+  };
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
