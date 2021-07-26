@@ -557,7 +557,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 830a6b91f10c0a04a68843370cea6319a21ed9c2
+          ref: c822b17f9ed598185cf1fa70f570871d12db7442
           path: oneflow-models
       - name: Speed test
         id: speed
