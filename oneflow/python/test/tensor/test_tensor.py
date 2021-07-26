@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import random
 from collections import OrderedDict
 
 import numpy as np
@@ -786,6 +785,14 @@ class TestTensor(flow.unittest.TestCase):
         mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
         y = input.addmm(mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
         return y
+    
+    @autotest()
+    def test_clamp_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clamp(min=random().to(float), max=random().to(float))
+        return y
+
 
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(

@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_clamp(test_case, shape, device):
@@ -101,6 +102,14 @@ class TestClampModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_clamp_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(input, min=random().to(float), max=random().to(float))
+        return y
+
 
 
 if __name__ == "__main__":
