@@ -66,12 +66,12 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
-  void PostSendReadInQueue(ibv_send_wr wr, ibv_sge sge);
+  void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
   void RecvDone(WorkRequestId*);
-  void EnqueuePostSend();
+  void PostPenddingSendWR();
 
  private:
   WorkRequestId* NewWorkRequestId();
@@ -89,7 +89,6 @@ class IBVerbsQP final {
   std::mutex num_outstanding_send_wr_mutex_;
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
-  std::mutex msg_pendding_list_mutex_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> msg_pendding_list_;
 };
 
