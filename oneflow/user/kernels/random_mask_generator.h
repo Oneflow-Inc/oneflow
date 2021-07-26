@@ -24,10 +24,10 @@ limitations under the License.
 #include <curand_kernel.h>
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <hiprand.h>
 #include <hiprand_kernel.h>
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace oneflow {
 
@@ -49,7 +49,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
   std::shared_ptr<one::CPUGeneratorImpl> generator_;
 };
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 template<>
 class RandomMaskGenerator<DeviceType::kGPU> final {
  public:

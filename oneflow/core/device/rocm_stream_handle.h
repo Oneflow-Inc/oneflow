@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 struct RocmCBEvent {
   std::function<void()> callback;
@@ -53,7 +53,7 @@ class RocmStreamHandle final {
   std::unique_ptr<miopenHandle_t> miopen_handle_;
 };
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace oneflow
 

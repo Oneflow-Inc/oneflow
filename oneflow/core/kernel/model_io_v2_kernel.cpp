@@ -98,7 +98,7 @@ void SyncCopyToHost<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst
 }
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 template<>
 void SyncCopyToHost<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
   OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
@@ -124,7 +124,7 @@ void SyncCopyToDevice<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* d
 }
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 template<>
 void SyncCopyToDevice<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
   OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));

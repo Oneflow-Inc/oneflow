@@ -27,10 +27,10 @@ limitations under the License.
 #include <curand_kernel.h>
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <hiprand.h>
 #include <hiprand_kernel.h>
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace oneflow {
 namespace one {
@@ -132,7 +132,7 @@ void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, cura
 }  // namespace detail
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
@@ -158,7 +158,7 @@ int GetCudaDeviceCount();
 void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, hiprandState_t* states);
 
 }  // namespace detail
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 class AutoGeneratorImpl : public GeneratorImpl {
  public:

@@ -35,7 +35,7 @@ struct MemoryCopyNdDesc {
 
 template<int32_t NDIMS>
 void CopyNDCpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 template<int32_t NDIMS>
 void CopyNDGpuImpl(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc);
 #endif
@@ -73,7 +73,7 @@ class HostMemoryCopier final : public MemoryCopier {
               const MemoryCopyNdDesc& desc) const override;
 };
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 class CudaAsyncMemoryCopier final : public MemoryCopier {
  public:

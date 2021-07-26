@@ -29,7 +29,7 @@ struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

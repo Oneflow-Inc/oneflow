@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 const hipStream_t* RocmStreamHandle::rocm_stream() {
   if (!rocm_stream_) {
@@ -98,6 +98,6 @@ RocmStreamHandle::~RocmStreamHandle() {
   if (rocm_stream_) { OF_ROCM_CHECK(hipStreamDestroy(*rocm_stream_)); }
 }
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace oneflow

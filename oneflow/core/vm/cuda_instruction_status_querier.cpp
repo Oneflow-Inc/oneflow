@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 #include "oneflow/core/vm/cuda_instruction_status_querier.h"
 #include "oneflow/core/device/device_context.h"
@@ -32,7 +32,7 @@ void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   OF_CUDA_CHECK(cudaEventRecord(event_, device_ctx->cuda_stream()));
   launched_ = true;
 }
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
 bool CudaInstrStatusQuerier::event_completed() const {
   hipSetDevice(device_id_);
   return hipEventQuery(event_) == hipSuccess;

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/rocm/atomic_rocm.h"
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
 #endif
 
@@ -86,7 +86,7 @@ REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_CPU_KERNEL(double)
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

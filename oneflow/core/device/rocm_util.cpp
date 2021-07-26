@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 void InitGlobalRocmDeviceProp() {
   CHECK(Global<hipDeviceProp_t>::Get() == nullptr) << "initialized Global<hipDeviceProp_t> twice";
@@ -92,6 +92,6 @@ RocmCurrentDeviceGuard::RocmCurrentDeviceGuard() { OF_ROCM_CHECK(hipGetDevice(&s
 
 RocmCurrentDeviceGuard::~RocmCurrentDeviceGuard() { OF_ROCM_CHECK(hipSetDevice(saved_dev_id_)); }
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace oneflow

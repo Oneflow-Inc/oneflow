@@ -38,7 +38,7 @@ void AssignKernel<device_type>::ForwardDataContent(
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kCPU,
                             AssignKernel<DeviceType::kCPU>);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kGPU,
                             AssignKernel<DeviceType::kGPU>);
 #endif

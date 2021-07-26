@@ -81,7 +81,7 @@ REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(
 
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 namespace {
 

@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 inline ncclDataType_t GetNcclDataType(const DataType& dt) {
   switch (dt) {

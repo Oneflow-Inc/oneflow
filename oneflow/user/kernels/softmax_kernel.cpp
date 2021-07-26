@@ -112,7 +112,7 @@ REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 template<typename T>
 class SoftmaxGpuKernel final : public user_op::OpKernel {

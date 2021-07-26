@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 miopenDataType_t GetMiopenDataType(DataType val) {
 #define MAKE_ENTRY(type_cpp, type_miopen) \
@@ -158,6 +158,6 @@ template void* MiopenSPZeroPtr<float>();
 template void* MiopenSPZeroPtr<double>();
 template void* MiopenSPZeroPtr<float16>();
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace oneflow

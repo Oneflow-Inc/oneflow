@@ -20,7 +20,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hip/hip_fp16.h>
 #endif
 #include "oneflow/core/common/fp16_data_type.h"
@@ -33,7 +33,7 @@ limitations under the License.
 namespace oneflow {
 
 // #if defined(WITH_CUDA)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
@@ -204,7 +204,7 @@ struct DevDType {
   typedef T type;
 };
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 template<>
 struct DevDType<DeviceType::kGPU, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");

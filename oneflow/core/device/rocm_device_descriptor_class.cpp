@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include <json.hpp>
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 namespace oneflow {
 
@@ -102,4 +102,4 @@ COMMAND(DeviceDescriptorClass::RegisterClass(std::make_shared<RocmDeviceDescript
 
 }  // namespace oneflow
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP

@@ -44,7 +44,7 @@ class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
   GpuReleaseTensorInstructionType() = default;

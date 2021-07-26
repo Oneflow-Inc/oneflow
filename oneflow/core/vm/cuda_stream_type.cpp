@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -70,7 +70,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
 void CudaStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
   hipSetDevice(stream->device_id());

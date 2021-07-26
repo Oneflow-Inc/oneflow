@@ -31,7 +31,7 @@ class CompTaskNode : public TaskNode {
   virtual ~CompTaskNode() = default;
 
   virtual CudaWorkType GetCudaWorkType() const {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     return CudaWorkType::kCompute;
 #else
     UNIMPLEMENTED();

@@ -229,7 +229,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CPU, (DeviceTy
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CPU
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 namespace {
 
 __device__ __inline__ static int get_target_prime(const int* targets_ptr, int64_t max_target_length,

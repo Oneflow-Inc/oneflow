@@ -105,7 +105,7 @@ COMMAND(
     vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
  public:
   CudaHostRegisterBlobInstructionType() = default;

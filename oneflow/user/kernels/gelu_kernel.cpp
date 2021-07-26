@@ -85,7 +85,7 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
 REGISTER_CPU_GELU_GRAD_KERNEL(float)
 REGISTER_CPU_GELU_GRAD_KERNEL(double)
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

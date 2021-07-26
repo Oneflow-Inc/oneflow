@@ -30,7 +30,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SLICE_BOXING_KERNEL_UTIL_CPU,
                      ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SLICE_BOXING_KERNEL_UTIL_CPU
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 template<typename T>
 __global__ void AddGpu(int64_t n, const T* a, const T* b, T* out) {

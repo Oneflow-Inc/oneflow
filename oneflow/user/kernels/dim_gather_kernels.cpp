@@ -137,7 +137,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
 REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t);

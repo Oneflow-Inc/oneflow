@@ -34,7 +34,7 @@ void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include "oneflow/core/vm/cuda_host_allocator.h"
 #include "oneflow/core/device/rocm_util.h"

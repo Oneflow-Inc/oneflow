@@ -21,7 +21,7 @@ endif()
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
-option(BUILD_ROCM "" OFF)
+option(BUILD_HIP "" OFF)
 option(BUILD_TESTING "" OFF)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
@@ -51,7 +51,7 @@ endif()
 
 project(oneflow C CXX)
 
-if (BUILD_ROCM)
+if (BUILD_HIP)
   # Search for rocm in common locations
   list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
 endif()

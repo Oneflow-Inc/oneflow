@@ -32,7 +32,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_UNARY_CORE,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
                                  ARITHMETIC_UNARY_FUNC_SEQ)
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

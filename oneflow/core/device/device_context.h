@@ -41,7 +41,7 @@ class DeviceCtx {
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
   virtual const hipStream_t& rocm_stream() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_pmd_handle() const { UNIMPLEMENTED(); }

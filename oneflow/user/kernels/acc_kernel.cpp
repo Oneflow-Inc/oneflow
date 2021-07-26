@@ -46,7 +46,7 @@ class AccKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif

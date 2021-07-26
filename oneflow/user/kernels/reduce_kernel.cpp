@@ -69,7 +69,7 @@ class ReduceKernel final : public user_op::OpKernel {
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
 #endif
 
@@ -78,7 +78,7 @@ REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
   REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)
 
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
 namespace {

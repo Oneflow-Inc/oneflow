@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ROCM_SOFTMAX_H_
 #define ONEFLOW_CORE_ROCM_SOFTMAX_H_
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 #include <hipcub/hipcub.hpp>
 

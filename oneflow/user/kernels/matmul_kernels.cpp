@@ -84,7 +84,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kCPU, double);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
@@ -196,7 +196,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
 
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kCPU, double);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BATCH_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
@@ -357,7 +357,7 @@ REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kCPU, double);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float16);
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
 #endif
@@ -381,7 +381,7 @@ REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, double);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, double);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float16);
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, double);
 #endif

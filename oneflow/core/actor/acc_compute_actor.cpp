@@ -53,7 +53,7 @@ void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   if (GetDeviceType() == DeviceType::kCPU) {
     cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4);
   } else {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4);
 #else
     UNIMPLEMENTED();
@@ -80,7 +80,7 @@ void AccCompActor::Act() {
       Memcpy<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
     } else if (GetDeviceType() == DeviceType::kGPU) {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
       Memcpy<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
 #else

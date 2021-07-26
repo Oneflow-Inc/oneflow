@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/unique_kernel_util.h"
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
 #endif
 // #include <device_launch_parameters.h>
@@ -69,7 +69,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNIQUE_KERNEL_UTIL_CPU, ARITHMETIC_
 #undef INSTANTIATE_UNIQUE_KERNEL_UTIL_CPU
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 namespace {
 
 template<typename T>

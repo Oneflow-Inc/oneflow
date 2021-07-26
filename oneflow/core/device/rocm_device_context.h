@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 class RocmDeviceCtx : public DeviceCtx {
  public:
@@ -56,7 +56,7 @@ class RocmDeviceCtx : public DeviceCtx {
   RocmStreamHandle* rocm_handler_;
 };
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace oneflow
 

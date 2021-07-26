@@ -86,7 +86,7 @@ REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDe
 }  // namespace oneflow
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <hip/hip_runtime.h>
 #include <rccl.h>
 
@@ -125,4 +125,4 @@ void GpuDumpVersionInfo() {
 
 REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 }  // namespace oneflow
-#endif  // WITH_ROCM
+#endif  // WITH_HIP

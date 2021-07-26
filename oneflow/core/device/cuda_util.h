@@ -186,7 +186,7 @@ int GetCudaPtxVersion();
 
 #else
 
-#if !defined(WITH_ROCM)
+#if !defined(WITH_HIP)
 namespace oneflow {
 
 enum class CudaWorkType {};

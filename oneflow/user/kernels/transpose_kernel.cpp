@@ -54,7 +54,7 @@ REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, int64_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, float)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kCPU, double)
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int8_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_TRANSPOSE_KERNEL(DeviceType::kGPU, int64_t)

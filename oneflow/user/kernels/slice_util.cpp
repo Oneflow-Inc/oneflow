@@ -93,7 +93,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCPU)
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

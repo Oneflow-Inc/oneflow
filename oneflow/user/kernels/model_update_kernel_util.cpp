@@ -324,7 +324,7 @@ template struct LarsUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct LarsUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

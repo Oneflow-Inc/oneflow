@@ -25,7 +25,7 @@ CpuThread::CpuThread(int64_t thrd_id) {
   mut_actor_thread() = std::thread([this, thrd_id]() {
     OF_PROFILER_NAME_THIS_HOST_THREAD("CPU Actor : (" + std::to_string(thrd_id) + ")");
     ThreadCtx ctx;
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     ctx.cb_event_chan = nullptr;
 #endif  // WITH_CUDA
     PollMsgChannel(ctx);

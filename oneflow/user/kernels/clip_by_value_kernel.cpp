@@ -226,7 +226,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

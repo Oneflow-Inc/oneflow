@@ -36,9 +36,9 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include "oneflow/core/device/rocm_device_descriptor.h"
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace oneflow {
 
@@ -64,7 +64,7 @@ AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
     }
   }
 #endif
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
   const auto rocm_device_list =
       node_desc->GetDeviceDescriptorList(device::kRocmDeviceDescriptorClassName);
   CHECK(rocm_device_list);
@@ -94,7 +94,7 @@ AvailableMemDesc GetAvailableMemDesc() {
 
 AvailableMemDesc GetDryRunAvailableMemDesc() {
   AvailableMemDescOfMachine this_machine_mem_desc;
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
     this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
   }

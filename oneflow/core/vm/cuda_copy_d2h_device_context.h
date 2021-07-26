@@ -65,7 +65,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx {
 
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 class CudaCopyD2HDeviceCtx : public DeviceCtx {
  public:

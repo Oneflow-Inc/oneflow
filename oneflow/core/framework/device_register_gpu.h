@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <hip/hip_fp16.h>
 #endif
 
@@ -38,7 +38,7 @@ struct IsFloat16<half> : std::true_type {};
 
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 void GpuDumpVersionInfo();
 
 template<typename T>

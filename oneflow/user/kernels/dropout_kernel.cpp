@@ -100,7 +100,7 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(double)
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 template<typename T>
 __global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const int8_t* mask,

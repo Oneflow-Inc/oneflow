@@ -20,7 +20,7 @@ limitations under the License.
 #include <nccl.h>
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <rccl.h>
 #endif
 
@@ -80,7 +80,7 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 }
 
 bool ResourceDesc::nccl_use_compute_stream() const {
-#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_HIP)
   return resource_.nccl_use_compute_stream();
 #else
   return false;

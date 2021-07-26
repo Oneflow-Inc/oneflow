@@ -38,7 +38,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_UNARY_FUNC_CPU,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, DIM_SEQ,
                                  ARITHMETIC_UNARY_FUNC_SEQ)
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

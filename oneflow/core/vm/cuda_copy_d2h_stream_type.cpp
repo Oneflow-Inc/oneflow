@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_device_context.h"
@@ -61,7 +61,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
 // Launches a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();

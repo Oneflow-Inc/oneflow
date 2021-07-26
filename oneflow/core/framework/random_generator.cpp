@@ -20,9 +20,9 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include "oneflow/core/device/rocm_util.h"
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace oneflow {
 namespace one {
@@ -87,7 +87,7 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
 }
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 Maybe<Generator> DefaultCUDAGenerator(int device_index) {
   static std::vector<std::shared_ptr<Generator>> default_cuda_generator;
   static std::once_flag init_flags;
@@ -105,7 +105,7 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
       << "Invalid device index " << device_index;
   return default_cuda_generator.at(device_index);
 }
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 Maybe<Generator> MakeAutoGenerator() {
   return std::make_shared<Generator>(
@@ -127,7 +127,7 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
 }
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
   if (device_index == -1) { OF_ROCM_CHECK(hipGetDevice(&device_index)); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
@@ -135,13 +135,13 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
   return std::make_shared<Generator>(
       std::make_shared<CUDAGeneratorImpl>(detail::GetNonDeterministicRandom(), device_index));
 }
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
     return MakeCPUGenerator();
   }
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   else if (device == "cuda") {
     return MakeCUDAGenerator(device_index);
   }
@@ -159,7 +159,7 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
     return DefaultCPUGenerator();
   }
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   else if (device == "cuda") {
     return DefaultCUDAGenerator(device_index);
   }

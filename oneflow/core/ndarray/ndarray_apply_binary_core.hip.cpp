@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_ROCM) && defined(__HIP_PLATFORM_HCC__)
+#if defined(WITH_HIP) && defined(__HIP_PLATFORM_HCC__)
 
 #include "oneflow/core/ndarray/ndarray_apply_binary_core.h"
 #include "oneflow/core/ndarray/binary_func.h"

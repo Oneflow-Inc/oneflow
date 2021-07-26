@@ -73,7 +73,7 @@ ObjectMsgPtr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(const Resource& r
 
 #endif
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 

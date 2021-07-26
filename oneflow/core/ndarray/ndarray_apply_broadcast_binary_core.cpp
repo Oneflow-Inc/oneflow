@@ -70,7 +70,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC_CPU,
                                  ((int8_t, DataType::kInt8)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

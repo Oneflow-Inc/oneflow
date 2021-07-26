@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/square_sum_kernel_util.h"
 #include "oneflow/core/rocm/atomic_rocm.h"
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
 #endif
 
@@ -45,7 +45,7 @@ struct SquareSumKernelUtil<DeviceType::kCPU, T> {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CPU, FLOATING_DATA_TYPE_SEQ);
 #undef INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CPU
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

@@ -30,7 +30,7 @@ limitations under the License.
 #include <nccl.h>
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <rccl.h>
 #endif
 

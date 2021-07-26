@@ -27,7 +27,7 @@ struct ThreadCtx {
   Channel<CudaCBEvent>* cb_event_chan;
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
   std::unique_ptr<RocmStreamHandle> g_rocm_stream;
   Channel<RocmCBEvent>* cb_event_chan;
 #endif

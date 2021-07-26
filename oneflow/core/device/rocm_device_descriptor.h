@@ -20,7 +20,7 @@ limitations under the License.
 #include <string>
 #include <memory>
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 namespace oneflow {
 
@@ -56,6 +56,6 @@ class RocmDeviceDescriptor : public DeviceDescriptor {
 
 }  // namespace oneflow
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 #endif  // ONEFLOW_CORE_DEVICE_ROCM_DEVICE_DESCRIPTOR_H_

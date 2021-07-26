@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ROCM_ELEMENTWISE_H_
 #define ONEFLOW_CORE_ROCM_ELEMENTWISE_H_
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include <hip/hip_runtime.h>
 #include <hipblas.h>

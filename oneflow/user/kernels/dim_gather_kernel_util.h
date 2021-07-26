@@ -18,7 +18,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include "oneflow/core/rocm/atomic_rocm.h"
 #endif
 #include "oneflow/core/ndarray/xpu_util.h"

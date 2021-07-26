@@ -20,7 +20,7 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("flags", m) {
   m.def("with_cuda", []() {
 // #ifdef WITH_CUDA
-#if defined (WITH_CUDA) || defined (WITH_ROCM)
+#if defined (WITH_CUDA) || defined (WITH_HIP)
     return true;
 #else
     return false;

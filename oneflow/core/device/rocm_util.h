@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/data_type.h"
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
@@ -127,6 +127,6 @@ class RocmCurrentDeviceGuard final {
 
 }  // namespace oneflow
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 #endif  // ONEFLOW_CORE_DEVICE_ROCM_UTIL_H_

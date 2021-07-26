@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/rocm_util.h"

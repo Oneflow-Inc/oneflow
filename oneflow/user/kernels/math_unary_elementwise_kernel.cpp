@@ -78,7 +78,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

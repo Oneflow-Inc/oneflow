@@ -321,7 +321,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 #if defined(WITH_CUDA)
       cudaMemset(y_tensor->mut_dptr(), 0,
                  y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
       hipMemset(y_tensor->mut_dptr(), 0,
                  y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
 #else
@@ -410,7 +410,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
   REGISTER_SLICE_KERNELS(device, uint8_t)
 
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
 #endif

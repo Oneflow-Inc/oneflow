@@ -26,7 +26,7 @@ void BatchMemcpyKernelUtil<DeviceType::kCPU>::Copy(DeviceCtx* ctx,
   }
 }
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

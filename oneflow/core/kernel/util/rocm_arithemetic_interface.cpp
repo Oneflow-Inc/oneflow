@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include "oneflow/core/kernel/util/cuda_arithemetic_interface.h"
 #include "oneflow/core/common/switch_func.h"

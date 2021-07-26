@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ROCM_ATOMIC_H_
 #define ONEFLOW_CORE_ROCM_ATOMIC_H_
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 #include <hip/hip_runtime.h>
 
@@ -84,6 +84,6 @@ __device__ __forceinline__ double Max(double* address, const double val) {
 
 }  // namespace oneflow
 
-#endif  // defined(WITH_ROCM)
+#endif  // defined(WITH_HIP)
 
 #endif  // ONEFLOW_CORE_ROCM_ATOMIC_H_

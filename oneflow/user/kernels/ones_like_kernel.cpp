@@ -59,7 +59,7 @@ class OnesLikeKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(user_op::HobDeviceTag() == device_type_v);
 
 REGISTER_ONES_LIKE_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_ONES_LIKE_KERNEL(DeviceType::kGPU)
 #endif
 

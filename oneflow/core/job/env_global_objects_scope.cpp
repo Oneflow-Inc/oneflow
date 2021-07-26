@@ -68,7 +68,7 @@ int32_t GetDefaultGpuDeviceNum() {
   int device_count = 0;
   cudaGetDeviceCount(&device_count);
   return device_count;
-#elif WITH_ROCM
+#elif WITH_HIP
   int device_count = 0;
   hipGetDeviceCount(&device_count);
   return device_count;
@@ -114,7 +114,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
-#elif WITH_ROCM
+#elif WITH_HIP
   InitGlobalRocmDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
@@ -163,7 +163,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
   Global<EagerNcclCommMgr>::New();
 #endif
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
@@ -190,7 +190,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<ThreadPool>::Delete();
@@ -206,7 +206,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
-#elif WITH_ROCM
+#elif WITH_HIP
   Global<hipDeviceProp_t>::Delete();
 #endif
   ClearAllSymbolAndIdCache();

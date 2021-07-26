@@ -106,7 +106,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  GATHER_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

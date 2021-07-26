@@ -26,7 +26,7 @@ class DeviceCtx;
 
 namespace vm {
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 class CudaOptionalEventRecordStatusQuerier {
  public:
   ~CudaOptionalEventRecordStatusQuerier() = default;
@@ -55,7 +55,7 @@ class CudaOptionalEventRecordStatusQuerier {
   int64_t device_id_;
 #if defined(WITH_CUDA)
   cudaEvent_t event_;
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
   hipEvent_t event_;
 #endif
 };

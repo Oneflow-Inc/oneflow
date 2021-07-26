@@ -47,7 +47,7 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
   }
 };
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 #define REGISTER_CONSTANT_LIKE_KERNEL(dtype)                                                      \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kConstantLikeConf, DeviceType::kCPU, dtype, \
                                         ConstantLikeKernel<DeviceType::kCPU, dtype>)              \
@@ -67,7 +67,7 @@ REGISTER_CONSTANT_LIKE_KERNEL(int8_t);
 REGISTER_CONSTANT_LIKE_KERNEL(int32_t);
 REGISTER_CONSTANT_LIKE_KERNEL(int64_t);
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM) 
+#if defined(WITH_CUDA) || defined(WITH_HIP) 
 REGISTER_CONSTANT_LIKE_HALF_KERNEL;
 #endif
 

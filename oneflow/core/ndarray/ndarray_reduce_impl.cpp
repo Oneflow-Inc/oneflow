@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
 #endif
 
@@ -70,7 +70,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  REDUCE_BINARY_FUNC_SEQ);
 } // namespace oenflow
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace hipcub {
 struct Prod {

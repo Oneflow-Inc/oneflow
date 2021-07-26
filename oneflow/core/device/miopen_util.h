@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include <miopen/miopen.h>
 
@@ -97,6 +97,6 @@ void* MiopenSPZeroPtr();
 
 }  // namespace oneflow
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 #endif  // ONEFLOW_CORE_DEVICE_MIOPEN_UTIL_H_

@@ -22,9 +22,9 @@ limitations under the License.
 #include <cuda_runtime.h>
 #endif  // WITH_CUDA
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include "oneflow/core/device/rocm_util.h"
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace oneflow {
 namespace one {
@@ -72,7 +72,7 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
 #endif  // WITH_CUDA
 
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 namespace {
 
 int GetThreadNum(const hipDeviceProp_t& prop) {
@@ -127,7 +127,7 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
 }
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 namespace detail {
 
@@ -171,7 +171,7 @@ Maybe<CUDAGeneratorImpl> MakeGeneratorImpl<CUDAGeneratorImpl>(uint64_t seed, int
 #endif  // WITH_CUDA
 
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 int GetCudaDeviceCount() {
   /*static*/ int cuda_device_count;
   OF_ROCM_CHECK(hipGetDeviceCount(&cuda_device_count));
@@ -190,7 +190,7 @@ Maybe<CUDAGeneratorImpl> MakeGeneratorImpl<CUDAGeneratorImpl>(uint64_t seed, int
       << "Invalid device index " << device_index;
   return std::make_shared<CUDAGeneratorImpl>(seed, device_index);
 }
-#endif  // WITH_ROCM
+#endif  // WITH_HIP
 
 }  // namespace detail
 

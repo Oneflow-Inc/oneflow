@@ -300,7 +300,7 @@ void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
 }
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 namespace {
 
@@ -511,7 +511,7 @@ void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
 #endif
 
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
 #endif
 

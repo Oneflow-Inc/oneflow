@@ -59,7 +59,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
         int64_t thrd_id;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
           DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
                              static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
           auto* stream_index_generator =

@@ -27,7 +27,7 @@ limitations under the License.
 #include <nccl.h>
 #endif
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 #include <rccl.h>
 #endif
 
@@ -39,7 +39,7 @@ namespace collective {
 
 namespace {
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
   if (reduce_method == kReduceMethodSum) {
     return ncclRedOp_t::ncclSum;
@@ -79,7 +79,7 @@ int64_t GetAlignedRequestSize(const RequestDesc* request) {
 
 }  // namespace
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 void CollectiveBoxingExecutorBackend::GroupRequests(
     const std::vector<const RequestDesc*>& requests,
@@ -105,7 +105,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
  private:
   struct Event {
     int64_t device_id;
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     hipEvent_t cuda_event;
 #else
     cudaEvent_t cuda_event;
@@ -114,14 +114,14 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   };
 
   struct NcclDeviceCtx : public DeviceCtx {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     const hipStream_t& rocm_stream() const override { return stream; }
 #else
     const cudaStream_t& cuda_stream() const override { return stream; }
 #endif
     void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     hipStream_t stream = nullptr;
 #else
     cudaStream_t stream = nullptr;
@@ -151,7 +151,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     OF_ROCM_CHECK(hipGetDeviceCount(&num_devices_));
 #else
     OF_CUDA_CHECK(cudaGetDeviceCount(&num_devices_));
@@ -173,7 +173,7 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
       }
       if (local_event_list.empty() && shutdown_) { break; }
       for (auto it = local_event_list.begin(); it != local_event_list.end();) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
         OF_ROCM_CHECK(hipSetDevice(it->device_id));
         hipError_t err = hipEventQuery(it->cuda_event);
         if (err == hipErrorNotReady) {
@@ -221,7 +221,7 @@ NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
   }
   event_list_poll_thread_.join();
   callback_executor_pool_.reset();
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
   RocmCurrentDeviceGuard guard;
   for (auto& device_id2device_ctx : stream_id2device_id2device_ctx_) {
     for (auto& device_id7device_ctx : device_id2device_ctx) {
@@ -342,7 +342,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       device_id2callbacks;
   const int64_t stream_id = current_stream_id_;
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
   RocmCurrentDeviceGuard device_guard;
 #else
   CudaCurrentDeviceGuard device_guard;
@@ -389,7 +389,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       offset += aligned_size;
     }
     for (auto& device_id7copy_in_params : device_id2copy_in_params) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
       OF_ROCM_CHECK(hipSetDevice(device_id7copy_in_params.first));
 #else
       OF_CUDA_CHECK(cudaSetDevice(device_id7copy_in_params.first));
@@ -403,7 +403,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
     CHECK_EQ(offset % size_of_data_type, 0);
     const int64_t elem_cnt = offset / size_of_data_type;
     for (auto& device_id7comm : device_id2comm) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
       OF_ROCM_CHECK(hipSetDevice(device_id7comm.first));
 #else
       OF_CUDA_CHECK(cudaSetDevice(device_id7comm.first));
@@ -416,7 +416,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
     }
     OF_NCCL_CHECK(ncclGroupEnd());
     for (auto& device_id7copy_out_params : device_id2copy_out_params) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
       OF_ROCM_CHECK(hipSetDevice(device_id7copy_out_params.first));
 #else
       OF_CUDA_CHECK(cudaSetDevice(device_id7copy_out_params.first));
@@ -436,7 +436,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         const RuntimeRequestInfo& request_info = rank7request_info.second;
         const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
         const int64_t device_id = device_desc.device_id();
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
         OF_ROCM_CHECK(hipSetDevice(device_id));
 #else
         OF_CUDA_CHECK(cudaSetDevice(device_id));
@@ -472,7 +472,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
         } else if (op_type == OpType::kOpTypeAll2All) {
-#if (NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
+#if (NCCL_VERSION_CODE > 2700) || defined(WITH_HIP)
           const int64_t elem_per_rank = elem_cnt / num_ranks;
           const int64_t elem_per_chunk = elem_per_rank / num_ranks;
           const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
@@ -497,7 +497,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   }
   for (auto& device_id7callbacks : device_id2callbacks) {
     const int64_t device_id = device_id7callbacks.first;
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     OF_ROCM_CHECK(hipSetDevice(device_id));
     hipEvent_t event;
     OF_ROCM_CHECK(hipEventCreateWithFlags(&event, hipEventDisableTiming));
@@ -521,7 +521,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
 }
 
 void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& collective_boxing_plan) {
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
     RocmCurrentDeviceGuard guard;
 #else
     CudaCurrentDeviceGuard guard;
@@ -569,7 +569,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
         OF_NCCL_CHECK(ncclGroupStart());
         for (const int64_t rank : local_ranks) {
           const int64_t device_id = device_set.device(rank).device_id();
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
           OF_ROCM_CHECK(hipSetDevice(device_id));
 #else
           OF_CUDA_CHECK(cudaSetDevice(device_id));
@@ -583,7 +583,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
     }
   }
   int cuda_stream_greatest_priority;
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
   OF_ROCM_CHECK(hipDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
 #else
   OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
@@ -596,7 +596,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
     }
     for (const int64_t device_id : local_device_ids) {
       auto& device_ctx = device_id2device_ctx_.at(device_id);
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
       OF_ROCM_CHECK(hipSetDevice(device_id));
       OF_ROCM_CHECK(hipStreamCreateWithPriority(&device_ctx->stream, hipStreamNonBlocking, cuda_stream_greatest_priority));
       OF_ROCM_CHECK(hipMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
@@ -620,7 +620,7 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
       backend2count[static_cast<int32_t>(request.op_desc().backend())] += 1;
     }
   }
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   if (backend2count.count(static_cast<int32_t>(Backend::kBackendNCCL) != 0)) {
     auto it =
         backends_

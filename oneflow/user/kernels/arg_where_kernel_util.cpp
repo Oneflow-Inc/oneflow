@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/rocm/elementwise_rocm.h"
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
 #endif
 
@@ -58,7 +58,7 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 namespace {
 

@@ -67,7 +67,7 @@ class CpuAddNKernel : public user_op::OpKernel {
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_ADDN_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include "oneflow/core/framework/framework.h"
 

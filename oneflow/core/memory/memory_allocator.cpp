@@ -31,7 +31,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
       NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
-#elif WITH_ROCM
+#elif WITH_HIP
       NumaAwareRocmMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
 #else
       UNIMPLEMENTED();
@@ -44,7 +44,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaMalloc(&ptr, size));
-#elif WITH_ROCM
+#elif WITH_HIP
     RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_ROCM_CHECK(hipMalloc(&ptr, size));
 #else
@@ -61,7 +61,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
       OF_CUDA_CHECK(cudaFreeHost(ptr));
-#elif WITH_ROCM
+#elif WITH_HIP
       OF_ROCM_CHECK(hipHostFree(ptr));
 #else
       UNIMPLEMENTED();
@@ -73,7 +73,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaFree(ptr));
-#elif WITH_ROCM
+#elif WITH_HIP
     RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_ROCM_CHECK(hipFree(ptr));
 #else
@@ -105,7 +105,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 #ifdef WITH_CUDA
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
-#elif WITH_ROCM
+#elif WITH_HIP
     RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_ROCM_CHECK(hipMemset(dptr, memset_val, size));
 #else

@@ -29,7 +29,7 @@ class RepeatCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kRepeat; }
   CudaWorkType GetCudaWorkType() const override {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     return CudaWorkType::kCompute;
 #else
     UNIMPLEMENTED();

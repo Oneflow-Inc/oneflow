@@ -24,7 +24,7 @@ namespace {
       .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
 #endif
 }  // namespace

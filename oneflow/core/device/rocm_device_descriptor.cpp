@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/device/rocm_device_descriptor.h"
 #include "oneflow/core/device/rocm_util.h"
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include <hip/hip_runtime.h>
 #include <json.hpp>
@@ -137,4 +137,4 @@ std::shared_ptr<const RocmDeviceDescriptor> RocmDeviceDescriptor::Deserialize(
 
 }  // namespace oneflow
 
-#endif  // WITH_ROCM
+#endif  // WITH_HIP

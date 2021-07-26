@@ -28,7 +28,7 @@ void RandomMaskGenerator<DeviceType::kCPU>::Generate(DeviceCtx* device_ctx, cons
 
 template class RandomMaskGenerator<DeviceType::kCPU>;
 
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 namespace {
 

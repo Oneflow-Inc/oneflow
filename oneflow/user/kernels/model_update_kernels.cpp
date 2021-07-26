@@ -159,7 +159,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
@@ -444,7 +444,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 // REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 namespace oneflow {
 
@@ -93,7 +93,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
 
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
   OF_ROCM_CHECK(hipGetDevice(&dev));
 #endif
   {
@@ -120,7 +120,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamId(
   int dev;
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-#elif defined(WITH_ROCM)
+#elif defined(WITH_HIP)
   OF_ROCM_CHECK(hipGetDevice(&dev));
 #endif
 

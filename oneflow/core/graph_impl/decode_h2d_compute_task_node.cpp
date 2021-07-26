@@ -30,7 +30,7 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
   CudaWorkType GetCudaWorkType() const override {
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     return CudaWorkType::kDecodeH2D;
 #else
     UNIMPLEMENTED();
@@ -63,7 +63,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
     .SetStreamIndexGetterFn([](CudaStreamIndexGenerator* generator) -> uint32_t {

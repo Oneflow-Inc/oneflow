@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/graph/stream_index_getter_registry.h"
 #include "oneflow/core/device/cpu_stream_index.h"
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 #include "oneflow/core/device/cuda_stream_index.h"
 #endif
 

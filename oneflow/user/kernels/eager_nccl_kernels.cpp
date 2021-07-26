@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_ROCM
+#ifdef WITH_HIP
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"

@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#if defined(WITH_CUDA) || defined(WITH_ROCM)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 
 class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
  public:

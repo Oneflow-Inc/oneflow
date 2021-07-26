@@ -46,7 +46,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR, (DeviceTyp
                                  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ, INDEX_DATA_TYPE_SEQ);
 
 
-#if defined(WITH_ROCM)
+#if defined(WITH_HIP)
 
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDADimGather(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
