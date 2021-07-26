@@ -226,8 +226,9 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
         TensorTuple input_list;
         input_list.emplace_back(tensor);
         std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
         std::shared_ptr<UserOpExpr> op_expr =
-            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, 0));
+            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
         auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
         JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
         return outputs->at(0);
