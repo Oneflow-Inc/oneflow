@@ -208,16 +208,12 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
 }
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<py::tuple>> map;
   const auto& nd_sbp = JUST(tensor.parallel_distribution());
-  auto* tuple = &map[nd_sbp];
-  if (!*tuple) {
-    tuple->reset(new py::tuple(nd_sbp->sbp_parallel_size()));
-    for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
-      (**tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
-    }
+  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
   }
-  return *tuple;
+  return tuple;
 }
 
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {

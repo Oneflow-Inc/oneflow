@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.framework.distribute import split_sbp as split
+import oneflow._oneflow_internal
 
+sbp = oneflow._oneflow_internal.sbp.sbp
 broadcast = oneflow._oneflow_internal.sbp.broadcast()
 partial_sum = oneflow._oneflow_internal.sbp.partial_sum()
