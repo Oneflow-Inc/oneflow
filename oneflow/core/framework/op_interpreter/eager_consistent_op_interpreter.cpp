@@ -40,7 +40,7 @@ namespace {
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-  return ctx.parallel_desc;
+  return ctx.parallel_desc.value();
 }
 
 }  // namespace
@@ -52,7 +52,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
     const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
-        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution)));
+        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution.value())));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));

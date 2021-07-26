@@ -98,6 +98,7 @@ def _test_input_ndarray_not_contiguous(test_case, shape):
 #     # ret = foo_job(input).get()
 #     # test_case.assertTrue(np.allclose(input, ret.numpy()))
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_DRY_RUN"), "can't run in dry run")
 class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_lazy_input_output(test_case):
         flow.clear_default_session()

@@ -168,7 +168,7 @@ def _get_value(value):
         return value
 
 
-@oneflow_export("summary.Hparam")
+@oneflow_export("summary.HParam")
 class HParam(object):
     r"""The class of Hparam
 

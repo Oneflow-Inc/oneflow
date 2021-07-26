@@ -252,17 +252,13 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
     // Infer OpArgMutConsistentTensorMeta.
-    const auto& attrs = infer_args.attrs();
-    const auto& device_tag = parallel_desc->device_tag();
-    const auto& GetInputTensorMeta = [](int32_t i) -> const TensorMeta* {
+    const auto& GetInputTensorMeta = [](int32_t i) {
       UNIMPLEMENTED();
       return nullptr;
     };
-    const auto& GetOutputTensorMeta = [&](int32_t i) {
-      return output_mut_metas.at(i).mut_tensor_meta();
-    };
-    JUST(user_op_expr.InferLogicalShapeAndDType(attrs, device_tag, GetInputTensorMeta,
-                                                GetOutputTensorMeta));
+    JUST(user_op_expr.InferLogicalShapeAndDType(
+        infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
+        [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   auto* result =
       new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());

@@ -333,7 +333,7 @@ def new_ones_op(
     x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
 ):
     r"""
-    
+
     Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
 
     Args:
@@ -343,14 +343,14 @@ def new_ones_op(
         placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
         >>> y = x.new_ones((2, 2))
         >>> y

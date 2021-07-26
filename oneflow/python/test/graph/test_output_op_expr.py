@@ -30,9 +30,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 class TestFetchOutputTensor(unittest.TestCase):
     def test_fetch_output_tensor(test_case):
         test_case.assertTrue(oneflow.distributed.is_multi_client())
-        test_case.assertTrue(
-            oneflow.python.framework.env_util.HasAllMultiClientEnvVars()
-        )
+        test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
 
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
