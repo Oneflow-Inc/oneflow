@@ -793,6 +793,21 @@ class TestTensor(flow.unittest.TestCase):
         y = input.clamp(min=random().to(float), max=random().to(float))
         return y
 
+    @unittest.skip("backward has not add")
+    @autotest()
+    def test_clamp_minnone_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clamp(min=random().to(float) | nothing(), max=random().to(float))
+        return y
+
+    @unittest.skip("backward has not add")
+    @autotest()
+    def test_clamp_maxnone_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clamp(min=random().to(float), max=random().to(float))
+        return y
 
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(

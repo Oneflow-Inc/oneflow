@@ -110,7 +110,21 @@ class TestClampModule(flow.unittest.TestCase):
         y = torch.clamp(input, min=random().to(float), max=random().to(float))
         return y
 
+    @unittest.skip("backward has not add")
+    @autotest()
+    def test_clamp_minnone_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(input, min=random().to(float), max=random().to(float))
+        return y
 
+    @unittest.skip("backward has not add")
+    @autotest()
+    def test_clamp_maxnone_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(input, min=random().to(float), max=random().to(float))
+        return y
 
 if __name__ == "__main__":
     unittest.main()

@@ -236,7 +236,7 @@ class Tanh(Module):
 
 @oneflow_export("tanh")
 @register_tensor_op("tanh")
-def tanh_op(x):
+def tanh_op(input):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
     The equation is:
@@ -246,7 +246,7 @@ def tanh_op(x):
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        input (oneflow.Tensor): A Tensor
 
     Returns:
         oneflow.Tensor: The result Tensor
@@ -266,7 +266,7 @@ def tanh_op(x):
         tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
 
     """
-    return Tanh()(x)
+    return Tanh()(input)
 
 
 @oneflow_export("nn.ELU")

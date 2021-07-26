@@ -62,7 +62,7 @@ class TestReLUModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_relu_impl(test_case, *arg)
 
-    @autotest
+    @autotest()
     def test_relu_module_with_random_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -161,7 +161,7 @@ class TestTanh(flow.unittest.TestCase):
             _test_tanh_nn_impl(test_case, *arg)
             _test_tanh_function_impl(test_case, *arg)
 
-    @autotest
+    @autotest()
     def test_tanh_module_with_random_data(test_case):
         m = torch.nn.Tanh()
         m.train(random())
@@ -171,11 +171,11 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest
+    @autotest()
     def test_flow_tanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = flow.tanh(x)
+        y = torch.tanh(x)
         return y
 
 
