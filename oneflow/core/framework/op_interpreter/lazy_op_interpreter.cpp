@@ -62,6 +62,21 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distr
   return Maybe<void>::Ok();
 }
 
+Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
+    VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
+  var_conf->clear_parallel_distribution();
+  if (tensor->is_local()) {
+    cfg::SbpParallel broadcast;
+    broadcast.mutable_broadcast_parallel();
+    var_conf->add_parallel_distribution(SbpParallelToString(broadcast));
+  } else {
+    const cfg::ParallelDistribution& parallel_distribution = *JUST(tensor->parallel_distribution());
+    for (const auto& sbp_parallel : parallel_distribution.sbp_parallel()) {
+      var_conf->add_parallel_distribution(SbpParallelToString(sbp_parallel));
+    }
+  }
+}
+
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the EagerTensor
@@ -140,7 +155,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
-  // TODO(chengcheng): GenerateParallelDistributionString by tensor.
+  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   // TODO(chengcheng, xuxiaoyu): Set L1/L2 RegularizerConf by nn.Graph Optimizer
 
@@ -263,7 +278,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       // TODO(chengcheng):
       //     this is free EagerTensor which NOT captured by nn.Graph (inputs/params).
       //     Need Create a VariableOpConf for this inputs tensor, and Record name for itself.
-      UNIMPLEMENTED();
+      OF_UNIMPLEMENTED()
+          << " Sorry! nn.Graph does NOT support free eager tensor which NOT captured"
+          << " by nn.Graph. Please using nn.Graph.build() args or nn.Module.__init__() to handle "
+          << "all eager tensor.";
     }
     CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
@@ -307,7 +325,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
                                                      /* is_lazy= */ true, is_local));
     } else {
       // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
-      UNIMPLEMENTED();
+      OF_UNIMPLEMENTED() << " Op: " << op_conf->DebugString()
+                         << " outputs tensor CANNOT use inplace in nn.Graph.";
     }
     TensorNameScope::Global()->Record(outputs->at(i), GenLogicalBlobName(new_op_name, obn));
   }
