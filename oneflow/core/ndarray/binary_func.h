@@ -367,6 +367,32 @@ struct BinaryFuncFMod<half> final {
 #endif
   }
 };
+#elif defined(__HIP_DEVICE_COMPILE__)
+
+template<>
+struct BinaryFuncFMod<float> final {
+  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+    const float trunc_mod = fmodf(x, y);
+    return trunc_mod;
+  }
+};
+
+template<>
+struct BinaryFuncFMod<double> final {
+  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+    const double trunc_mod = fmod(x, y);
+    return trunc_mod;
+  }
+};
+
+template<>
+struct BinaryFuncFMod<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
+    return trunc_mod;
+  }
+};
+
 #else
 template<>
 struct BinaryFuncFMod<float> final {

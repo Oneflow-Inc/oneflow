@@ -54,10 +54,10 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS,
   template struct NdarrayApplyBroadcastBinaryCoreWrapper<                 \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC_CPU,
-                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, DIM_SEQ,
-                                 BINARY_FUNC_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC_CPU,
-                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
                                  LOGICAL_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC_CPU(dtype_pair, NDIMS, binary_func) \
@@ -232,7 +232,10 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS,
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC_GPU,
                                  ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
-                                 BINARY_FUNC_SEQ);
+                                 ARITHMETIC_BINARY_FUNC_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC_GPU,
+                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
+                                 LOGICAL_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC_GPU(dtype_pair, NDIMS, binary_func) \
   template struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<                  \
