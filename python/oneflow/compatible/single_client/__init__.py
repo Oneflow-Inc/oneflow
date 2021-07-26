@@ -425,6 +425,7 @@ from . import (
     optimizer,
     profiler,
     random,
+    regularizers,
     saved_model,
     scope,
     summary,
