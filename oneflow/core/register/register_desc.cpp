@@ -119,13 +119,6 @@ void RegstDesc::EraseUninitializedShapeBlob() {
       });
 }
 
-// void RegstDesc::EraseZeroSizeBlob() {
-//   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
-//       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-//         return it->second->ByteSizeOfBlobBody() == 0;
-//       });
-// }
-
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());

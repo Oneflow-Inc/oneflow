@@ -99,7 +99,6 @@ class RegstDesc final {
   bool HasSameMemSize(const RegstDesc*);
 
   // util
-  // void EraseZeroSizeBlob();
   void EraseUninitializedShapeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
