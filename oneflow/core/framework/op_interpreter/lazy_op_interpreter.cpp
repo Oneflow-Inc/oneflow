@@ -94,7 +94,7 @@ Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& ten
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
   JUST(vm::MultiClientSync());
-  CHECK_OR_RETURN(!new_scope);
+  CHECK_OR_RETURN(new_scope);
   return new_scope;
 }
 

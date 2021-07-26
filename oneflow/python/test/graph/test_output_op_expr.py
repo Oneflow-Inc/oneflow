@@ -21,6 +21,7 @@ import os
 import oneflow
 import oneflow as flow
 import oneflow.python.framework.session_context as session_ctx
+from oneflow.python.framework.tensor import Tensor as PyTensor
 import oneflow._oneflow_internal
 from oneflow.python.framework.multi_client_session import MultiClientSession
 import oneflow.python.framework.c_api_util as c_api_util
@@ -40,6 +41,8 @@ class TestFetchOutputTensor(unittest.TestCase):
         session = session_ctx.GetDefaultSession()
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
+
+        x = x.to(device=flow.device('cuda'))
 
         with oneflow._oneflow_internal.lazy_mode.gard(True):
 
@@ -75,19 +78,25 @@ class TestFetchOutputTensor(unittest.TestCase):
                 "cc_Output_0", output_conf, ["in_0"], ["out_0"]
             )
 
-            if not x.is_determined:
-                x.determine()
-            x_tensor_in_c = x._local_or_consistent_tensor
+            if isinstance(x, PyTensor):
+                if not x.is_determined:
+                    x.determine()
+                x_tensor_in_c = x._local_or_consistent_tensor
+            else:
+                x_tensor_in_c = x
+
 
             lazy_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
             test_case.assertEqual(lazy_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(lazy_tensor.is_lazy)
             test_case.assertTrue(lazy_tensor.is_local)
+            test_case.assertTrue(lazy_tensor.is_cuda)
 
             eager_tensor = output_op.apply([lazy_tensor], attrs)[0]
             test_case.assertEqual(eager_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(not eager_tensor.is_lazy)
             test_case.assertTrue(eager_tensor.is_local)
+            test_case.assertTrue(eager_tensor.is_cuda)
 
             oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
