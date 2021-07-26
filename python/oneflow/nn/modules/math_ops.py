@@ -417,7 +417,6 @@ def _add(x, y):
         return flow.F.add(x, y, False)
     elif x.shape == (1,):
         return flow.F.add_scalar_by_tensor(y, x, False)
-        
     elif y.shape == (1,):
         return flow.F.add_scalar_by_tensor(x, y, False)
     else:
