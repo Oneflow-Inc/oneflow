@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow._oneflow_internal.exception import IndexException
@@ -46,6 +61,7 @@ def _nelement(self):
         prod *= dim
     return prod
 
+
 def _numel(self):
     return self.nelement()
 
@@ -77,59 +93,77 @@ def _setitem(self, key, value):
 def _str(self):
     return self.__repr__()
 
+
 def _repr(self):
     return tensor_str_util._gen_tensor_str(self)
+
 
 def _gt(self, other):
     return self.gt(other)
 
+
 def _lt(self, other):
     return self.lt(other)
+
 
 def _ge(self, other):
     return self.ge(other)
 
+
 def _le(self, other):
     return self.le(other)
+
 
 def _mul(self, other):
     return self.mul(other)
 
+
 def _rmul(self, other):
     return self.mul(other)
+
 
 def _add(self, other):
     return self.add(other)
 
+
 def _iadd(self, other):
     return self.add_(other)
+
 
 def _radd(self, other):
     return self.add(other)
 
+
 def _sub(self, other):
     return self.sub(other)
+
 
 def _rsub(self, other):
     return flow.experimental.sub(other, self)
 
+
 def _truediv(self, other):
     return self.div(other)
+
 
 def _rtruediv(self, other):
     return flow.experimental.div(other, self)
 
+
 def _neg(self):
     return flow.experimental.neg(self)
 
+
 def _pow(self, b):
     return flow.experimental.pow(self, b)
+
 
 def _uniform_(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
     return _init_by_initializer_conf(self, initializer_conf)
+
 
 def _kaiming_uniform_(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
@@ -144,6 +178,7 @@ def _kaiming_uniform_(
     )
     return _init_by_initializer_conf(self, initializer_conf)
 
+
 def _kaiming_normal_(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
@@ -157,19 +192,23 @@ def _kaiming_normal_(
     )
     return _init_by_initializer_conf(self, initializer_conf)
 
+
 def _xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
     assert gain == 1.0, "Only gain == 1.0 is supported now"
     initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
+
 
 def _xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
     assert gain == 1.0, "Only gain == 1.0 is supported now"
     initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
+
 def _normal_(self, mean=0, std=1):
     initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
     return _init_by_initializer_conf(self, initializer_conf)
+
 
 def _fill_(self, value):
     initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
@@ -213,9 +252,7 @@ def _init_by_initializer_conf(tensor, initializer_conf):
                 tensor, initializer_conf, True, None
             )
     else:
-        _init_eager_local_tensor_by_initializer_conf(
-            tensor, initializer_conf
-        )
+        _init_eager_local_tensor_by_initializer_conf(tensor, initializer_conf)
     return tensor
 
 
@@ -256,7 +293,7 @@ def _copy_(self, other: Union[Tensor, np.ndarray]):
         src_np = other
 
     _copy_from_numpy_to_eager_local_tensor(self, src_np)
-    
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -315,4 +352,3 @@ def register_tensor_op(op_name):
 @experimental_api
 def new_tensor(*args, **kwargs):
     return flow._oneflow_internal.tensor(*args, **kwargs)
-

@@ -20,9 +20,7 @@ from typing import Union, Sequence, Tuple, Optional
 from oneflow._oneflow_internal import TensorTuple, Tensor
 
 
-def convert_to_tensor_tuple(
-    args: Optional[Union[Tensor, Sequence[Tensor]]]
-):
+def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
     if args is None:
         return TensorTuple()
     elif isinstance(args, collections.abc.Sequence):
@@ -31,4 +29,3 @@ def convert_to_tensor_tuple(
         tensor_tuple = TensorTuple()
         tensor_tuple.append(args)
         return tensor_tuple
-
