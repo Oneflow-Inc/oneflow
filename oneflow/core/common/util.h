@@ -216,6 +216,8 @@ class RoundModeGuard final {
   int saved_mode_;
 };
 
+bool ParseBooleanFromEnv(const std::string& env_var, bool default_value);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
