@@ -26,7 +26,7 @@ from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptimizerConfig
+from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.utils import add_indent
@@ -226,8 +226,6 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        # TODO(xuxiaoyu): Add dict of Parameter id to Parameter Block, for using id
-        # to query Parameter Block.
         self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):

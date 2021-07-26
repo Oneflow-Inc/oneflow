@@ -18,6 +18,9 @@ from contextlib import contextmanager
 from google.protobuf import text_format
 
 import oneflow._oneflow_internal
+from oneflow._oneflow_internal.oneflow.core.framework import (
+    user_op_attr as user_op_attr_cfg,
+)
 import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.c_api_util as c_api_util
