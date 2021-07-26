@@ -18,14 +18,12 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 
 import oneflow
-import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.experimental.name_scope as name_scope
 import oneflow
 import oneflow._oneflow_internal
 
