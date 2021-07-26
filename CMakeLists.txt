@@ -109,8 +109,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
   CACHE PATH "Where to install third party headers and libs")
 
-set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
-  CACHE PATH "Where the third party submodules are")
+set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)

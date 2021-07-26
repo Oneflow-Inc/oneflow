@@ -54,11 +54,13 @@ jobs:
         id: license_check
         run: |
           python3 ci/check/run_license_format.py -i oneflow -c
+          python3 ci/check/run_license_format.py -i python -c
       - name: Add license
         id: license_fmt
         if: ${{ failure() }}
         run: |
           python3 ci/check/run_license_format.py -i oneflow --fix
+          python3 ci/check/run_license_format.py -i python --fix
       - name: Check C++/CUDA format
         id: cpp_check
         run: |
@@ -532,7 +534,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
       - name: Dataloader API test
@@ -541,7 +543,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/dataloader \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/dataloader \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
@@ -550,7 +552,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Graph API test
@@ -558,7 +560,7 @@ jobs:
         run: |
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/graph \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Checkout Oneflow-Inc/models
@@ -566,7 +568,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 830a6b91f10c0a04a68843370cea6319a21ed9c2
+          ref: c822b17f9ed598185cf1fa70f570871d12db7442
           path: oneflow-models
       - name: Speed test
         id: speed
