@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/user/utils/pool_util.h"
 
@@ -122,7 +123,9 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
         input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
     for (int id = 0; id < k_d; ++id) {
       for (int ih = 0; ih < k_h; ++ih) {
-        for (int iw = 0; iw < k_w; ++iw) { *(input_ptr + ih * in_w + iw) += grad_delta; }
+        for (int iw = 0; iw < k_w; ++iw) {
+          cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
+        }
       }
       input_ptr += in_h * in_w;  // next input depth
     }
@@ -258,9 +261,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
 
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                             \
@@ -278,9 +279,7 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int64_t);
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int);
 
 }  // namespace user_op
 
