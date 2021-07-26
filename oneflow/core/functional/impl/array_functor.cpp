@@ -28,6 +28,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -87,7 +89,7 @@ class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
-                           const int64_t& device) const {
+                           const Optional<int64_t>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -101,13 +103,14 @@ class ConstantFunctor {
     {
       ParallelDistribution parallel_distribution;
       parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution.DebugString()));
+      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
     }
-    if (device) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
-    } else {
-      Symbol<Device> device_symbol = *reinterpret_cast<const Symbol<Device>*>(&device);
+    if (device.has_value()) {
+      int64_t device_val = JUST(device.value());
+      Symbol<Device> device_symbol = *reinterpret_cast<const Symbol<Device>*>(&device_val);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
     }
   }
 

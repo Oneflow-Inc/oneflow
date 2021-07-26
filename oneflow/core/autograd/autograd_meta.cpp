@@ -24,11 +24,13 @@ namespace oneflow {
 namespace one {
 
 TensorInfo::TensorInfo(const Tensor& tensor)
-    : shape_(tensor.shape()),
-      dtype_(tensor.dtype()),
-      device_(tensor.device()),
-      parallel_desc_(tensor.parallel_desc()),
-      parallel_distribution_(tensor.parallel_distribution()) {}
+    : shape_(tensor.shape()), dtype_(tensor.dtype()) {
+  if (TRY(tensor.device()).IsOk()) { device_ = CHECK_JUST(tensor.device()); }
+  if (TRY(tensor.parallel_desc()).IsOk()) { parallel_desc_ = CHECK_JUST(tensor.parallel_desc()); }
+  if (TRY(tensor.parallel_distribution()).IsOk()) {
+    parallel_distribution_ = CHECK_JUST(tensor.parallel_distribution());
+  }
+}
 
 Maybe<const std::vector<int64_t>&> GetSbpTuple(
     Symbol<cfg::ParallelDistribution> parallel_distribution) {
@@ -46,13 +48,13 @@ Maybe<const std::vector<int64_t>&> GetSbpTuple(
 }
 
 Maybe<Tensor> TensorInfo::zeros() const {
-  if (TRY(device_).IsOk()) {
-    const auto& device = JUST(device_);
+  if (device_.has_value()) {
+    const auto& device = JUST(device_.value());
     return functional::Constant(*shape_.get(), 0, dtype_,
                                 *reinterpret_cast<const int64_t*>(&device));
   } else {
-    const auto& parallel_desc = JUST(parallel_desc_);
-    const auto& parallel_distribution = JUST(parallel_distribution_);
+    const auto& parallel_desc = JUST(parallel_desc_.value());
+    const auto& parallel_distribution = JUST(parallel_distribution_.value());
     const auto& sbp_tuple = JUST(GetSbpTuple(parallel_distribution));
     return functional::ConsistentConstant(
         *shape_.get(), 0, dtype_, *reinterpret_cast<const int64_t*>(&parallel_desc), sbp_tuple);

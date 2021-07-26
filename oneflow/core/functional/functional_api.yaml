@@ -264,7 +264,7 @@
   bind_python: True
 
 - name: "constant"
-  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype, Int64 device)"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype, Int64 device=None)"
   bind_python: True
 
 - name: "consistent_constant"
