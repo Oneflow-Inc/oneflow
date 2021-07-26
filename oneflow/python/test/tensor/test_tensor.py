@@ -769,13 +769,23 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
 
-    def test_tensor_addmm_(test_case):
-        input = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
-        mat1 = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        mat2 = flow.Tensor(np.random.randn(3, 6), dtype=flow.float32)
-        of_out = input.addmm(mat1, mat2, alpha=1, beta=2)
-        np_out = np.add(2 * input.numpy(), 1 * np.matmul(mat1.numpy(), mat2.numpy()))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    @autotest()
+    def test_addmm_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        y = input.addmm(mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        return y
+
+    @autotest()
+    def test_addmm_broadcast_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        y = input.addmm(mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        return y
 
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(
@@ -882,7 +892,7 @@ class TestTensor(flow.unittest.TestCase):
     )
     def test_tensor_fmod(test_case):
         x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
-        y = random.uniform(-10, 10)
+        y = np.random.uniform(-10, 10)
         of_out = x.fmod(y)
         np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
 
@@ -898,7 +908,7 @@ class TestTensor(flow.unittest.TestCase):
     )
     def test_magic_fmod(test_case):
         x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
-        y = random.uniform(-10, 10)
+        y = np.random.uniform(-10, 10)
         of_out = x % y
         np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
