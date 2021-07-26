@@ -312,6 +312,5 @@ def register_tensor_op(op_name):
 
 
 @oneflow_export("tensor")
-@experimental_api
 def new_tensor(*args, **kwargs):
     return flow._oneflow_internal.tensor(*args, **kwargs)
