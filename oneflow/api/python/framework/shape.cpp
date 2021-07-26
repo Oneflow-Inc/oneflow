@@ -26,8 +26,7 @@ namespace {
 struct ShapeExportUtil final {
   static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
     if (py_shape.empty()) {
-      bool is_scalar = true;
-      return std::make_shared<Shape>(is_scalar);
+      return std::make_shared<Shape>();
     }
     DimVector shape_dims;
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
@@ -70,14 +69,14 @@ struct ShapeExportUtil final {
     std::stringstream ss;
     int32_t idx = 0;
     ss << "flow.Size([";
-    if (!shape.IsScalar()) {
+    if (!shape.is_uninitialized()){
       if (shape.dim_vec().size() > 0) {
         for (int64_t dim : shape.dim_vec()) {
           ss << dim;
           if (++idx != shape.dim_vec().size()) { ss << ", "; }
         }
       }
-    } 
+    }
     ss << "])";
     return ss.str();
   }

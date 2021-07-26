@@ -112,12 +112,19 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
   for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
-void RegstDesc::EraseZeroSizeBlob() {
+void RegstDesc::EraseUninitializedShapeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfBlobBody() == 0;
+        return it->second->shape().is_uninitialized();
       });
 }
+
+// void RegstDesc::EraseZeroSizeBlob() {
+//   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
+//       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
+//         return it->second->ByteSizeOfBlobBody() == 0;
+//       });
+// }
 
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);

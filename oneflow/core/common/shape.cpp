@@ -50,30 +50,21 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const bool& is_scalar) : is_scalar_(is_scalar) {
-  is_scalar_ = true;
-  UpdateElemCnt();
-}
 
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) {
-  is_scalar_ = false;
   UpdateElemCnt();
 }
 Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) {
-  is_scalar_ = false;
   UpdateElemCnt();
 }
 Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) {
-  is_scalar_ = false;
   UpdateElemCnt();
 }
 Shape::Shape(const ShapeProto& shape_proto) {
-  is_scalar_ = false;
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }
 Shape::Shape(const cfg::ShapeProto& shape_proto) {
-  is_scalar_ = false;
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }
@@ -107,10 +98,10 @@ std::string Shape::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  if (!is_scalar_) {
+  if (!is_uninitialized()){
     for (int64_t dim : dim_vec_) {
-      ss << dim;
-      if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+    ss << dim;
+    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
     }
   }
   ss << ")";
@@ -139,11 +130,9 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
 
 void Shape::UpdateElemCnt() {
-  elem_cnt_ = 1;
-  if (!is_scalar_) {
-    for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
-    if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
-  }
+  int64_t elem_cnt = 1;
+  for (int64_t s : dim_vec_) { elem_cnt *= s; }
+  elem_cnt_ = elem_cnt;
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
@@ -170,7 +159,6 @@ Shape Shape::RemoveOnes(const AxisVector& axis_vec) const {
       CHECK_EQ(this->dim_vec().at(i), 1);
     }
   }
-  if (dim_vec.empty()) { dim_vec.push_back(1); }
   return Shape(dim_vec);
 }
 
@@ -202,10 +190,6 @@ bool Shape::Containing(const Shape& small_shape) const {
   return true;
 }
 
-bool Shape::IsScalar() const {
-  if (is_scalar_) { return true; }
-  return false;
-}
 
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);

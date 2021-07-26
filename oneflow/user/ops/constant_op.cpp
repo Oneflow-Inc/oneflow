@@ -31,7 +31,6 @@ REGISTER_NO_GRAD_USER_OP("constant")
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
       }
-      if (dim_vec.empty()) { dim_vec.push_back(1); }
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })

@@ -63,14 +63,14 @@ namespace one {
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const {
-  if (shape()->IsScalar()) { return 0; }
+  // if (shape()->IsScalar()) { return 0; }
   return shape()->NumAxes();
 }
 
 int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 
 int64_t MirroredTensor::nelement() const {
-  if (shape()->IsScalar()) { return 1; }
+  // if (shape()->IsScalar()) { return 1; }
   return shape()->elem_cnt();
 }
 
