@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
 namespace oneflow {
@@ -8,8 +23,8 @@ struct AvgPoolingOpKernelState final : public user_op::OpKernelState {
   const AvgPoolingParams3D& GetParams3D() { return params_3d; }
 };
 
-std::shared_ptr<AvgPoolingOpKernelState> DoCreateAvgOpKernelState(user_op::KernelComputeContext* ctx,
-                                                            const int32_t& dim) {
+std::shared_ptr<AvgPoolingOpKernelState> DoCreateAvgOpKernelState(
+    user_op::KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -19,79 +34,82 @@ std::shared_ptr<AvgPoolingOpKernelState> DoCreateAvgOpKernelState(user_op::Kerne
   const bool count_include_pad = ctx->Attr<bool>("count_include_pad");
   const int64_t divisor_override = ctx->Attr<int64_t>("divisor_override");
 
-  AvgPoolingParams3D params_3d = AvgPoolingParams3D(dim, x_shape, data_format, padding, kernel_size,
-                                              stride, ceil_mode, count_include_pad, divisor_override);
+  AvgPoolingParams3D params_3d =
+      AvgPoolingParams3D(dim, x_shape, data_format, padding, kernel_size, stride, ceil_mode,
+                         count_include_pad, divisor_override);
   std::shared_ptr<AvgPoolingOpKernelState> state(new AvgPoolingOpKernelState(params_3d));
   return std::move(state);
 }
 
 template<typename T>
 struct AvgPoolingKernelUtil<DeviceType::kCPU, T> {
-//   static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-//                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
-//                                const PoolingParams3D& params_3d) {
-//     Maxpool1dForwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
-//                                params_3d.padding()[2], params_3d.num_batch(),
-//                                params_3d.num_channel(), params_3d.GetXShape5D().At(4),
-//                                params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[2],
-//                                params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
-//   }
+  //   static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>&
+  //   index_helper,
+  //                                const int64_t elem_num, const T* src, T* dest, int64_t*
+  //                                indice_ptr, const PoolingParams3D& params_3d) {
+  //     Maxpool1dForwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+  //                                params_3d.padding()[2], params_3d.num_batch(),
+  //                                params_3d.num_channel(), params_3d.GetXShape5D().At(4),
+  //                                params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[2],
+  //                                params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
+  //   }
 
-//   static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-//                                 const int64_t elem_num, const T* src, T* dest,
-//                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-//     Maxpool1dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
-//                                 params_3d.num_batch(), params_3d.num_channel(),
-//                                 params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
-//   }
+  //   static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>&
+  //   index_helper,
+  //                                 const int64_t elem_num, const T* src, T* dest,
+  //                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
+  //     Maxpool1dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+  //                                 params_3d.num_batch(), params_3d.num_channel(),
+  //                                 params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
+  //   }
   static void Avgpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                               const int64_t elem_num, const T* src, T* dest, const AvgPoolingParams3D& params_3d){
+                               const int64_t elem_num, const T* src, T* dest,
+                               const AvgPoolingParams3D& params_3d) {
     Avgpool2dForwardCompute<T>(
-        index_helper, elem_num, src, dest, 
-        params_3d.padding()[1], params_3d.padding()[2], 
-        params_3d.num_batch(), params_3d.num_channel(),
-        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), 
-        params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4), 
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], 
-        params_3d.stride_3d()[1], params_3d.stride_3d()[2], 
-        params_3d.count_include_pad(), params_3d.divisor_override());
+        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
   static void Avgpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                                const int64_t elem_num, const T* src, T* dest, const AvgPoolingParams3D& params_3d) {
-    Avgpool2dBackwardCompute<T>(index_helper, elem_num, src, dest, 
-                                params_3d.padding()[1], params_3d.padding()[2], 
-                                params_3d.num_batch(), params_3d.num_channel(),
-                                params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), 
-                                params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-                                params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], 
-                                params_3d.stride_3d()[1], params_3d.stride_3d()[2], 
-                                params_3d.count_include_pad(), params_3d.divisor_override());
+                                const int64_t elem_num, const T* src, T* dest,
+                                const AvgPoolingParams3D& params_3d) {
+    Avgpool2dBackwardCompute<T>(
+        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
-//   static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
-//                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
-//                                const PoolingParams3D& params_3d) {
-//     Maxpool3dForwardCompute<T>(
-//         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
-//         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
-//         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
-//         params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
-//         params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[0],
-//         params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0],
-//         params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[0],
-//         params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
-//   }
+  //   static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>&
+  //   index_helper,
+  //                                const int64_t elem_num, const T* src, T* dest, int64_t*
+  //                                indice_ptr, const PoolingParams3D& params_3d) {
+  //     Maxpool3dForwardCompute<T>(
+  //         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
+  //         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
+  //         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
+  //         params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(2),
+  //         params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+  //         params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
+  //         params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+  //         params_3d.stride_3d()[2], params_3d.dilation_3d()[0], params_3d.dilation_3d()[1],
+  //         params_3d.dilation_3d()[2]);
+  //   }
 
-//   static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5> index_helper,
-//                                 const int64_t elem_num, const T* src, T* dest,
-//                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
-//     Maxpool3dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
-//                                 params_3d.num_batch(), params_3d.num_channel(),
-//                                 params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
-//                                 params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
-//                                 params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
-//   }
+  //   static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>
+  //   index_helper,
+  //                                 const int64_t elem_num, const T* src, T* dest,
+  //                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
+  //     Maxpool3dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+  //                                 params_3d.num_batch(), params_3d.num_channel(),
+  //                                 params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
+  //                                 params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
+  //                                 params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+  //   }
 };
 
 // template<DeviceType device_type, typename T>
@@ -119,7 +137,8 @@ struct AvgPoolingKernelUtil<DeviceType::kCPU, T> {
 //     y->shape().ToDimVector(&y_vector);
 //     NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
 
-//     PoolingKernelUtil<device_type, T>::Maxpool1dForward(ctx->device_ctx(), index_helper, elem_num,
+//     PoolingKernelUtil<device_type, T>::Maxpool1dForward(ctx->device_ctx(), index_helper,
+//     elem_num,
 //                                                         src, dest, indice_ptr, params_3d);
 //   };
 // };
@@ -151,7 +170,8 @@ struct AvgPoolingKernelUtil<DeviceType::kCPU, T> {
 //     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
 //     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
-//     PoolingKernelUtil<device_type, T>::Maxpool1dBackward(ctx->device_ctx(), index_helper, elem_num,
+//     PoolingKernelUtil<device_type, T>::Maxpool1dBackward(ctx->device_ctx(), index_helper,
+//     elem_num,
 //                                                          src, dest, indice_ptr, params_3d);
 //   };
 // };
@@ -178,8 +198,8 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-    AvgPoolingKernelUtil<device_type, T>::Avgpool2dForward(ctx->device_ctx(), index_helper, elem_num,
-                                                        src, dest, params_3d);
+    AvgPoolingKernelUtil<device_type, T>::Avgpool2dForward(ctx->device_ctx(), index_helper,
+                                                           elem_num, src, dest, params_3d);
   };
 };
 
@@ -207,8 +227,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
-    AvgPoolingKernelUtil<device_type, T>::Avgpool2dBackward(ctx->device_ctx(), index_helper, elem_num,
-                                                         src, dest, params_3d);
+    AvgPoolingKernelUtil<device_type, T>::Avgpool2dBackward(ctx->device_ctx(), index_helper,
+                                                            elem_num, src, dest, params_3d);
   };
 };
 
@@ -237,7 +257,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 //     y->shape().ToDimVector(&y_vector);
 //     NdIndexOffsetHelper<int64_t, 5> index_helper(y_vector.data());
 
-//     PoolingKernelUtil<device_type, T>::Maxpool3dForward(ctx->device_ctx(), index_helper, elem_num,
+//     PoolingKernelUtil<device_type, T>::Maxpool3dForward(ctx->device_ctx(), index_helper,
+//     elem_num,
 //                                                         src, dest, indice_ptr, params_3d);
 //   };
 // };
@@ -270,7 +291,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 //     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
 //     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
-//     PoolingKernelUtil<device_type, T>::Maxpool3dBackward(ctx->device_ctx(), index_helper, elem_num,
+//     PoolingKernelUtil<device_type, T>::Maxpool3dBackward(ctx->device_ctx(), index_helper,
+//     elem_num,
 //                                                          src, dest, indice_ptr, params_3d);
 //   };
 // };
@@ -301,7 +323,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 //       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
 //                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_AVG_POOLING_KERNELS(device, dtype)                                        \
+#define REGISTER_AVG_POOLING_KERNELS(device, dtype)                                    \
   REGISTER_USER_KERNEL("avgpool_2d")                                                   \
       .SetCreateFn<AvgPool2dKernel<device, dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
@@ -309,7 +331,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("avgpool_2d_grad")                                              \
       .SetCreateFn<AvgPool2dGradKernel<device, dtype>>()                               \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); 
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_AVG_POOLING_WITH_DEVICE(device) \
   REGISTER_AVG_POOLING_KERNELS(device, float)    \

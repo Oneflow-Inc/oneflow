@@ -61,7 +61,7 @@ Maybe<void> AvgPoolingNdGrad::Init(const OpExpr& op) {
 }
 
 Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingInterpState* ctx, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const AttrMap& attrs) const {
+                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -81,9 +81,9 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingInterpState* ctx, const TensorTu
 }
 
 Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingInterpState* ctx, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_LE_OR_RETURN(out_grads.size(), 2); // TODO: fix to 1
+  CHECK_LE_OR_RETURN(out_grads.size(), 2);  // TODO: fix to 1
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
@@ -91,8 +91,8 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingInterpState* ctx, const Tens
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::AvgPoolingNdGrad(
-      input, output, out_grads.at(0), ndims, ctx->data_format, ctx->padding,
-      ctx->kernel_size, ctx->stride, ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
+      input, output, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
+      ctx->stride, ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();
 }

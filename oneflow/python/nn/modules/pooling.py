@@ -100,8 +100,8 @@ class AvgPool1d(Module):
 #             stride=(2, 1),
 #         )
 #         x = flow.Tensor(shape=(1, 1, 10, 10))
-#         of_y = of_avgpool2d(x)   
-        
+#         of_y = of_avgpool2d(x)
+
 #     """
 
 #     def __init__(
@@ -629,7 +629,7 @@ class AvgPool2d(Module):
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
         count_include_pad: bool = True,
-        divisor_override: int = 0
+        divisor_override: int = 0,
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
@@ -643,17 +643,16 @@ class AvgPool2d(Module):
         self.divisor_override = int(divisor_override)
         self.padding = _pair(padding)
 
-
     def forward(self, x):
         return flow.F.avgpool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
             padding=self.padding,
-            ceil_mode=self.ceil_mode, 
-            count_include_pad=self.count_include_pad, 
-            divisor_override=self.divisor_override, 
-            data_format=self.channel_pos
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override,
+            data_format=self.channel_pos,
         )
 
     # TODO: maybe error

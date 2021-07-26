@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
 namespace oneflow {
@@ -29,33 +44,37 @@ std::vector<int32_t> GetAvg3DPadVec(const std::vector<int32_t>& original_vec, in
 }
 
 void GetNoDilationWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
-                            int32_t padding, bool ceil_mode, int64_t* output_ptr) {
-  *output_ptr = (input_size + 2 * padding - (filter_size - 1) - 1 + stride
-                 + (ceil_mode ? stride - 1 : 0)) / stride;
+                                      int32_t padding, bool ceil_mode, int64_t* output_ptr) {
+  *output_ptr =
+      (input_size + 2 * padding - (filter_size - 1) - 1 + stride + (ceil_mode ? stride - 1 : 0))
+      / stride;
 }
 
 void GetNoDilation3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
-                      const std::vector<int32_t>& strides, const std::vector<int32_t>& padding,
-                      const bool ceil_mode, DimVector* out) {
+                                const std::vector<int32_t>& strides,
+                                const std::vector<int32_t>& padding, const bool ceil_mode,
+                                DimVector* out) {
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
     int64_t* out_ptr = &(*out).at(i);
-    GetNoDilationWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), ceil_mode,
-                           out_ptr);
+    GetNoDilationWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i),
+                                     ceil_mode, out_ptr);
   }
 }
 
-AvgPoolingParams3D::AvgPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                  const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
-                  const std::vector<int32_t>& stride, const bool ceil_mode, const bool count_include_pad, 
-                  const int64_t divisor_override)
+AvgPoolingParams3D::AvgPoolingParams3D(const int32_t dim, const ShapeView& x_shape,
+                                       const std::string& data_format,
+                                       const std::vector<int32_t>& padding,
+                                       const std::vector<int32_t>& kernel_size,
+                                       const std::vector<int32_t>& stride, const bool ceil_mode,
+                                       const bool count_include_pad, const int64_t divisor_override)
     : dim_(dim),
       data_format_(data_format),
       padding_(GetAvg3DPadVec(padding, dim)),
       pooling_size_3d_(GetAvg3DVec(kernel_size, dim)),
       stride_3d_(GetAvg3DVec(stride, dim)),
-      ceil_mode_(ceil_mode), 
+      ceil_mode_(ceil_mode),
       count_include_pad_(count_include_pad),
       divisor_override_(divisor_override) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),

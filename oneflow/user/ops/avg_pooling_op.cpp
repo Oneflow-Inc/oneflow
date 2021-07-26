@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
@@ -29,7 +44,8 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const AvgPoolingParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride, ceil_mode, count_include_pad, divisor_override);
+    const AvgPoolingParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
+                                       ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
@@ -43,10 +59,7 @@ Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     if (padding[i] == 0) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), i)
-          .Split(user_op::OpArg("y", 0), i)
-          .Build();
+      ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
     }
   }
   return Maybe<void>::Ok();
@@ -110,37 +123,37 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const int32_t dim) {
 
 }  // namespace
 
-#define REGISTER_AVGPOOL_FORWARD_OP(name, ndim) \
-  REGISTER_USER_OP(name) \
-    .Input("x") \
-    .Output("y") \
-    .Attr<std::vector<int32_t>>("padding") \
-    .Attr<std::string>("data_format") \
-    .Attr<std::vector<int32_t>>("kernel_size") \
-    .Attr<std::vector<int32_t>>("stride") \
-    .Attr<bool>("ceil_mode") \
-    .Attr<bool>("count_include_pad") \
-    .Attr<int64_t>("divisor_override") \
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(ndim)) \
-    .SetGetSbpFn(ForwardGetSbpFn) \
-    .SetDataTypeInferFn(FwInferDataType);
+#define REGISTER_AVGPOOL_FORWARD_OP(name, ndim)                 \
+  REGISTER_USER_OP(name)                                        \
+      .Input("x")                                               \
+      .Output("y")                                              \
+      .Attr<std::vector<int32_t>>("padding")                    \
+      .Attr<std::string>("data_format")                         \
+      .Attr<std::vector<int32_t>>("kernel_size")                \
+      .Attr<std::vector<int32_t>>("stride")                     \
+      .Attr<bool>("ceil_mode")                                  \
+      .Attr<bool>("count_include_pad")                          \
+      .Attr<int64_t>("divisor_override")                        \
+      .SetTensorDescInferFn(MakeForwardTensorDescInferFn(ndim)) \
+      .SetGetSbpFn(ForwardGetSbpFn)                             \
+      .SetDataTypeInferFn(FwInferDataType);
 
-#define REGISTER_AVGPOOL_BACKWARD_OP(name, ndim) \
-    REGISTER_USER_OP(name) \
-        .Input("x") \
-        .Input("y") \
-        .Input("dy") \
-        .Output("dx") \
-        .Attr<std::vector<int32_t>>("padding") \
-        .Attr<std::string>("data_format") \
-        .Attr<std::vector<int32_t>>("kernel_size") \
-        .Attr<std::vector<int32_t>>("stride") \
-        .Attr<bool>("ceil_mode") \
-        .Attr<bool>("count_include_pad") \
-        .Attr<int64_t>("divisor_override") \
-        .SetTensorDescInferFn(BackwardTensorDescInferFn) \
-        .SetGetSbpFn(BackwardGetSbpFn) \
-        .SetDataTypeInferFn(BwInferDataType);
+#define REGISTER_AVGPOOL_BACKWARD_OP(name, ndim)       \
+  REGISTER_USER_OP(name)                               \
+      .Input("x")                                      \
+      .Input("y")                                      \
+      .Input("dy")                                     \
+      .Output("dx")                                    \
+      .Attr<std::vector<int32_t>>("padding")           \
+      .Attr<std::string>("data_format")                \
+      .Attr<std::vector<int32_t>>("kernel_size")       \
+      .Attr<std::vector<int32_t>>("stride")            \
+      .Attr<bool>("ceil_mode")                         \
+      .Attr<bool>("count_include_pad")                 \
+      .Attr<int64_t>("divisor_override")               \
+      .SetTensorDescInferFn(BackwardTensorDescInferFn) \
+      .SetGetSbpFn(BackwardGetSbpFn)                   \
+      .SetDataTypeInferFn(BwInferDataType);
 
 // REGISTER_AVGPOOL_FORWARD_OP("avgpool_1d", 1);
 REGISTER_AVGPOOL_FORWARD_OP("avgpool_2d", 2);
@@ -148,6 +161,5 @@ REGISTER_AVGPOOL_BACKWARD_OP("avgpool_2d_grad", 2);
 REGISTER_USER_OP_GRAD("avgpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(2));
 
 // REGISTER_AVGPOOL_FORWARD_OP("avgpool_3d", 3);
-
 
 }  // namespace oneflow

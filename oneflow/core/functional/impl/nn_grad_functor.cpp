@@ -312,13 +312,9 @@ class AvgPoolingNdGradFunctor {
   AvgPoolingNdGradFunctor() {
     for (int ndims = 2; ndims <= 2; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
-      std::cout<<"Here ndims is: "<<ndims<<std::endl; 
-      op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
-                                                  .Input("x")
-                                                  .Input("y")
-                                                  .Input("dy")
-                                                  .Output("dx")
-                                                  .Build());
+      std::cout << "Here ndims is: " << ndims << std::endl;
+      op_expr_map_[op_type_name] = CHECK_JUST(
+          one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -326,15 +322,11 @@ class AvgPoolingNdGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy, 
-                           const int32_t& ndims, 
-                           const std::string& data_format,
-                           const std::vector<int32_t>& padding,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
+                           const std::string& data_format, const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& stride, 
-                           const bool& ceil_mode, 
-                           const bool& count_include_pad, 
-                           const int64_t& divisor_override) const {
+                           const std::vector<int32_t>& stride, const bool& ceil_mode,
+                           const bool& count_include_pad, const int64_t& divisor_override) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
@@ -354,7 +346,6 @@ class AvgPoolingNdGradFunctor {
  protected:
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
-
 
 }  // namespace impl
 
