@@ -425,6 +425,7 @@ from . import (
     optimizer,
     profiler,
     random,
+    saved_model,
     scope,
     summary,
     sysconfig,
