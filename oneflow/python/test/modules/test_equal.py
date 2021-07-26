@@ -24,25 +24,24 @@ from test_util import GenArgList
 from automated_test_util import *
 
 
-def get_random_data_with_same_size():
-    ndim = random(1, 6)
-    dim0 = random(1, 6)
-    dim1 = random(1, 6)
-    dim2 = random(1, 6)
-    dim3 = random(1, 6)
-    dim4 = random(1, 6)
-    x = random_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
-    y = random_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
-    return x, y
-
 @flow.unittest.skip_unless_1n1d()
 class TestEqual(flow.unittest.TestCase):  
 
     @autotest()
     def test_flow_equal_with_random_data(test_case):
-        x, y = get_random_data_with_same_size()
-        z = torch.equal(x, y)
-        return z
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_tensor(len(shape), *shape).to(device)
+        y = random_tensor(len(shape), *shape).to(device)
+        return torch.equal(x, y)
+    
+    @autotest()
+    def test_flow_equal_with_same_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_tensor(len(shape), *shape).to(device)
+        return torch.equal(x, x)
+
 
 
 if __name__ == "__main__":
