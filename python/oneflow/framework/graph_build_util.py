@@ -29,6 +29,7 @@ from oneflow.framework.tensor import Tensor
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
+
 @contextmanager
 def graph_build_context(config_proto, session):
     prev_scope = oneflow._oneflow_internal.GetCurrentScope()

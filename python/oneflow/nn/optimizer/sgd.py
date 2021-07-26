@@ -157,4 +157,3 @@ class SGD(Optimizer):
                 if not param.requires_grad:
                     continue
                 optimizer_conf.add_variable_op_names(vars_conf[param].name)
-
