@@ -34,15 +34,18 @@ class _ConstantBase(Module):
         super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
-            size, (int, tuple, flow.Size)
+            size, (int, tuple, list, flow.Size)
         ), "shape should be int or tuple int!"
-        self.device = device
         self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
         if device is None:
             self.device = flow.device("cpu")
+        elif isinstance(device, str):
+            self.device = flow.device(device)
+        else:
+            self.device = device
         self.shape = size
         self.value = value
         self.dtype = dtype
@@ -73,7 +76,7 @@ def ones_op(
         size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \\
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:

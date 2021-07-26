@@ -40,6 +40,9 @@ def _test_0_dim_tensor(test_case, device):
     test_case.assertEqual(y1.numpy(), 6.0)
     test_case.assertEqual(y2.numpy(), 5.0)
 
+def _test_scalar_mul(test_case, device):
+    for dim in range(5):
+        test_case.assertEqual(np.ones([2] * dim).sum(), flow.ones([2] * dim, device=device).sum().numpy())
 
 @flow.unittest.skip_unless_1n1d()
 class TestZeroDimensionTensor(flow.unittest.TestCase):
@@ -47,6 +50,7 @@ class TestZeroDimensionTensor(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_0_dim_tensor,
+            _test_scalar_mul
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
