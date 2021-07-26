@@ -185,22 +185,11 @@ def _test_expand_backward(test_case, device):
     np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
-<<<<<<< HEAD
-=======
-
-def random_expand_size(a, b):
-    return py_random.randint(a, b)
->>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
 
 
 def random_expand(x, ndim, expand_size):
-<<<<<<< HEAD
     dim_size = [1, ] * ndim
     random_index = random(0, ndim).to(int).value()
-=======
-    dim_size = [1,] * ndim
-    random_index = py_random.randint(0, ndim)
->>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
     dim_size[random_index] = expand_size
     return x.expand(*dim_size)
 
@@ -221,12 +210,8 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-<<<<<<< HEAD
     
     @autotest()
-=======
-
->>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
         x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
