@@ -47,7 +47,7 @@ class TestExp(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_exp_impl(test_case, *arg)
-    
+
     @autotest()
     def test_flow_tensor_exp_with_random_data(test_case):
         device = random_device()

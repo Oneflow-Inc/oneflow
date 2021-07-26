@@ -76,7 +76,7 @@ class TestErfcModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_erfc_impl(test_case, *arg)
             _test_tensor_erfc_impl(test_case, *arg)
-    
+
     @autotest()
     def test_flow_tensor_erfc_with_random_data(test_case):
         device = random_device()

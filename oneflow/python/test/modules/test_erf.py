@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 from automated_test_util import *
 
+
 def _test_erf_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -76,7 +77,7 @@ class TestErfModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_erf_impl(test_case, *arg)
             _test_tensor_erf_impl(test_case, *arg)
-    
+
     @autotest()
     def test_flow_tensor_erf_with_random_data(test_case):
         device = random_device()

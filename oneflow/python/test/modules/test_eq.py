@@ -82,6 +82,25 @@ def _test_tensor_eq_operator_float(test_case, shape, device):
     np_out = np.equal(arr, num)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+<<<<<<< HEAD
+=======
+
+def get_random_data_with_same_size():
+    ndim = random(1, 6)
+    dim0 = random(1, 6)
+    dim1 = random(1, 6)
+    dim2 = random(1, 6)
+    dim3 = random(1, 6)
+    dim4 = random(1, 6)
+    x = random_pytorch_tensor(
+        ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+    )
+    y = random_pytorch_tensor(
+        ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+    )
+    return x, y
+>>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
@@ -107,7 +126,7 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, y)
-    
+
     @autotest(auto_backward=False)
     def test_flow_eq_with_same_random_data(test_case):
         device = random_device()
@@ -122,6 +141,7 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return x.eq(y)
+<<<<<<< HEAD
     
     @autotest(auto_backward=False)
     def test_flow_tensor_eq_with_same_random_data(test_case):
@@ -130,6 +150,9 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return x.eq(x)
     
+=======
+
+>>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
 
 if __name__ == "__main__":
     unittest.main()

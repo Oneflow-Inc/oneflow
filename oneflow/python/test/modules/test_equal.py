@@ -24,9 +24,25 @@ from test_util import GenArgList
 from automated_test_util import *
 
 
+<<<<<<< HEAD
 @flow.unittest.skip_unless_1n1d()
 class TestEqual(flow.unittest.TestCase):  
+=======
+def get_random_data_with_same_size():
+    ndim = random(1, 6)
+    dim0 = random(1, 6)
+    dim1 = random(1, 6)
+    dim2 = random(1, 6)
+    dim3 = random(1, 6)
+    dim4 = random(1, 6)
+    x = random_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
+    y = random_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
+    return x, y
 
+>>>>>>> 93dacde46195c2c7472960f6d66a334fbdf62f5b
+
+@flow.unittest.skip_unless_1n1d()
+class TestEqual(flow.unittest.TestCase):
     @autotest()
     def test_flow_equal_with_random_data(test_case):
         device = random_device()
