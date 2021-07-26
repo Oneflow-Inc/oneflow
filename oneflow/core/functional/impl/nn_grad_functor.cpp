@@ -307,6 +307,55 @@ class PadGradFunctor {
   std::shared_ptr<OpExpr> constant_pad_3d_grad_;
 };
 
+class AvgPoolingNdGradFunctor {
+ public:
+  AvgPoolingNdGradFunctor() {
+    for (int ndims = 2; ndims <= 2; ++ndims) {
+      const auto& op_type_name = GetOpTypeName(ndims);
+      std::cout<<"Here ndims is: "<<ndims<<std::endl; 
+      op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
+                                                  .Input("x")
+                                                  .Input("y")
+                                                  .Input("dy")
+                                                  .Output("dx")
+                                                  .Build());
+    }
+  }
+  static std::string GetOpTypeName(const int32_t& ndims) {
+    return "avgpool_" + std::to_string(ndims) + "d_grad";
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, 
+                           const int32_t& ndims, 
+                           const std::string& data_format,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& stride, 
+                           const bool& ceil_mode, 
+                           const bool& count_include_pad, 
+                           const int64_t& divisor_override) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
+    JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));
+    const auto& op_type_name = GetOpTypeName(ndims);
+    const auto& it = op_expr_map_.find(op_type_name);
+    CHECK_OR_RETURN(it != op_expr_map_.end())
+        << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
+  }
+
+ protected:
+  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -318,6 +367,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
+  m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
 };
 
 }  // namespace functional

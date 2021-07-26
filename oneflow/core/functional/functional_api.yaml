@@ -733,3 +733,17 @@
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
+
+- name: "avgpool_2d"
+  signature:
+    "Tensor Avgpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+                      Int64 divisor_override=0)"
+  bind_python: True 
+
+- name: "avg_pooling_grad"
+  signature:
+    "Tensor AvgPoolingNdGrad(Tensor x, Tensor y, Tensor dy, *, Int32 ndims, 
+                       String data_format, Int32List padding, Int32List kernel_size,
+                       Int32List stride, Bool ceil_mode, Bool count_include_pad, Int64 divisor_override=0)"
+  bind_python: True 
