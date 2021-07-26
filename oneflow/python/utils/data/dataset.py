@@ -30,7 +30,7 @@ from typing import (
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
-from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 
 
 default_generator = flow._oneflow_internal.default_generator("auto")

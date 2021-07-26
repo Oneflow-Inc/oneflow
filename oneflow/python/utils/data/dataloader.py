@@ -19,7 +19,7 @@ import warnings
 
 from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
 
-from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 
 

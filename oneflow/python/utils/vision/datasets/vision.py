@@ -16,7 +16,7 @@ limitations under the License.
 import os
 from typing import Any, Callable, List, Optional, Tuple
 
-from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.utils.data as data
 
 # reference: https://github.com/pytorch/vision/commit/d1f1a5445dcbbd0d733dc38a32d9ae153337daae

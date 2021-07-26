@@ -26,7 +26,7 @@ import oneflow as flow
 from .vision import VisionDataset
 from .utils import download_and_extract_archive, check_integrity
 from oneflow.python.framework.tensor import Tensor
-from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("utils.vision.datasets.MNIST")

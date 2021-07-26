@@ -22,7 +22,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from .vision import VisionDataset
 from .utils import check_integrity, download_and_extract_archive
-from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("utils.vision.datasets.CIFAR10")
