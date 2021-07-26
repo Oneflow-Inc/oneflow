@@ -45,18 +45,17 @@ class VariableConfig(object):
         self._name = name
         self._l2 = 0.0
 
-    @property 
+    @property
     def name(self):
         return self._name
 
     @property
     def l2(self):
         return self._l2
-    
+
     @l2.setter
     def l2(self, l2: float = 0.0):
         self._l2 = l2
 
     def __repr__(self):
         return "(variable name: " + self._name + "):(l2: " + str(self._l2) + ".)"
-

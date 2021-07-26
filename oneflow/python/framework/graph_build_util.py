@@ -25,6 +25,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.session_context as session_context
+import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.python.framework.tensor import Tensor
@@ -149,7 +150,7 @@ def build_graph_input_arg(op_name, arg):
     return lazy_arg
 
 
-def build_graph_state(op_name, state_tensor):
+def build_graph_state(op_name, state_tensor, state_config):
     var_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
     )
@@ -163,6 +164,11 @@ def build_graph_state(op_name, state_tensor):
     if not state_tensor.is_determined:
         state_tensor.determine()
     tensor_in_c = state_tensor._local_or_consistent_tensor
+
+    if state_config != None:
+        attr_l2 = user_op_attr_cfg.AttrValue()
+        attr_l2.set_at_double(state_config.l2)
+        attrs["l2"] = attr_l2
 
     lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
     return lazy_tensor

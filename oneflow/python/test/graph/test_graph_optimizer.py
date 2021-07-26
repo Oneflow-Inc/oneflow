@@ -46,7 +46,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
-                    "weight_decay": weight_decay
+                    "weight_decay": weight_decay,
                 }
             ]
         )
@@ -97,7 +97,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
-                    "weight_decay": 0.3 
+                    "weight_decay": 0.3,
                 }
             ]
         )
@@ -108,14 +108,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
-                    "weight_decay": 0.4 
+                    "weight_decay": 0.4,
                 },
                 {
                     "params": [m.para4],
                     "lr": learning_rate,
                     "momentum": 0.9,
                     "scale": scale,
-                    "weight_decay": 0.5 
+                    "weight_decay": 0.5,
                 },
             ]
         )

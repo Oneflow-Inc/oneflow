@@ -103,11 +103,13 @@ class Graph(object):
             self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:
-                self._variables_conf[state_block.origin] = VariableConfig(state_block.name_prefix + state_block.name)
+                self._variables_conf[state_block.origin] = VariableConfig(
+                    state_block.name_prefix + state_block.name
+                )
         for name, opt_config in self._optimizers_conf.items():
-            self.config._generate_optimizer_and_variable_configs(opt_config, self._variables_conf)
-        for v, c in self._variables_conf.items():
-            print(c)
+            self.config._generate_optimizer_and_variable_configs(
+                opt_config, self._variables_conf
+            )
 
     def _compile(self, *args):
         assert not self._is_compiled, (
@@ -136,8 +138,17 @@ class Graph(object):
                 state_tensor = state_block.origin
                 state_op_names.append(op_name)
                 state_tensors.append(state_tensor)
+                if state_block.type == BlockType.PARAMETER:
+                    state_config = self._variables_conf[state_block.origin]
+                else:
+                    state_config = None
                 state_block.set_lazy_origin_builder(
-                    partial(graph_build_util.build_graph_state, op_name, state_tensor)
+                    partial(
+                        graph_build_util.build_graph_state,
+                        op_name,
+                        state_tensor,
+                        state_config,
+                    )
                 )
 
             self._variables = convert_to_tensor_tuple(state_tensors)
@@ -288,7 +299,9 @@ class GraphConfig(FunctionConfig):
             self.proto.mutable_predict_conf()
 
     def _generate_optimizer_and_variable_configs(
-        self, optimizer_config: OptimizerConfig = None, variables_conf: OrderedDict = None
+        self,
+        optimizer_config: OptimizerConfig = None,
+        variables_conf: OrderedDict = None,
     ):
         optimizer_config.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf

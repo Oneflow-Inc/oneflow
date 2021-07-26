@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
 
+#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
@@ -142,7 +143,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   var_conf->mutable_initializer()->mutable_empty_conf();
   // TODO(chengcheng): GenerateParallelDistributionString by tensor.
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
-  // TODO(chengcheng, xuxiaoyu): Set L1/L2 RegularizerConf by nn.Graph Optimizer
+  if (input_tensor->requires_grad()) {
+    double l2 = JUST(ctx.attrs.GetAttr<double>("l2"));
+    var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2);
+  }
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
