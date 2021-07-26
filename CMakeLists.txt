@@ -33,8 +33,8 @@ set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 set(PIP_INDEX_MIRROR "" CACHE STRING "")
 
-if (BUILD_CUDA AND BUILD_ROCM)
-  message(FATAL_ERROR "Enable cuda and rocm simultaneously are not supported")
+if (BUILD_CUDA AND BUILD_HIP)
+  message(FATAL_ERROR "Enable cuda and hip simultaneously are not supported.")
 endif()
 
 if (APPLE)
