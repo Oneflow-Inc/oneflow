@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -32,7 +33,8 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
       : is_init_(false),
         has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
         stream_index_(ctx->op_conf().stream_index_hint()),
-        parallel_desc_(ctx->parallel_desc()) {}
+        parallel_desc_(ctx->parallel_desc()),
+        op_name_(ctx->op_name()) {}
   ~NcclLogicalKernelCommState() = default;
 
   ncclComm_t comm() {
@@ -49,6 +51,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
       } else {
         comm_ = comm_mgr->GetCommForDevice(device_set);
       }
+      Global<CtrlClient>::Get()->Barrier(op_name_, parallel_desc_.parallel_num());
       is_init_ = true;
     }
     return comm_;
@@ -59,6 +62,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
   bool has_independent_stream_;
   uint32_t stream_index_;
   ParallelDesc parallel_desc_;
+  std::string op_name_;
   ncclComm_t comm_;
 };
 
