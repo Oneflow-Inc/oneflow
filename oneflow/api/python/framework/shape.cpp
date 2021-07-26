@@ -25,9 +25,7 @@ namespace oneflow {
 namespace {
 struct ShapeExportUtil final {
   static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
-    if (py_shape.empty()) {
-      return std::make_shared<Shape>();
-    }
+    if (py_shape.empty()) { return std::make_shared<Shape>(); }
     DimVector shape_dims;
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     return std::make_shared<Shape>(shape_dims);
@@ -69,7 +67,7 @@ struct ShapeExportUtil final {
     std::stringstream ss;
     int32_t idx = 0;
     ss << "flow.Size([";
-    if (!shape.is_uninitialized()){
+    if (!shape.is_uninitialized()) {
       if (shape.dim_vec().size() > 0) {
         for (int64_t dim : shape.dim_vec()) {
           ss << dim;

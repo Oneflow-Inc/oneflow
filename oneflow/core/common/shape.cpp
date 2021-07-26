@@ -50,16 +50,9 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) {
-  UpdateElemCnt();
-}
-Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) {
-  UpdateElemCnt();
-}
-Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) {
-  UpdateElemCnt();
-}
+Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
+Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
+Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
 Shape::Shape(const ShapeProto& shape_proto) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
@@ -98,10 +91,10 @@ std::string Shape::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  if (!is_uninitialized()){
+  if (!is_uninitialized()) {
     for (int64_t dim : dim_vec_) {
-    ss << dim;
-    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+      ss << dim;
+      if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
     }
   }
   ss << ")";
@@ -189,7 +182,6 @@ bool Shape::Containing(const Shape& small_shape) const {
   }
   return true;
 }
-
 
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);
