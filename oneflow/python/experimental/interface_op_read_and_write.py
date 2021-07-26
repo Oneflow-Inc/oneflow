@@ -23,7 +23,6 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.eager.op_executor as op_executor
 import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
