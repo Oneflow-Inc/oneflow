@@ -56,7 +56,8 @@ void ConvertEntryParamsToTVMExpr(const std::vector<Parameter>& entry_params,
                                  util::Map<std::string, tvm::relay::Expr>* tensor_name2expr,
                                  tvm::Array<tvm::relay::Var>* graph_input_vars) {
   for (const auto& para : entry_params) {
-    auto tensor_type = tvm::relay::TensorType(ConvertShapeToTVM(para.shape()), ConvertDataTypeToTVM(para.data_type()));
+    auto tensor_type = tvm::relay::TensorType(ConvertShapeToTVM(para.shape()),
+                                              ConvertDataTypeToTVM(para.data_type()));
     auto var = tvm::relay::Var(para.name(), tensor_type);
     CHECK(tensor_name2expr->emplace(para.name(), var).second);
     graph_input_vars->push_back(var);
@@ -86,11 +87,10 @@ std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Funct
   //     {DLDeviceType::kDLGPU,
   //      tvm::Target("cuda -model=2080ti")}};  // TODO(niuchong): support more devs and targets
   tvm::Map<tvm::Integer, tvm::Target> targets;
-  auto llvm_tgt = tvm::Target("llvm");
-  targets.Set(0, llvm_tgt);
+  targets.Set(DLDeviceType::kDLGPU, tvm::Target("cuda"));
 
   auto relay_mod = tvm::IRModule::FromExpr(graph_func);
-  build_f(relay_mod, targets, llvm_tgt); // TODO: save as above
+  build_f(relay_mod, targets, tvm::Target("llvm"));  // TODO: save as above
 
   std::string json = json_f();
   tvm::runtime::Module mod = mod_f();
@@ -107,6 +107,7 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
   util::Map<std::string, tvm::relay::Expr> tensor_name2expr;
   tvm::Array<tvm::relay::Var> graph_input_vars;
   LOG(WARNING) << "Compile Xrt graph with TVM";
+  LOG(WARNING) << graph->ToDot();
 
   ConvertEntryParamsToTVMExpr(entry_params, &tensor_name2expr, &graph_input_vars);
 
@@ -121,8 +122,13 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
       CHECK(it != tensor_name2expr.end());
       input_arg2expr.emplace(in_arg, it->second);
     }
+    util::Vector<Argument> out_args;
+    for (const auto* out_edge : node->out_edges()) {
+      const auto& out_arg = out_edge->argument();
+      out_args.push_back(out_arg);
+    }
 
-    TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr));
+    TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr), std::move(out_args));
     auto op_kernel = BuildTVMOpKernel(node->type());
     op_kernel->Compile(&ctx);
 
@@ -139,16 +145,17 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
   });
 
   auto outputs = ConvertReturnParamsToTVMExpr(return_params, tensor_name2expr);
-  auto graph_func =
-      tvm::relay::Function(graph_input_vars, outputs, tvm::relay::Type(), {});
+  auto graph_func = tvm::relay::Function(graph_input_vars, outputs, tvm::relay::Type(), {});
 
   tvm::runtime::Module built_mod;
   std::string graph_json;
+
   std::tie(built_mod, graph_json) = BuildGraphModule(graph_func);
+  LOG(WARNING) << graph_json;
 
   return std::make_shared<TVMExecutable>(this->name_, entry_params.size(), return_params,
                                          graph_json, built_mod,
-                                         XrtDevice::CPU_X86);  // only support GPU_CUDA now
+                                         XrtDevice::GPU_CUDA);  // only support GPU_CUDA now
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TVM, TVMGraphCompiler);

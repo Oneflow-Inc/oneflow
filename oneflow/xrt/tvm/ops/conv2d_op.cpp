@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/tvm/ops/op_kernel.h"
 #include <tvm/relay/attrs/nn.h>
 #include "oneflow/xrt/tvm/ops/nn_util.h"
@@ -9,15 +24,20 @@ namespace of_tvm {
 namespace {
 
 std::string GetKernelLayout(const std::string& data_format) {
-  if (data_format == "NCHW") { return "OIHW"; }
-  else { return "OHWI"; }
+  if (data_format == "NCHW") {
+    return "OIHW";
+  } else {
+    return "OHWI";
+  }
 }
 
 tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Conv(const std::string& data_format,
-    const std::string& padding_format, const Shape& in_shape, const Shape& weight_shape,
-    const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation) {
+                                                     const std::string& padding_format,
+                                                     const Shape& in_shape,
+                                                     const Shape& weight_shape,
+                                                     const std::vector<int32_t>& stride,
+                                                     const std::vector<int32_t>& dilation) {
   if (padding_format == "valid") { return tvm::Array<tvm::relay::IndexExpr>({0, 0}); }
-  CHECK_EQ("same", padding_format);
 
   auto Int64VecToInt32Vec = [](const std::vector<int64_t>& vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret;
@@ -32,31 +52,31 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Conv(const std::string& data_for
   }
   std::vector<int32_t> filter_size;
   if (GetKernelLayout(data_format) == "OIHW") {
-    filter_size = Int64VecToInt32Vec(
-        std::vector<int64_t>{weight_shape.At(2), weight_shape.At(3)});
+    filter_size = Int64VecToInt32Vec(std::vector<int64_t>{weight_shape.At(2), weight_shape.At(3)});
   } else {
-    filter_size = Int64VecToInt32Vec(
-      std::vector<int64_t>{weight_shape.At(1), weight_shape.At(2)});
+    filter_size = Int64VecToInt32Vec(std::vector<int64_t>{weight_shape.At(1), weight_shape.At(2)});
   }
   auto padding4 = Calc2DPadding(padding_format, input_size, filter_size, stride, dilation);
   // only need padding_after for conv
   return {padding4[1], padding4[3]};
 }
 
-}
+}  // namespace
 
 class Conv2DOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
-    tvm::Array<tvm::relay::Expr> inputs;
-    inputs.push_back(ctx->GetExpr4InputName("in"));
-    inputs.push_back(ctx->GetExpr4InputName("weight"));
+    LOG(WARNING) << ctx->DebugStr();
 
-    auto conv_attrs = tvm::make_node<tvm::relay::Conv2DAttrs>();
+    tvm::Array<tvm::relay::Expr> inputs;
+    inputs.push_back(ctx->GetExpr4InputName("in_0"));
+    inputs.push_back(ctx->GetExpr4InputName("weight_0"));
+
+    auto conv_attrs = tvm::runtime::make_object<tvm::relay::Conv2DAttrs>();
     {
       std::string data_format = ctx->Attr<std::string>("data_format");
       CHECK(data_format == "channels_last" || data_format == "channels_first")
-        << "Wrong data_format: " << data_format;
+          << "Wrong data_format: " << data_format;
       if (data_format == "channels_first") {
         data_format = "NCHW";
       } else {
@@ -75,13 +95,13 @@ class Conv2DOp final : public TVMOpKernel {
       CHECK_EQ(2, dilation.size());
       conv_attrs->dilation = tvm::Array<tvm::relay::IndexExpr>({dilation.at(0), dilation.at(1)});
 
-      conv_attrs->padding = Calc2DPadding4Conv(data_format, ctx->Attr<std::string>("padding"),
-          ctx->GetShape4InputName("in"), ctx->GetShape4InputName("weight"), stride, dilation);
+      std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
+      conv_attrs->padding = tvm::Array<tvm::relay::IndexExpr>({padding.at(0), padding.at(1)});
 
       std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
       CHECK_EQ(2, kernel_size.size());
       conv_attrs->kernel_size =
-        tvm::Array<tvm::relay::IndexExpr>({kernel_size.at(0), kernel_size.at(1)});
+          tvm::Array<tvm::relay::IndexExpr>({kernel_size.at(0), kernel_size.at(1)});
 
       // though the default value of groups is 1 in tvm::relay::Conv2DAttrs,
       // but we still need to set it explicitly
@@ -89,21 +109,9 @@ class Conv2DOp final : public TVMOpKernel {
     }
 
     auto conv_op = tvm::relay::Op::Get("nn.conv2d");
-    auto conv = tvm::relay::CallNode::make(conv_op, inputs, tvm::Attrs(conv_attrs), {});
+    auto conv = tvm::relay::Call(conv_op, inputs, tvm::Attrs(conv_attrs), {});
 
-    bool use_bias = ctx->Attr<bool>("use_bias");
-    if (use_bias) {
-      auto bias_add_attrs = tvm::make_node<tvm::relay::BiasAddAttrs>();
-      bias_add_attrs->axis = 1;
-
-      auto bias_add_in = ctx->GetExpr4InputName("bias");
-      auto bias_add_op = tvm::relay::Op::Get("nn.bias_add");
-      auto bias_add = tvm::relay::CallNode::make(
-          bias_add_op, {conv, bias_add_in}, tvm::Attrs(bias_add_attrs), {});
-      ctx->SetExpr4OutputName("out", std::move(bias_add));
-    } else {
-      ctx->SetExpr4OutputName("out", std::move(conv));
-    }
+    ctx->SetExpr4OutputName("out_0", std::move(conv));
   }
 };
 
