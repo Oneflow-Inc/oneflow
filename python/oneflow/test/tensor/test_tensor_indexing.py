@@ -19,7 +19,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
+import oneflow.unittest
 
 
 def test_basic_slice(test_case, numpy_x):
