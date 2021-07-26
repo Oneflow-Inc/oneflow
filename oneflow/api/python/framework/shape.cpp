@@ -67,12 +67,10 @@ struct ShapeExportUtil final {
     std::stringstream ss;
     int32_t idx = 0;
     ss << "flow.Size([";
-    if (!shape.is_uninitialized()) {
-      if (shape.dim_vec().size() > 0) {
-        for (int64_t dim : shape.dim_vec()) {
-          ss << dim;
-          if (++idx != shape.dim_vec().size()) { ss << ", "; }
-        }
+    if (shape.dim_vec().size() > 0) {
+      for (int64_t dim : shape.dim_vec()) {
+        ss << dim;
+        if (++idx != shape.dim_vec().size()) { ss << ", "; }
       }
     }
     ss << "])";

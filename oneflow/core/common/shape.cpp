@@ -91,11 +91,9 @@ std::string Shape::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  if (!is_uninitialized()) {
-    for (int64_t dim : dim_vec_) {
-      ss << dim;
-      if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
-    }
+  for (int64_t dim : dim_vec_) {
+    ss << dim;
+    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
   }
   ss << ")";
   return ss.str();
