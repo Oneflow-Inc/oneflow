@@ -1,7 +1,7 @@
 set -xe
 
 rm -rf /benchmarks
-cp -r oneflow/compatible_single_client_python/benchmarks /benchmarks
+cp -r python/oneflow/compatible/single_client/benchmarks /benchmarks
 cd /benchmarks
 
 python3 cnn_benchmark/of_cnn_benchmarks.py \
@@ -42,7 +42,7 @@ python3 cnn_benchmark/of_cnn_benchmarks.py \
     --iter_num=5 \
     --learning_rate=0.01 \
     --optimizer="sgd" \
-    --loss_print_every_n_iter=1 
+    --loss_print_every_n_iter=1
 
 python3 bert_benchmark/run_pretraining.py \
     --gpu_num_per_node=1 \
