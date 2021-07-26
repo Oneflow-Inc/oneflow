@@ -85,3 +85,5 @@ from oneflow.compatible.single_client.framework.config_util import (
 from oneflow.compatible.single_client.framework.config_util import (
     api_use_rdma as use_rdma,
 )
+
+from . import collective_boxing

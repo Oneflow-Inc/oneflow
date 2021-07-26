@@ -394,6 +394,10 @@ from oneflow.compatible.single_client import unittest
                         node=ast.parse(f"from . import nn"),
                     )
                     self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client.config",
+                        node=ast.parse(f"from . import collective_boxing"),
+                    )
+                    self.export_visitor.append_export(
                         target_module="oneflow.compatible.single_client.unittest",
                         node=ast.parse(f"from . import env"),
                     )
