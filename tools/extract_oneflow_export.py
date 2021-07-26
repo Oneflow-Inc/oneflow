@@ -397,6 +397,12 @@ from oneflow.compatible.single_client import unittest
                         target_module="oneflow.compatible.single_client.unittest",
                         node=ast.parse(f"from . import env"),
                     )
+                    self.export_visitor.append_export(
+                        target_module="oneflow.compatible.single_client.optimizer",
+                        node=ast.parse(
+                            f"from . import warmup, loss_scale, grad_clipping"
+                        ),
+                    )
             #     self.export_visitor.append_export(
             #         target_module=".".join([root_module, "lib.core"]), node=ast.parse(f"from . import async_util")
             #     )
