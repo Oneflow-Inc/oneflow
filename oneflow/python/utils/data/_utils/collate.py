@@ -78,7 +78,7 @@ def default_collate(batch):
     elem_type = type(elem)
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
         # TODO: tensor.storage()._new_shared(numel)
-        return flow.experimental.stack(batch, dim=0)
+        return flow.stack(batch, dim=0)
     elif (
         elem_type.__module__ == "numpy"
         and elem_type.__name__ != "str_"

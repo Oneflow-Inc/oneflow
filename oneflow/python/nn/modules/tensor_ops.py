@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
@@ -28,7 +27,6 @@ class TypeAs(Module):
 
 
 @register_tensor_op("type_as")
-@experimental_api
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.
         This is a no-op if the tensor is already of the correct type.
@@ -41,10 +39,9 @@ def type_as_op(input, target):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> target = flow.Tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
         >>> input = input.type_as(target)
@@ -64,7 +61,6 @@ class Long(Module):
 
 
 @register_tensor_op("long")
-@experimental_api
 def long_op(input):
     r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
 
@@ -75,10 +71,9 @@ def long_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.long()
         >>> input.dtype

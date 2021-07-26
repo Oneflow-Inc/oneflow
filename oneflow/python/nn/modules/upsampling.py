@@ -15,13 +15,12 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Union, Tuple
 
 
 @oneflow_export("nn.Upsample")
-@experimental_api
 class Upsample(Module):
     r"""The interface is consistent with PyTorch.    
     
@@ -85,7 +84,7 @@ class Upsample(Module):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
@@ -112,7 +111,7 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.experimental.nn.functional.interpolate(
+        return flow.nn.functional.interpolate(
             x,
             size=self.size,
             scale_factor=self.scale_factor,
@@ -130,7 +129,6 @@ class Upsample(Module):
 
 
 @oneflow_export("nn.UpsamplingNearest2d")
-@experimental_api
 class UpsamplingNearest2d(Upsample):
     r"""Applies a 2D nearest neighbor upsampling to an input signal composed of several input
     channels.
@@ -163,9 +161,8 @@ class UpsamplingNearest2d(Upsample):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
@@ -186,7 +183,6 @@ class UpsamplingNearest2d(Upsample):
 
 
 @oneflow_export("nn.UpsamplingBilinear2d")
-@experimental_api
 class UpsamplingBilinear2d(Upsample):
     r"""Applies a 2D bilinear upsampling to an input signal composed of several input
     channels.
@@ -220,9 +216,8 @@ class UpsamplingBilinear2d(Upsample):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)

@@ -18,7 +18,7 @@ import unittest
 import numpy as np
 import cv2
 
-import oneflow.experimental as flow
+import oneflow as flow
 
 
 @flow.unittest.skip_unless_1n1d()

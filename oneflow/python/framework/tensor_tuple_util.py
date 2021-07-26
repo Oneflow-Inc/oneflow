@@ -27,6 +27,8 @@ def convert_to_tensor_tuple(
     if args is None:
         return TensorTuple()
     elif isinstance(args, collections.abc.Sequence):
+        if len(args) == 0:
+            return TensorTuple()
         if isinstance(args[0], PyTensor):
             for tensor in args:
                 if not tensor.is_determined:
