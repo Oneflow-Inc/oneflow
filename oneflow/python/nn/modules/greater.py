@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -25,18 +25,17 @@ class Greater(Module):
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
-            x = flow.experimental.cast(x, flow.float32)
+            x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
         if y.dtype != flow.float32:
-            y = flow.experimental.cast(y, flow.float32)
+            y = flow.cast(y, flow.float32)
         return flow.F.broadcast_greater(x, y)
 
 
 @oneflow_export("gt")
-@experimental_api
 def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
@@ -52,9 +51,8 @@ def greater_op(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
@@ -67,13 +65,12 @@ def greater_op(x, y):
 
 
 @register_tensor_op("gt")
-@experimental_api
 def greater_op_tensor(x, y):
     r"""
 
     gt() -> Tensor
 
-    See :func:`oneflow.experimental.gt`
+    See :func:`oneflow.gt`
 
     """
     return Greater()(x, y)

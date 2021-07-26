@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -25,19 +25,18 @@ class Less(Module):
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
-            x = flow.experimental.cast(x, flow.float32)
+            x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
         if y.dtype != flow.float32:
-            y = flow.experimental.cast(y, flow.float32)
+            y = flow.cast(y, flow.float32)
         return flow.F.broadcast_less(x, y)
 
 
 @oneflow_export("lt")
 @register_tensor_op("lt")
-@experimental_api
 def less_op(x, y):
     r"""Returns the truth value of :math:`x < y` element-wise.
 
@@ -53,9 +52,8 @@ def less_op(x, y):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 

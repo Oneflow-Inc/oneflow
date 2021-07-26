@@ -20,14 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
-#define MATH_BINARY_BROADCAST_FUNC_SEQ           \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", Add)     \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", Sub)     \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", Mul)     \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)     \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max) \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod)
+#define MATH_BINARY_BROADCAST_FUNC_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", Add)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", Sub)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", Mul)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", Div)            \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", Min)        \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", Max)        \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)
 
 #define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ        \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_equal", EQ)         \

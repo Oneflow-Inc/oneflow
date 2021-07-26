@@ -17,7 +17,7 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -47,9 +47,9 @@ def check_dim(num_dims, input_dim):
 
 def _norm_min_max(input, ord, dim, keepdim):
     if ord > 0:
-        return flow.experimental.max(input, dim=dim, keepdim=keepdim)
+        return flow.max(input, dim=dim, keepdim=keepdim)
     else:
-        return flow.experimental.min(input, dim=dim, keepdim=keepdim)
+        return flow.min(input, dim=dim, keepdim=keepdim)
 
 
 class Vector_Norm(Module):
@@ -71,24 +71,14 @@ class Vector_Norm(Module):
     def _vector_norm(self, x, ord, dim, keepdim=False):
         if ord == 0:
             # TODO: fix error when input are all zero vector
-            return flow.experimental.cast(
-                flow.tensor([flow.experimental.argwhere(x).shape[0]]), flow.float32
-            )
+            return flow.cast(flow.tensor([flow.argwhere(x).shape[0]]), flow.float32)
         elif ord == float("inf"):
-            return flow.experimental.max(
-                flow.experimental.abs(x), dim=dim, keepdim=keepdim
-            )
+            return flow.max(flow.abs(x), dim=dim, keepdim=keepdim)
         elif ord == float("-inf"):
-            return flow.experimental.min(
-                flow.experimental.abs(x), dim=dim, keepdim=keepdim
-            )
+            return flow.min(flow.abs(x), dim=dim, keepdim=keepdim)
         else:
-            return flow.experimental.pow(
-                flow.experimental.sum(
-                    flow.experimental.pow(flow.experimental.abs(x), ord),
-                    dim=dim,
-                    keepdim=keepdim,
-                ),
+            return flow.pow(
+                flow.sum(flow.pow(flow.abs(x), ord), dim=dim, keepdim=keepdim,),
                 1.0 / ord,
             )
 
@@ -142,29 +132,21 @@ class Matrix_Norm(Module):
         if ord == "nuc":
             raise NotImplementedError
         elif ord == "fro":
-            return flow.experimental.sqrt(
-                flow.experimental.sum(
-                    flow.experimental.square(x), dim=dim, keepdim=keepdim
-                )
-            )
+            return flow.sqrt(flow.sum(flow.square(x), dim=dim, keepdim=keepdim))
 
         elif ord in [float("inf"), float("-inf")]:
             dim_0, dim_1 = dim[0], dim[1]
             dim_0, dim_1 = dim_1, dim_0
             if dim_1 > dim_0 and not keepdim:
                 dim_1 -= 1
-            res = flow.experimental.sum(
-                flow.experimental.abs(x), dim=dim_0, keepdim=keepdim
-            )
+            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
             return _norm_min_max(res, ord, dim_1, keepdim)
 
         elif ord in [1, -1]:
             dim_0, dim_1 = dim[0], dim[1]
             if dim_1 > dim_0 and not keepdim:
                 dim_1 -= 1
-            res = flow.experimental.sum(
-                flow.experimental.abs(x), dim=dim_0, keepdim=keepdim
-            )
+            res = flow.sum(flow.abs(x), dim=dim_0, keepdim=keepdim)
             return _norm_min_max(res, ord, dim_1, keepdim)
         elif ord in [2, -2]:
             raise NotImplementedError
@@ -208,7 +190,6 @@ class Norm(Module):
 
 
 @oneflow_export("linalg.norm")
-@experimental_api
 def norm_op(input, ord=None, dim=None, keepdim=False):
     r"""linalg.norm(input, ord=None, dim=None, keepdim=False, *, out=None) -> Tensor
 
@@ -262,10 +243,9 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> import oneflow as flow
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
@@ -329,16 +309,14 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
 
 @register_tensor_op("norm")
-@experimental_api
 def norm_tensor_op(input, ord=None, dim=None, keepdim=False):
     r"""
-    See :func:`oneflow.experimental.linalg.norm`
+    See :func:`oneflow.linalg.norm`
     """
     return Norm(ord, dim, keepdim)(input)
 
 
 @oneflow_export("linalg.vector_norm")
-@experimental_api
 def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
     r"""
     linalg.vector_norm(input, ord=2, dim=None, keepdim=False, *, dtype=None, out=None) -> Tensor
@@ -385,10 +363,9 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> import oneflow as flow
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
@@ -406,7 +383,6 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
 
 
 @oneflow_export("linalg.matrix_norm")
-@experimental_api
 def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     r"""
     linalg.matrix_norm(input, ord='fro', dim=(-2, -1), keepdim=False, *, dtype=None, out=None) -> Tensor
@@ -450,10 +426,9 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
-        >>> from oneflow.experimental import linalg as LA
+        >>> import oneflow as flow
+        >>> from oneflow import linalg as LA
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape((3,3))
         >>> a
         tensor([[0., 1., 2.],
