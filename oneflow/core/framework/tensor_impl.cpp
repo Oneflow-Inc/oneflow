@@ -215,7 +215,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
     const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
     const auto& cur_rank_phy_device = JUST(cur_rank_phy_tensor->device());
-    CHECK_OR_RETURN(*device == *cur_rank_phy_device)
+    CHECK_OR_RETURN(device->device_id() == cur_rank_phy_device->device_id())
         << "only LocalTensors on current rank Device can be casted to ConsistentTensor: "
         << device->ToString() << " vs " << cur_rank_phy_device->ToString();
   }

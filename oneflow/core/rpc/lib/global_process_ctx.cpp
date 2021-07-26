@@ -17,12 +17,14 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
-  *device_id = *machine_id % NumOfProcessPerNode();
+  *device_id = LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
 }
 
 int64_t GlobalProcessCtx::Rank() {

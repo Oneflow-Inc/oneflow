@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
@@ -68,18 +70,23 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
                                                                int64_t device_id) {
-  std::string device_type = type == "gpu" ? "cuda" : type;
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
   auto* vec = &type2device_id2device[type];
   if (vec->size() <= device_id) { vec->resize(device_id + 1); }
   auto* pptr = &vec->at(device_id);
-  if (!*pptr) { *pptr = JUST(New(device_type, device_id)); }
+  if (!*pptr) { *pptr = JUST(New(type, device_id)); }
   return *pptr;
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+  int64_t device_id = -1;
+  if (type == "cpu") {
+    device_id = GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+  } else {
+    device_id = GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
+  }
+  return New(type, device_id);
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
