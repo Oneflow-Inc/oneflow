@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -75,6 +76,26 @@ Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
       var_conf->add_parallel_distribution(SbpParallelToString(sbp_parallel));
     }
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
+  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  if (tensor->is_local()) {
+    parallel_conf->InitFromProto(JUST(tensor->device())->parallel_desc_ptr()->parallel_conf());
+  } else {
+    parallel_conf->InitFromProto(JUST(tensor->parallel_desc())->parallel_conf());
+  }
+  const auto& old_scope = JUST(GetCurrentScope());
+  std::shared_ptr<Scope> new_scope;
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    new_scope = JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_conf));
+    return Maybe<void>::Ok();
+  }));
+  // NOTE(chengcheng): need sync vm for get scope right now
+  JUST(vm::MultiClientSync());
+  CHECK_OR_RETURN(!new_scope);
+  return new_scope;
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
@@ -85,12 +106,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
-  const auto& scope = JUST(GetCurrentScope());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(scope_symbol_id);
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct InputOpConf instead of FeedInputOpConf because FeedInputOpExpr JUST for getting
@@ -138,12 +159,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
-  const auto& scope = JUST(GetCurrentScope());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(scope_symbol_id);
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
@@ -198,12 +219,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
-  const auto& scope = JUST(GetCurrentScope());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(scope_symbol_id);
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
