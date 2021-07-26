@@ -428,6 +428,7 @@ from . import (
     scope,
     summary,
     sysconfig,
+    tensorrt,
     train,
     typing,
     util,
