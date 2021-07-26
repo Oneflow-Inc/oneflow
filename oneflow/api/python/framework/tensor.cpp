@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
@@ -23,7 +22,6 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/framework/device.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
@@ -38,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/extension/python/numpy.h"
-#include "numpy/ndarrayobject.h"
 
 namespace py = pybind11;
 
@@ -173,6 +170,7 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
 
 Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtype,
                                      const Symbol<Device>& device, bool requires_grad) {
+  // Executing any numpy c api before _import_array() results in segfault
   if (PyArray_API == nullptr) { _import_array(); }
   auto* np_arr_pyobject = PyArray_FromAny(array.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
   CHECK_NOTNULL_OR_RETURN(np_arr_pyobject) << "input data cannot convert to a numpy array";
