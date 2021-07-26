@@ -16,8 +16,8 @@ limitations under the License.
 import unittest
 import cv2
 import numpy as np
-import oneflow.experimental as flow
-import oneflow.experimental.nn as nn
+import oneflow as flow
+import oneflow.nn as nn
 import image_test_util
 
 

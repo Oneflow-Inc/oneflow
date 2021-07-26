@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import cv2
 import numpy as np
-import oneflow.experimental as flow
+import oneflow as flow
 
 
 def _of_image_flip(images, image_static_shape, flip_code):
