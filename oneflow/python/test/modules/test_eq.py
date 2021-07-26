@@ -82,6 +82,7 @@ def _test_tensor_eq_operator_float(test_case, shape, device):
     np_out = np.equal(arr, num)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def get_random_data_with_same_size():
     ndim = random(1, 6)
     dim0 = random(1, 6)
@@ -89,9 +90,14 @@ def get_random_data_with_same_size():
     dim2 = random(1, 6)
     dim3 = random(1, 6)
     dim4 = random(1, 6)
-    x = random_pytorch_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
-    y = random_pytorch_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
+    x = random_pytorch_tensor(
+        ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+    )
+    y = random_pytorch_tensor(
+        ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+    )
     return x, y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
@@ -114,12 +120,12 @@ class TestEq(flow.unittest.TestCase):
     def test_flow_eq_with_random_data(test_case):
         x, y = get_random_data_with_same_size()
         return torch.eq(x, y)
-    
+
     @autotest(auto_backward=False)
     def test_flow_tensor_eq_with_random_data(test_case):
         x, y = get_random_data_with_same_size()
         return x.eq(y)
-    
+
 
 if __name__ == "__main__":
     unittest.main()

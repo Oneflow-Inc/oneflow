@@ -35,9 +35,9 @@ def get_random_data_with_same_size():
     y = random_tensor(ndim=ndim, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4)
     return x, y
 
-@flow.unittest.skip_unless_1n1d()
-class TestEqual(flow.unittest.TestCase):  
 
+@flow.unittest.skip_unless_1n1d()
+class TestEqual(flow.unittest.TestCase):
     @autotest()
     def test_flow_equal_with_random_data(test_case):
         x, y = get_random_data_with_same_size()
