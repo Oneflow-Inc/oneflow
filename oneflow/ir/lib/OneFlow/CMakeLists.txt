@@ -15,5 +15,6 @@ add_mlir_dialect_library(MLIROneFlow
   LINK_LIBS PUBLIC
   ${dialect_libs}
   MLIRTosaToLinalg
+  MLIRSCFToStandard
   MLIRIR
 )
