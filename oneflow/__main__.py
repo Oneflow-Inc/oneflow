@@ -45,6 +45,7 @@ def main():
             StartWorker(f.read())
     if args.doctor:
         import oneflow
+        import oneflow.sysconfig
 
         print("path:", oneflow.__path__)
         print("version:", oneflow.__version__)

@@ -31,6 +31,7 @@ from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 import subprocess
+import oneflow.env
 
 
 class _ClearDefaultSession(object):

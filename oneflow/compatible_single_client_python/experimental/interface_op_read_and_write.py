@@ -31,7 +31,6 @@ from oneflow.compatible.single_client.python.framework import (
 )
 from oneflow.compatible.single_client.python.framework import runtime_mode as rt_mode
 from oneflow.compatible.single_client.python.oneflow_export import oneflow_export
-from oneflow.compatible.single_client.python.eager import op_executor as op_executor
 from oneflow._oneflow_internal.oneflow.core.job import placement as placement_cfg
 from oneflow._oneflow_internal.oneflow.core.register import logical_blob_id as lbi_util
 from oneflow._oneflow_internal.oneflow.core.common import shape as shape_proto_cfg
