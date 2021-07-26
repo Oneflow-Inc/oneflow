@@ -52,12 +52,12 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
-      if (TRY(ctx.parallel_desc).IsOk()) {
-        JUST(ctx.parallel_distribution);
-        CHECK_OR_RETURN(!TRY(ctx.device).IsOk());
+      if (ctx.parallel_desc.has_value()) {
+        JUST(ctx.parallel_distribution.value());
+        CHECK_OR_RETURN(!ctx.device.has_value());
         return g_eager_consistent_interpreter;
       } else {
-        CHECK_OR_RETURN(!TRY(ctx.parallel_distribution).IsOk());
+        CHECK_OR_RETURN(!ctx.parallel_distribution.has_value());
         return g_eager_mirrored_interpreter;
       }
     } else {

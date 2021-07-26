@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -65,9 +66,9 @@ struct OpExprInterpContext {
         parallel_distribution(parallel_distribution_arg) {}
 
   AttrMap attrs;
-  Maybe<Symbol<Device>> device;                                    // for local op
-  Maybe<Symbol<ParallelDesc>> parallel_desc;                       // for consistent op
-  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution;  // for consistent op
+  Optional<Symbol<Device>> device;                                    // for local op
+  Optional<Symbol<ParallelDesc>> parallel_desc;                       // for consistent op
+  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution;  // for consistent op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
