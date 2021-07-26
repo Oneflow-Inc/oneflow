@@ -15,6 +15,7 @@ limitations under the License.
 """
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
+import collections
 
 import oneflow._oneflow_internal
 
@@ -48,6 +49,22 @@ from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
+
+_DEPRECATED = set()
+
+
+def oneflow_deprecate(*api_names, **kwargs):
+    def Decorator(func_or_class):
+        _DEPRECATED.add(func_or_class)
+        return func_or_class
+
+    return Decorator
+
+
+def is_deprecated(func_or_class):
+    return (
+        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    )
 
 
 import oneflow.python.framework.register_python_callback
@@ -104,9 +121,9 @@ def _SyncOnMasterFn():
     def Sync():
         if not oneflow._oneflow_internal.IsEnvInited():
             return
-        if oneflow.python.framework.distribute.is_multi_client():
+        if oneflow.framework.distribute.is_multi_client():
             oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.python.framework.distribute.get_rank() == 0:
+        elif oneflow.framework.distribute.get_rank() == 0:
             oneflow._oneflow_internal.eager.single_client.Sync()
 
     return Sync
@@ -114,7 +131,7 @@ def _SyncOnMasterFn():
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
 # Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
 # will be set to nullptr by TryCloseDefaultSession,
 # so sync vm in advance to avoid data race
@@ -122,7 +139,6 @@ atexit.register(_SyncOnMasterFn)
 
 del atexit
 
-del absolute_import
 del oneflow
 
 import oneflow.python.framework.docstr as docstr
@@ -131,3 +147,9 @@ from oneflow.python.framework.docstr.utils import register_docstr
 register_docstr()
 del register_docstr
 del docstr
+from . import linalg
+from . import autograd
+from . import optim
+import oneflow.nn.image
+import oneflow.nn.modules.permute
+import oneflow.tmp
