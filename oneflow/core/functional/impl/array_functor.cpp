@@ -45,7 +45,9 @@ class ConsistentConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
                            const int64_t& placement, const std::vector<int64_t>& sbp_tuple) const {
     CHECK_NE_OR_RETURN(placement, 0);
-    Symbol<ParallelDesc> parallel_desc = *reinterpret_cast<const Symbol<ParallelDesc>*>(&placement);
+    const auto* placement_ptr = reinterpret_cast<const ParallelDesc*>(placement);
+    Symbol<ParallelDesc> parallel_desc =
+      JUST(SymbolUtil<ParallelDesc>::GetSymbolByExistedRawPtr(placement_ptr));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -72,8 +74,9 @@ class ConsistentConstantFunctor {
       cfg::ParallelDistribution parallel_distribution;
       for (int64_t sbp_val : sbp_tuple) {
         CHECK_NE_OR_RETURN(sbp_val, 0);
+        const auto* sbp_ptr = reinterpret_cast<cfg::SbpParallel*>(sbp_val);
         Symbol<cfg::SbpParallel> sbp_parallel =
-            *reinterpret_cast<Symbol<cfg::SbpParallel>*>(&sbp_val);
+            JUST(SymbolUtil<cfg::SbpParallel>::GetSymbolByExistedRawPtr(sbp_ptr));
         *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
       }
       iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
@@ -89,7 +92,7 @@ class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
-                           const Optional<int64_t>& device) const {
+                           const int64_t& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -105,9 +108,11 @@ class ConstantFunctor {
       parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
       JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
     }
-    if (device.has_value()) {
-      int64_t device_val = JUST(device.value());
-      Symbol<Device> device_symbol = *reinterpret_cast<const Symbol<Device>*>(&device_val);
+    if (device) {
+      int64_t device_val = device;
+      const auto* device_ptr = reinterpret_cast<Device*>(device_val);
+      Symbol<Device> device_symbol =
+        JUST(SymbolUtil<Device>::GetSymbolByExistedRawPtr(device_ptr));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);

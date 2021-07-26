@@ -78,7 +78,12 @@ class _ConstantBase(Module):
                 list(map(int, self.sbp)),
             )
         else:
-            res = flow.F.constant(self.shape, self.value, self.dtype, int(self.device))
+            res = flow.F.constant(
+                self.shape,
+                self.value,
+                self.dtype,
+                int(self.device) if self.device is not None else None
+            )
         res.requires_grad = self.requires_grad
         return res
 
