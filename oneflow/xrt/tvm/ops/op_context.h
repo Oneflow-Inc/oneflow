@@ -29,7 +29,7 @@ namespace of_tvm {
 class TVMOpContext final : public OpContext {
  public:
   TVMOpContext(const XrtNode* node, const PbMessage* message,
-               util::Map<Argument, tvm::relay::Expr>&& input_arg2expr, 
+               util::Map<Argument, tvm::relay::Expr>&& input_arg2expr,
                util::Vector<Argument>&& output_args);
   ~TVMOpContext() = default;
 
