@@ -126,6 +126,29 @@ class TestClampModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest()
+    def test_clip_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_min_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_max_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(
+            input, min=random().to(float), max=random().to(float) | nothing()
+        )
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

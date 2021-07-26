@@ -817,6 +817,41 @@ class TestTensor(flow.unittest.TestCase):
         y = input.clamp(min=random().to(float), max=random().to(float) | nothing())
         return y
 
+    @autotest()
+    def test_clip_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clip(min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_minnone_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clip(min=random().to(float) | nothing(), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_maxnone_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.clip(min=random().to(float), max=random().to(float) | nothing())
+        return y
+    
+    @autotest()
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.ceil()
+        return y
+    
+    @autotest()
+    def test_expm1_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.expm1()
+        return y
+
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(
             np.array([[-4.0, -3.0, -2.0], [-1.0, 0.0, 1.0], [2.0, 3.0, 4.0]]),
@@ -947,29 +982,6 @@ class TestTensor(flow.unittest.TestCase):
         of_out.backward()
         test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((5, 5)), 1e-4, 1e-4))
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_tensor_ceil(test_case):
-        x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
-        of_out = x.ceil()
-        np_out = np.ceil(x.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        of_out = of_out.sum()
-        of_out.backward()
-        test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2, 3)), 1e-4, 1e-4))
-
-    def test_tensor_expm1(test_case):
-        x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
-        of_out = x.expm1()
-        np_out = np.expm1(x.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        of_out = of_out.sum()
-        of_out.backward()
-        test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
 
     def test_tensor_mish(test_case):
         def np_mish(x):
