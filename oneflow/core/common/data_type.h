@@ -85,9 +85,7 @@ struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
-#if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
-#elif defined(__HIP_PLATFORM_HCC__)
+#if defined(__CUDACC__) || defined(__HIP_PLATFORM_HCC__)
 #define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC inline

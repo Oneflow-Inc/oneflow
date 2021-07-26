@@ -19,12 +19,11 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("flags", m) {
   m.def("with_cuda", []() {
-// #ifdef WITH_CUDA
 #if defined (WITH_CUDA) || defined (WITH_HIP)
     return true;
 #else
     return false;
-#endif  // WITH_CUDA
+#endif  // defined (WITH_CUDA) || defined (WITH_HIP)
   });
 
   m.def("use_cxx11_abi", []() {
