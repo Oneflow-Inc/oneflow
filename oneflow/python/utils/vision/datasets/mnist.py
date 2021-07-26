@@ -47,7 +47,7 @@ class MNIST(VisionDataset):
     """
 
     mirrors = [
-        "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/MNIST/",
+        "http://yann.lecun.com/exdb/mnist/",
         "https://ossci-datasets.s3.amazonaws.com/mnist/",
     ]
 
@@ -100,11 +100,14 @@ class MNIST(VisionDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         download: bool = False,
+        source_url: Optional[str] = None,
     ) -> None:
         super(MNIST, self).__init__(
             root, transform=transform, target_transform=target_transform
         )
         self.train = train  # training set or test set
+        if source_url is not None:
+            self.url = source_url
 
         if self._check_legacy_exist():
             self.data, self.targets = self._load_legacy_data()
@@ -237,9 +240,7 @@ class FashionMNIST(MNIST):
             target and transforms it.
     """
 
-    mirrors = [
-        "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
-    ]
+    mirrors = ["http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"]
 
     resources = [
         ("train-images-idx3-ubyte.gz", "8d4fb7e6c68d591d4c3dfef9ec88bf0d"),
