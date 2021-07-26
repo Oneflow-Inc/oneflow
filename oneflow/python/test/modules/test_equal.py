@@ -24,8 +24,6 @@ from test_util import GenArgList
 from automated_test_util import *
 
 
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestEqual(flow.unittest.TestCase):
     @autotest()
@@ -35,14 +33,13 @@ class TestEqual(flow.unittest.TestCase):
         x = random_tensor(len(shape), *shape).to(device)
         y = random_tensor(len(shape), *shape).to(device)
         return torch.equal(x, y)
-    
+
     @autotest()
     def test_flow_equal_with_same_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x = random_tensor(len(shape), *shape).to(device)
         return torch.equal(x, x)
-
 
 
 if __name__ == "__main__":

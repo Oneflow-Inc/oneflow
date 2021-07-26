@@ -83,7 +83,6 @@ def _test_tensor_eq_operator_float(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
     def test_eq(test_case):
@@ -115,7 +114,7 @@ class TestEq(flow.unittest.TestCase):
         shape = random_tensor().value().shape
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, x)
-    
+
     @autotest(auto_backward=False)
     def test_flow_tensor_eq_with_random_data(test_case):
         device = random_device()
@@ -123,14 +122,14 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return x.eq(y)
-    
+
     @autotest(auto_backward=False)
     def test_flow_tensor_eq_with_same_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return x.eq(x)
-    
+
 
 if __name__ == "__main__":
     unittest.main()
