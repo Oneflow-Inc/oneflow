@@ -23,50 +23,6 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSequence
 
 
-@oneflow_export("nn.AvgPool1d")
-class AvgPool1d(Module):
-    r"""Applies a 1D average pooling over an input signal composed of several input planes.
-
-    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
-    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`k`
-    can be precisely described as:
-
-    .. math::
-
-        out(N_i, C_j, l)  = \frac{1}{k} \sum_{m=0}^{k-1}
-                               input(N_i, C_j, stride[0] \times h + m, stride*l + m)
-
-    If padding is non-zero, then the input is implicitly zero-padded on both sides for padding number of points.
-    The parameters kernel_size, stride, padding can each be an int or a one-element tuple.
-
-    Note:
-        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding or the
-        input. Sliding windows that would start in the right padded region are ignored.
-    
-    Args:
-        kernel_size: the size of the window.
-        strides: the stride of the window. Default value is kernel_size.
-        padding: implicit zero padding to be added on both sides.
-        ceil_mode: when True, will use ceil instead of floor to compute the output shape.
-        count_include_pad: when True, will include the zero-padding in the averaging calculation.
-
-
-    # TODO: fix cuDNN bugs in pooling_1d
-    
-    """
-
-    def __init__(
-        self,
-        kernel_size: _size_1_t,
-        stride: Optional[_size_1_t] = None,
-        padding: _size_1_t = 0,
-        ceil_mode: bool = False,
-        count_include_pad: Optional[bool] = None,
-    ):
-        # TODO: fix cuDNN bugs in pooling_1d
-        raise NotImplementedError
-
-
 # @oneflow_export("nn.AvgPool2d")
 # class AvgPool2d(Module):
 #     r"""Performs the 2d-average pooling on the input.
@@ -584,6 +540,83 @@ class MaxPool3d(Module):
             self.kernel_size, self.stride, self.padding, self.dilation
         )
 
+
+@oneflow_export("nn.AvgPool1d")
+class AvgPool1d(Module):
+    r"""Performs the 2d-average pooling on the input.
+
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+
+    .. math::
+
+        out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    Args:
+        kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+        ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+
+        of_avgpool2d = flow.nn.AvgPool2d(
+            kernel_size=(3, 2),
+            padding=0,
+            stride=(2, 1),
+        )
+        x = flow.Tensor(shape=(1, 1, 10, 10))
+        of_y = of_avgpool2d(x)   
+
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = 0,
+    ):
+        super().__init__()
+        self.kernel_size = _single(kernel_size)
+        data_format = "NCHW"  # only support "NCHW" for now !
+        self.channel_pos = (
+            "channels_first" if data_format == "NCHW" else "channels_last"
+        )
+        self.stride = _single(stride) if (stride is not None) else _single(kernel_size)
+        self.ceil_mode = ceil_mode
+        self.count_include_pad = count_include_pad
+        self.divisor_override = int(divisor_override)
+        self.padding = _single(padding)
+
+    def forward(self, x):
+        return flow.F.avgpool_1d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override,
+            data_format=self.channel_pos,
+        )
+
+    # TODO: maybe error
+    def extra_repr(self) -> str:
+        return (
+            "kernel_size={kernel_size}, stride={stride}, padding={padding}"
+            ", ceil_mode={ceil_mode}".format(**self.__dict__)
+        )
 
 @oneflow_export("nn.AvgPool2d")
 class AvgPool2d(Module):

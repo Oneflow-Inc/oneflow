@@ -78,15 +78,13 @@ class AvgPoolingParams3D {
 
 template<DeviceType device_type, typename T>
 struct AvgPoolingKernelUtil {
-  // static void Maxpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>&
-  // index_helper,
-  //                              const int64_t elem_num, const T* src, T* dest, int64_t*
-  //                              indice_ptr, const PoolingParams3D& params_3d);
+  static void Avgpool1dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                               const int64_t elem_num, const T* src, T* dest,
+                               const AvgPoolingParams3D& params_3d);
 
-  // static void Maxpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>&
-  // index_helper,
-  //                               const int64_t elem_num, const T* src, T* dest,
-  //                               const int64_t* indice_ptr, const PoolingParams3D& params_3d);
+  static void Avgpool1dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                               const int64_t elem_num, const T* src, T* dest,
+                               const AvgPoolingParams3D& params_3d);
 
   static void Avgpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest,
@@ -106,6 +104,97 @@ struct AvgPoolingKernelUtil {
   //                               const int64_t elem_num, const T* src, T* dest,
   //                               const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 };
+
+template<typename T>
+OF_DEVICE_FUNC void Avgpool1dForwardCompute(
+    const NdIndexOffsetHelper<int64_t, 3> index_helper, int64_t elem_num, 
+    const T* src, T* dest, const int32_t padding_l, 
+    const int64_t n_batch, const int64_t n_channel, 
+    const int64_t x_length, const int64_t y_length,
+    const int32_t kernel_size_l, const int32_t stride_l, 
+    const bool count_include_pad, int64_t divisor_override) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, c, l;
+    index_helper.OffsetToNdIndex(num, n, c, l);
+
+    const int64_t start_idx = (n * n_channel + c) * x_length;
+    int64_t lstart = l * stride_l - padding_l;
+    int64_t lend = std::min(lstart + kernel_size_l, x_length + padding_l);
+    const int64_t pool_size = (lend - lstart);
+    std::cout << "pool size is: " << pool_size << std::endl;
+
+    lstart = std::max(int64_t(0), lstart);
+    lend = std::min(lend, x_length);
+
+    int64_t divide_factor;
+    if (divisor_override != 0) {
+      std::cout << "divisor override != 0" << std::endl;
+      divide_factor = divisor_override;
+    } else {
+      if (count_include_pad) {
+        divide_factor = pool_size;
+      } else {
+        divide_factor = (lend - lstart);
+      }
+    }
+    std::cout << "divide factor is: " << divide_factor << std::endl;
+    T sum = 0;
+
+    for (int64_t idx = lstart; idx < lend; idx += 1) {
+      const int64_t search_idx = start_idx + idx;
+      sum += src[search_idx];
+    }
+    dest[num] = sum / divide_factor;
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC void Avgpool1dBackwardCompute(
+    const NdIndexOffsetHelper<int64_t, 3> index_helper, int64_t elem_num, 
+    const T* src, T* dest, const int32_t padding_l, 
+    const int64_t n_batch, const int64_t n_channel, 
+    const int64_t input_length, const int64_t output_length, 
+    const int32_t kernel_size_l, const int32_t stride_l, 
+    const bool count_include_pad, int64_t divisor_override) {
+  std::cout << "Height of input is: " << input_length << std::endl;
+  std::cout << "Width of input is: " << output_length << std::endl;
+
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, c, l;
+    index_helper.OffsetToNdIndex(num, n, c, l);
+
+    const int64_t start_idx = (n * n_channel + c) * input_length;
+    int64_t lstart = l * stride_l - padding_l;
+    int64_t lend = std::min(lstart + kernel_size_l, input_length + padding_l);
+    const int64_t pool_size = (lend - lstart);
+    std::cout << "pool size is: " << pool_size << std::endl;
+
+    lstart = std::max(int64_t(0), lstart);
+    lend = std::min(lend, input_length);
+
+    int64_t divide_factor;
+    if (divisor_override != 0) {
+      std::cout << "divisor override != 0" << std::endl;
+      divide_factor = divisor_override;
+    } else {
+      if (count_include_pad) {
+        divide_factor = pool_size;
+      } else {
+        divide_factor = (lend - lstart);
+      }
+    }
+    std::cout << "divide factor is: " << divide_factor << std::endl;
+
+    T grad_delta = src[num] / divide_factor;
+    std::cout << "Grad is: " << grad_delta << std::endl;
+    for (int64_t idx = lstart; idx < lend; idx += 1) {
+      const int64_t search_idx = start_idx + idx;
+      std::cout << "search idx is: " << std::endl;
+      dest[search_idx] += grad_delta;
+    }
+  }
+}
+
 
 template<typename T>
 OF_DEVICE_FUNC void Avgpool2dForwardCompute(

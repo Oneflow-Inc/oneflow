@@ -734,6 +734,13 @@
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
 
+- name: "avgpool_1d"
+  signature:
+    "Tensor Avgpool1D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+                      Int64 divisor_override=0)"
+  bind_python: True 
+
 - name: "avgpool_2d"
   signature:
     "Tensor Avgpool2D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,

@@ -155,9 +155,13 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const int32_t dim) {
       .SetGetSbpFn(BackwardGetSbpFn)                   \
       .SetDataTypeInferFn(BwInferDataType);
 
-// REGISTER_AVGPOOL_FORWARD_OP("avgpool_1d", 1);
+REGISTER_AVGPOOL_FORWARD_OP("avgpool_1d", 1);
 REGISTER_AVGPOOL_FORWARD_OP("avgpool_2d", 2);
+
+REGISTER_AVGPOOL_BACKWARD_OP("avgpool_1d_grad", 1);
 REGISTER_AVGPOOL_BACKWARD_OP("avgpool_2d_grad", 2);
+
+REGISTER_USER_OP_GRAD("avgpool_1d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(1));
 REGISTER_USER_OP_GRAD("avgpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(2));
 
 // REGISTER_AVGPOOL_FORWARD_OP("avgpool_3d", 3);

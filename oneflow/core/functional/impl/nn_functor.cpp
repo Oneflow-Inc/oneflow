@@ -526,6 +526,13 @@ class AvgPoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class Avgpool1DFunctor : public AvgPoolingNDFunctor {
+ public:
+  Avgpool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avgpool_1d").Input("x").Output("y").Build());
+  }
+};
+
 class Avgpool2DFunctor : public AvgPoolingNDFunctor {
  public:
   Avgpool2DFunctor() {
@@ -557,6 +564,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
+  m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
 };
 
