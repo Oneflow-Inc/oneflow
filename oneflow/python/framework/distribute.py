@@ -220,9 +220,7 @@ def is_multi_client():
 
 
 @oneflow_export("sbp.split")
-def split_sbp(
-    axis: int,
-) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
     r"""Generate a split scheme in which op will be splitted at `axis`.
 
     Args:
@@ -242,7 +240,7 @@ def split_sbp(
 
 
 @oneflow_export_value("sbp.broadcast")
-def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+def broadcast_sbp() -> oneflow._oneflow_internal.sbp.sbp:
     r"""Generate a broadcast scheme.
     Returns:
         SbpParallel: Broadcast scheme object,, often required by `to_consistent` method of `Tensor`
@@ -254,8 +252,13 @@ def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.S
     return oneflow._oneflow_internal.sbp.broadcast()
 
 
+@oneflow_export_value("sbp.sbp")
+def sbp_sbp():
+    return oneflow._oneflow_internal.sbp.sbp
+
+
 @oneflow_export_value("sbp.partial_sum")
-def partial_sum_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+def partial_sum_sbp() -> oneflow._oneflow_internal.sbp.sbp:
     r"""Generate a partial_sum scheme.
     Returns:
         SbpParallel: PartialSum scheme object,, often required by `to_consistent` method of `Tensor`

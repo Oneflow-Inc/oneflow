@@ -21,10 +21,17 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
 class Shape;
+
+class Device;
+class ParallelDesc;
+namespace cfg {
+class ParallelDistribution;
+}
 
 namespace one {
 
@@ -86,7 +93,9 @@ class TensorInfo final {
  private:
   std::shared_ptr<const Shape> shape_;
   DataType dtype_;
-  // TODO: Add device info
+  Maybe<Symbol<Device>> device_;                                    // for local tensor
+  Maybe<Symbol<ParallelDesc>> parallel_desc_;                       // for consistent tensor
+  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution_;  // for consistent tensor
 };
 
 }  // namespace one
