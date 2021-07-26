@@ -574,6 +574,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/test_speed.sh"
       - name: Post speed stats
         if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
         uses: actions/github-script@v4
         with:
           script: |

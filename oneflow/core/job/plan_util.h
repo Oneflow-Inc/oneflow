@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 
 #include <functional>
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
 
@@ -30,8 +32,14 @@ struct PlanUtil {
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
+  static void DumpCtrlRegstInfoToPlan(Plan* plan);
+  static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
   static const oneflow::OpAttribute& GetOpAttribute(const Plan* plan, int64_t job_id,
                                                     const oneflow::KernelConf& kernel_conf);
+  // NOTE(chengcheng): recovery op_attr
+  static void PopulateOpAttibute(
+      Plan* plan,
+      const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
 };
 
 }  // namespace oneflow

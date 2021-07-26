@@ -16,12 +16,11 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.ReplicationPad2d")
-@experimental_api
 class ReplicationPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -44,9 +43,8 @@ class ReplicationPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -113,7 +111,6 @@ class ReplicationPad2d(Module):
 
 
 @oneflow_export("nn.ReflectionPad2d")
-@experimental_api
 class ReflectionPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -140,9 +137,8 @@ class ReflectionPad2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
@@ -190,27 +186,26 @@ class ReflectionPad2d(Module):
         return "{}".format(self.padding)
 
 
-@oneflow_export("nn.ConstantPad2d")
-@experimental_api
-class ConstantPad2d(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
+@oneflow_export("nn.ConstantPad1d")
+class ConstantPad1d(Module):
+    r"""Pads the input tensor boundaries with a constant value.
+    The interface is consistent with PyTorch, and referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad1d.html?highlight=constantpad1d#torch.nn.ConstantPad1d
 
-    This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    For `N`-dimensional padding, use :func:`torch.nn.functional.pad()`.
 
     Args:
-        padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
-        
-        value (Union[int, float]): The constant value used for padding. Defaults to 0.
+        padding (int, list, tuple): the size of the padding. If is `int`, uses the same
+            padding in both boundaries. If a 2-`tuple`, uses
+            (:math:`\text{padding_left}`, :math:`\text{padding_right}`)
+
+        value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
-        - Input: :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` where
+        - Input: :math:`(N, C, W_{in})`
+        - Output: :math:`(N, C, W_{out})` where
 
-            :math:`H_{out} = H_{in} + \mathrm{padding_{top}} + \mathrm{padding_{bottom}}`
-
-            :math:`W_{out} = W_{in} + \mathrm{padding_{left}} + \mathrm{padding_{right}}`
+          :math:`W_{out} = W_{in} + \text{padding\_left} + \text{padding\_right}`
 
     For example:
 
@@ -218,7 +213,72 @@ class ConstantPad2d(Module):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
+
+        >>> input = flow.tensor(np.arange(8).reshape(2,2,2).astype(np.float32))
+        >>> m = flow.nn.ConstantPad1d(padding=[1, 2], value=9.9999)
+        >>> output = m(input)
+        >>> output
+        tensor([[[9.9999, 0.    , 1.    , 9.9999, 9.9999],
+                 [9.9999, 2.    , 3.    , 9.9999, 9.9999]],
+        <BLANKLINE>
+                [[9.9999, 4.    , 5.    , 9.9999, 9.9999],
+                 [9.9999, 6.    , 7.    , 9.9999, 9.9999]]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
+        super().__init__()
+        if isinstance(padding, (tuple, list)):
+            assert len(padding) == 2, ValueError("Length of padding must be 4")
+            boundary = [padding[0], padding[1]]
+        elif isinstance(padding, int):
+            boundary = [padding, padding]
+        else:
+            raise ValueError("padding must be int or list or tuple!")
+
+        self.padding = boundary
+        self.value = value
+
+    def forward(self, x):
+        if x.dtype in (flow.float32, flow.float16, flow.float64):
+            self.value = float(self.value)
+        else:
+            self.value = int(self.value)
+
+        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+
+
+@oneflow_export("nn.ConstantPad2d")
+class ConstantPad2d(Module):
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
+
+    This operator pads the input with constant value that user specifies. 
+    User can set the amount of padding by setting the parameter `paddings`.
+
+    Args:
+        padding (int, tuple, list):  the size of the padding.
+            If is `int`, uses the same padding in all boundaries. 
+            If a 4-`tuple`, uses 
+            (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
+
+        value (int, float): The constant value used for padding. Defaults to 0.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+
+          :math:`H_{out} = H_{in} + \mathrm{padding_{top}} + \mathrm{padding_{bottom}}`
+          :math:`W_{out} = W_{in} + \mathrm{padding_{left}} + \mathrm{padding_{right}}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
@@ -250,6 +310,7 @@ class ConstantPad2d(Module):
                   [ 1.,  1., 12., 13., 14.,  1.,  1.],
                   [ 1.,  1., 15., 16., 17.,  1.,  1.],
                   [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
+
     """
 
     def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
@@ -275,7 +336,6 @@ class ConstantPad2d(Module):
 
 
 @oneflow_export("nn.ConstantPad3d")
-@experimental_api
 class ConstantPad3d(Module):
     r"""Pads the input tensor boundaries with a constant value.
     The interface is consistent with PyTorch, and referenced from:
@@ -290,7 +350,7 @@ class ConstantPad3d(Module):
             :math:`\text{padding_top}`, :math:`\text{padding_bottom}`,
             :math:`\text{padding_front}`, :math:`\text{padding_back}`)
         
-        value (Union[int, float]): The constant value used for padding. Defaults to 0.
+        value (int, float): The constant value used for padding. Defaults to 0.
 
     Shape:
         - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`
@@ -304,7 +364,7 @@ class ConstantPad3d(Module):
 
     Examples::
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
 
         >>> input = flow.tensor(np.arange(8).reshape(1,1,2,2,2).astype(np.int32))

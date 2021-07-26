@@ -16,9 +16,9 @@ limitations under the License.
 import unittest
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.utils.data as Data
-import oneflow.experimental.nn as nn
+import oneflow.nn as nn
 
 
 class LinearNet(nn.Module):
