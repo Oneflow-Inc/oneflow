@@ -24,7 +24,7 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.nn.utils import add_indent
+from oneflow.python.nn.util import add_indent
 
 
 class BlockType:

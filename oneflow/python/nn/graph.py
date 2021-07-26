@@ -29,7 +29,7 @@ from oneflow.python.nn.graph_block import Block, BlockType
 from oneflow.python.nn.graph_optimizer import OptimizerConfig
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.optimizer.optimizer import Optimizer
-from oneflow.python.nn.utils import add_indent
+from oneflow.python.nn.util import add_indent
 from oneflow.python.framework.function_util import FunctionConfig
 
 
