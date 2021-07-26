@@ -38,6 +38,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         learning_rate = 0.1
         momentum = 0.2
         scale = 0.3
+        weight_decay = 0.7
         sgd0 = flow.optim.SGD(
             [
                 {
@@ -45,6 +46,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
+                    "weight_decay": weight_decay
                 }
             ]
         )
@@ -91,20 +93,11 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         sgd0 = flow.optim.SGD(
             [
                 {
-                    "params": [m.para0],
-                    "lr": learning_rate,
-                    "momentum": momentum,
-                    "scale": scale,
-                }
-            ]
-        )
-        sgd0 = flow.optim.SGD(
-            [
-                {
                     "params": [m.para0, m.para1, m.para2],
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
+                    "weight_decay": 0.3 
                 }
             ]
         )
@@ -115,12 +108,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
+                    "weight_decay": 0.4 
                 },
                 {
                     "params": [m.para4],
                     "lr": learning_rate,
-                    "momentum": momentum,
+                    "momentum": 0.9,
                     "scale": scale,
+                    "weight_decay": 0.5 
                 },
             ]
         )
@@ -141,8 +136,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         g = CustomGraph0()
         x = flow.Tensor(4, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        g._preprocess_state()
-        g._complete_graph_config()
+        g._generate_optimizer_and_variable_configs()
         print("repr(g): \n", repr(g))
         print("g.config.proto: \n", g.config.proto)
 

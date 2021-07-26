@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, OrderedDict
 from functools import partial
 
 import oneflow._oneflow_internal
@@ -26,7 +26,7 @@ from oneflow._oneflow_internal import Tensor as InternalTensor
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.multi_client_session import MultiClientSession
 from oneflow.python.nn.graph_block import Block, BlockType
-from oneflow.python.nn.graph_optimizer import OptimizerConfig
+from oneflow.python.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.nn.utils import add_indent
@@ -44,9 +44,9 @@ class Graph(object):
         self.config.proto.set_job_name(self._name)
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
-        self._optimizers = OrderedDict()
+        self._optimizers_conf = OrderedDict()
+        self._variables_conf = OrderedDict()
         self._is_compiled = False
-        self._var2var_op_name = dict()
         self._job_proto = None
 
     @property
@@ -78,7 +78,7 @@ class Graph(object):
         assert isinstance(
             optimizer, Optimizer
         ), "optimizer must be an instance of Optimizer"
-        self._optimizers[name] = OptimizerConfig(
+        self._optimizers_conf[name] = OptimizerConfig(
             name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
 
@@ -98,30 +98,23 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
-    def _preprocess_state(self):
-        state_list = list()
-        for state_block in self._state():
-            state_list.append(state_block.origin)
-            if state_block.type == BlockType.PARAMETER:
-                self._var2var_op_name[state_block.origin] = (
-                    state_block.name_prefix + state_block.name
-                )
-
-    def _complete_graph_config(self):
-        if len(self._optimizers):
+    def _generate_optimizer_and_variable_configs(self):
+        if len(self._optimizers_conf):
             self.config._train(True)
-        # TODO(xuxiaoyu): save variable name and it's l2 if optimizer has weight decay
-        # which means to used as l2.
-        for name, opt_config in self._optimizers.items():
-            self.config.add_optimizer_config(opt_config, self._var2var_op_name)
+        for state_block in self._state():
+            if state_block.type == BlockType.PARAMETER:
+                self._variables_conf[state_block.origin] = VariableConfig(state_block.name_prefix + state_block.name)
+        for name, opt_config in self._optimizers_conf.items():
+            self.config._generate_optimizer_and_variable_configs(opt_config, self._variables_conf)
+        for v, c in self._variables_conf.items():
+            print(c)
 
     def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
 
-        self._preprocess_state()
-        self._complete_graph_config()
+        self._generate_optimizer_and_variable_configs()
 
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
@@ -294,9 +287,9 @@ class GraphConfig(FunctionConfig):
         else:
             self.proto.mutable_predict_conf()
 
-    def add_optimizer_config(
-        self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
+    def _generate_optimizer_and_variable_configs(
+        self, optimizer_config: OptimizerConfig = None, variables_conf: OrderedDict = None
     ):
-        optimizer_config.optimizer.add_to_graph_train_config(
-            self.proto.mutable_train_conf(), var2var_op_name
+        optimizer_config.generate_optimizer_and_variable_configs(
+            self.proto.mutable_train_conf(), variables_conf
         )
