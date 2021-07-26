@@ -32,7 +32,7 @@ class ShapeProto;
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
-  Shape() : elem_cnt_(0) {}
+  Shape() : elem_cnt_(0) {is_scalar_=false;}
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
