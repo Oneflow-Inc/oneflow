@@ -76,6 +76,7 @@ class ConsistentTensorMetaInferArgs final {
     return input_consistent_tensor_metas_;
   }
   Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
   const AttrMap& attrs() const { return attrs_; }
 
   size_t hash_value() const;
@@ -95,7 +96,8 @@ class ConsistentTensorMetaInferArgs final {
 
   static Maybe<ConsistentTensorMetaInferArgs> New(const TensorTuple& input_tensors,
                                                   Symbol<PlacementScope> placement_scope,
-                                                  const AttrMap& attrs);
+                                                  const AttrMap& attrs,
+                                                  Symbol<ParallelDesc> parallel_desc);
 
  private:
   ConsistentTensorMetaInferArgs() = default;
@@ -103,6 +105,7 @@ class ConsistentTensorMetaInferArgs final {
 
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
   Symbol<PlacementScope> placement_scope_;
+  Symbol<ParallelDesc> parallel_desc_;
   AttrMap attrs_;
 };
 
@@ -180,10 +183,11 @@ class ConsistentTensorInferCache final {
       : user_op_expr_(user_op_expr) {}
 
   Maybe<const ConsistentTensorInferResult> GetOrInfer(
-      const ConsistentTensorMetaInferArgs& infer_args);
+      const ConsistentTensorMetaInferArgs& infer_args, Symbol<ParallelDesc> parallel_desc);
 
   static Maybe<const ConsistentTensorInferResult> Infer(
-      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args);
+      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args,
+      Symbol<ParallelDesc> parallel_desc);
 
  private:
   std::weak_ptr<const UserOpExpr> user_op_expr_;

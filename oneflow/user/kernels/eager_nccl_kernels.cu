@@ -96,7 +96,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
+    CHECK(!(in->shape() == out->shape()));
     CHECK_EQ(in->data_type(), out->data_type());
     std::set<std::pair<int64_t, int64_t>> device_set;
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
@@ -107,12 +107,11 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
       int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
       int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-      LOG(ERROR) << "machine_id: " << machine_id << ", device_id: " << device_id;
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
     OF_NCCL_CHECK(ncclReduceScatter(
-        in->dptr(), out->mut_dptr(), in->shape().elem_cnt(), GetNcclDataType(in->data_type()),
+        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
         op_type2ncclRedOp_t.at(op_type), comm, ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -127,4 +126,36 @@ REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
     .SetCreateFn<EagerNcclReduceScatterKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
+class EagerNcclAllGatherKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclAllGatherKernel() = default;
+  ~EagerNcclAllGatherKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK(!(in->shape() == out->shape()));
+    CHECK_EQ(in->data_type(), out->data_type());
+    std::set<std::pair<int64_t, int64_t>> device_set;
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    ParallelConf parallel_conf{};
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    const ParallelDesc parallel_desc(parallel_conf);
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+    ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), comm,
+                                ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_all_gather")
+    .SetCreateFn<EagerNcclAllGatherKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 }  // namespace oneflow

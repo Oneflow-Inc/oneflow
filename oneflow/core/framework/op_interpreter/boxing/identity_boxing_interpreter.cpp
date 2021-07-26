@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
-#define ONEFLOW_CORE_COMMON_CONSTANT_H_
-
-#include <string>
+#include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 
 namespace oneflow {
 
-static const int64_t kInvalidSessionId = -1;
-static const std::string kNoPassTag = "";
-static const std::string kMainOp = "main_op";
-static const int64_t kMaxSplitAxis = 6;
+Maybe<void> IdentityBoxingInterpreter::Interpret(
+    const one::TensorTuple& inputs, one::TensorTuple* outputs,
+    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_EQ_OR_RETURN(in_parallel_distribution, out_parallel_distribution);
+  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  *outputs = inputs;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_

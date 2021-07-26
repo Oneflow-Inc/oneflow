@@ -29,7 +29,8 @@ Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2B(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  std::shared_ptr<one::UserOpExpr> op_expr = JUST(op_expr_helper::EagerNcclAllGather());
+  std::shared_ptr<one::UserOpExpr> op_expr =
+      JUST(op_expr_helper::EagerNcclAllGather(in_parallel_desc));
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
   JUST(interperter->Apply(*op_expr, inputs, outputs, AttrMap{}));
   return Maybe<void>::Ok();
@@ -43,7 +44,8 @@ Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingP2B(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  std::shared_ptr<one::UserOpExpr> op_expr = JUST(op_expr_helper::EagerNcclAllReduce());
+  std::shared_ptr<one::UserOpExpr> op_expr =
+      JUST(op_expr_helper::EagerNcclAllReduce(in_parallel_desc));
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
   JUST(interperter->Apply(*op_expr, inputs, outputs, AttrMap{}));
   return Maybe<void>::Ok();

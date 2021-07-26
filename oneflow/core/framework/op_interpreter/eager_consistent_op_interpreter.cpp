@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 
 namespace oneflow {
 namespace one {
@@ -36,14 +37,16 @@ namespace one {
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  const auto& parallel_desc = JUST(inputs.at(0)->parallel_desc());
+  for (int i = 1; i < inputs.size(); ++i) {
+    CHECK_EQ_OR_RETURN(parallel_desc, JUST(inputs.at(i)->parallel_desc()));
+  }
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
   const auto& infer_args =
-      JUST(ConsistentTensorMetaInferArgs::New(inputs, placement_scope, ctx.attrs));
-  const auto& result =
-      JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+      JUST(ConsistentTensorMetaInferArgs::New(inputs, placement_scope, ctx.attrs, parallel_desc));
+  const auto& result = JUST(
+      user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args, parallel_desc));
   const auto& output_tensor_metas = result->output_tensor_metas();
-  const auto& parallel_desc =
-      JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name())).shared_from_symbol();
   int64_t parallel_id = -1;
   const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
   using TensorImpl = EagerConsistentTensorImpl;
@@ -56,12 +59,31 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!device) { return Maybe<void>::Ok(); }
+  // Eager boxing
+  std::shared_ptr<TensorTuple> input_after_boxing = std::make_shared<TensorTuple>(inputs.size());
+  {
+    for (int i = 0; i < inputs.size(); ++i) {
+      const auto& boxing_interpreter =
+          JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+              JUST(inputs.at(i)->parallel_distribution()),
+              result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
+              JUST(inputs.at(i)->parallel_desc())));
+      TensorTuple boxing_input(1);
+      TensorTuple boxing_output(1);
+      boxing_input.at(0) = inputs.at(i);
+      JUST(boxing_interpreter->Interpret(
+          boxing_input, &boxing_output, JUST(inputs.at(i)->parallel_distribution()),
+          result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
+          JUST(inputs.at(i)->parallel_desc())));
+      input_after_boxing->at(i) = boxing_output.at(0);
+    }
+  }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    const auto& local_tensor = JUST(inputs.at(i)->cur_rank_phy_tensor());
+      std::make_shared<EagerBlobObjectList>(input_after_boxing->size());
+  for (int i = 0; i < input_after_boxing->size(); ++i) {
+    const auto& local_tensor = JUST(input_after_boxing->at(i)->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
@@ -73,7 +95,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, parallel_desc, instr_type_name);
+                                      ctx, parallel_desc.shared_from_symbol(), instr_type_name);
   }));
   return Maybe<void>::Ok();
 }

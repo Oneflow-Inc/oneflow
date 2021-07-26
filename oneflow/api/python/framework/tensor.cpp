@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/op_builder.h"
 
 namespace py = pybind11;
 
@@ -308,6 +309,39 @@ Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
   return outputs->at(0);
 }
 
+// used in consistent_tensor.to_consistent(sbp)
+Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
+                                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                       Symbol<ParallelDesc> parallel_desc) {
+  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+  TensorTuple input_list;
+  input_list.emplace_back(consistent_tensor);
+  auto outputs = std::make_shared<one::TensorTuple>(1);
+  std::vector<std::string> sbp_parallel_str_list(sbp_parallels.size());
+  {
+    for (int64_t i = 0; i < sbp_parallel_str_list.size(); ++i) {
+      sbp_parallel_str_list.at(i) = SbpParallelToString(*sbp_parallels.at(i));
+    }
+  }
+  const auto& parallel_distribution_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallel_str_list)
+               .Attr<std::string>("grad_mode", "restore")
+               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
+               .Build());
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*parallel_distribution_cast_op_expr, input_list, outputs.get(),
+                          AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  return outputs->at(0);
+}
+
 Maybe<Tensor> ConvertTensorDevice(const std::shared_ptr<Tensor>& tensor,
                                   const std::string& device_type, int64_t device_id) {
   return functional::Copy(tensor, device_type, device_id);
@@ -390,16 +424,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
-      .def("to_consistent",
-           [](const std::shared_ptr<Tensor>& tensor,
-              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-              Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<Tensor> {
-             if (tensor->is_consistent()) {
-               UNIMPLEMENTED();
-             } else {
-               return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
-             }
-           })
+      .def(
+          "to_consistent",
+          [](const std::shared_ptr<Tensor>& tensor,
+             const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+             Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<Tensor> {
+            if (tensor->is_consistent()) {
+              return CastParallelDistribution(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
+            } else {
+              return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
+            }
+          })
       .def("to_local",
            [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
              return CastConsistentToLocal(tensor).GetPtrOrThrow();

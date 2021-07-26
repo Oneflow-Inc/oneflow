@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
@@ -23,8 +24,6 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
-
-static const int64_t kMaxSplitAxis = 6;
 
 namespace {
 

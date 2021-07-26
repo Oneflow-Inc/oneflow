@@ -46,6 +46,7 @@ void InputConsistentTensorMeta::assign(
 size_t ConsistentTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<Symbol<PlacementScope>>()(placement_scope_);
   hash_value ^= std::hash<AttrMap>()(attrs_);
+  hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
   const auto& tensor_meta_hash_functor = std::hash<InputConsistentTensorMeta>();
   for (const auto& tensor_meta : input_consistent_tensor_metas_) {
     HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
@@ -55,7 +56,8 @@ size_t ConsistentTensorMetaInferArgs::hash_value() const {
 
 bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferArgs& other) const {
   return this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_
-         && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_;
+         && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_
+         && this->parallel_desc_ == other.parallel_desc_;
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionConstraints(
@@ -101,12 +103,13 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
 }
 
 Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
-    const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
-    const AttrMap& attrs) {
+    const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope, const AttrMap& attrs,
+    Symbol<ParallelDesc> parallel_desc) {
   std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
   infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
   infer_args->placement_scope_ = placement_scope;
   infer_args->attrs_ = attrs;
+  infer_args->parallel_desc_ = parallel_desc;
   JUST(infer_args->InitInputConsistentTensorMetas(input_tensors));
   return infer_args;
 }
@@ -135,13 +138,8 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 }  // namespace
 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
-    const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
-  Symbol<ParallelDesc> parallel_desc;
-  {
-    // Get parallel description.
-    const auto& placement_scope = infer_args.placement_scope();
-    parallel_desc = JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name()));
-  }
+    const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args,
+    Symbol<ParallelDesc> parallel_desc) {
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
     // Infer OpArgMutConsistentTensorMeta.
@@ -195,12 +193,12 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 }
 
 Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
-    const ConsistentTensorMetaInferArgs& infer_args) {
+    const ConsistentTensorMetaInferArgs& infer_args, Symbol<ParallelDesc> parallel_desc) {
   auto iter = cache_.find(infer_args);
   if (iter == cache_.end()) {
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
-    const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
+    const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args, parallel_desc));
     iter = cache_.emplace(infer_args, output_tensor_metas).first;
   }
   return iter->second;

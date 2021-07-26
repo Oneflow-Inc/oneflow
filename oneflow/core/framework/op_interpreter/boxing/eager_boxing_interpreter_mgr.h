@@ -30,7 +30,7 @@ class EagerBoxingInterpreterManager final {
       Symbol<cfg::ParallelDistribution> in_parallel_distribution,
       Symbol<cfg::ParallelDistribution> out_parallel_distribution,
       Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const;
-}
+};
 
 }  // namespace oneflow
 
