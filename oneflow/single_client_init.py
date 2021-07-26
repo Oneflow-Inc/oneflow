@@ -141,5 +141,3 @@ sys.exit = custom_exit
 
 del custom_exit
 del sys
-
-del absolute_import
