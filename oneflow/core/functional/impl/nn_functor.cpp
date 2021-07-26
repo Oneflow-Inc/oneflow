@@ -463,6 +463,39 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
 };
 
+// class AvgPoolingNDFunctor {
+//  public:
+//   AvgPoolingNDFunctor() = default;
+//   virtual ~AvgPoolingNDFunctor() = default;
+//   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+//                                 const std::string& data_format, const std::vector<int32_t>& padding,
+//                                 const std::vector<int32_t>& kernel_size,
+//                                 const std::vector<int32_t>& stride,
+//                                 const bool& ceil_mode, 
+//                                 const bool& count_include_pad, 
+//                                 const int64_t& divisor_override) const {
+//     MutableAttrMap attrs;
+//     JUST(attrs.SetAttr<std::string>("data_format", data_format));
+//     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+//     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+//     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+//     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+//     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
+//     JUST(attrs.SetAttr<bool>("divisor_override", divisor_override));
+//     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+//   }
+
+//  protected:
+//   std::shared_ptr<OpExpr> op_;
+// };
+
+// class Avgpool2DFunctor : public AvgPoolingNDFunctor {
+//  public:
+//   Avgpool2DFunctor() {
+//     op_ = CHECK_JUST(one::OpBuilder("avgpool_2d").Input("x").Output("y").Build());
+//   }
+// };
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -484,6 +517,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
+  // m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
 };
 
 }  // namespace functional

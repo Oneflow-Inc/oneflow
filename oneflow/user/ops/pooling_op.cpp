@@ -134,106 +134,50 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
 
 }  // namespace
 
-REGISTER_USER_OP("maxpool_1d")
-    .Input("x")
-    .Output("y")
-    .Output("indice")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(1))
-    .SetGetSbpFn(ForwardGetSbpFn)
+#define REGISTER_MAXPOOL_FORWARD_OP(name, ndim) \
+  REGISTER_USER_OP(name) \
+    .Input("x") \
+    .Output("y") \
+    .Output("indice") \
+    .Attr<std::vector<int32_t>>("padding") \
+    .Attr<std::string>("data_format") \
+    .Attr<std::vector<int32_t>>("kernel_size") \
+    .Attr<std::vector<int32_t>>("stride") \
+    .Attr<std::vector<int32_t>>("dilation") \
+    .Attr<bool>("return_indices") \
+    .Attr<bool>("ceil_mode") \
+    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(ndim)) \
+    .SetGetSbpFn(ForwardGetSbpFn) \
     .SetDataTypeInferFn(FwInferDataType);
 
-REGISTER_USER_OP("maxpool_1d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("indice")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetGetSbpFn(BackwardGetSbpFn)
+#define REGISTER_MAXPOOL_BACKWARD_OP(name) \
+  REGISTER_USER_OP(name) \
+    .Input("x") \
+    .Input("y") \
+    .Input("indice") \
+    .Input("dy") \
+    .Output("dx") \
+    .Attr<std::vector<int32_t>>("padding") \
+    .Attr<std::string>("data_format") \
+    .Attr<std::vector<int32_t>>("kernel_size") \
+    .Attr<std::vector<int32_t>>("stride") \
+    .Attr<std::vector<int32_t>>("dilation") \
+    .Attr<bool>("return_indices") \
+    .Attr<bool>("ceil_mode") \
+    .SetTensorDescInferFn(BackwardTensorDescInferFn) \
+    .SetGetSbpFn(BackwardGetSbpFn) \
     .SetDataTypeInferFn(BwInferDataType);
+
+REGISTER_MAXPOOL_FORWARD_OP("maxpool_1d", 1);
+REGISTER_MAXPOOL_FORWARD_OP("maxpool_2d", 2);
+REGISTER_MAXPOOL_FORWARD_OP("maxpool_3d", 3);
+
+REGISTER_MAXPOOL_BACKWARD_OP("maxpool_1d")
+REGISTER_MAXPOOL_BACKWARD_OP("maxpool_2d")
+REGISTER_MAXPOOL_BACKWARD_OP("maxpool_3d")
 
 REGISTER_USER_OP_GRAD("maxpool_1d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 1));
-
-REGISTER_USER_OP("maxpool_2d")
-    .Input("x")
-    .Output("y")
-    .Output("indice")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(2))
-    .SetGetSbpFn(ForwardGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
-
-REGISTER_USER_OP("maxpool_2d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("indice")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetGetSbpFn(BackwardGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
-
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
-
-REGISTER_USER_OP("maxpool_3d")
-    .Input("x")
-    .Output("y")
-    .Output("indice")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(3))
-    .SetGetSbpFn(ForwardGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
-
-REGISTER_USER_OP("maxpool_3d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("indice")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("stride")
-    .Attr<std::vector<int32_t>>("dilation")
-    .Attr<bool>("return_indices")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetGetSbpFn(BackwardGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
-
 REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 3));
 
 }  // namespace oneflow

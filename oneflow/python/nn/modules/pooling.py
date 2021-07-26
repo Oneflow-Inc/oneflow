@@ -595,6 +595,85 @@ class MaxPool3d(Module):
             self.kernel_size, self.stride, self.padding, self.dilation
         )
 
+# @oneflow_export("nn.torch_AvgPool2d")
+# @experimental_api
+# class Torch_AvgPool2d(Module):
+#     r"""Performs the 2d-average pooling on the input.
+
+#     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+#     output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+#     can be precisely described as:
+
+#     .. math::
+
+#         out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+#                                input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+#     Args:
+#         kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+#         strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+#         padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+#         ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+
+#     For example:
+
+#     .. code-block:: python
+
+#         import oneflow.experimental as flow
+#         import numpy as np
+
+
+#         of_avgpool2d = flow.nn.AvgPool2d(
+#             kernel_size=(3, 2),
+#             padding=0,
+#             stride=(2, 1),
+#         )
+#         x = flow.Tensor(shape=(1, 1, 10, 10))
+#         of_y = of_avgpool2d(x)   
+        
+#     """
+
+#     def __init__(
+#         self,
+#         kernel_size: _size_2_t,
+#         stride: Optional[_size_2_t] = None,
+#         padding: _size_2_t = 0,
+#         ceil_mode: bool = False,
+#         count_include_pad: bool = True,
+#         divisor_override: int = 0
+#     ):
+#         super().__init__()
+#         self.kernel_size = _pair(kernel_size)
+#         data_format = "NCHW"  # only support "NCHW" for now !
+#         self.channel_pos = (
+#             "channels_first" if data_format == "NCHW" else "channels_last"
+#         )
+#         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
+#         self.ceil_mode = ceil_mode
+#         self.count_include_pad = count_include_pad
+#         self.divisor_override = divisor_override
+#         self.padding = _pair(padding)
+    
+
+#     def forward(self, x):
+#         return flow.F.avgpool_2d(
+#             x,
+#             kernel_size=self.kernel_size,
+#             stride=self.stride,
+#             padding=self.padding,
+#             ceil_mode=self.ceil_mode, 
+#             count_include_pad=self.count_include_pad, 
+#             divisor_override=self.divisor_override, 
+#             data_format=self._channel_pos
+#         )
+
+#     # TODO: maybe error
+#     def extra_repr(self) -> str:
+#         return (
+#             "kernel_size={kernel_size}, stride={stride}, padding={padding}"
+#             ", ceil_mode={ceil_mode}".format(**self.__dict__)
+#         )
+
 
 if __name__ == "__main__":
     import doctest
