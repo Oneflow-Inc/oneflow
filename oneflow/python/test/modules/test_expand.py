@@ -20,6 +20,8 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+import random as py_random
+from automated_test_util import *
 
 
 def _np_get_expand(input_shape, expand_size):
@@ -183,6 +185,15 @@ def _test_expand_backward(test_case, device):
     np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
+def random_expand_size(a, b):
+    return py_random.randint(a, b)
+
+def random_expand(x, ndim, expand_size):
+    dim_size = [1, ] * ndim
+    random_index = py_random.randint(0, ndim)
+    dim_size[random_index] = expand_size
+    return x.expand(*dim_size)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
@@ -200,6 +211,12 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    def test_flow_tensor_expand_with_random_data(test_case):
+        expand_size = random_expand_size(1, 6)
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        return random_expand(x, ndim=5, expand_size=expand_size)
+
 
 
 if __name__ == "__main__":

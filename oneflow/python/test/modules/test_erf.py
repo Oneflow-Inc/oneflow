@@ -21,6 +21,7 @@ from collections import OrderedDict
 import oneflow as flow
 from test_util import GenArgList
 
+from automated_test_util import *
 
 def _test_erf_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
@@ -75,6 +76,19 @@ class TestErfModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_erf_impl(test_case, *arg)
             _test_tensor_erf_impl(test_case, *arg)
+    
+    @autotest()
+    def test_flow_tensor_erf_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erf()
+
+    @autotest()
+    def test_flow_erf_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.erf(x)
+        return y
 
 
 if __name__ == "__main__":

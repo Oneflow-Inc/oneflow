@@ -21,6 +21,7 @@ import numpy as np
 
 import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_round_impl(test_case, shape, device):
@@ -48,6 +49,19 @@ class TestRound(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_round_impl(test_case, *arg)
+    
+    @autotest()
+    def test_flow_tensor_round_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.round()
+
+    @autotest()
+    def test_flow_round_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.round(x)
+        return y
 
 
 if __name__ == "__main__":
