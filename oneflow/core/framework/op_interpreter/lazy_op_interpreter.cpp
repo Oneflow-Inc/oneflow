@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
 
-#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
