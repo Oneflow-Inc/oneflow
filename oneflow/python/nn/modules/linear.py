@@ -125,7 +125,7 @@ class Linear(Module):
             )
 
         if self.use_bias:
-            res = res + self.bias
+            res += self.bias
 
         return res
 
