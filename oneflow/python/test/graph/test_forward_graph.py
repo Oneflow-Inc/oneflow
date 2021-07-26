@@ -16,7 +16,6 @@ limitations under the License.
 import unittest
 import os
 
-import oneflow
 import oneflow as flow
 
 
@@ -30,7 +29,7 @@ class TestForwardGraph(flow.unittest.TestCase):
                 self.relu = flow.nn.ReLU()
 
             def forward(self, x, y):
-                x = oneflow.F.matmul(x, self.weight)
+                x = flow.F.matmul(x, self.weight)
                 x = self.relu(x)
                 y = self.relu(y)
                 return x, y
@@ -45,8 +44,8 @@ class TestForwardGraph(flow.unittest.TestCase):
 
             def forward(self, x, y):
                 x, y = self.layer(x, y)
-                x = oneflow.F.flatten(x, 1)
-                x = oneflow.F.matmul(x, self.dummy_buff)
+                x = flow.F.flatten(x, 1)
+                x = flow.F.matmul(x, self.dummy_buff)
                 return x, y
 
         class CustomGraph(flow.nn.Graph):
