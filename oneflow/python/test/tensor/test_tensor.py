@@ -774,7 +774,12 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
-        y = input.addmm(mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        y = input.addmm(
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
         return y
 
     @autotest()
@@ -783,9 +788,14 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
-        y = input.addmm(mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        y = input.addmm(
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
         return y
-    
+
     @autotest()
     def test_clamp_tensor_with_random_data(test_case):
         device = random_device()
@@ -793,7 +803,6 @@ class TestTensor(flow.unittest.TestCase):
         y = input.clamp(min=random().to(float), max=random().to(float))
         return y
 
-    @unittest.skip("backward has not add")
     @autotest()
     def test_clamp_minnone_tensor_with_random_data(test_case):
         device = random_device()
@@ -801,12 +810,11 @@ class TestTensor(flow.unittest.TestCase):
         y = input.clamp(min=random().to(float) | nothing(), max=random().to(float))
         return y
 
-    @unittest.skip("backward has not add")
     @autotest()
     def test_clamp_maxnone_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
-        y = input.clamp(min=random().to(float), max=random().to(float))
+        y = input.clamp(min=random().to(float), max=random().to(float) | nothing())
         return y
 
     def test_norm_tensor_function(test_case):

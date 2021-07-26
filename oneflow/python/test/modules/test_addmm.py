@@ -70,7 +70,13 @@ class TestAddmm(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
-        y = torch.addmm(input, mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        y = torch.addmm(
+            input,
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
         return y
 
     @autotest()
@@ -79,7 +85,13 @@ class TestAddmm(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
         mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
         mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
-        y = torch.addmm(input, mat1, mat2, beta=random().to(float) | nothing(), alpha=random().to(float) | nothing())
+        y = torch.addmm(
+            input,
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
         return y
 
 

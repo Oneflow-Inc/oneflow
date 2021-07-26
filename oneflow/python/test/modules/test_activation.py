@@ -704,7 +704,10 @@ class TestSoftplusModule(flow.unittest.TestCase):
     @unittest.skip("pytorch softplus backward has bug")
     @autotest()
     def test_softplus_module_with_random_data(test_case):
-        m = torch.nn.Softplus(beta=random().to(float) | nothing(), threshold=random().to(float) | nothing())
+        m = torch.nn.Softplus(
+            beta=random().to(float) | nothing(),
+            threshold=random().to(float) | nothing(),
+        )
         m.train(random())
         device = random_device()
         m.to(device)
