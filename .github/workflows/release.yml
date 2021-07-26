@@ -131,14 +131,15 @@ jobs:
           echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
           echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
-          tmp_dir=$HOME/ci-tmp-rel/${git_branch}
+          git_branch=${GITHUB_REF##*/}
+
+          tmp_dir=$HOME/ci-tmp-rel/branch/${git_branch}
           bin_dir=$tmp_dir/manylinux2014-build-cache/${cache_dir_name}/build-oneflow/bin
           echo "bin_dir=${bin_dir}" >> $GITHUB_ENV
           echo "cache_dir_name=${cache_dir_name}" >> $GITHUB_ENV
           echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
-          git_branch=${GITHUB_REF##*/}
           oss_branch_dir=branch/${git_branch}/${{ matrix.compute_platform }}
           oss_dir=${oss_branch_dir}/${GITHUB_SHA}
           echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
