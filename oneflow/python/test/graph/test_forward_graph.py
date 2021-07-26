@@ -17,40 +17,38 @@ import unittest
 import os
 
 import oneflow
-import oneflow.experimental as flow
-
-
-class SubModule(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.weight = flow.nn.Parameter(flow.Tensor(6, 6))
-        self.relu = flow.nn.ReLU()
-
-    def forward(self, x, y):
-        x = oneflow.F.matmul(x, self.weight)
-        x = self.relu(x)
-        y = self.relu(y)
-        return x, y
-
-
-class CustomModule(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer = SubModule()
-        self.register_buffer(
-            "dummy_buff", flow.Tensor(6, 8),
-        )
-
-    def forward(self, x, y):
-        x, y = self.layer(x, y)
-        x = oneflow.F.flatten(x, 1)
-        x = oneflow.F.matmul(x, self.dummy_buff)
-        return x, y
+import oneflow as flow
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGraph(flow.unittest.TestCase):
+class TestForwardGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
+        class SubModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = flow.nn.Parameter(flow.Tensor(6, 6))
+                self.relu = flow.nn.ReLU()
+
+            def forward(self, x, y):
+                x = oneflow.F.matmul(x, self.weight)
+                x = self.relu(x)
+                y = self.relu(y)
+                return x, y
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layer = SubModule()
+                self.register_buffer(
+                    "dummy_buff", flow.Tensor(6, 8),
+                )
+
+            def forward(self, x, y):
+                x, y = self.layer(x, y)
+                x = oneflow.F.flatten(x, 1)
+                x = oneflow.F.matmul(x, self.dummy_buff)
+                return x, y
+
         class CustomGraph(flow.nn.Graph):
             def __init__(self, module):
                 super().__init__()

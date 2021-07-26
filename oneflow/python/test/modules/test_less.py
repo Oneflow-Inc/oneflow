@@ -18,8 +18,9 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_less_normal(test_case, device):
@@ -91,6 +92,25 @@ class TestLess(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=60, auto_backward=False)
+    def test_less_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
+        return y
+
+    @autotest(n=60, auto_backward=False)
+    def test_tensor_less_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y1 = x1.lt(oneof(x2, random().to(int), random().to(float)))
+        y2 = x1 < x2
+        return y1, y2
 
 
 if __name__ == "__main__":

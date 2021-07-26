@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 
@@ -28,12 +29,13 @@ class Runtime;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name) : name_(name) {}
+  explicit NNGraph(const std::string& name) : name_(name), runtime_inited_(false) {}
   ~NNGraph();
 
   const std::string& job_name() const { return name_; }
   const std::vector<std::string>& inputs_op_names() const;
   const std::vector<std::string>& outputs_op_names() const;
+  int64_t variable_op_size() const;
 
   Maybe<void> RegisterInputOpNames(const std::vector<std::string>& input_op_names);
   Maybe<void> RegisterOutputOpNames(const std::vector<std::string>& output_op_names);
@@ -43,6 +45,9 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> CompileAndInitRuntime();
 
  private:
+  void NewRuntimeBuffers();
+  void CloseRuntimeBuffers();
+
   std::string name_;
   std::vector<std::string> input_op_names_;
   std::vector<std::string> output_op_names_;
@@ -51,11 +56,11 @@ class NNGraph final : public NNGraphIf {
   Plan plan_;
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
+  bool runtime_inited_;
 };
 
-Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph);
 
 }  // namespace oneflow

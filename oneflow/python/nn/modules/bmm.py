@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -31,7 +31,6 @@ class BMM(Module):
 
 
 @oneflow_export("bmm")
-@experimental_api
 def bmm_op(x, y):
     """
     Performs a batch matrix-matrix product of matrices stored in input and mat2.
@@ -48,9 +47,8 @@ def bmm_op(x, y):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
         >>> of_out = flow.bmm(input1, input2)
@@ -61,13 +59,12 @@ def bmm_op(x, y):
 
 
 @register_tensor_op("bmm")
-@experimental_api
 def bmm_op_tensor(x, y):
     r"""
 
     bmm() -> Tensor
 
-    See :func:`oneflow.experimental.bmm`
+    See :func:`oneflow.bmm`
 
     """
     return BMM()(x, y)

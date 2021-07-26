@@ -18,7 +18,7 @@ from typing import Optional, Sequence
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 def _calc_broadcast_axes(x, like_tensor):
@@ -50,6 +50,5 @@ class BroadCastLike(Module):
 
 
 @oneflow_export("broadcast_like")
-@experimental_api
 def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None):
     return BroadCastLike(broadcast_axes=broadcast_axes)(x, like_tensor)
