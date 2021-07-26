@@ -410,17 +410,18 @@ def _add(x, y):
 
     """
     if isinstance(x, (int, float)):
-        return ScalarAdd(x)(y)
+        return flow.F.add_scalar(y, x, False)
     elif isinstance(y, (int, float)):
-        return ScalarAdd(y)(x)
+        return flow.F.add_scalar(x, y, False)
     elif x.shape == y.shape:
-        return ElementwiseAdd()(x, y)
+        return flow.F.add(x, y, False)
     elif x.shape == (1,):
-        return ScalarAddByTensor()(y, x)
+        return flow.F.add_scalar_by_tensor(y, x, False)
+        
     elif y.shape == (1,):
-        return ScalarAddByTensor()(x, y)
+        return flow.F.add_scalar_by_tensor(x, y, False)
     else:
-        return BroadcastAdd()(x, y)
+        return flow.F.broadcast_add(x, y)
 
 
 @register_tensor_op("add_")
