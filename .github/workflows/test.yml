@@ -416,8 +416,8 @@ jobs:
 
 
           oneflow_test_cache_dir="$HOME/ci-cache/${{ github.repository }}/test_cache"
-          extra_docker_args="-v ${oneflow_test_cache_dir}:${oneflow_test_cache_dir}"
-          extra_docker_args="-e ONEFLOW_TEST_CACHE_DIR=${oneflow_test_cache_dir}"
+          extra_docker_args+=" -v ${oneflow_test_cache_dir}:${oneflow_test_cache_dir}"
+          extra_docker_args+=" -e ONEFLOW_TEST_CACHE_DIR=${oneflow_test_cache_dir}"
 
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
           echo "image_name=oneflow-test:0.2" >> $GITHUB_ENV
