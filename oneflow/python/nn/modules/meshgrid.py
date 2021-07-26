@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class MeshGrid(Module):
@@ -49,7 +49,6 @@ class MeshGrid(Module):
 
 
 @oneflow_export("meshgrid")
-@experimental_api
 def meshgrid_op(*inputs):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
@@ -73,9 +72,8 @@ def meshgrid_op(*inputs):
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
+        >>> import oneflow as flow
+        
         >>> input1 = flow.Tensor(np.array([1, 2, 3]), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([4, 5, 6]), dtype=flow.float32)
         >>> of_x, of_y = flow.meshgrid(input1, input2)

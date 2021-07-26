@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.nn.modules.batchnorm import _NormBase
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 
 
 class _InstanceNorm(_NormBase):
@@ -41,7 +41,7 @@ class _InstanceNorm(_NormBase):
 
         mean = x.mean(2, keepdim=True)
         variance = x.var(2, keepdim=True)
-        normalized = (x - mean) / flow.experimental.sqrt(variance + self.eps)
+        normalized = (x - mean) / flow.sqrt(variance + self.eps)
 
         if self.weight and params_shape[0] == self.weight.nelement():
             weight = self.weight.reshape(shape=nd_params_shape)
@@ -65,7 +65,6 @@ class _InstanceNorm(_NormBase):
 
 
 @oneflow_export("nn.InstanceNorm1d")
-@experimental_api
 class InstanceNorm1d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm1d.html
@@ -131,10 +130,8 @@ class InstanceNorm1d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
 
         >>> # Without Learnable Parameters
         >>> m = flow.nn.InstanceNorm1d(100)
@@ -158,7 +155,6 @@ class InstanceNorm1d(_InstanceNorm):
 
 
 @oneflow_export("nn.InstanceNorm2d")
-@experimental_api
 class InstanceNorm2d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm2d.html
@@ -224,10 +220,8 @@ class InstanceNorm2d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
 
         >>> # Without Learnable Parameters
         >>> m = flow.nn.InstanceNorm2d(100)
@@ -244,7 +238,6 @@ class InstanceNorm2d(_InstanceNorm):
 
 
 @oneflow_export("nn.InstanceNorm3d")
-@experimental_api
 class InstanceNorm3d(_InstanceNorm):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm3d.html
@@ -310,11 +303,8 @@ class InstanceNorm3d(_InstanceNorm):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
-
         >>> # Without Learnable Parameters
         >>> m = flow.nn.InstanceNorm3d(100)
         >>> # With Learnable Parameters

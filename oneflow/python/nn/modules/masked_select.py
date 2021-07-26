@@ -15,10 +15,9 @@ limitations under the License.
 """
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.ops.array_ops import argwhere, gather, gather_nd
 
 
 class MaskedSelect(Module):
@@ -39,29 +38,28 @@ class MaskedSelect(Module):
                 broadcast_x_axes.append(i)
             if max_dim != mask.shape[i]:
                 broadcast_mask_axes.append(i)
-        broadcast_like_tensor = flow.experimental.zeros(
+        broadcast_like_tensor = flow.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32, device=x.device,
         )
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
-            x = flow.experimental.broadcast_like(
+            x = flow.broadcast_like(
                 x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
             )
 
         if len(broadcast_mask_axes) != 0:
-            mask = flow.experimental.broadcast_like(
+            mask = flow.broadcast_like(
                 mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
             )
         mask = mask.to(dtype=x.dtype)
 
         res = flow.F.mul(x, mask)
-        indices = flow.experimental.argwhere(res)
+        indices = flow.argwhere(res)
         gather_res = flow.F.gather_nd(res, indices)
         return gather_res.flatten()
 
 
 @oneflow_export("masked_select")
-@experimental_api
 def masked_select_op(x, mask):
     r"""
 
@@ -77,10 +75,9 @@ def masked_select_op(x, mask):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
+        
         >>> x = flow.Tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
         >>> mask = x.gt(0.05)
         >>> out = flow.masked_select(x, mask)
@@ -91,11 +88,10 @@ def masked_select_op(x, mask):
 
 
 @register_tensor_op("masked_select")
-@experimental_api
 def tensor_masked_select_op(x, mask):
     r"""
 
-    See :func:`oneflow.experimental.masked_select`
+    See :func:`oneflow.masked_select`
 
     """
     return MaskedSelect()(x, mask)

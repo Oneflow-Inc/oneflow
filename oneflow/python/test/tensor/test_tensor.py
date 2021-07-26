@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.typing as oft
 from automated_test_util import *
 
@@ -580,6 +580,55 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.numpy(), np.zeros(shape), 1e-4, 1e-4)
         )
 
+    def _test_tensor_reshape(test_case):
+        x = np.array(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ).astype(np.float32)
+        input = flow.Tensor(x)
+        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        np_shape = (2, 2, 2, 2)
+        test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+    @autotest()
+    def test_reshape_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.reshape(shape=(-1,))
+        return y
+
+    @autotest()
+    def test_tensor_squeeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.squeeze(random().to(int))
+        return y
+
+    @autotest()
+    def test_flow_unsqueeze_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.unsqueeze(random(1, 3).to(int))
+        return y
+
+    @autotest()
+    def test_permute_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.permute(
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+            random(0, 4).to(int),
+        )
+        return y
+
+    @autotest()
+    def test_transpose_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        return y
+
     def test_tensor_where(test_case):
         x = flow.Tensor(
             np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
@@ -827,6 +876,41 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_fmod(test_case):
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        y = random.uniform(-10, 10)
+        of_out = x.fmod(y)
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
+
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((5, 5)), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_magic_fmod(test_case):
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        y = random.uniform(-10, 10)
+        of_out = x % y
+        np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((5, 5)), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_ceil(test_case):
         x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.ceil()

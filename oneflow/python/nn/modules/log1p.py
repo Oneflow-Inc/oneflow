@@ -17,7 +17,7 @@ limitations under the License.
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -32,7 +32,6 @@ class Log1p(Module):
 
 @oneflow_export("log1p")
 @register_tensor_op("log1p")
-@experimental_api
 def log1p_op(input):
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 
@@ -43,9 +42,8 @@ def log1p_op(input):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
         >>> out = flow.log1p(x).numpy()
         >>> out

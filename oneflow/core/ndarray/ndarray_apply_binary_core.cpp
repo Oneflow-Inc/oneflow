@@ -47,8 +47,10 @@ struct NdarrayApplyBinaryCoreWrapper<DeviceType::kCPU, T, binary_func> final {
   template struct NdarrayApplyBinaryCoreWrapper<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), \
                                                 binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE_CPU,
-                                 ARITHMETIC_DATA_TYPE_SEQ, BINARY_FUNC_SEQ)
-
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, BINARY_FUNC_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_APPLY_BINARY_CORE_CPU,
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
+                                 LOGICAL_BINARY_FUNC_SEQ)
 
 #if defined(WITH_ROCM)
 namespace {
