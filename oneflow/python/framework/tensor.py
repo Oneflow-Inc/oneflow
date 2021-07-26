@@ -165,7 +165,7 @@ def _uniform_(self, a=0, b=1):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _kaiming_uniform_(
+def _kaiming_uniform(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
     initializer_conf = flow.kaiming_initializer(
@@ -179,7 +179,7 @@ def _kaiming_uniform_(
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _kaiming_normal_(
+def _kaiming_normal(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
     initializer_conf = flow.kaiming_initializer(
@@ -193,24 +193,24 @@ def _kaiming_normal_(
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
+def _xavier_normal(self, gain=1.0, *, data_format="NCHW"):
     assert gain == 1.0, "Only gain == 1.0 is supported now"
     initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
+def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     assert gain == 1.0, "Only gain == 1.0 is supported now"
     initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _normal_(self, mean=0, std=1):
+def _normal(self, mean=0, std=1):
     initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
     return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _fill_(self, value):
+def _fill(self, value):
     initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
     return _init_by_initializer_conf(self, initializer_conf)
 
@@ -300,12 +300,12 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
+    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.ndim = _ndim
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
     Tensor.dim = _ndim
     Tensor.ndimension = _ndim
-    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.nelement = _nelement
     Tensor.numel = _numel
     Tensor.element_size = _element_size
@@ -330,12 +330,12 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.uniform_ = _uniform_
-    Tensor.kaiming_uniform_ = _kaiming_uniform_
-    Tensor.kaiming_normal_ = _kaiming_normal_
-    Tensor.xavier_normal_ = _xavier_normal_
-    Tensor.xavier_uniform_ = _xavier_uniform_
-    Tensor.normal_ = _normal_
-    Tensor.fill_ = _fill_
+    Tensor.kaiming_uniform_ = _kaiming_uniform
+    Tensor.kaiming_normal_ = _kaiming_normal
+    Tensor.xavier_normal_ = _xavier_normal
+    Tensor.xavier_uniform_ = _xavier_uniform
+    Tensor.normal_ = _normal
+    Tensor.fill_ = _fill
     Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy_
 
