@@ -159,7 +159,7 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   pm.addPass(createBufferResultsToOutParamsPass());
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<FuncOp>(createLowerToCFGPass());
-  // pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
   // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
   // pm.addPass(createMemRefToLLVMPass());
   // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());

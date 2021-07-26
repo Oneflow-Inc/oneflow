@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as oft
-import oneflow.python.framework.dtype as dtype_util
+import oneflow.framework.dtype as dtype_util
 
 func_config = flow.FunctionConfig()
 

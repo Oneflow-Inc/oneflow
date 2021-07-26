@@ -68,7 +68,7 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment(
     "PYTHONPATH",
-    os.path.join(config.oneflow_obj_root, "python_scripts"),
+    os.path.join(config.test_source_root, "../../../python"),
     append_path=True,
 )
 
