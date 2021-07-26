@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -33,7 +33,6 @@ class MaskedFill(Module):
 
 @oneflow_export("masked_fill")
 @register_tensor_op("masked_fill")
-@experimental_api
 def masked_fill_op(input, mask, value):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
@@ -47,9 +46,8 @@ def masked_fill_op(input, mask, value):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
         >>> in_arr = np.array(
         ...     [[[-0.13169311,  0.97277078,  1.23305363,  1.56752789],
         ...     [-1.51954275,  1.87629473, -0.53301206,  0.53006478],

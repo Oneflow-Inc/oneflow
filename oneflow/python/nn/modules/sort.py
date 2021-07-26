@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
@@ -42,18 +42,17 @@ class Sort(Module):
         assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
             indices = self._argsort_op(input)[0]
-            return (flow.experimental.gather(input, indices, dim), indices)
+            return (flow.gather(input, indices, dim), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
             x = flow.F.transpose(input, perm=perm)
             indices = self._argsort_op(x)[0]
             indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.experimental.gather(input, indices, dim), indices)
+            return (flow.gather(input, indices, dim), indices)
 
 
 @oneflow_export("sort")
 @register_tensor_op("sort")
-@experimental_api
 def sort_op(input, dim: int = -1, descending: bool = False):
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.
 
@@ -71,10 +70,8 @@ def sort_op(input, dim: int = -1, descending: bool = False):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
         >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
         >>> input = flow.Tensor(x)
         >>> (values, indices) = flow.sort(input)
