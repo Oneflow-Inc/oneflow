@@ -136,3 +136,4 @@ lib.py
 *.ast.py
 unittest-log-*
 log
+output
