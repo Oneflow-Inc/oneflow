@@ -108,8 +108,8 @@ Maybe<void> RecursiveParseAndAssign(PyObject* object, char* data, const int& ndi
   CHECK_EQ_OR_RETURN(size, shape.At(dim)) << "Sequence size is " << size << " at dimemsion " << dim
                                           << ", but expected " << shape.At(dim);
   for (int64_t i = 0; i < size; ++i) {
-    auto item = PyObjectPtr(PySequence_Fast_GET_ITEM(seq.get(), i));
-    JUST(RecursiveParseAndAssign(item.get(), data, ndims, dim + 1, shape, strides, dtype));
+    PyObject* item = PySequence_Fast_GET_ITEM(seq.get(), i);
+    JUST(RecursiveParseAndAssign(item, data, ndims, dim + 1, shape, strides, dtype));
     data += strides.at(dim) * GetSizeOfDataType(dtype);
   }
   return Maybe<void>::Ok();
