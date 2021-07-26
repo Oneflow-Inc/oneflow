@@ -18,8 +18,7 @@ import os
 
 import numpy as np
 
-import oneflow
-import oneflow.experimental as flow
+import oneflow as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
 
 

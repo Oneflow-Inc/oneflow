@@ -20,7 +20,7 @@ from collections import OrderedDict
 import oneflow
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
 from test_util import GenArgList
 
 

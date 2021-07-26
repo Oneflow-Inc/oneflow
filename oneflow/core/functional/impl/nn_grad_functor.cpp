@@ -253,7 +253,9 @@ class SmoothL1LossGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    constant_pad_grad_ =
+    constant_pad_1d_grad_ =
+        CHECK_JUST(one::OpBuilder("constant_pad1d_grad").Input("dy").Output("dx").Build());
+    constant_pad_2d_grad_ =
         CHECK_JUST(one::OpBuilder("constant_pad2d_grad").Input("dy").Output("dx").Build());
     constant_pad_3d_grad_ =
         CHECK_JUST(one::OpBuilder("constant_pad3d_grad").Input("dy").Output("dx").Build());
@@ -280,7 +282,8 @@ class PadGradFunctor {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
       switch (dy->shape()->NumAxes()) {
-        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_grad_, {dy}, attrs);
+        case 3: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_1d_grad_, {dy}, attrs);
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_2d_grad_, {dy}, attrs);
         case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_grad_, {dy}, attrs);
         default:
           UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but "
@@ -297,9 +300,10 @@ class PadGradFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> constant_pad_grad_;
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
+  std::shared_ptr<OpExpr> constant_pad_1d_grad_;
+  std::shared_ptr<OpExpr> constant_pad_2d_grad_;
   std::shared_ptr<OpExpr> constant_pad_3d_grad_;
 };
 
