@@ -15,9 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/data_type.h"
 
-// This header file must be included instead of
-// forward declaring PyArrayObject, or compile error
-// will occur
+// PyArrayObject cannot be forward declared, or compile error will occur
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 

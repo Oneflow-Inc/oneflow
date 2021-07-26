@@ -285,7 +285,7 @@ def _placement_scope(self):
         return _convert_to_placement_scope(self.device)
 
 
-def _copy_(self, other: Union[Tensor, np.ndarray]):
+def _copy(self, other: Union[Tensor, np.ndarray]):
     if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
         src_np = other.numpy()
     else:
@@ -337,7 +337,7 @@ def RegisterMethods():
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor._placement_scope = _placement_scope
-    Tensor.copy_ = _copy_
+    Tensor.copy_ = _copy
 
 
 def register_tensor_op(op_name):

@@ -172,8 +172,7 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
 }
 
 Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtype,
-                                     const Symbol<Device>& device, bool requires_grad,
-                                     bool is_leaf) {
+                                     const Symbol<Device>& device, bool requires_grad) {
   if (PyArray_API == nullptr) { _import_array(); }
   auto* np_arr_pyobject = PyArray_FromAny(array.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
   CHECK_NOTNULL_OR_RETURN(np_arr_pyobject) << "input data cannot convert to a numpy array";
@@ -182,9 +181,11 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtyp
   auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
   auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
   bool init_from_numpy = py::isinstance<py::array>(array);
-  DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
-    desired_dtype = DType::Float().get();
+  {
+    DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
+    if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
+      desired_dtype = DType::Float().get();
+    }
   }
   if (desired_dtype != nullptr) {
     np_arr_raii = py::reinterpret_steal<py::array>(
@@ -193,8 +194,9 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtyp
   }
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const auto shape = std::make_shared<Shape>(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
-  flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  auto tensor = MirroredTensor::MakeTensor(shape, flow_dtype, device, false, requires_grad, is_leaf)
+  DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
+  auto tensor = MirroredTensor::MakeTensor(shape, flow_dtype, device, /* is_lazy */ false,
+                                           requires_grad, /* is_leaf */ true)
                     .GetPtrOrThrow();
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   return std::static_pointer_cast<Tensor>(tensor);
@@ -280,26 +282,28 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
     const auto& arg = args[0];
     if (py::isinstance<Tensor>(arg)) {
       std::shared_ptr<Tensor> other_tensor = py::cast<std::shared_ptr<Tensor>>(arg);
-      std::shared_ptr<Tensor> tensor = JUST(functional::Copy(other_tensor, "cpu", 0));
+      std::shared_ptr<Tensor> tensor =
+          JUST(functional::Copy(other_tensor, device->type(), device->device_id()));
       if (desired_dtype != nullptr && desired_dtype->data_type() != tensor->dtype()) {
         tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
       }
       return tensor;
     } else {
-      return MakeLocalTensorByNumpy(arg, desired_dtype, device, requires_grad, true);
+      return MakeLocalTensorByNumpy(arg, desired_dtype, device, requires_grad);
     }
   } else {
     DimVector dim_vector;
     for (const auto& arg : args) {
       try {
         dim_vector.push_back(py::cast<int>(arg));
-      } catch (const py::cast_error& e) { return Error::ValueError("invalid arg"); }
+      } catch (const py::cast_error& e) {
+        return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
+      }
     }
-    bool is_lazy = false;
     CHECK_NOTNULL_OR_RETURN(desired_dtype);
     std::shared_ptr<MirroredTensor> tensor = JUST(
         MirroredTensor::MakeTensor(std::make_shared<Shape>(dim_vector), desired_dtype->data_type(),
-                                   device, is_lazy, requires_grad, true));
+                                   device, /* is_lazy */ false, requires_grad, /* is_leaf */ true));
     return std::static_pointer_cast<Tensor>(tensor);
   }
 }
