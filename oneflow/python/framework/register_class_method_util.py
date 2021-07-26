@@ -19,10 +19,12 @@ import oneflow.python.framework.functional as functional
 import oneflow.python.framework.generator as generator
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.blob_trait as blob_trait
+import oneflow.python.framework.tensor as tensor_util
 import oneflow._oneflow_internal
 
 
 def RegisterMethod4Class():
+    tensor_util.RegisterMethods()
     op_expr_util.RegisterMethod4UserOpExpr()
     functional.RegisterFunctionalApis()
 

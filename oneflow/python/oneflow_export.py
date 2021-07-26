@@ -95,6 +95,7 @@ internal_names_2_api_names = {
     "Size": "Size",
     "device": "device",
     "autograd.no_grad": "no_grad",
+    "Tensor": "Tensor",
 }
 
 
