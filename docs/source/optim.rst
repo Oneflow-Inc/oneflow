@@ -4,15 +4,14 @@ Optimizers
 ----------------------------------
 .. currentmodule:: oneflow.optim
 .. automodule:: oneflow.optim
-    :members: Adam, 
-        AdamW, 
-        Optimizer, 
-        RMSprop, 
-        SGD, 
+    :members: Adam,
+        AdamW,
+        Optimizer,
+        RMSprop,
+        SGD,
         lr_scheduler
 
 .. automodule:: oneflow.optim.lr_scheduler
-    :members: CosineAnnealingLR, 
-            LambdaLR, 
-            LrScheduler, 
+    :members: CosineAnnealingLR,
+            LambdaLR,
             StepLR
