@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def np_tile(x, sizes):
@@ -155,23 +156,24 @@ def _test_tile_same_dim_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTile(flow.unittest.TestCase):
-    def test_tile(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_tile_less_dim_a,
-            _test_tile_less_dim_b,
-            _test_tile_less_dim_c,
-            _test_tile_same_dim,
-            _test_tile_same_dim_int,
-            _test_tile_same_dim_int8,
-            _test_tile_less_dim_a_backward,
-            _test_tile_less_dim_b_backward,
-            _test_tile_less_dim_c_backward,
-            _test_tile_same_dim_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_tile_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        import random
+
+        reps = (random.randint(1, 5), random.randint(1, 5), random.randint(1, 5))
+        z = torch.tile(x, reps)
+        return z
+
+    @autotest()
+    def test_flow_tensor_tile_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        import random
+
+        reps = (random.randint(1, 5), random.randint(1, 5), random.randint(1, 5))
+        y = x.tile(reps)
+        return y
 
 
 if __name__ == "__main__":

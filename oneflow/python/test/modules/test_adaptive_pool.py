@@ -21,7 +21,7 @@ import numpy as np
 import oneflow.experimental as flow
 
 from test_util import GenArgList
-
+from automated_test_util import *
 
 # TODO: auto test
 
@@ -862,48 +862,35 @@ def _test_adaptive_avgpool3d_dhw_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPool(flow.unittest.TestCase):
+    @autotest()
     def test_adaptive_avgpool1d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_adaptive_avgpool1d_forward,
-            _test_adaptive_avgpool1d_backward,
-        ]
-        arg_dict["device"] = [
-            "cpu",
-            "cuda",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        m = torch.nn.AdaptiveAvgPool1d(output_size=random(1, 5).to(int))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim0=random(1, 2), dim1=random(), dim2=random()).to(device)
+        y = m(x)
+        return y
 
+    @autotest()
     def test_adaptive_avgpool2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_adaptive_avgpool2d_forward,
-            _test_adaptive_avgpool2d_backward,
-            _test_adaptive_avgpool2d_hw_forward,
-            _test_adaptive_avgpool2d_hw_backward,
-        ]
-        arg_dict["device"] = [
-            "cpu",
-            "cuda",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        m = torch.nn.AdaptiveAvgPool2d(output_size=random(1, 5).to(int))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim0=random(), dim1=random(), dim2=random(), dim3=random()).to(device)
+        y = m(x)
+        return y
 
+    @autotest()
     def test_adaptive_avgpool3d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_adaptive_avgpool3d_forward,
-            _test_adaptive_avgpool3d_backward,
-            _test_adaptive_avgpool3d_dhw_forward,
-            _test_adaptive_avgpool3d_dhw_backward,
-        ]
-        arg_dict["device"] = [
-            "cpu",
-            "cuda",
-        ]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        m = torch.nn.AdaptiveAvgPool3d(output_size=random(1, 5).to(int))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=5, dim0=random(), dim1=random(), dim2=random(), dim3=random(), dim4=random()).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

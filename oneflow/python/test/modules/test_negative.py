@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_negtive(test_case, shape, device):
@@ -74,6 +75,23 @@ class TestNegativeModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_tensor_negative_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        return x.negative()
+
+    @autotest()
+    def test_flow_negative_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = torch.negative(x)
+        return z
+
+    @autotest()
+    def test_flow_neg_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = torch.neg(x)
+        return z
 
 
 if __name__ == "__main__":

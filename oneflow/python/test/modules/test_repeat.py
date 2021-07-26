@@ -19,7 +19,9 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
+import torch
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def np_repeat(x, sizes):
@@ -130,19 +132,24 @@ def _test_repeat_same_dim_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
-    def test_repeat(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_repeat_new_dim,
-            _test_repeat_same_dim,
-            _test_repeat_same_dim_int,
-            _test_repeat_same_dim_int8,
-            _test_repeat_new_dim_backward,
-            _test_repeat_same_dim_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_flow_repeat_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        import random
+
+        sizes = (random.randint(1, 5), random.randint(1, 5), random.randint(1, 5))
+        z = torch.repeat(x, sizes)
+        return z
+
+    @autotest()
+    def test_flow_tensor_repeat_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        import random
+
+        sizes = (random.randint(1, 5), random.randint(1, 5), random.randint(1, 5))
+        y = x.repeat(sizes)
+        return y
+
 
 
 if __name__ == "__main__":

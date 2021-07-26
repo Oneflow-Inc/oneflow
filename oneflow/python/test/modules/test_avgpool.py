@@ -21,6 +21,7 @@ import math
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _nd_tuple_to_dhw(nd_tuple, dim, prefix=1, dhw_offset=0):
@@ -594,16 +595,34 @@ def _test_avgpool3d_special_kernel_size_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPoolingModule(flow.unittest.TestCase):
-    def test_avgpool3d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_avgpool3d,
-            _test_avgpool3d_backward,
-            _test_avgpool3d_special_kernel_size_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_avgpool2d_with_random_data(test_case):
+        m = torch.nn.AvgPool2d(
+            kernel_size=random(2, 3).to(int),
+            stride=random(1, 3).to(int),
+            padding=random(0, 1).to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=random(1, 2), dim2=random(1, 3), dim3=random(5, 7), dim4=random(5, 7)).to(device)
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_avgpool3d_with_random_data(test_case):
+        m = torch.nn.AvgPool3d(
+            kernel_size=random(2, 3).to(int),
+            stride=random(1, 3).to(int),
+            padding=(0, 0, 0),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=5, dim1=random(3, 4), dim2=random(3, 4), dim3=random(5, 7),
+                                  dim4=random(4, 7), dim5=random(4, 7)).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

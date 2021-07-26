@@ -21,6 +21,7 @@ import math
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _nd_tuple_to_dhw(nd_tuple, dim, prefix=1, dhw_offset=0):
@@ -148,12 +149,12 @@ class MaxPoolNumpy:
                                 index
                             ] += d_loss[n, c, i, j, k]
         dx = dx[
-            :,
-            :,
-            self.padding[0] : self.pad_shape[2] - self.padding[0],
-            self.padding[1] : self.pad_shape[3] - self.padding[1],
-            self.padding[2] : self.pad_shape[4] - self.padding[2],
-        ]
+             :,
+             :,
+             self.padding[0]: self.pad_shape[2] - self.padding[0],
+             self.padding[1]: self.pad_shape[3] - self.padding[1],
+             self.padding[2]: self.pad_shape[4] - self.padding[2],
+             ]
         dx = dx.reshape(self.x_shape)
         return dx
 
@@ -614,43 +615,52 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPooling(flow.unittest.TestCase):
-    def test_maxpool1d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_maxpool1d_impl, _test_maxpool1d_zero_padding]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_maxpool1d_with_random_data(test_case):
+        m = torch.nn.MaxPool1d(
+            kernel_size=random(2, 3).to(int),
+            stride=random(1, 3).to(int),
+            padding=random(0, 1).to(int),
+            dilation=random(1, 2).to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim0=random(25, 46), dim1=random(33, 55), dim2=random(1, 3)).to(device)
+        y = m(x)
+        return y
 
-    def test_maxpool2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_maxpool2d,
-            _test_maxpool2d_ceil_mode,
-            _test_maxpool2d_special_kernel_size,
-            _test_maxpool2d_diff_kernel_stride,
-            _test_maxpool2d_negative_input,
-            _test_maxpool2d_backward,
-            _test_maxpool2d_special_kernel_size_backward,
-            _test_maxpool2d_diff_kernel_stride_backward,
-            _test_maxpool2d_negative_input_backward,
-        ]
+    @autotest()
+    def test_maxpool2d_with_random_data(test_case):
+        m = torch.nn.MaxPool2d(
+            kernel_size=random(2, 3).to(int),
+            stride=random(1, 3).to(int),
+            padding=random(0, 1).to(int),
+            dilation=random(1, 2).to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim0=random(2, 4), dim1=random(3, 5), dim2=random(25, 46),
+                                  dim3=random(25, 46)).to(device)
+        y = m(x)
+        return y
 
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    def test_maxpool3d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_maxpool3d,
-            _test_maxpool3d_backward,
-            _test_maxpool3d_special_kernel_size_backward,
-            _test_maxpool3d_negative_input_backward,
-            _test_maxpool3d_diff_kernel_stride_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_maxpool3d_with_random_data(test_case):
+        m = torch.nn.MaxPool3d(
+            kernel_size=random(2, 3).to(int),
+            stride=random(1, 3).to(int),
+            padding=random(0, 1).to(int),
+            dilation=random(1, 2).to(int),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=5, dim0=random(2, 4), dim1=random(3, 5), dim2=random(5, 6),
+                                  dim3=random(25, 46), dim4=random(25, 46)).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

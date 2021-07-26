@@ -343,6 +343,13 @@ class TestModule(flow.unittest.TestCase):
         z = torch.matmul(x, y)
         return z
 
+    @autotest()
+    def test_flow_tensor_matmul_with_random_data(test_case):
+        k = random(1, 6)
+        x = random_pytorch_tensor(ndim=2, dim1=k)
+        y = random_pytorch_tensor(ndim=2, dim0=k)
+        return x.matmul(y)
+
 
 if __name__ == "__main__":
     unittest.main()
