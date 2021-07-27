@@ -80,6 +80,7 @@ def glob_files(path: str = None, excludes=None):
         for f in files
         if "version.py" not in f and all([not e in f for e in excludes])
     ]
+    print("[files]", len(files))
     return files
 
 
