@@ -29,4 +29,3 @@ def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
         tensor_tuple = TensorTuple()
         tensor_tuple.append(args)
         return tensor_tuple
-
