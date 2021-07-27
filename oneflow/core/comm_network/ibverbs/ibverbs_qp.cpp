@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include <infiniband/verbs.h>
+
+#include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -62,7 +63,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // recv_msg_buf_
   recv_msg_buf_.assign(max_recv_wr, nullptr);
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
-  // send_msg_buf_ init 
+  // send_msg_buf_
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = qp_init_attr.cap.max_send_wr;
