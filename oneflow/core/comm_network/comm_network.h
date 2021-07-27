@@ -105,4 +105,4 @@ class CommNetIf : public CommNet {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_ 

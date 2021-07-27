@@ -36,5 +36,4 @@ void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
 }
 
-}  // namespace oneflow
-
+}  // namespace oneflow 
