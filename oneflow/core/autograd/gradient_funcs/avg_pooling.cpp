@@ -83,7 +83,7 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingInterpState* ctx, const TensorTu
 Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingInterpState* ctx, const TensorTuple& out_grads,
                                     TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_LE_OR_RETURN(out_grads.size(), 2);  // TODO: fix to 1
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
