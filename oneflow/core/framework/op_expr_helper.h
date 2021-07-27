@@ -286,17 +286,6 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
                                           const std::string& name);
 
-Maybe<one::UserOpExpr> EagerNcclAllGather();
-Maybe<one::UserOpExpr> EagerNcclAllGather(const std::string& name);
-
-Maybe<one::UserOpExpr> EagerNcclAllReduce();
-Maybe<one::UserOpExpr> EagerNcclAllReduce(const std::string& name);
-
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type);
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type, const std::string& name);
-
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
