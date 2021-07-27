@@ -79,6 +79,14 @@ Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
   return Maybe<void>::Ok();
 }
 
+Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_local()) {
+    return JUST(tensor->device())->parallel_desc_ptr();
+  } else {
+    return JUST(tensor->parallel_desc()).shared_from_symbol();
+  }
+}
+
 Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
   if (tensor->is_local()) {
@@ -107,11 +115,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   CHECK_OR_RETURN(input_tensor->is_eager());
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct InputOpConf instead of FeedInputOpConf because FeedInputOpExpr JUST for getting
@@ -160,11 +167,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   CHECK_OR_RETURN(input_tensor->is_eager());
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
@@ -220,11 +226,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
 
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
@@ -270,26 +275,35 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   // TODO(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
-  //     2. [Change Placement/ParallelDesc UserOp] : to/to_consistent/parallel_cast
+  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_consistent/parallel_cast
   //     3. [Multi-Inputs & Different ParallelDesc for each input UserOp] : like there are 2 inputs,
   //             one from CPU and the other from GPU.
   //     ..., etc.
-
-  const auto& scope = JUST(GetCurrentScope());
-  int64_t old_scope_symbol_id = JUST(scope->symbol_id());
-  // TODO(chengcheng): New parallel desc scope from all inputs tensors.
-  op_conf->set_scope_symbol_id(old_scope_symbol_id);
+  //
+  //     Need add if for each special UserOp for infer:
+  //     1. op_conf: device_tag,
+  //     2. output tensor: is_local,
+  //     3. op_parallel_conf for build new scope with parallel_desc
+  //     4. output blob (different with tensor) -> parallel_conf
+  //     5. need add to JobBuildAndInferCtx (like copy will NOT need)
 
   // NOTE(chengcheng):
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
   //   if inputs size == 0, need handle in SourceUserOp impl.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(inputs.at(0)));
+  op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
+  const std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(GetParallelDescOfTensor(inputs.at(0)));
+
   op_conf->set_device_tag(device_tag);
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor));
+    CHECK_OR_RETURN(
+        parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     const std::string& lbn = TensorNameScope::Global()->Lookup(inputs[i]);
