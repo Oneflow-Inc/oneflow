@@ -156,6 +156,7 @@ def _test_repeat_flow_size(test_case, device):
     ]
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
     def test_repeat(test_case):
