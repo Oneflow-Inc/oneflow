@@ -111,7 +111,6 @@ jobs:
           set -x
           git add -u
           git commit -m "auto format by CI"
-          git checkout -b ${{ github.event.pull_request.head.ref }}
           git remote add fork ${{ github.event.pull_request.head.repo.clone_url }}
           git push -f fork ${{ github.event.pull_request.head.ref }}
           echo "::set-output name=auto_format_branch::$auto_format_branch"
