@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_expm1_impl(test_case, device, shape):
@@ -46,6 +47,12 @@ class TestExpm1Module(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
+    def test_expm1_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.expm1(input)
+        return y
 
 if __name__ == "__main__":
     unittest.main()

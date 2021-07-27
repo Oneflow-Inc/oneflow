@@ -22,7 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
+from automated_test_util import *
 
 def _test_ceil_impl(test_case, device, shape):
     x = flow.Tensor(
@@ -45,6 +45,13 @@ class TestCeilModule(flow.unittest.TestCase):
         arg_dict["shape"] = [(1,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    @autotest()
+    def test_ceil_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.ceil(input)
+        return y
 
 
 if __name__ == "__main__":
