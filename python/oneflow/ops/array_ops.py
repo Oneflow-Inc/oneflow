@@ -37,14 +37,14 @@ def check_slice_tup_list(slice_tup_list, shape):
         if not all((isinstance(idx, int) or idx is None for idx in slice_tup)):
             raise ValueError("element of slice tuple must int or None")
         (start, stop, step) = slice_tup
-        if step is None:
+        if step is None or start == stop:
             step = 1
         if step == 0:
             raise ValueError("slice step can't be 0")
         if start is None:
             start = 0 if step > 0 else np.iinfo(np.int64).max
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice start must be in range [-size, size)")
+            start, stop, step = 0, 0, 1
         if stop is None:
             stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
         elif stop < -dim_size - 1 or stop > dim_size:
