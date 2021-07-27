@@ -19,9 +19,16 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
+from oneflow.python.nn.common_types import _size_1_t
+from typing import Union, Tuple
 
 from test_util import GenArgList
 from automated_test_util import *
+
+NoneType = type(None)
+# Not the same as those in PyTorch because 'output_size' cannot be NoneType (even in 'torch.nn.AdaptiveAvgPoolXd')
+_size_2_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType]]]
+_size_3_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]]
 
 # TODO: auto test
 
@@ -864,7 +871,7 @@ def _test_adaptive_avgpool3d_dhw_backward(test_case, device):
 class TestAdaptiveAvgPool(flow.unittest.TestCase):
     @autotest()
     def test_adaptive_avgpool1d(test_case):
-        m = torch.nn.AdaptiveAvgPool1d(output_size=random(1, 5).to(int))
+        m = torch.nn.AdaptiveAvgPool1d(output_size=random().to(_size_1_t))
         m.train(random())
         device = random_device()
         m.to(device)
@@ -874,7 +881,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
     @autotest()
     def test_adaptive_avgpool2d(test_case):
-        m = torch.nn.AdaptiveAvgPool2d(output_size=random(1, 5).to(int))
+        m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
         m.train(random())
         device = random_device()
         m.to(device)
@@ -884,7 +891,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
     @autotest()
     def test_adaptive_avgpool3d(test_case):
-        m = torch.nn.AdaptiveAvgPool3d(output_size=random(1, 5).to(int))
+        m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
         m.train(random())
         device = random_device()
         m.to(device)
