@@ -515,17 +515,15 @@ class TestBatchNorm(flow.unittest.TestCase):
                     training=training,
                     n=10,
                 )
-    
+
     @autotest(n=1, auto_backward=False)
     def test_batchnorm3d_module_with_random_data(test_case):
         channel = random().to(int)
-        m = torch.nn.BatchNorm2d(
-            num_features=channel, track_running_stats=False
-        )
+        m = torch.nn.BatchNorm2d(num_features=channel, track_running_stats=False)
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel,requires_grad=False).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, requires_grad=False).to(device)
         y = m(x)
         return y
 
