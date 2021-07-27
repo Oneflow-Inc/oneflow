@@ -303,8 +303,6 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == GlobalProcessCtx::Rank()) {
       Regst* regst = msg.regst();
-      LOG(ERROR) << "HandlerNormal received kRegstMsg, actor: " << actor_id_
-                 << ", regst: " << regst->regst_desc_id();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));
         const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(regst->regst_desc_id());
@@ -519,8 +517,6 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> 
   int64_t real_consumer_cnt = 0;
   for (int64_t consumer : regst->consumers_actor_id()) {
     if (!IsAllowedActor(consumer)) { continue; }
-    LOG(ERROR) << "HandleRegstToConsumer, " << actor_id_ << " -> " << consumer
-               << ", regst: " << regst->regst_desc_id();
     EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
     real_consumer_cnt += 1;
   }
@@ -541,7 +537,6 @@ bool Actor::IsWriteReady() const {
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
                               std::function<Regst*(int64_t)> Regst4RegstDescId) {
-  LOG(ERROR) << "AsyncLaunchKernel, actor: " << actor_id_;
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);

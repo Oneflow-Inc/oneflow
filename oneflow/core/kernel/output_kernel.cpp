@@ -23,7 +23,6 @@ namespace oneflow {
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  LOG(ERROR) << "OutputKernel, in shape: " << BnInOp2Blob("in")->shape();
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& job_name = this->job_desc().job_name();
     const auto& op_name = this->op_conf().name();
@@ -31,24 +30,9 @@ void OutputKernel<device_type>::ForwardDataContent(
     auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
     std::shared_ptr<JobInstance> job_instance;
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
-    LOG(ERROR) << "OutputKernel, buffer received, job_name: " << job_name
-               << ", op_name: " << op_name << ", status: " << buffer_status;
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      Blob* in_blob = BnInOp2Blob("in");
-      OfBlob ofblob(ctx.device_ctx, in_blob);
-      std::ostringstream ss;
-      ss << "OutputKernel in_blob, shape: " << in_blob->shape().ToString();
-      ss << ", data: [";
-      for (int i = 0; i < 5; ++i) {
-        ss << in_blob->dptr<float>()[i];
-        if (i != 4) {
-          ss << ", ";
-        }
-      }
-      ss << "]";
-      LOG(ERROR) << ss.str();
-      LOG(ERROR) << "OutputKernel, PullBlobByOpName, op_name: " << op_name;
+      OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {

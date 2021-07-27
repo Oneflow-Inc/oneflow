@@ -131,13 +131,11 @@ class RunLazyJobInstructionType final : public InstructionType {
     CHECK_EQ(nn_graph->inputs_op_names().size(), phy_instr_operand->inputs()->size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
       const auto& op_name = nn_graph->inputs_op_names().at(i);
-      LOG(ERROR) << "push op_name: " << op_name;
       const auto* blob = &phy_instr_operand->inputs()->at(i)->blob();
       const auto& PushCb = [blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
         of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
-        LOG(ERROR) << "push cb, shape: " << of_blob->blob().shape().ToString();
       };
       CHECK(push_cbs.emplace(op_name, PushCb).second);
     }
@@ -145,13 +143,11 @@ class RunLazyJobInstructionType final : public InstructionType {
     CHECK_EQ(nn_graph->outputs_op_names().size(), phy_instr_operand->outputs()->size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& op_name = nn_graph->outputs_op_names().at(i);
-      LOG(ERROR) << "pull op_name: " << op_name;
       auto* mut_blob = phy_instr_operand->outputs()->at(i)->mut_blob();
       const auto& PullCb = [mut_blob](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
         mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
         mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
-        LOG(ERROR) << "pull cb, shape" << mut_blob->shape().ToString();
       };
       CHECK(pull_cbs.emplace(op_name, PullCb).second);
     }
@@ -160,7 +156,6 @@ class RunLazyJobInstructionType final : public InstructionType {
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
       NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
-      LOG(ERROR) << "Finish cb";
     };
     return std::make_shared<LazyJobInstance>(nn_graph->job_name(), push_cbs, pull_cbs, FinishCb);
   }

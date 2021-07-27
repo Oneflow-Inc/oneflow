@@ -33,7 +33,6 @@ class InputKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    LOG(ERROR) << "InputKernel::ForwardDataContent begin";
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       const auto& job_name = this->job_desc().job_name();
       const auto& op_name = this->op_conf().name();
@@ -41,23 +40,10 @@ class InputKernel final : public KernelIf<device_type> {
       auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
       std::shared_ptr<JobInstance> job_instance;
       BufferStatus buffer_status = buffer->TryReceive(&job_instance);
-      LOG(ERROR) << "InputKernel, buffer received, job_name: " << job_name
-                 << ", op_name: " << op_name << ", status: " << buffer_status;
       CHECK_NE(buffer_status, kBufferStatusEmpty);
       if (buffer_status == kBufferStatusSuccess) {
         OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("out"));
         job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
-
-        Blob* out_blob = BnInOp2Blob("out");
-        std::ostringstream ss;
-        ss << "InputKernel out_blob, shape: " << out_blob->shape().ToString();
-        ss << ", data: [";
-        for (int i = 0; i < 5; ++i) {
-          ss << out_blob->dptr<float>()[i];
-          if (i != 4) { ss << ", "; }
-        }
-        ss << "]";
-        LOG(ERROR) << ss.str();
       }
     }
   }
