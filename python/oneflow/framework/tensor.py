@@ -295,7 +295,7 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
 
 
 def _get_device(self):
-    if self.device.type == 'cuda':
+    if self.device.type == "cuda":
         return self.device.index
     raise NotImplementedError("get_device is only available for GPU tensor.")
 

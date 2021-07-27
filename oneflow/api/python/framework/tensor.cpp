@@ -293,7 +293,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
   DimVector dim_vector;
   for (const auto& arg : args) {
     try {
-      dim_vector.push_back(py::cast<int>(arg));
+      dim_vector.push_back(py::cast<int64_t>(arg));
     } catch (const py::cast_error& e) {
       return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
     }
@@ -367,7 +367,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
       // Methods of pytorch
-      .def("requires_grad_", &ApiSetRequiresGrad)
+      .def(
+          "requires_grad_",
+          [](Tensor& t, bool requires_grad) -> Tensor& {
+            ApiSetRequiresGrad(t, requires_grad);
+            return t;
+          },
+          "requires_grad"_a = true)
       .def("retain_grad",
            [](Tensor& t) {
              if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
