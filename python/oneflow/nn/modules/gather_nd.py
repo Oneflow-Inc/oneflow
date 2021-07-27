@@ -21,16 +21,9 @@ from oneflow.nn.module import Module
 class Gather_nd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.gather_nd_op = (
-            flow.builtin_op("gather_nd")
-            .Input("params")
-            .Input("indices")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, input, index):
-        return self.gather_nd_op(input, index)[0]
+        return flow.F.gather_nd(input, index)
 
 
 def gather_nd_op(input, index):

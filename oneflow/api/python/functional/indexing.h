@@ -13,22 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_INDEXING_H_
+#define ONEFLOW_API_PYTHON_FUNCTIONAL_INDEXING_H_
+
+#include <Python.h>
 
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-bool PyTensorCheck(PyObject* object) {
-  auto obj = py::reinterpret_borrow<py::object>(object);
-  return detail::isinstance<std::shared_ptr<one::Tensor>>(obj);
-}
+namespace detail {
 
-const char* PyStringAsString(PyObject* object) {
-  return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
-}
+Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
+
+Maybe<Tensor> ConvertToIndexingTensor(PyObject* object);
+
+Maybe<IndexItem> UnpackIndexItem(PyObject* object);
+
+}  // namespace detail
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_FUNCTIONAL_INDEXING_H_
