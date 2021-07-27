@@ -16,12 +16,15 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-
+from oneflow.nn.modules.utils import _single
 
 class Repeat(Module):
     def __init__(self, sizes) -> None:
         super().__init__()
-        self.sizes = sizes
+        assert isinstance(
+            sizes, (tuple, flow.Size)
+        ), "sizes should be flow.Size or tuple int!"
+        self.sizes = _single(sizes)
 
     def forward(self, input):
         repeat = self.sizes

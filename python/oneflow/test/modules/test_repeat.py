@@ -129,6 +129,32 @@ def _test_repeat_same_dim_backward(test_case, device):
     ]
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
+def _test_repeat_flow_size(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 4, 1, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    sizes = flow.Size([4, 3, 2, 3, 3])
+    of_out = input.repeat(sizes=sizes)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+        ],
+        [
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+        ],
+    ]
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
@@ -141,11 +167,13 @@ class TestRepeat(flow.unittest.TestCase):
             _test_repeat_same_dim_int8,
             _test_repeat_new_dim_backward,
             _test_repeat_same_dim_backward,
+            _test_repeat_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    
 
 if __name__ == "__main__":
     unittest.main()
