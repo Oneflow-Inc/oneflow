@@ -132,8 +132,15 @@ jobs:
             })
       - name: Please request CI again
         if: ${{ failure() }}
-        run: |
-          exit 1
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeRequestedReviewers({
+              pull_number: context.issue.number,
+              owner: "Oneflow-Inc",
+              repo: "oneflow",
+              reviewers: ["oneflow-ci-bot"]
+            })
       - name: Check source code (prevent creating files at wrong places)
         run: |
           python3 tools/check_src.py
