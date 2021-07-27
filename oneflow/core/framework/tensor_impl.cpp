@@ -157,8 +157,8 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
 }
 
 MirroredTensorMeta::MirroredTensorMeta()
-    : TensorMeta(std::make_shared<const Shape>(), dtype),
-      device_(nullptr),
+    : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
+      device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
       storage_offset_(0) {}
 

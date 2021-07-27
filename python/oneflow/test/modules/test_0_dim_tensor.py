@@ -48,11 +48,20 @@ def _test_scalar_mul(test_case, device):
         )
 
 
+def _test_slice(test_case, device):
+    x = flow.tensor(np.arange(10), device=device)
+    for i in range(x.numel()):
+        scalar_i = x[i]
+        test_case.assertEqual(i, scalar_i.numpy())
+        test_case.assertEqual(scalar_i.numel(), 1)
+        test_case.assertEqual(scalar_i.ndimension(), 0)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestZeroDimensionTensor(flow.unittest.TestCase):
     def test_0_dim_tensor(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_0_dim_tensor, _test_scalar_mul]
+        arg_dict["test_fun"] = [_test_0_dim_tensor, _test_scalar_mul, _test_slice]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
