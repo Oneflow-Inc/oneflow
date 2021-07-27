@@ -396,59 +396,21 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
-CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name,
-                                           Symbol<cfg::ParallelDistribution> parallel_distribution,
-                                           Symbol<ParallelDesc> parallel_desc)
-    : parallel_distribution_(parallel_distribution), parallel_desc_(parallel_desc) {}
+CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}
 
-Symbol<cfg::ParallelDistribution> CastConsistentOpExpr::parallel_distribution() const {
-  return parallel_distribution_;
+CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name)
+    : CastConsistentOpExpr(op_name) {}
+
+/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastToConsistentOpExpr>(new CastToConsistentOpExpr(op_name));
 }
 
-Symbol<ParallelDesc> CastConsistentOpExpr::parallel_desc() const { return parallel_desc_; }
-
-CastToConsistentOpExpr::CastToConsistentOpExpr(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc)
-    : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
-
-/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
-    const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-    Symbol<ParallelDesc> parallel_desc) {
-  cfg::ParallelDistribution parallel_distribution;
-  for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
-    *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
-  }
-  return CastToConsistentOpExpr::New(op_name, SymbolOf(parallel_distribution), parallel_desc);
-}
-
-/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc) {
-  return std::shared_ptr<CastToConsistentOpExpr>(
-      new CastToConsistentOpExpr(op_name, parallel_distribution, parallel_desc));
-}
-
-CastFromConsistentOpExpr::CastFromConsistentOpExpr(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc)
-    : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
+CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
+    : CastConsistentOpExpr(op_name) {}
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-    Symbol<ParallelDesc> parallel_desc) {
-  cfg::ParallelDistribution parallel_distribution;
-  for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
-    *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
-  }
-  return CastFromConsistentOpExpr::New(op_name, SymbolOf(parallel_distribution), parallel_desc);
-}
-
-/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc) {
-  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(
-      op_name, Symbol<cfg::ParallelDistribution>(parallel_distribution), parallel_desc));
+    const std::string& op_name) {
+  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(op_name));
 }
 
 template<>

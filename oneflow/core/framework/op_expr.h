@@ -169,20 +169,12 @@ class CastConsistentOpExpr : public OpExpr {
   int input_size() const override { return 1; }
   int output_size() const override { return 1; }
 
-  // Getters
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const;
-  Symbol<ParallelDesc> parallel_desc() const;
-
   Maybe<bool> IsGradDisabled() const override { return false; }
 
  protected:
-  CastConsistentOpExpr(const std::string& op_name,
-                       Symbol<cfg::ParallelDistribution> parallel_distribution,
-                       Symbol<ParallelDesc> parallel_desc);
+  CastConsistentOpExpr(const std::string& op_name);
 
   std::string op_name_;
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
-  Symbol<ParallelDesc> parallel_desc_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
@@ -190,42 +182,26 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   ~CastToConsistentOpExpr() = default;
 
-  static Maybe<CastToConsistentOpExpr> New(
-      const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-      Symbol<ParallelDesc> parallel_desc);
-
-  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
-                                           Symbol<cfg::ParallelDistribution> parallel_distribution,
-                                           Symbol<ParallelDesc> parallel_des);
+  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToConsistentOpExpr(const std::string& op_name,
-                         Symbol<cfg::ParallelDistribution> parallel_distribution,
-                         Symbol<ParallelDesc> parallel_des);
+  CastToConsistentOpExpr(const std::string& op_name);
 };
 
 class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   ~CastFromConsistentOpExpr() = default;
 
-  static Maybe<CastFromConsistentOpExpr> New(
-      const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-      Symbol<ParallelDesc> parallel_desc);
-
-  static Maybe<CastFromConsistentOpExpr> New(
-      const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-      Symbol<ParallelDesc> parallel_des);
+  static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromConsistentOpExpr(const std::string& op_name,
-                           Symbol<cfg::ParallelDistribution> parallel_distribution,
-                           Symbol<ParallelDesc> parallel_des);
+  CastFromConsistentOpExpr(const std::string& op_name);
 };
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
 using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;

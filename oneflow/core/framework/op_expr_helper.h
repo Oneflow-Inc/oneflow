@@ -299,16 +299,10 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type, const std::string& name);
 
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp();
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name);
 
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp();
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow

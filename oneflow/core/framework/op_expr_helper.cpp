@@ -924,29 +924,21 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
       .Build();
 }
 
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
-  return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_distribution,
-                            parallel_desc);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp() {
+  return CastToConsistentOp(UniqueOpName("cast_to_consistent"));
 }
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name) {
   std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
-      JUST(one::CastToConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+      JUST(one::CastToConsistentOpExpr::New(name));
   return cast_to_consistent_op_expr;
 }
 
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
-  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"), parallel_distribution,
-                              parallel_desc);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp() {
+  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"));
 }
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name) {
   std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
-      JUST(one::CastFromConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+      JUST(one::CastFromConsistentOpExpr::New(name));
   return cast_from_consistent_op_expr;
 }
 }  // namespace op_expr_helper
