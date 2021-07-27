@@ -25,6 +25,7 @@ import oneflow.experimental as flow
 import torch
 
 py_tuple = tuple
+NoneType = type(None)
 
 TEST_MODULE = 0
 TEST_FLOW = 1
@@ -247,6 +248,8 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
+        elif annotation == NoneType:
+            val = None
         else:
             raise NotImplementedError(
                 f"Not implemented annotation {annotation} in random"

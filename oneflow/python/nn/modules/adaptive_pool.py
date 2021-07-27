@@ -16,27 +16,23 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.common_types import _size_1_t
+from oneflow.python.nn.modules.utils import _single, _pair, _triple
 
 
 def _generate_output_size(input_size, output_size):
     new_output_size = []
-    if isinstance(output_size, int):
-        for _ in range(len(input_size) - 2):
-            new_output_size.append(output_size)
-    elif isinstance(output_size, tuple):
-        assert len(input_size) - 2 == len(
-            output_size
-        ), f"The length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
-        for i in range(len(output_size)):
-            if output_size[i] is None:
-                new_output_size.append(input_size[i + 2])
-            else:
-                assert isinstance(
-                    output_size[i], int
-                ), "numbers in 'output_size' should be integer"
-                new_output_size.append(output_size[i])
-    else:
-        raise ValueError("invalid 'output_size', 'int' or 'tuple' expected")
+    assert len(input_size) - 2 == len(
+        output_size
+    ), f"the length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
+    for i in range(len(output_size)):
+        if output_size[i] is None:
+            new_output_size.append(input_size[i + 2])
+        else:
+            assert isinstance(
+                output_size[i], int
+            ), "numbers in 'output_size' should be integer"
+            new_output_size.append(output_size[i])
     return tuple(new_output_size)
 
 
@@ -68,19 +64,16 @@ class AdaptiveAvgPool1d(Module):
 
     """
 
-    def __init__(self, output_size) -> None:
+    def __init__(self, output_size: _size_1_t) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None
+        self.output_size = _single(output_size)
 
     def forward(self, x):
         assert len(x.shape) == 3
-        if isinstance(self.output_size, tuple):
-            new_output_size = self.output_size[0]
-        elif isinstance(self.output_size, int):
-            new_output_size = self.output_size
-        else:
-            raise ValueError("'output_size' should be integer or tuple")
-        return flow.F.adaptive_avg_pool1d(x, output_size=(new_output_size,))
+        assert len(self.output_size) == 1,  f"the length of 'output_size' does not match the input size, 1 expected"
+        assert isinstance(self.output_size[0], int), "numbers in 'output_size' should be integer"
+        return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
 
 @oneflow_export("adaptive_avg_pool1d")
@@ -142,7 +135,8 @@ class AdaptiveAvgPool2d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None
+        self.output_size = _pair(output_size)
 
     def forward(self, x):
         assert len(x.shape) == 4
@@ -209,7 +203,8 @@ class AdaptiveAvgPool3d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None
+        self.output_size = _triple(output_size)
 
     def forward(self, x):
         assert len(x.shape) == 5
