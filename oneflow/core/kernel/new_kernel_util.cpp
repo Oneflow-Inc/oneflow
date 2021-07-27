@@ -36,12 +36,12 @@ void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
   if (dst == src) { return; }
-  OF_HIP_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->hip_stream()));
 }
 
 template<>
 void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  OF_HIP_CHECK(hipMemsetAsync(dst, value, sz, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemsetAsync(dst, value, sz, ctx->hip_stream()));
 }
 
 #endif
@@ -62,7 +62,7 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
   Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody());
-  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->hip_stream()));
   OF_HIP_CHECK(hipHostFree(host_raw_dptr));
 #else
   UNIMPLEMENTED();

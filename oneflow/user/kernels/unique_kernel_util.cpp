@@ -190,20 +190,20 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
   UniqueAliasWorkspace<KEY, IDX>(ctx, n, workspace, &rt_workspace_size, &cub_sort_keys_out,
                                  &cub_sort_values_out, &cub_temp_storage);
   CHECK_LE(rt_workspace_size, workspace_size_in_bytes);
-  IotaKernel<IDX><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  IotaKernel<IDX><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, cub_sort_values_in_ptr);
   OF_HIP_CHECK((hipcub::DeviceRadixSort::SortPairs<KEY, IDX>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, in, cub_sort_keys_out.ptr,
-      cub_sort_values_in_ptr, cub_sort_values_out.ptr, n, 0, sizeof(KEY) * 8, ctx->rocm_stream())));
+      cub_sort_values_in_ptr, cub_sort_values_out.ptr, n, 0, sizeof(KEY) * 8, ctx->hip_stream())));
   OF_HIP_CHECK((hipcub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, IDX*>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, cub_sort_keys_out.ptr, unique_out,
-      count, num_unique, n, ctx->rocm_stream())));
+      count, num_unique, n, ctx->hip_stream())));
   NotEqualToPreviousAdjacentIterator<IDX, KEY> unique_counting_iter(cub_sort_keys_out.ptr, 0);
   PermutationIterator<IDX, IDX*, IDX*> remapping_iter(idx_out, cub_sort_values_out.ptr);
   OF_HIP_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<IDX, KEY>,
                                                PermutationIterator<IDX, IDX*, IDX*>>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, unique_counting_iter, remapping_iter, n,
-      ctx->rocm_stream())));
+      ctx->hip_stream())));
 }
 
 template<typename KEY, typename IDX>

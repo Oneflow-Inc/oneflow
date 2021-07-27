@@ -13,51 +13,51 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_ROCM_DEVICE_CONTEXT_H_
-#define ONEFLOW_CORE_DEVICE_ROCM_DEVICE_CONTEXT_H_
+#ifndef ONEFLOW_CORE_DEVICE_HIP_DEVICE_CONTEXT_H_
+#define ONEFLOW_CORE_DEVICE_HIP_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/device/rocm_stream_handle.h"
+#include "oneflow/core/device/hip_stream_handle.hip.h"
 
 namespace oneflow {
 
 #ifdef WITH_HIP
 
-class RocmDeviceCtx : public DeviceCtx {
+class HipDeviceCtx : public DeviceCtx {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RocmDeviceCtx);
-  RocmDeviceCtx() = delete;
-  ~RocmDeviceCtx() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(HipDeviceCtx);
+  HipDeviceCtx() = delete;
+  ~HipDeviceCtx() override = default;
 
-  explicit RocmDeviceCtx(RocmStreamHandle* rocm_handler) : rocm_handler_(rocm_handler) {}
+  explicit HipDeviceCtx(HipStreamHandle* hip_handler) : hip_handler_(hip_handler) {}
 
-  const hipStream_t& rocm_stream() const override { return *(rocm_handler_->rocm_stream()); }
+  const hipStream_t& hip_stream() const override { return *(hip_handler_->hip_stream()); }
 
   const hipblasHandle_t& hipblas_pmh_handle() const override {
-    return *(rocm_handler_->hipblas_pmh_handle());
+    return *(hip_handler_->hipblas_pmh_handle());
   }
   const hipblasHandle_t& hipblas_tensor_op_math_handle() const override {
-    return *(rocm_handler_->hipblas_tensor_op_math_handle());
+    return *(hip_handler_->hipblas_tensor_op_math_handle());
   }
   const hipblasHandle_t& hipblas_pmd_handle() const override {
-    return *(rocm_handler_->hipblas_pmd_handle());
+    return *(hip_handler_->hipblas_pmd_handle());
   }
 
-  const miopenHandle_t& miopen_handle() const override { return *(rocm_handler_->miopen_handle()); }
+  const miopenHandle_t& miopen_handle() const override { return *(hip_handler_->miopen_handle()); }
   
-  void SyncDevice() override { OF_HIP_CHECK(hipStreamSynchronize(rocm_stream())); }
+  void SyncDevice() override { OF_HIP_CHECK(hipStreamSynchronize(hip_stream())); }
 
   void AddCallBack(std::function<void()> callback) const override {
-    rocm_handler_->AddCallBack(callback);
+    hip_handler_->AddCallBack(callback);
   }
 
  protected:
-  RocmStreamHandle* rocm_handler_;
+  HipStreamHandle* hip_handler_;
 };
 
 #endif  // WITH_HIP
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_ROCM_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_DEVICE_HIP_DEVICE_CONTEXT_H_

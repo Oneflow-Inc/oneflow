@@ -114,7 +114,7 @@ struct GpuAddCaller {
     }
 
     gpu_add<T, N>
-        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->hip_stream()>>>(
             n, para);
   }
 };
@@ -218,7 +218,7 @@ struct GpuAddCaller<float16, N> {
     }
 
     gpu_half_add<N>
-        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->hip_stream()>>>(
             n, para);
   }
 };

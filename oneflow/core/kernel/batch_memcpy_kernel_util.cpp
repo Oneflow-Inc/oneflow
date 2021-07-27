@@ -64,7 +64,7 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
                                                    const std::vector<MemcpyParam>& params) {
   if (params.size() == 1) {
     OF_HIP_CHECK(hipMemcpyAsync(params.front().dst, params.front().src, params.front().count,
-                                  hipMemcpyDefault, ctx->rocm_stream()));
+                                  hipMemcpyDefault, ctx->hip_stream()));
   } else {
     int block_size = 0;
     int num_blocks = 0;
@@ -78,16 +78,16 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
         batch_memcpy_param.params[batch_memcpy_param.batch_size] = param;
         batch_memcpy_param.batch_size += 1;
         if (batch_memcpy_param.batch_size == kMaxBatchSize) {
-          GpuCopy<<<num_blocks, block_size, 0, ctx->rocm_stream()>>>(batch_memcpy_param);
+          GpuCopy<<<num_blocks, block_size, 0, ctx->hip_stream()>>>(batch_memcpy_param);
           batch_memcpy_param.batch_size = 0;
         }
       } else {
         OF_HIP_CHECK(hipMemcpyAsync(param.dst, param.src, param.count, hipMemcpyDefault,
-                                      ctx->rocm_stream()));
+                                      ctx->hip_stream()));
       }
     }
     if (batch_memcpy_param.batch_size != 0) {
-      GpuCopy<<<num_blocks, block_size, 0, ctx->rocm_stream()>>>(batch_memcpy_param);
+      GpuCopy<<<num_blocks, block_size, 0, ctx->hip_stream()>>>(batch_memcpy_param);
     }
   }
 }

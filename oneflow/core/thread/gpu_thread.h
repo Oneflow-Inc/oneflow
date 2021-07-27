@@ -34,7 +34,7 @@ class GpuThread final : public Thread {
 #if defined(WITH_CUDA)
   Channel<CudaCBEvent> cb_event_chan_;
 #elif defined(WITH_HIP)
-  Channel<RocmCBEvent> cb_event_chan_;
+  Channel<HipCBEvent> cb_event_chan_;
 #endif
   std::thread cb_event_poller_;
 

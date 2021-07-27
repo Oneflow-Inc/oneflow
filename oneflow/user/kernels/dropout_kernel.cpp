@@ -162,7 +162,7 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 template<typename T>
 void GpuMaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
                   T* y) {
-  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, scale, x, mask, y);
 }
 
@@ -170,7 +170,7 @@ void GpuMaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
 // void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
 //                         const int8_t* mask, half* y) {
 //   MaskAndScaleGpu<half>
-//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
 //           n, scale, x, mask, y);
 // }
 
@@ -178,7 +178,7 @@ template<typename T>
 void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
                      const T* addend, T* y) {
   MaskAndScaleAddGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
           n, scale, x, mask, addend, y);
 }
 
@@ -186,7 +186,7 @@ void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
 // void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
 //                            const int8_t* mask, const half* addend, half* y) {
 //   MaskAndScaleAddGpu<half>
-//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
 //           n, scale, x, mask, addend, y);
 // }
 

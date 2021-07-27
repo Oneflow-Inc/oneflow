@@ -96,11 +96,11 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
     if (num_blocks == 0) {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
     } else if (num_blocks == 1) {
-      SquareSumGpu<T, true><<<1, kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      SquareSumGpu<T, true><<<1, kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(n, x, y);
     } else {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
       SquareSumGpu<T, false>
-          <<<num_blocks, kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+          <<<num_blocks, kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(n, x, y);
     }
   }
 
@@ -115,7 +115,7 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
         max_count = std::max(max_count, gpu_params.params[i].count);
       }
       MultiSquareSumGpu<T>
-          <<<BlocksNum4ThreadsNum(max_count), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(max_count), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               gpu_params, y);
     }
   }

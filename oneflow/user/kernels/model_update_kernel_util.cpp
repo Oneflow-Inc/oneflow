@@ -376,7 +376,7 @@ void SGDUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model) {
-  SGDUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  SGDUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
       model_diff, model);
 }
@@ -416,7 +416,7 @@ void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
     const float* learning_rate, const K* indices, const T* values, T* model) {
   IndexedSlicesSGDUpdateGpu<T, K, IDX>
       <<<BlocksNum4ThreadsNum(num_indices * feature_size), kHipThreadsNumPerBlock, 0,
-         ctx->rocm_stream()>>>(weight_decay, feature_size, lower_bound, upper_bound,
+         ctx->hip_stream()>>>(weight_decay, feature_size, lower_bound, upper_bound,
                                num_unique_instance, learning_rate, indices, values, model);
 }
 
@@ -482,7 +482,7 @@ void MomentumUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
   MomentumUpdateGpu<T, G>
-      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
           n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
           skip_if, model_diff, model, momentum);
 }
@@ -523,7 +523,7 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Updat
     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
     const float* learning_rate, const K* indices, const T* values, T* model, T* momentum) {
   IndexedSlicesMomentumUpdateGpu<T, K, IDX><<<BlocksNum4ThreadsNum(num_instance * feature_size),
-                                              kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+                                              kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       beta, weight_decay, feature_size, lower_bound, upper_bound, num_unique_instance,
       learning_rate, indices, values, model, momentum);
 }
@@ -628,7 +628,7 @@ void AdamUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1, float beta2, float epsilon,
     float weight_decay, float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, T* m, T* v) {
-  AdamUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  AdamUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, learning_rate_val, learning_rate,
       scale_by_ptr, skip_if, model_diff, model, m, v);
 }
@@ -669,8 +669,8 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
     T* beta1_t, T* beta2_t) {
-  AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->rocm_stream()>>>(beta1, beta2, skip_if, beta1_t, beta2_t);
-  LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->hip_stream()>>>(beta1, beta2, skip_if, beta1_t, beta2_t);
+  LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, scale_by_ptr, skip_if, model_diff,
       adam_diff, model, m, v);
   T* w_norm = norm_buffer;
@@ -678,7 +678,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, w_norm);
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, g_norm);
   KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
-  LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, weight_decay, learning_rate, skip_if, w_norm, g_norm, beta1_t, beta2_t, adam_diff, model);
 }
 
@@ -722,7 +722,7 @@ void IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
     const IDX* num_unique_instance, const float* learning_rate, const K* indices, const T* values,
     T* model, T* m, T* v) {
   IndexedSlicesAdamUpdateGpu<T, K, IDX><<<BlocksNum4ThreadsNum(num_instance * feature_size),
-                                          kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+                                          kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       beta1, beta2, epsilon, weight_decay, feature_size, lower_bound, upper_bound,
       num_unique_instance, learning_rate, indices, values, model, m, v);
 }
@@ -746,7 +746,7 @@ struct AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kGPU> {
 void AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kGPU>::AdamBiasCorrectionLearningRate(
     DeviceCtx* ctx, float beta1, float beta2, const float* learning_rate, const int64_t* train_step,
     float* out) {
-  AdamBiasCorrectionLearningRateGpu<<<1, 1, 0, ctx->rocm_stream()>>>(beta1, beta2, learning_rate,
+  AdamBiasCorrectionLearningRateGpu<<<1, 1, 0, ctx->hip_stream()>>>(beta1, beta2, learning_rate,
                                                                      train_step, out);
 }
 
@@ -787,12 +787,12 @@ void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     T* mean_gradient) {
   if (centered) {
     RmsPropUpdateGpu<T, G, true>
-        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             n, scale, l1, l2, mean_square, mean_gradient, epsilon, weight_decay, decay_rate,
             learning_rate_val, learning_rate, scale_by_ptr, skip_if, model_diff, model);
   } else {
     RmsPropUpdateGpu<T, G, false>
-        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             n, scale, l1, l2, mean_square, mean_gradient, epsilon, weight_decay, decay_rate,
             learning_rate_val, learning_rate, scale_by_ptr, skip_if, model_diff, model);
   }
@@ -881,7 +881,7 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     const int64_t* skip_if, const G* model_diff, T* model, T* momentum, T* data_tmp,
     T* model_diff_tmp) {
   LarsScaleModelDiffGpu<T, G>
-      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
           n, scale, l1, l2, scale_by_ptr, skip_if, model_diff, model, model_diff_tmp);
   T* model_norm = data_tmp;
   T* model_diff_norm = data_tmp + 1;
@@ -889,9 +889,9 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, model_norm);
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
                                        model_diff_norm);
-  LarsGetLocalLearningRateGpu<T><<<1, 1, 0, ctx->rocm_stream()>>>(
+  LarsGetLocalLearningRateGpu<T><<<1, 1, 0, ctx->hip_stream()>>>(
       learning_rate, weight_decay, epsilon, lars_coefficient, skip_if, data_tmp);
-  LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
       n, momentum_beta, momentum, weight_decay, skip_if, local_learning_rate, model_diff_tmp,
       model);
 }

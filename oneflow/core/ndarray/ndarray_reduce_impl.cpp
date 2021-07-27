@@ -156,7 +156,7 @@ void MatrixColReduceBy1BlockLayer(DeviceCtx* ctx, K num_elems, K num_cols, const
     const int num_blocks = (num_cols + kHipWarpSize - 1) / kHipWarpSize;
     const int num_threads = kHipWarpSize * kHipWarpSize;
     auto Reduce = &MatrixColReduceByWarpBlock<R, T, K>;
-    Reduce<<<num_blocks, num_threads, 0, ctx->rocm_stream()>>>(num_elems, num_cols, in, out);
+    Reduce<<<num_blocks, num_threads, 0, ctx->hip_stream()>>>(num_elems, num_cols, in, out);
   }
 }
 
@@ -224,7 +224,7 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
       int retcode =
           hipcub::DeviceReduce::Reduce(tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), x_size,
                                     typename CubFunctor4BianryFunc<T, binary_func>::type(),
-                                    UnitOfBinaryFunc<T, binary_func>::Val(), ctx->rocm_stream());
+                                    UnitOfBinaryFunc<T, binary_func>::Val(), ctx->hip_stream());
       CHECK_EQ(retcode, 0) << "hipcub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -256,7 +256,7 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
       int retcode = hipcub::DeviceSegmentedReduce::Reduce(
           tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), num_rows, transform_input_iter,
           transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
-          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->rocm_stream());
+          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->hip_stream());
       CHECK_EQ(retcode, 0) << "hipcub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -311,7 +311,7 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
       int retcode = hipcub::DeviceSegmentedReduce::Reduce(
           tmp_storage_ptr, tmp_storage_bytes, x_iter, y.ptr(), num_cols, transform_input_iter,
           transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
-          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->rocm_stream());
+          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->hip_stream());
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -385,7 +385,7 @@ struct NdarrayXYZCubeXZReduce<DeviceType::kGPU, T, binary_func> final {
       int retcode = hipcub::DeviceSegmentedReduce::Reduce(
           tmp_storage_ptr, tmp_storage_bytes, x_iter, y.ptr(), num_rows, transform_input_iter,
           transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
-          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->rocm_stream());
+          UnitOfBinaryFunc<T, binary_func>::Val(), ctx->hip_stream());
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);

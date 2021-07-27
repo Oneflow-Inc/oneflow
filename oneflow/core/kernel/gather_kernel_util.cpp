@@ -156,12 +156,12 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
     const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
     if (IsSafeUseIndex32(flat_in_shape, num_indices)) {
       GatherForwardGpu<T, K, int32_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
               offset);
     } else {
       GatherForwardGpu<T, K, int64_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
               offset);
     }

@@ -83,7 +83,7 @@ inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
 
 #define RUN_HIP_KERNEL(func, device_ctx_ptr, thread_num, ...) \
   func<<<SMBlocksNum4ThreadsNum(thread_num), kHipThreadsNumPerBlock, 0, \
-         (device_ctx_ptr)->rocm_stream()>>>(__VA_ARGS__)
+         (device_ctx_ptr)->hip_stream()>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 

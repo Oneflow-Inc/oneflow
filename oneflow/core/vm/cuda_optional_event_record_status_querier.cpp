@@ -46,7 +46,7 @@ void CudaOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
     hipSetDevice(device_id_);
     OF_HIP_CHECK(
         hipEventCreateWithFlags(&event_, hipEventBlockingSync | hipEventDisableTiming));
-    OF_HIP_CHECK(hipEventRecord(event_, device_ctx->rocm_stream()));
+    OF_HIP_CHECK(hipEventRecord(event_, device_ctx->hip_stream()));
   }
   launched_ = true;
 }

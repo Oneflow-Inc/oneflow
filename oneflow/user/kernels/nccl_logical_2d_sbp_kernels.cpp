@@ -104,7 +104,7 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
 #if defined(WITH_HIP)
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(), ctx->device_ctx()->rocm_stream()));
+                                nccl_comm->comm(), ctx->device_ctx()->hip_stream()));
 #else
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
@@ -136,7 +136,7 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
 #if defined(WITH_HIP)
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->device_ctx()->rocm_stream()));
+                                ctx->device_ctx()->hip_stream()));
 #else
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
@@ -182,7 +182,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 #if defined(WITH_HIP)
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->device_ctx()->rocm_stream()));
+                                ctx->device_ctx()->hip_stream()));
 #else
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
@@ -302,11 +302,11 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
                                elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               nccl_comm->comm(), ctx->device_ctx()->rocm_stream()));
+                               nccl_comm->comm(), ctx->device_ctx()->hip_stream()));
         OF_NCCL_CHECK(ncclRecv(
             reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
             elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
-            ctx->device_ctx()->rocm_stream()));
+            ctx->device_ctx()->hip_stream()));
 #else
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
@@ -424,7 +424,7 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
 #if defined(WITH_HIP)
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(), ctx->device_ctx()->rocm_stream()));
+                                nccl_comm->comm(), ctx->device_ctx()->hip_stream()));
 #else
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,

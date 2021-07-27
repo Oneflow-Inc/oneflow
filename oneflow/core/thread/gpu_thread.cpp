@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/device/rocm_stream_handle.h"
+#include "oneflow/core/device/hip_stream_handle.hip.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
@@ -105,7 +105,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
                                       + std::to_string(thrd_id) + ")");
     OF_HIP_CHECK(hipSetDevice(dev_id));
     ThreadCtx ctx;
-    ctx.g_rocm_stream.reset(new RocmStreamHandle(&cb_event_chan_));
+    ctx.g_hip_stream.reset(new HipStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
@@ -114,7 +114,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
                                       + std::to_string(thrd_id) + ")");
     OF_HIP_CHECK(hipSetDevice(dev_id));
-    RocmCBEvent cb_event;
+    HipCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       OF_HIP_CHECK(hipEventSynchronize(cb_event.event));
       cb_event.callback();

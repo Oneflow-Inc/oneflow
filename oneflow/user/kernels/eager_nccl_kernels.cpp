@@ -46,7 +46,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclSum, comm,
-                                ctx->device_ctx()->rocm_stream()));
+                                ctx->device_ctx()->hip_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

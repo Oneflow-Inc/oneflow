@@ -71,7 +71,7 @@ void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, cons
   const int32_t elem_cnt_per_block = thread_num * sizeof(PackType) * kMinPackPerThread;
   const int32_t block_num_final =
       std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
-  GenerateGpu<<<block_num_final, thread_num, 0, device_ctx->rocm_stream()>>>(curand_states, n, rate,
+  GenerateGpu<<<block_num_final, thread_num, 0, device_ctx->hip_stream()>>>(curand_states, n, rate,
                                                                              mask);
 }
 

@@ -275,10 +275,10 @@ void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const double al
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float16 alpha,
                                     const float16* x, const int incx, float16* y, const int incy) {
   if (incx == 1 && incy == 1) {
-    AxpyHalf2Gpu<<<BlocksNum4ThreadsNum(n / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    AxpyHalf2Gpu<<<BlocksNum4ThreadsNum(n / 2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
   } else {
-    AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
         incy);
   }

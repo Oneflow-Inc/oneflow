@@ -280,7 +280,7 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 #ifdef WITH_CUDA
     OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
 #elif WITH_HIP
-    OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+    OF_HIP_CHECK(hipStreamSynchronize(ctx->hip_stream()));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA

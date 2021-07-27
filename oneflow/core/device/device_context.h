@@ -42,7 +42,7 @@ class DeviceCtx {
 #endif
 
 #ifdef WITH_HIP
-  virtual const hipStream_t& rocm_stream() const { UNIMPLEMENTED(); }
+  virtual const hipStream_t& hip_stream() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const hipblasHandle_t& hipblas_tensor_op_math_handle() const { UNIMPLEMENTED(); }

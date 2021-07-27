@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/rocm_device_context.h"
+#include "oneflow/core/device/hip_device_context.hip.h"
 #include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
@@ -21,9 +21,9 @@ namespace oneflow {
 #ifdef WITH_HIP
 
 REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
-                          RocmStreamHandle* rocm_handle = nullptr;
-                          rocm_handle = thread_ctx.g_rocm_stream.get();
-                          return new RocmDeviceCtx(rocm_handle);
+                          HipStreamHandle* hip_handle = nullptr;
+                          hip_handle = thread_ctx.g_hip_stream.get();
+                          return new HipDeviceCtx(hip_handle);
                         }));
 
 #endif  // WITH_HIP

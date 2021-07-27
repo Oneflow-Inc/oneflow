@@ -148,7 +148,7 @@ class GpuGeluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
     OF_HIP_CHECK((rocm::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                                            x->dptr<T>(), ctx->device_ctx()->rocm_stream())));
+                                            x->dptr<T>(), ctx->device_ctx()->hip_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -177,7 +177,7 @@ class GpuGeluGradKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = x->shape().elem_cnt();
     OF_HIP_CHECK(
         (rocm::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(),
-                                   dy->dptr<T>(), ctx->device_ctx()->rocm_stream())));
+                                   dy->dptr<T>(), ctx->device_ctx()->hip_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

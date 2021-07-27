@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_ROCM_STREAM_HANDLE_H_
-#define ONEFLOW_CORE_DEVICE_ROCM_STREAM_HANDLE_H_
+#ifndef ONEFLOW_CORE_DEVICE_HIP_STREAM_HANDLE_H_
+#define ONEFLOW_CORE_DEVICE_HIP_STREAM_HANDLE_H_
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/device/hip_util.hip.h"
@@ -23,18 +23,18 @@ namespace oneflow {
 
 #ifdef WITH_HIP
 
-struct RocmCBEvent {
+struct HipCBEvent {
   std::function<void()> callback;
   hipEvent_t event;
 };
 
-class RocmStreamHandle final {
+class HipStreamHandle final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RocmStreamHandle);
-  RocmStreamHandle() = delete;
-  RocmStreamHandle(Channel<RocmCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
+  OF_DISALLOW_COPY_AND_MOVE(HipStreamHandle);
+  HipStreamHandle() = delete;
+  HipStreamHandle(Channel<HipCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
 
-  const hipStream_t* rocm_stream();
+  const hipStream_t* hip_stream();
   const hipblasHandle_t* hipblas_pmh_handle();
   const hipblasHandle_t* hipblas_pmd_handle();
   const hipblasHandle_t* hipblas_tensor_op_math_handle();
@@ -42,11 +42,11 @@ class RocmStreamHandle final {
 
   void AddCallBack(std::function<void()> callback);
 
-  ~RocmStreamHandle();
+  ~HipStreamHandle();
 
  private:
-  Channel<RocmCBEvent>* cb_event_chan_;
-  std::unique_ptr<hipStream_t> rocm_stream_;
+  Channel<HipCBEvent>* cb_event_chan_;
+  std::unique_ptr<hipStream_t> hip_stream_;
   std::unique_ptr<hipblasHandle_t> hipblas_pmh_handle_;
   std::unique_ptr<hipblasHandle_t> hipblas_pmd_handle_;
   std::unique_ptr<hipblasHandle_t> hipblas_tensor_op_math_handle_;
@@ -57,4 +57,4 @@ class RocmStreamHandle final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DEVICE_ROCM_STREAM_HANDLE_H_
+#endif  // ONEFLOW_CORE_DEVICE_HIP_STREAM_HANDLE_H_

@@ -131,7 +131,7 @@ class SoftmaxGpuKernel final : public user_op::OpKernel {
     rocm::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), cols);
     rocm::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
     rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->rocm_stream(), load, store, rows, cols);
+        ctx->device_ctx()->hip_stream(), load, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -164,7 +164,7 @@ class SoftmaxGpuGradKernel final : public user_op::OpKernel {
     rocm::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
     rocm::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
     rocm::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
-                                       ComputeType>(ctx->device_ctx()->rocm_stream(), load_y,
+                                       ComputeType>(ctx->device_ctx()->hip_stream(), load_y,
                                                     load_dy, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

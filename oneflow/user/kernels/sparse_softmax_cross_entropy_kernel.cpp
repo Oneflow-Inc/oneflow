@@ -240,7 +240,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
   rocm::softmax::DirectLoad<T, ComputeType> load(in, col);
   rocm::softmax::DirectStore<ComputeType, T> store(prob, col);
   rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-      ctx->rocm_stream(), load, store, row, col);
+      ctx->hip_stream(), load, store, row, col);
 }
 
 template<>
@@ -248,7 +248,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const flo
                  float16* prob) {
   rocm::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
   rocm::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
-  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->rocm_stream(), load,
+  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->hip_stream(), load,
                                                                          store, row, col);
 }
 

@@ -221,7 +221,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
                              const int64_t depth, const int64_t lower_bound, const T* x,
                              const K* labels, T* y) {
     ComputeEntropyGpu<<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0,
-                        ctx->rocm_stream()>>>(num_instances, num_classes, depth, lower_bound, x,
+                        ctx->hip_stream()>>>(num_instances, num_classes, depth, lower_bound, x,
                                               labels, y);
   }
 
@@ -229,7 +229,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
                           const int64_t depth, const int64_t lower_bound, const T* x,
                           const K* labels, const T* dy, T* dx) {
     ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0,
-                     ctx->rocm_stream()>>>(num_instances, num_classes, depth, lower_bound, x,
+                     ctx->hip_stream()>>>(num_instances, num_classes, depth, lower_bound, x,
                                            labels, dy, dx);
   }
 
@@ -238,7 +238,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
                                      const int64_t lower_bound, const T* prob, const K* labels,
                                      const T* dy, T* dx) {
     ComputeDiffWithSoftmaxGpu<<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0,
-                                ctx->rocm_stream()>>>(elem_cnt, num_classes, depth, lower_bound,
+                                ctx->hip_stream()>>>(elem_cnt, num_classes, depth, lower_bound,
                                                       prob, labels, dy, dx);
   }
 };
@@ -249,7 +249,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
                              const int64_t depth, const int64_t lower_bound, const float16* x,
                              const K* labels, float16* y) {
     ComputeEntropyGpuHalf<K>
-        <<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(x),
             labels, reinterpret_cast<half*>(y));
   }
@@ -258,7 +258,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
                           const int64_t depth, const int64_t lower_bound, const float16* x,
                           const K* labels, const float16* dy, float16* dx) {
     ComputeDiffGpuHalf<K>
-        <<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(num_instances), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(x),
             labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
   }
@@ -269,12 +269,12 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
                                      const K* labels, const float16* dy, float16* dx) {
     // if (num_classes % 2 == 0) {
     //   ComputeDiffWithSoftmaxGpuHalf2<K>
-    //       <<<BlocksNum4ThreadsNum(elem_cnt / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    //       <<<BlocksNum4ThreadsNum(elem_cnt / 2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
     //           elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
     //           labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
     // } else {
       ComputeDiffWithSoftmaxGpuHalf<K>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
               labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
     // }

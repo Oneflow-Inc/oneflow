@@ -140,12 +140,12 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
 
     if (NDIM == 1) {
       OF_HIP_CHECK(
-          (SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->rocm_stream(), input_shape.elem_cnt(), temp_storage,
+          (SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->hip_stream(), input_shape.elem_cnt(), temp_storage,
                                            workspace, input_ptr, output_ptr, output_size_ptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(output_ptr, elem_cnt);
-      OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->rocm_stream(), elem_cnt,
+      OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->hip_stream(), elem_cnt,
                                                              temp_storage, workspace, input_ptr,
                                                              output_iter, output_size_ptr)));
 
@@ -154,13 +154,13 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
                      [](int64_t dim) { return static_cast<OUT_T>(dim); });
       NdIndexOffsetHelper<OUT_T, NDIM> index_converter(dims);
       RocmOffsetToNdIndexInplace<OUT_T, NDIM>
-          <<<GetNumBlocks(elem_cnt), kBlockSize, 0, ctx->rocm_stream()>>>(
+          <<<GetNumBlocks(elem_cnt), kBlockSize, 0, ctx->hip_stream()>>>(
               index_converter, output_size_ptr, output_ptr);
     }
   }
 
   static size_t GetWorkspaceBytesSize(DeviceCtx* ctx, int64_t elem_cnt) {
-    hipStream_t stream = ctx ? ctx->rocm_stream() : 0;
+    hipStream_t stream = ctx ? ctx->hip_stream() : 0;
     size_t workspace = 0;
     if (NDIM == 1) {
       OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(stream, elem_cnt, nullptr, workspace, nullptr,

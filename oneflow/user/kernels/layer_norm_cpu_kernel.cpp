@@ -154,15 +154,15 @@ void InstanceScaleCenter(DeviceCtx* ctx, const int64_t batch_size, const int64_t
   const int64_t elem_cnt = batch_size * instance_size;
   if (beta != nullptr && gamma != nullptr) {  // scale and center
     InstanceScaleCenterGpu<T, true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt, instance_size, in, gamma, beta, out);
   } else if (gamma != nullptr) {  // scale only
     InstanceScaleCenterGpu<T, true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt, instance_size, in, gamma, nullptr, out);
   } else if (beta != nullptr) {  // center only
     InstanceScaleCenterGpu<T, false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt, instance_size, in, nullptr, beta, out);
   } else {
     UNIMPLEMENTED();
@@ -176,15 +176,15 @@ void InstanceScaleCenterH2(DeviceCtx* ctx, const int64_t batch_size, const int64
   const int64_t instance_size_h2 = instance_size / 2;
   if (beta != nullptr && gamma != nullptr) {  // scale and center
     InstanceScaleCenterH2Gpu<true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, gamma, beta, out);
   } else if (gamma != nullptr) {  // scale only
     InstanceScaleCenterH2Gpu<true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, gamma, nullptr, out);
   } else if (beta != nullptr) {  // center only
     InstanceScaleCenterH2Gpu<false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, nullptr, beta, out);
   } else {
     UNIMPLEMENTED();
@@ -300,7 +300,7 @@ void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm
                          user_op::Tensor* inv_variance) {
   LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
-         GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->rocm_stream()>>>(
+         GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->hip_stream()>>>(
           num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
           mean->mut_dptr<typename LayerNormUtil<T>::ComputeType>(),
           inv_variance->mut_dptr<typename LayerNormUtil<T>::ComputeType>(), normalized_ptr, y_ptr);
@@ -314,7 +314,7 @@ void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const
                                   user_op::Tensor* inv_variance) {
   LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
-         GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->rocm_stream()>>>(
+         GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->hip_stream()>>>(
           num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
           reinterpret_cast<const half*>(gamma_ptr), reinterpret_cast<const half*>(beta_ptr),
           mean->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
@@ -637,14 +637,14 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
         LayerNormParamGradImpl<T, int64_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->rocm_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->hip_stream()>>>(
                 elem_cnt, m, dy->dptr<T>(), normalized->dptr<T>(), gamma->dptr<T>(),
                 gamma_diff->mut_dptr<T>(), beta_diff->mut_dptr<T>(),
                 normalized_diff->mut_dptr<T>());
       } else {
         LayerNormParamGradImpl<T, int32_t>
             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->rocm_stream()>>>(
+               GetParamGradDynamicSharedMemorySize<T>(m), ctx->device_ctx()->hip_stream()>>>(
                 static_cast<int32_t>(elem_cnt), static_cast<int32_t>(m), dy->dptr<T>(),
                 normalized->dptr<T>(), gamma->dptr<T>(), gamma_diff->mut_dptr<T>(),
                 beta_diff->mut_dptr<T>(), normalized_diff->mut_dptr<T>());
@@ -737,14 +737,14 @@ REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 //       if (elem_cnt > static_cast<int64_t>(GetMaxVal<int32_t>() / 2)) {
 //         LayerNormParamGradHalfImpl<int64_t>
 //             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-//                GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->rocm_stream()>>>(
+//                GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->hip_stream()>>>(
 //                 elem_cnt, m, dy->dptr<half>(), normalized->dptr<half>(), gamma->dptr<half>(),
 //                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
 //                 normalized_diff->mut_dptr<half>());
 //       } else {
 //         LayerNormParamGradHalfImpl<int32_t>
 //             <<<GetLayerNormParamGradNumBlocks(elem_cnt), GetLayerNormParamGradBlockSize(),
-//                GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->rocm_stream()>>>(
+//                GetParamGradDynamicSharedMemorySize<float16>(m), ctx->device_ctx()->hip_stream()>>>(
 //                 static_cast<int32_t>(elem_cnt), static_cast<int32_t>(m), dy->dptr<half>(),
 //                 normalized->dptr<half>(), gamma->dptr<half>(),
 //                 reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),

@@ -63,17 +63,17 @@ __global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
 template<typename T, typename K>
 struct TwoStageReduceKernelUtil<DeviceType::kGPU, T, K> {
   static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
-    DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
         n, x, count, y);
   }
 
   static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y) {
-    MaskGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    MaskGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
         n, x, mask, y);
   }
 
   static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y) {
-    ScaleGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    ScaleGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
         n, x, scale, y);
   }
 };

@@ -51,7 +51,7 @@ template<typename T>
 void SliceBoxingKernelUtil<DeviceType::kGPU, T>::Add(DeviceCtx* ctx, int64_t n, const T* a,
                                                      const T* b, T* out) {
   AddGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, a, b, out);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(n, a, b, out);
 }
 
 template<>

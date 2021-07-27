@@ -121,11 +121,11 @@ struct BiasAddCalculation<DeviceType::kGPU, T, Index> {
     const Index elem_cnt = outer_size * bias_size * inner_size;
     if (inner_size == 1) {
       BiasAddRowGpu<T, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               elem_cnt, bias_size, x, bias, y);
     } else if (outer_size == 1) {
       BiasAddColGpu<T, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               elem_cnt, inner_size, x, bias, y);
     } else {
       // if (x == y) {
@@ -146,18 +146,18 @@ struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
     if (inner_size == 1) {
       if (bias_size % 2 == 0) {
         BiasAddRowGpuHalf2<Index><<<BlocksNum4ThreadsNum(elem_cnt / 2), kHipThreadsNumPerBlock, 0,
-                                    ctx->rocm_stream()>>>(
+                                    ctx->hip_stream()>>>(
             elem_cnt, bias_size, reinterpret_cast<const half*>(x),
             reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       } else {
         BiasAddRowGpu<half, Index>
-            <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+            <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
                 elem_cnt, bias_size, reinterpret_cast<const half*>(x),
                 reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       }
     } else if (outer_size == 1) {
       BiasAddColGpu<half, Index>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
               elem_cnt, inner_size, reinterpret_cast<const half*>(x),
               reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
     } else {

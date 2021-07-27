@@ -163,7 +163,7 @@ template<typename T>
 void BroadcastSubExpGpu(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                         const T* x, const T* y, T* z) {
   BroadcastSubExpGpuImpl<<<GetSoftmaxNumBlocks(num_instances), GetSoftmaxBlockSize(), 0,
-                           ctx->rocm_stream()>>>(num_instances, num_classes, x, y, z);
+                           ctx->hip_stream()>>>(num_instances, num_classes, x, y, z);
 }
 
 template<>

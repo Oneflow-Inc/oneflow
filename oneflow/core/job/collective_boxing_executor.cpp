@@ -115,7 +115,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 
   struct NcclDeviceCtx : public DeviceCtx {
 #if defined(WITH_HIP)
-    const hipStream_t& rocm_stream() const override { return stream; }
+    const hipStream_t& hip_stream() const override { return stream; }
 #else
     const cudaStream_t& cuda_stream() const override { return stream; }
 #endif

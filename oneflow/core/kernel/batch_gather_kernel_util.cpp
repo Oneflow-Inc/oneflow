@@ -192,7 +192,7 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(DeviceCtx* ctx, 
   const int64_t instance_size = flat_out_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
   BatchGatherForwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
           elem_cnt, in, indices, indices_num, instance_size, gather_dim_size, out);
 }
 
@@ -207,7 +207,7 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx,
   const int64_t instance_size = flat_out_diff_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
   BatchGatherBackwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->hip_stream()>>>(
           elem_cnt, out_diff, indices, indices_num, instance_size, gather_dim_size, in_diff);
 }
 

@@ -47,7 +47,7 @@ struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
   static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out) {
     rocm::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
-                               ctx->rocm_stream());
+                               ctx->hip_stream());
   }
 };
 
