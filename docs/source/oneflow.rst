@@ -7,6 +7,7 @@ oneflow
     :members: advanced, 
             argsort, 
             argwhere, 
+            cat, 
             clamp, 
             clip, 
             diag, 
