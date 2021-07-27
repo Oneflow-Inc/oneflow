@@ -55,7 +55,7 @@ class OpInterpUtil {
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-      const bool is_lazy);
+      const bool is_lazy, const bool is_local);
 };
 
 }  // namespace one
