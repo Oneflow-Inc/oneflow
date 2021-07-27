@@ -15,9 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#ifdef WITH_CUDA
-#include <nccl.h>
-#endif
 
 namespace oneflow {
 
