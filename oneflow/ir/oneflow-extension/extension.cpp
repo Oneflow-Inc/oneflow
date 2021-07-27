@@ -30,6 +30,7 @@ REGISTER_USER_OP("mlir_jit")
     .InputWithMinimum("in", 0)
     .OutputWithMinimum("out", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      // TODO: infer shape by extracting Ops from mlir_assembly
       CHECK_EQ(ctx->inputs().size(), 1);
       CHECK_EQ(ctx->outputs().size(), 1);
       const Shape& in_shape = ctx->InputShape("in", 0);
