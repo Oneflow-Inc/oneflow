@@ -13,19 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
 import sys
 import traceback
 import warnings
-from typing import Any, Callable, Generic, List, Optional, Sequence, TypeVar
+
+from typing import Any, Callable, TypeVar, Generic, Sequence, List, Optional
 
 import oneflow as flow
 
 
 class ExceptionWrapper(object):
-    """Wraps an exception plus traceback to communicate across threads"""
+    r"""Wraps an exception plus traceback to communicate across threads"""
 
     def __init__(self, exc_info=None, where="in background"):
+        # It is important that we don't store exc_info, see
+        # NOTE [ Python Traceback Reference Cycle Problem ]
         if exc_info is None:
             exc_info = sys.exc_info()
         self.exc_type = exc_info[0]
@@ -33,32 +35,51 @@ class ExceptionWrapper(object):
         self.where = where
 
     def reraise(self):
-        """Reraises the wrapped exception in the current thread"""
+        r"""Reraises the wrapped exception in the current thread"""
+        # Format a message such as: "Caught ValueError in DataLoader worker
+        # process 2. Original Traceback:", followed by the traceback.
         msg = "Caught {} {}.\nOriginal {}".format(
             self.exc_type.__name__, self.where, self.exc_msg
         )
         if self.exc_type == KeyError:
+            # KeyError calls repr() on its argument (usually a dict key). This
+            # makes stack traces unreadable. It will not be changed in Python
+            # (https://bugs.python.org/issue2651), so we work around it.
             msg = KeyErrorMessage(msg)
         elif getattr(self.exc_type, "message", None):
+            # Some exceptions have first argument as non-str but explicitly
+            # have message field
             raise self.exc_type(message=msg)
         raise self.exc_type(msg)
 
 
 string_classes = (str, bytes)
+
 from . import (
-    BatchSampler,
-    Dataset,
     IterableDataset,
-    RandomSampler,
     Sampler,
     SequentialSampler,
-    _utils,
+    RandomSampler,
+    BatchSampler,
+    Dataset,
 )
+from . import _utils
 
 T_co = TypeVar("T_co", covariant=True)
 T = TypeVar("T")
 _worker_init_fn_t = Callable[[int], None]
+
+# Ideally we would parameterize `DataLoader` by the return type of `collate_fn`, but there is currently no way to have that
+# type parameter set to a default value if the user doesn't pass in a custom 'collate_fn'.
+# See https://github.com/python/mypy/issues/3737.
 _collate_fn_t = Callable[[List[T]], Any]
+
+
+# This function used to be defined in this file. However, it was moved to
+# _utils/collate.py. Although it is rather hard to access this from user land
+# (one has to explicitly directly `import flow.utils.data.dataloader`), there
+# probably is user code out there using it. This aliasing maintains BC in this
+# aspect.
 default_collate: _collate_fn_t = _utils.collate.default_collate
 
 
@@ -79,7 +100,7 @@ class _DatasetKind(object):
 
 
 class _InfiniteConstantSampler(Sampler):
-    """Analogous to ``itertools.repeat(None, None)``.
+    r"""Analogous to ``itertools.repeat(None, None)``.
     Used as sampler for :class:`~flow.utils.data.IterableDataset`.
 
     Args:
@@ -95,7 +116,7 @@ class _InfiniteConstantSampler(Sampler):
 
 
 class DataLoader(Generic[T_co]):
-    """
+    r"""
     Data loader. Combines a dataset and a sampler, and provides an iterable over
     the given dataset.
 
@@ -167,7 +188,6 @@ class DataLoader(Generic[T_co]):
     .. warning:: See :ref:`reproducibility`, and :ref:`dataloader-workers-random-seed`, and
                  :ref:`data-loading-randomness` notes for random seed related questions.
     """
-
     dataset: Dataset[T_co]
     batch_size: Optional[int]
     num_workers: int
@@ -195,88 +215,148 @@ class DataLoader(Generic[T_co]):
         prefetch_factor: int = 2,
         persistent_workers: bool = False
     ):
+
         if num_workers < 0:
             raise ValueError(
-                "num_workers option should be non-negative; use num_workers=0 to disable multiprocessing."
+                "num_workers option should be non-negative; "
+                "use num_workers=0 to disable multiprocessing."
             )
+
         if num_workers >= 1:
             warnings.warn(
                 "Not support multiprocessing dataloader yet, we will temporary set num_workers=0!"
             )
             num_workers = 0
+
         if timeout < 0:
             raise ValueError("timeout option should be non-negative")
+
         if num_workers == 0 and prefetch_factor != 2:
             raise ValueError(
-                "prefetch_factor option could only be specified in multiprocessing.let num_workers > 0 to enable multiprocessing."
+                "prefetch_factor option could only be specified in multiprocessing."
+                "let num_workers > 0 to enable multiprocessing."
             )
         assert prefetch_factor > 0
+
         if persistent_workers and num_workers == 0:
             raise ValueError("persistent_workers option needs num_workers > 0")
+
         self.dataset = dataset
         self.num_workers = num_workers
         self.prefetch_factor = prefetch_factor
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
+
+        # Arg-check dataset related before checking samplers because we want to
+        # tell users that iterable-style datasets are incompatible with custom
+        # samplers first, so that they don't learn that this combo doesn't work
+        # after spending time fixing the custom sampler errors.
         if isinstance(dataset, IterableDataset):
             self._dataset_kind = _DatasetKind.Iterable
+            # NOTE [ Custom Samplers and IterableDataset ]
+            #
+            # `IterableDataset` does not support custom `batch_sampler` or
+            # `sampler` since the key is irrelevant (unless we support
+            # generator-style dataset one day...).
+            #
+            # For `sampler`, we always create a dummy sampler. This is an
+            # infinite sampler even when the dataset may have an implemented
+            # finite `__len__` because in multi-process data loading, naive
+            # settings will return duplicated data (which may be desired), and
+            # thus using a sampler with length matching that of dataset will
+            # cause data lost (you may have duplicates of the first couple
+            # batches, but never see anything afterwards). Therefore,
+            # `Iterabledataset` always uses an infinite sampler, an instance of
+            # `_InfiniteConstantSampler` defined above.
+            #
+            # A custom `batch_sampler` essentially only controls the batch size.
+            # However, it is unclear how useful it would be since an iterable-style
+            # dataset can handle that within itself. Moreover, it is pointless
+            # in multi-process data loading as the assignment order of batches
+            # to workers is an implementation detail so users can not control
+            # how to batchify each worker's iterable. Thus, we disable this
+            # option. If this turns out to be useful in future, we can re-enable
+            # this, and support custom samplers that specify the assignments to
+            # specific workers.
             if shuffle is not False:
                 raise ValueError(
-                    "DataLoader with IterableDataset: expected unspecified shuffle option, but got shuffle={}".format(
-                        shuffle
-                    )
+                    "DataLoader with IterableDataset: expected unspecified "
+                    "shuffle option, but got shuffle={}".format(shuffle)
                 )
             elif sampler is not None:
+                # See NOTE [ Custom Samplers and IterableDataset ]
                 raise ValueError(
-                    "DataLoader with IterableDataset: expected unspecified sampler option, but got sampler={}".format(
-                        sampler
-                    )
+                    "DataLoader with IterableDataset: expected unspecified "
+                    "sampler option, but got sampler={}".format(sampler)
                 )
             elif batch_sampler is not None:
+                # See NOTE [ Custom Samplers and IterableDataset ]
                 raise ValueError(
-                    "DataLoader with IterableDataset: expected unspecified batch_sampler option, but got batch_sampler={}".format(
+                    "DataLoader with IterableDataset: expected unspecified "
+                    "batch_sampler option, but got batch_sampler={}".format(
                         batch_sampler
                     )
                 )
         else:
             self._dataset_kind = _DatasetKind.Map
+
         if sampler is not None and shuffle:
-            raise ValueError("sampler option is mutually exclusive with shuffle")
+            raise ValueError("sampler option is mutually exclusive with " "shuffle")
+
         if batch_sampler is not None:
+            # auto_collation with custom batch_sampler
             if batch_size != 1 or shuffle or sampler is not None or drop_last:
                 raise ValueError(
-                    "batch_sampler option is mutually exclusive with batch_size, shuffle, sampler, and drop_last"
+                    "batch_sampler option is mutually exclusive "
+                    "with batch_size, shuffle, sampler, and "
+                    "drop_last"
                 )
             batch_size = None
             drop_last = False
         elif batch_size is None:
+            # no auto_collation
             if drop_last:
                 raise ValueError(
-                    "batch_size=None option disables auto-batching and is mutually exclusive with drop_last"
+                    "batch_size=None option disables auto-batching "
+                    "and is mutually exclusive with drop_last"
                 )
-        if sampler is None:
+
+        if sampler is None:  # give default samplers
             if self._dataset_kind == _DatasetKind.Iterable:
+                # See NOTE [ Custom Samplers and IterableDataset ]
                 sampler = _InfiniteConstantSampler()
-            elif shuffle:
-                sampler = RandomSampler(dataset, generator=generator)
-            else:
-                sampler = SequentialSampler(dataset)
+            else:  # map-style
+                if shuffle:
+                    # Cannot statically verify that dataset is Sized
+                    # Somewhat related: see NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
+                    sampler = RandomSampler(dataset, generator=generator)  # type: ignore
+                else:
+                    sampler = SequentialSampler(dataset)
+
         if batch_size is not None and batch_sampler is None:
+            # auto_collation without custom batch_sampler
             batch_sampler = BatchSampler(sampler, batch_size, drop_last)
+
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.sampler = sampler
         self.batch_sampler = batch_sampler
         self.generator = generator
+
         if collate_fn is None:
             if self._auto_collation:
                 collate_fn = _utils.collate.default_collate
             else:
                 collate_fn = _utils.collate.default_convert
+
         self.collate_fn = collate_fn
         self.persistent_workers = persistent_workers
+
         self.__initialized = True
-        self._IterableDataset_len_called = None
+        self._IterableDataset_len_called = (
+            None  # See NOTE [ IterableDataset and __len__ ]
+        )
+
         self._iterator = None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
@@ -295,13 +375,20 @@ class DataLoader(Generic[T_co]):
             "persistent_workers",
         ):
             raise ValueError(
-                "{} attribute should not be set after {} is initialized".format(
-                    attr, self.__class__.__name__
-                )
+                "{} attribute should not be set after {} is "
+                "initialized".format(attr, self.__class__.__name__)
             )
+
         super(DataLoader, self).__setattr__(attr, val)
 
+    # We quote '_BaseDataLoaderIter' since it isn't defined yet and the definition can't be moved up
+    # since '_BaseDataLoaderIter' references 'DataLoader'.
     def __iter__(self) -> "_BaseDataLoaderIter":
+        # When using a single worker the returned iterator should be
+        # created everytime to avoid reseting its state
+        # However, in the case of a multiple workers iterator
+        # the iterator is only created once in the lifetime of the
+        # DataLoader object so that workers can be reused
         if self.persistent_workers and self.num_workers > 0:
             if self._iterator is None:
                 self._iterator = self._get_iterator()
@@ -317,6 +404,11 @@ class DataLoader(Generic[T_co]):
 
     @property
     def _index_sampler(self):
+        # The actual sampler used for generating indices for `_DatasetFetcher`
+        # (see _utils/fetch.py) to read data at each time. This would be
+        # `.batch_sampler` if in auto-collation mode, and `.sampler` otherwise.
+        # We can't change `.sampler` and `.batch_sampler` attributes for BC
+        # reasons.
         if self._auto_collation:
             return self.batch_sampler
         else:
@@ -324,8 +416,26 @@ class DataLoader(Generic[T_co]):
 
     def __len__(self) -> int:
         if self._dataset_kind == _DatasetKind.Iterable:
-            length = self._IterableDataset_len_called = len(self.dataset)
-            if self.batch_size is not None:
+            # NOTE [ IterableDataset and __len__ ]
+            #
+            # For `IterableDataset`, `__len__` could be inaccurate when one naively
+            # does multi-processing data loading, since the samples will be duplicated.
+            # However, no real use case should be actually using that behavior, so
+            # it should count as a user error. We should generally trust user
+            # code to do the proper thing (e.g., configure each replica differently
+            # in `__iter__`), and give us the correct `__len__` if they choose to
+            # implement it (this will still throw if the dataset does not implement
+            # a `__len__`).
+            #
+            # To provide a further warning, we track if `__len__` was called on the
+            # `DataLoader`, save the returned value in `self._len_called`, and warn
+            # if the iterator ends up yielding more than this number of samples.
+
+            # Cannot statically verify that dataset is Sized
+            length = self._IterableDataset_len_called = len(self.dataset)  # type: ignore
+            if (
+                self.batch_size is not None
+            ):  # IterableDataset doesn't allow custom sampler or batch_sampler
                 from math import ceil
 
                 if self.drop_last:
@@ -351,6 +461,8 @@ class _BaseDataLoaderIter(object):
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
         self._base_seed = flow.Tensor([0], dtype=flow.int64).uniform_().numpy().item()
+        # TODO: flow.empty()
+        # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
         self._persistent_workers = loader.persistent_workers
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
@@ -366,7 +478,7 @@ class _BaseDataLoaderIter(object):
         self._IterableDataset_len_called = loader._IterableDataset_len_called
 
     def _next_index(self):
-        return next(self._sampler_iter)
+        return next(self._sampler_iter)  # may raise StopIteration
 
     def _next_data(self):
         raise NotImplementedError
@@ -379,11 +491,12 @@ class _BaseDataLoaderIter(object):
         if (
             self._dataset_kind == _DatasetKind.Iterable
             and self._IterableDataset_len_called is not None
-            and (self._num_yielded > self._IterableDataset_len_called)
+            and self._num_yielded > self._IterableDataset_len_called
         ):
-            warn_msg = "Length of IterableDataset {} was reported to be {} (when accessing len(dataloader)), but {} samples have been fetched. ".format(
-                self._dataset, self._IterableDataset_len_called, self._num_yielded
-            )
+            warn_msg = (
+                "Length of IterableDataset {} was reported to be {} (when accessing len(dataloader)), but {} "
+                "samples have been fetched. "
+            ).format(self._dataset, self._IterableDataset_len_called, self._num_yielded)
             if self._num_workers > 1:
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
@@ -401,6 +514,7 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
         super(_SingleProcessDataLoaderIter, self).__init__(loader)
         assert self._timeout == 0
         assert 0 <= self._num_workers <= 1
+
         self._dataset_fetcher = _DatasetKind.create_fetcher(
             self._dataset_kind,
             self._dataset,
@@ -410,5 +524,5 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
         )
 
     def _next_data(self):
-        index = self._next_index()
+        index = self._next_index()  # may raise StopIteration
         return self._dataset_fetcher.fetch(index)
