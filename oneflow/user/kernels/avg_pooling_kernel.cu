@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
-#ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
@@ -24,7 +23,9 @@ namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 
-const int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
+const int GetMinThreadNum(const int64_t elem_num) {
+  return std::min<int64_t>(elem_num, kBlockSize);
+}
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;
@@ -207,4 +208,3 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOLING_KERNEL_UTIL, (DeviceTyp
                                  AVG_POOLING_DATA_TYPE_GPU_SEQ);
 
 }  // namespace oneflow
-#endif  // WITH_CUDA
