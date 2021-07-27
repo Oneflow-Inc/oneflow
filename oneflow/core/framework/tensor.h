@@ -43,6 +43,9 @@ class Tensor {
   virtual ~Tensor() = default;
 
   // Getters
+  virtual int64_t nelement() const = 0;
+  virtual int64_t dim(int64_t index) const = 0;
+
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
@@ -109,7 +112,28 @@ class Tensor {
   Tensor() = default;
 };
 
-class Parameter final : public Tensor {
+template<typename DerivedT>
+class TensorIf : public Tensor {
+ public:
+  virtual ~TensorIf() = default;
+
+  // Getters for autograd
+  // acc_grad is tensor's accumulated grad in more than once backward operation,
+  // and current_grad is temporary grad to shared data with different FunctionNode
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
+
+  // Setters for autograd
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+    grad_fn_node_ = grad_fn_node;
+  }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
+
+ protected:
+  TensorIf() = default;
+  std::shared_ptr<FunctionNode> grad_fn_node_;
+};
+
+class Parameter final : public TensorIf<Parameter> {
  public:
   Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
     while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
@@ -167,11 +191,8 @@ class Parameter final : public Tensor {
   }
 
   bool requires_grad() const override { return tensor_->requires_grad(); }
-  bool is_leaf() const override { return tensor_->is_leaf(); }
+  bool is_leaf() const override { return true; }
   bool retain_grad() const override { return tensor_->retain_grad(); }
-  std::shared_ptr<const FunctionNode> grad_fn_node() const override {
-    return tensor_->grad_fn_node();
-  }
   Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
@@ -183,12 +204,6 @@ class Parameter final : public Tensor {
   }
   Maybe<void> set_retain_grad(bool retain_grad) override {
     return tensor_->set_retain_grad(retain_grad);
-  }
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
-    return tensor_->set_grad_fn_node(grad_fn_node);
-  }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
-    return tensor_->mut_grad_fn_node();
   }
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
     return tensor_->set_acc_grad(grad);
@@ -212,33 +227,11 @@ class Parameter final : public Tensor {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
+  int64_t nelement() const override { return tensor_->nelement(); }
+  int64_t dim(int64_t index) const override { return tensor_->dim(index); }
+
  private:
   std::shared_ptr<Tensor> tensor_;
-};
-
-template<typename DerivedT>
-class TensorIf : public Tensor {
- public:
-  virtual ~TensorIf() = default;
-
-  // Getters
-  virtual int64_t nelement() const = 0;
-  virtual int64_t dim(int64_t index) const = 0;
-
-  // Getters for autograd
-  // acc_grad is tensor's accumulated grad in more than once backward operation,
-  // and current_grad is temporary grad to shared data with different FunctionNode
-  std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
-
-  // Setters for autograd
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
-    grad_fn_node_ = grad_fn_node;
-  }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
-
- protected:
-  TensorIf() = default;
-  std::shared_ptr<FunctionNode> grad_fn_node_;
 };
 
 class MirroredTensor final : public TensorIf<MirroredTensor>,

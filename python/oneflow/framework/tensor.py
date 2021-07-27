@@ -294,6 +294,12 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     _copy_from_numpy_to_eager_local_tensor(self, src_np)
 
 
+def _get_device(self):
+    if self.device.type == 'cuda':
+        return self.device.index
+    raise NotImplementedError("get_device is only available for GPU tensor.")
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -337,6 +343,7 @@ def RegisterMethods():
     Tensor.fill_ = _fill
     Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
+    Tensor.get_device = _get_device
 
 
 def register_tensor_op(op_name):
