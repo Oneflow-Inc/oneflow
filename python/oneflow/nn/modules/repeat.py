@@ -23,10 +23,11 @@ class Repeat(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
         assert isinstance(
-            sizes, (tuple, flow.Size)
-        ), "sizes should be flow.Size or tuple int!"
+            sizes, (tuple)
+        ), "sizes should be tuple flow.Size or tuple int!"
         self.sizes = _single(*sizes)
         if isinstance(self.sizes[0], flow.Size):
+            assert len(self.sizes) == 1, "len of tuple flow.Size must be 1!"
             self.sizes = self.sizes[0]
 
     def forward(self, input):
