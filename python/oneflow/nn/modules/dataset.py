@@ -587,6 +587,33 @@ class ImageBatchAlign(Module):
         return self._op(input)[0]
 
 
+class OFRecordBytesDecoder(Module):
+    r"""This operator reads an tensor as bytes. The output might need
+    further decoding process like cv2.imdecode() for images and decode("utf-8")
+    for characters,depending on the downstream task.
+    Args:
+        blob_name: The name of the target feature in OFRecored.
+        name: The name for this component in the graph?
+        input: the Tensor which might be provided by an OfrecordReader.
+    Returns:
+        The result bytes Tensor.
+    """
+
+    def __init__(self, blob_name: str, name: Optional[str] = None):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("ofrecord_bytes_decoder", name)
+            .Input("in")
+            .Output("out")
+            .Attr("name", blob_name)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
+
 if __name__ == "__main__":
     import doctest
 

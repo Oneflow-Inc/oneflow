@@ -55,6 +55,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordImageDecoderRandomCrop,
     OfrecordRawDecoder,
     OfrecordReader,
+    OFRecordBytesDecoder,
 )
 from oneflow.nn.modules.deconv import ConvTranspose2d
 from oneflow.nn.modules.dropout import Dropout
