@@ -71,7 +71,8 @@ class MlirJitKernel final : public user_op::OpKernel {
 
     mlir::OwningModuleRef module =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    mlir::oneflow::Lower(&mlir_ctx, module);
+    CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, module)))
+        << "fail to lower OneFlow to LLVM";
     module->dump();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
