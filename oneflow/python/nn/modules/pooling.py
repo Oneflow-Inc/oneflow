@@ -110,6 +110,7 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSeq
 #             ", ceil_mode={ceil_mode}".format(**self.__dict__)
 #         )
 
+
 @oneflow_export("nn.MaxPool1d")
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
@@ -512,6 +513,7 @@ class AvgPool1d(Module):
             "kernel_size={kernel_size}, stride={stride}, padding={padding}"
             ", ceil_mode={ceil_mode}".format(**self.__dict__)
         )
+
 
 @oneflow_export("nn.AvgPool2d")
 class AvgPool2d(Module):

@@ -167,5 +167,4 @@ REGISTER_USER_OP_GRAD("avgpool_1d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(
 REGISTER_USER_OP_GRAD("avgpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(2));
 REGISTER_USER_OP_GRAD("avgpool_3d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn(3));
 
-
 }  // namespace oneflow

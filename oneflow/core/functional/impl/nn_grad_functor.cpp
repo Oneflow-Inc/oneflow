@@ -312,7 +312,6 @@ class AvgPoolingNdGradFunctor {
   AvgPoolingNdGradFunctor() {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
-      std::cout << "Here ndims is: " << ndims << std::endl;
       op_expr_map_[op_type_name] = CHECK_JUST(
           one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
     }
