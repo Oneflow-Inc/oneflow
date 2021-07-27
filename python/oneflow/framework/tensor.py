@@ -62,7 +62,8 @@ def _local_tensor_numpy(eager_local_tensor):
         tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
-    copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -77,7 +78,8 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
         assert tuple(eager_local_tensor.shape) == (1,)
     else:
         assert np_arr.shape == tuple(eager_local_tensor.shape)
-    copy_from_numpy(np_arr)
+    if np_arr.size != 0:
+        copy_from_numpy(np_arr)
 
 
 @register_local_tensor_method("_init_by_initializer_conf")
