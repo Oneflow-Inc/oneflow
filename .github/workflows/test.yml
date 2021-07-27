@@ -80,15 +80,55 @@ jobs:
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
-      - name: Git push
+      - name: Setup Git
         id: git_push
         if: ${{ failure() }}
         run: |
           git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
+      - name: Git push
+        id: git_push
+        if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc")
+        run: |
           git add -u
           git commit -m "auto format by CI"
           git push
+      - name: Post Notice
+        if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc")
+        continue-on-error: true
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "You code has been formatted by CI. Please pull from remote to update your local branch and request review from oneflow-ci-bot again if you still want to run CI."
+            })
+      - name: Git push (fork repo)
+        id: git_push
+        if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc") == false
+        run: |
+          set -x
+          git add -u
+          git commit -m "auto format by CI"
+          git_branch=${GITHUB_REF##*/}
+          auto_format_branch="ci_auto_format_${git_branch}"
+          git checkout -b ${auto_format_branch}
+          git push -f origin
+          echo "auto_format_branch=${auto_format_branch}" >> $GITHUB_ENV
+      - name: Post Notice (fork repo)
+        if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc") == false
+        continue-on-error: true
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "You code needs to be formatted. Please run `git pull upstream ${{ env.auto_format_branch }}`"
+            })
       - name: Please request CI again
         if: ${{ failure() }}
         run: |
