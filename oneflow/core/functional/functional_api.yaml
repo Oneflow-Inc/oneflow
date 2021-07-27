@@ -748,6 +748,13 @@
                       Int64 divisor_override=0)"
   bind_python: True 
 
+- name: "avgpool_3d"
+  signature:
+    "Tensor Avgpool3D(Tensor x, *, String data_format=\"channels_first\", Int32List padding,
+                      Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+                      Int64 divisor_override=0)"
+  bind_python: True
+
 - name: "avg_pooling_grad"
   signature:
     "Tensor AvgPoolingNdGrad(Tensor x, Tensor y, Tensor dy, *, Int32 ndims, 

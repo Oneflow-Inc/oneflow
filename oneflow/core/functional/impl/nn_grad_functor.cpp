@@ -310,7 +310,7 @@ class PadGradFunctor {
 class AvgPoolingNdGradFunctor {
  public:
   AvgPoolingNdGradFunctor() {
-    for (int ndims = 1; ndims <= 2; ++ndims) {
+    for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       std::cout << "Here ndims is: " << ndims << std::endl;
       op_expr_map_[op_type_name] = CHECK_JUST(

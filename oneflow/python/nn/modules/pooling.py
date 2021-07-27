@@ -110,111 +110,6 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSeq
 #             ", ceil_mode={ceil_mode}".format(**self.__dict__)
 #         )
 
-
-@oneflow_export("nn.AvgPool3d")
-class AvgPool3d(Module):
-    r"""Applies a 3D average pooling over an input signal composed of several input planes.
-
-    In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
-    output :math:`(N, C, D_{out}, H_{out}, W_{out})` and `kernel_size` :math:`(kD, kH, kW)`
-    can be precisely described as:
-
-    .. math::
-
-        out(N_i, C_j, d, h, w)  = \frac{1}{kD * kH * kW } \sum_{k=0}^{kD-1} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
-                               input(N_i, C_j, stride[0] \times d + k, stride[1] \times h + m, stride[2] \times w + n)
-    
-    If padding is non-zero, then the input is implicitly zero-padded on all three sides for padding number of points.
-
-    Note:
-        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding or the
-        input. Sliding windows that would start in the right padded region are ignored.
-
-    Args:
-        kernel_size: the size of the window.
-        strides:  the stride of the window. Default value is kernel_size.
-        padding:  implicit zero padding to be added on all three sides.
-        ceil_mode:  when True, will use ceil instead of floor to compute the output shape.
-        count_include_pad: when True, will include the zero-padding in the averaging calculation.
-        divisor_override: if specified, it will be used as divisor, otherwise kernel_size will be used.
-
-    Shape:
-        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`
-        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
-
-          .. math::
-              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{kernel_size}[0]}{\text{stride}[0]} + 1\right\rfloor
-
-          .. math::
-              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{kernel_size}[1]}{\text{stride}[1]} + 1\right\rfloor
-
-          .. math::
-              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{kernel_size}[2]}{\text{stride}[2]} + 1\right\rfloor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
-        >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
-        >>> y = m(x)
-        >>> y.shape
-        flow.Size([9, 7, 10, 31, 19])
-
-    """
-
-    def __init__(
-        self,
-        kernel_size: _size_3_t,
-        stride: Optional[_size_3_t] = None,
-        padding: _size_3_t = 0,
-        ceil_mode: bool = False,
-        count_include_pad: Optional[bool] = None,
-        divisor_override: Optional[int] = None,
-    ):
-        super().__init__()
-        kernel_size = _triple(kernel_size)
-        stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
-
-        assert padding == (0, 0, 0), "padding>0 not supported yet"
-        assert isinstance(padding, int) or isinstance(
-            padding, tuple
-        ), "padding can only int int or tuple of 3 ints."
-        padding = _triple(padding)
-        padding = [0, 0, *padding]
-
-        assert count_include_pad is None, "count_include_pad not supported yet"
-        assert divisor_override is None, "divisor_override not supported yet"
-
-        _channel_pos = "channels_first"
-        # TODO(yaochi): align with pytorch when padding is asymmetric
-        _padding_type, _pads_list = calc_pool_padding(
-            padding, get_dhw_offset(_channel_pos), 3
-        )
-        _padding_before = [pad[0] for pad in _pads_list]
-        _padding_after = [pad[1] for pad in _pads_list]
-
-        self._op = (
-            flow.builtin_op("avg_pool_3d")
-            .Attr("data_format", _channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", stride)
-            .Attr("ceil_mode", ceil_mode)
-            .Attr("padding", _padding_type)
-            .Attr("padding_before", _padding_before)
-            .Attr("padding_after", _padding_after)
-            .Input("x")
-            .Output("y")
-            .Build()
-        )
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
 @oneflow_export("nn.MaxPool1d")
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
@@ -678,6 +573,84 @@ class AvgPool2d(Module):
 
     def forward(self, x):
         return flow.F.avgpool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            ceil_mode=self.ceil_mode,
+            count_include_pad=self.count_include_pad,
+            divisor_override=self.divisor_override,
+            data_format=self.channel_pos,
+        )
+
+    # TODO: maybe error
+    def extra_repr(self) -> str:
+        return (
+            "kernel_size={kernel_size}, stride={stride}, padding={padding}"
+            ", ceil_mode={ceil_mode}".format(**self.__dict__)
+        )
+
+
+@oneflow_export("nn.AvgPool3d")
+class AvgPool3d(Module):
+    r"""Performs the 2d-average pooling on the input.
+
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+
+    .. math::
+
+        out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    Args:
+        kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+        ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+
+        of_avgpool2d = flow.nn.AvgPool2d(
+            kernel_size=(3, 2),
+            padding=0,
+            stride=(2, 1),
+        )
+        x = flow.Tensor(shape=(1, 1, 10, 10))
+        of_y = of_avgpool2d(x)   
+
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: _size_3_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = 0,
+    ):
+        super().__init__()
+        self.kernel_size = _triple(kernel_size)
+        data_format = "NCHW"  # only support "NCHW" for now !
+        self.channel_pos = (
+            "channels_first" if data_format == "NCHW" else "channels_last"
+        )
+        self.stride = _triple(stride) if (stride is not None) else _triple(kernel_size)
+        self.ceil_mode = ceil_mode
+        self.count_include_pad = count_include_pad
+        self.divisor_override = int(divisor_override)
+        self.padding = _triple(padding)
+
+    def forward(self, x):
+        return flow.F.avgpool_3d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,

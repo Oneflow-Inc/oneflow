@@ -93,16 +93,14 @@ struct AvgPoolingKernelUtil {
   static void Avgpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d);
+                                
+  static void Avgpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+                               const int64_t elem_num, const T* src, T* dest,
+                               const AvgPoolingParams3D& params_3d);
 
-  // static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>&
-  // index_helper,
-  //                              const int64_t elem_num, const T* src, T* dest, int64_t*
-  //                              indice_ptr, const PoolingParams3D& params_3d);
-
-  // static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>&
-  // index_helper,
-  //                               const int64_t elem_num, const T* src, T* dest,
-  //                               const int64_t* indice_ptr, const PoolingParams3D& params_3d);
+  static void Avgpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+                                const int64_t elem_num, const T* src, T* dest,
+                                const AvgPoolingParams3D& params_3d);
 };
 
 template<typename T>
@@ -295,8 +293,124 @@ OF_DEVICE_FUNC void Avgpool2dBackwardCompute(
       for (int64_t j = wstart; j < wend; j += 1) {
         const int64_t tcntr = i * input_width + j;
         const int64_t search_idx = start_idx + tcntr;
-        std::cout << "search idx is: " << std::endl;
+        std::cout << "search idx is: "<<search_idx<< std::endl;
         dest[search_idx] += grad_delta;
+      }
+    }
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC void Avgpool3dForwardCompute(
+    const NdIndexOffsetHelper<int64_t, 5> index_helper, int64_t elem_num, const T* src, T* dest,
+    const int32_t padding_t, const int32_t padding_h, const int32_t padding_w, 
+    const int64_t n_batch, const int64_t n_channel, 
+    const int64_t x_time, const int64_t x_height, const int64_t x_width, 
+    const int64_t y_time, const int64_t y_height, const int64_t y_width, 
+    const int32_t kernel_size_t, const int32_t kernel_size_h, const int32_t kernel_size_w,
+    const int32_t stride_t, const int32_t stride_h, const int32_t stride_w, 
+    const bool count_include_pad, int64_t divisor_override) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, c, t, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, t, h, w);
+
+    const int64_t start_idx = (n * n_channel + c) * x_time * x_width * x_height;
+    int64_t tstart = t * stride_t - padding_t;
+    int64_t hstart = h * stride_h - padding_h;
+    int64_t wstart = w * stride_w - padding_w;
+    int64_t tend = std::min(tstart + kernel_size_t, x_time + padding_t);
+    int64_t hend = std::min(hstart + kernel_size_h, x_height + padding_h);
+    int64_t wend = std::min(wstart + kernel_size_w, x_width + padding_w);
+    const int64_t pool_size = (tend - tstart) * (hend - hstart) * (wend - wstart);
+    std::cout << "pool size is: " << pool_size << std::endl;
+
+    tstart = std::max(int64_t(0), tstart);
+    hstart = std::max(int64_t(0), hstart);
+    wstart = std::max(int64_t(0), wstart);
+    tend = std::min(tend, x_time);
+    hend = std::min(hend, x_height);
+    wend = std::min(wend, x_width);
+
+    int64_t divide_factor;
+    if (divisor_override != 0) {
+      std::cout << "divisor override != 0" << std::endl;
+      divide_factor = divisor_override;
+    } else {
+      if (count_include_pad) {
+        divide_factor = pool_size;
+      } else {
+        divide_factor = (hend - hstart) * (wend - wstart);
+      }
+    }
+    std::cout << "divide factor is: " << divide_factor << std::endl;
+    T sum = 0;
+
+    for (int64_t i = tstart; i < tend; i += 1) {
+      for (int64_t j = hstart; j < hend; j += 1) {
+        for (int64_t k = wstart; k < wend; k += 1) {
+          const int64_t tcntr = i * x_width * x_height + j * x_height + k;
+          const int64_t search_idx = start_idx + tcntr;
+          sum += src[search_idx];
+        }
+      }
+    }
+    dest[num] = sum / divide_factor;
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
+    const NdIndexOffsetHelper<int64_t, 5> index_helper, int64_t elem_num, const T* src, T* dest,
+    const int32_t padding_t, const int32_t padding_h, const int32_t padding_w, 
+    const int64_t n_batch, const int64_t n_channel, 
+    const int64_t x_time, const int64_t x_height, const int64_t x_width, 
+    const int64_t y_time, const int64_t y_height, const int64_t y_width, 
+    const int32_t kernel_size_t, const int32_t kernel_size_h, const int32_t kernel_size_w,
+    const int32_t stride_t, const int32_t stride_h, const int32_t stride_w, 
+    const bool count_include_pad, int64_t divisor_override) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, c, t, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, t, h, w);
+
+    const int64_t start_idx = (n * n_channel + c) * x_time * x_width * x_height;
+    int64_t tstart = t * stride_t - padding_t;
+    int64_t hstart = h * stride_h - padding_h;
+    int64_t wstart = w * stride_w - padding_w;
+    int64_t tend = std::min(tstart + kernel_size_t, x_time + padding_t);
+    int64_t hend = std::min(hstart + kernel_size_h, x_height + padding_h);
+    int64_t wend = std::min(wstart + kernel_size_w, x_width + padding_w);
+    const int64_t pool_size = (tend - tstart) * (hend - hstart) * (wend - wstart);
+    std::cout << "pool size is: " << pool_size << std::endl;
+
+    tstart = std::max(int64_t(0), tstart);
+    hstart = std::max(int64_t(0), hstart);
+    wstart = std::max(int64_t(0), wstart);
+    tend = std::min(tend, x_time);
+    hend = std::min(hend, x_height);
+    wend = std::min(wend, x_width);
+
+    int64_t divide_factor;
+    if (divisor_override != 0) {
+      std::cout << "divisor override != 0" << std::endl;
+      divide_factor = divisor_override;
+    } else {
+      if (count_include_pad) {
+        divide_factor = pool_size;
+      } else {
+        divide_factor = (tend - tstart) * (hend - hstart) * (wend - wstart);
+      }
+    }
+    std::cout << "divide factor is: " << divide_factor << std::endl;
+    
+    T grad_delta = src[num] / divide_factor;
+
+    for (int64_t i = tstart; i < tend; i += 1) {
+      for (int64_t j = hstart; j < hend; j += 1) {
+        for (int64_t k = wstart; k < wend; k += 1) {
+          const int64_t tcntr = i * x_width * x_height + j * x_height + k;
+          const int64_t search_idx = start_idx + tcntr;
+          dest[search_idx] += grad_delta;
+        }
       }
     }
   }

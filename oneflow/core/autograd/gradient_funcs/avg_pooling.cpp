@@ -99,10 +99,9 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingInterpState* ctx, const Tens
 
 }  // namespace
 
-// REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", AvgPoolingNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPoolingNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPoolingNdGrad);
-// REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", AvgPoolingNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPoolingNdGrad);
 
 }  // namespace one
 }  // namespace oneflow
