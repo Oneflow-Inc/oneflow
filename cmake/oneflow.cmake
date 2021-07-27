@@ -193,7 +193,6 @@ set(of_proto_python_dir "${PROJECT_BINARY_DIR}/of_proto_python")
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
   COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
 foreach(proto_name ${of_all_proto})
