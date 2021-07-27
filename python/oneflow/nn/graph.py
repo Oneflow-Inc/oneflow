@@ -96,7 +96,7 @@ class Graph(object):
                 yield bu
 
     def _generate_optimizer_and_variable_configs(self):
-        if len(self._optimizers_conf):
+        if len(self._optimizers_conf) > 0:
             self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:

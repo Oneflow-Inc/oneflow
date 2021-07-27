@@ -28,7 +28,7 @@ import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow._oneflow_internal import Tensor as InternalTensor
-from oneflow.framework.tensor import Tensor
+from oneflow.framework.tensor import Tensor as PyTensor
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -75,6 +75,7 @@ class BlockScopeContext(object):
         self._new_scope = new_scope
 
     def __enter__(self):
+        assert oneflow._oneflow_internal.GetCurrentScope() is self._prev_scope
         oneflow._oneflow_internal.GlobalScopeStackPush(self._new_scope)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -128,7 +129,7 @@ def scope_to_proto(scope):
 
 
 def build_graph_input_arg(op_name, arg):
-    assert isinstance(arg, (Tensor, InternalTensor))
+    assert isinstance(arg, (PyTensor, InternalTensor))
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
     )
@@ -138,7 +139,7 @@ def build_graph_input_arg(op_name, arg):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    if isinstance(arg, Tensor):
+    if isinstance(arg, PyTensor):
         if not arg.is_determined:
             arg.determine()
         tensor_in_c = arg._local_or_consistent_tensor
@@ -159,12 +160,12 @@ def build_graph_state(op_name, state_tensor, state_config):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    assert isinstance(state_tensor, Tensor)
+    assert isinstance(state_tensor, PyTensor)
     if not state_tensor.is_determined:
         state_tensor.determine()
     tensor_in_c = state_tensor._local_or_consistent_tensor
 
-    if state_config != None:
+    if state_config is not None:
         attr_l2 = user_op_attr_cfg.AttrValue()
         attr_l2.set_at_double(state_config.l2)
         attrs["l2"] = attr_l2
