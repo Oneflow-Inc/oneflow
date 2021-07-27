@@ -92,10 +92,7 @@ void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { 
-    LOG(ERROR) << "";
-    return; 
-  }
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
