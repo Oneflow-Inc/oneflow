@@ -40,6 +40,7 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  LOG(ERROR) << "Kernel::Launch, op_name: " << this->op_conf().name();
   Forward(ctx, BnInOp2Blob);
 }
 
@@ -91,7 +92,10 @@ void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { 
+    LOG(ERROR) << "";
+    return; 
+  }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);

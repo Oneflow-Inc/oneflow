@@ -225,6 +225,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   // TODO(chengcheng): Build EagerLocalTensor if parllel attr is this rank.
   (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ false,
                                                  /* is_local= */ input_tensor->is_local()));
+  LOG(ERROR) << "LazyInterpreter::ApplyImpl, output shape: " << outputs->at(0)->shape()->ToString();
   return Maybe<void>::Ok();
 }
 

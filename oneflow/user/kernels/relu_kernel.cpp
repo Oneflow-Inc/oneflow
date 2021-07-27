@@ -30,8 +30,33 @@ class ReluKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    {
+      std::ostringstream ss;
+      ss << "ReluKernel::Computer, x shape: " << x->shape().ToString();
+      ss << ", data: [";
+      for (int i = 0; i < 5; ++i) {
+        ss << x->dptr<float>()[i];
+        if (i != 4) { ss << ", "; }
+      }
+      ss << "]";
+      LOG(ERROR) << ss.str();
+    }
+
     NewKernelUtil<device_type>::Relu(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
                                      y->mut_dptr<T>());
+
+    {
+      std::ostringstream ss;
+      ss << "ReluKernel::Computer, y shape: " << y->shape().ToString();
+      ss << ", data: [";
+      for (int i = 0; i < 5; ++i) {
+        ss << y->dptr<float>()[i];
+        if (i != 4) { ss << ", "; }
+      }
+      ss << "]";
+      LOG(ERROR) << ss.str();
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

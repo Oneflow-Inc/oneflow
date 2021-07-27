@@ -37,6 +37,7 @@ void WaitAndSendIdsCompActor::Act() {
 
 void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
+    LOG(ERROR) << "WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer";
     HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
       regst->set_piece_id(++cur_piece_id_);
       return true;

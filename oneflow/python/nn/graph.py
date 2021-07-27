@@ -151,6 +151,8 @@ class Graph(object):
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
+            print(f"outputs type: {type(outputs)}")
+            print(f"output shape: {outputs.shape}")
 
             # Deal with outputs
             if not (type(outputs) is tuple or type(outputs) is list):
@@ -174,8 +176,11 @@ class Graph(object):
 
             self._outputs = convert_to_tensor_tuple(eager_outputs)
             self._eager_outputs = eager_outputs
+            print(f"type of self._eager_outputs: {type(self._eager_outputs)}")
+            print(f"self._eager_outputs shape: {self._eager_outputs.shape}")
 
             # Register input/output/variable to _c_nn_graph
+            print(f"eager_output_op_names: {eager_output_op_names}")
             self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
             self._c_nn_graph.register_output_op_names(eager_output_op_names)
             self._c_nn_graph.register_variable_op_names_and_tensors(

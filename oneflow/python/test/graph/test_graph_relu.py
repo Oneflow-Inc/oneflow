@@ -15,14 +15,14 @@ limitations under the License.
 """
 import unittest
 import os
-
+import time
 import numpy as np
 
 import oneflow as flow
 import oneflow.python.framework.graph_build_util as graph_build_util
 
 
-@unittest.skip(" nn.Graph cannnot run right now ")
+# @unittest.skip(" nn.Graph cannnot run right now ")
 class TestReluGraph(flow.unittest.TestCase):
     def test_relu_graph(test_case):
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
@@ -41,8 +41,9 @@ class TestReluGraph(flow.unittest.TestCase):
                 return self.cc_relu(x)
 
         relu_g = ReluGraph()
-        y_lazy = relu_g(x)[0]
-        print("lazy out :", y_lazy)
+        y_lazy = relu_g(x)
+        print(f"type of lazy y: {type(y_lazy)}")
+        print(f"lazy y shape: {y_lazy.shape}, data: {y_lazy}")
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
 
