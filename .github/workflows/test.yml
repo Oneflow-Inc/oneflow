@@ -115,7 +115,8 @@ jobs:
           git_branch=${GITHUB_REF##*/}
           auto_format_branch="ci_auto_format_${git_branch}"
           git checkout -b ${auto_format_branch}
-          git push -f origin
+          git remote add upstream https://github.com/Oneflow-Inc/oneflow.git
+          git push -f upstream ${auto_format_branch}
           echo "auto_format_branch=${auto_format_branch}" >> $GITHUB_ENV
       - name: Post Notice (fork repo)
         if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc") == false
