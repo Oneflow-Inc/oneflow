@@ -88,13 +88,13 @@ jobs:
           git config --global user.name "oneflow-ci-bot"
       - name: Git push
         id: git_push
-        if: failure() && github.repository_owner == 'Oneflow-Inc'
+        if: github.repository_owner == 'Oneflow-Inc' && failure()
         run: |
           git add -u
           git commit -m "auto format by CI"
           git push
       - name: Post Notice
-        if: failure() && github.repository_owner == 'Oneflow-Inc'
+        if: github.repository_owner == 'Oneflow-Inc' && failure()
         continue-on-error: true
         uses: actions/github-script@v4
         with:
@@ -107,7 +107,7 @@ jobs:
             })
       - name: Git push (fork repo)
         id: git_push_fork
-        if: failure() && github.repository_owner != 'Oneflow-Inc'
+        if: github.repository_owner != 'Oneflow-Inc' && failure()
         run: |
           set -x
           git add -u
@@ -119,7 +119,7 @@ jobs:
           git push -f upstream ${auto_format_branch}
           echo "::set-output name=auto_format_branch::$auto_format_branch"
       - name: Post Notice (fork repo)
-        if: failure() && github.repository_owner != 'Oneflow-Inc'
+        if: github.repository_owner != 'Oneflow-Inc' && failure()
         continue-on-error: true
         uses: actions/github-script@v4
         with:
