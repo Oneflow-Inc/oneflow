@@ -176,4 +176,5 @@ COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && OF_PLATFORM_POSIX 
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+
