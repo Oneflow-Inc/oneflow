@@ -19,18 +19,16 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.F.diag,
     r"""
-    torch.diag(input, diagonal=0, *, out=None) -> Tensor
-    
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
-
-    Returns:
-        oneflow.Tensor: the output Tensor.
     
     Args:
         input (Tensor): the input tensor.
         diagonal (Optional[int], 0): The diagonal to consider. 
             If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
+    
+    Returns:
+        oneflow.Tensor: the output Tensor.
     
     For example:
     
@@ -48,6 +46,6 @@ add_docstr(
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
-        
+    
     """,
 )
