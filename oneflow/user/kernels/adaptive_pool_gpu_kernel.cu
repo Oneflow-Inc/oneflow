@@ -60,6 +60,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
   const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO: Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
     int out_d_idx = (idx % out_panel_size) / out_w / out_h;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
@@ -101,6 +102,7 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
   const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO: Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
     int out_d_idx = (idx % out_panel_size) / out_w / out_h;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
@@ -124,6 +126,7 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
     for (int id = 0; id < k_d; ++id) {
       for (int ih = 0; ih < k_h; ++ih) {
         for (int iw = 0; iw < k_w; ++iw) {
+          // TODO: Use 'atmoic::Add' when necessary
           cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
         }
       }
