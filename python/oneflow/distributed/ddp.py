@@ -16,14 +16,13 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
-from oneflow.python.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.nn.module import Module
+from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.nn.module import Module
 
 
 def allreducefn(reversed_param_list, param, nccl_allreduce_op):
     assert param.device.type == "cuda"
-    assert param.device.index == flow.distributed.get_local_rank()
+    assert param.device.index == flow.framework.distribute.get_local_rank()
 
     def allreduce(grad):
         reversed_param_list[param][0] = True
@@ -44,14 +43,13 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
     return allreduce
 
 
-@oneflow_export("ddp")
-def DDP(module: Module):
-    world_size = flow.distributed.get_world_size()
+def ddp(module: Module):
+    world_size = flow.framework.distribute.get_world_size()
     nccl_allreduce_op = (
         builtin_op("eager_nccl_all_reduce")
         .Input("in")
         .Output("out")
-        .Attr("sorted_ranks", [0, 1])
+        # .Attr("sorted_ranks", [0, 1])
         .Attr("parallel_conf", f'device_tag: "gpu", device_name: "0:0-{world_size-1}"',)
         .Build()
     )
@@ -66,7 +64,7 @@ def DDP(module: Module):
         reversed_param_list = module._reversed_param_list
         for item in reversed_param_list.values():
             item[0], item[1] = False, False
-        output = flow.experimental.return_first_input(
+        output = flow.return_first_input(
             output, *reversed_param_list.keys()
         )
         return output

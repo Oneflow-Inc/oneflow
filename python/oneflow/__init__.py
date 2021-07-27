@@ -362,3 +362,5 @@ from oneflow.ops.user_op_builder import (
 )
 
 from . import autograd, distributed, linalg, optim, saved_model
+
+from oneflow.nn.modules.tensor_ops import return_first_input

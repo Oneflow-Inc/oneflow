@@ -358,6 +358,7 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
 /* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
+  JUST(AddAttrDefaultValueAndCheckValid(&op_proto));
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   std::shared_ptr<UserOpExpr> op_expr(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));

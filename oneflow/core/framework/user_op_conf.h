@@ -177,6 +177,7 @@ class BackwardOpConfContext final {
 
 Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name);
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
+Maybe<void> AddAttrDefaultValueAndCheckValid(UserOpConf* user_conf);
 
 }  // namespace oneflow
 

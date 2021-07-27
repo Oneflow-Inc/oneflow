@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import oneflow.experimental as flow
+import oneflow as flow
+from oneflow.distributed.ddp import ddp
+import oneflow.unittest
 
 import numpy as np
 
@@ -30,7 +32,7 @@ class TestAllReduce(flow.unittest.TestCase):
             def forward(self, x):
                 return x * self.w
 
-        local_rank = flow.distributed.get_local_rank()
+        local_rank = flow.framework.distribute.get_local_rank()
         if local_rank == 0:
             x = flow.Tensor([1])
         elif local_rank == 1:
@@ -40,7 +42,7 @@ class TestAllReduce(flow.unittest.TestCase):
 
         x = x.to("cuda")
         m = Mul().to("cuda")
-        m = flow.ddp(m)
+        m = ddp(m)
         y = m(x)
         y.backward()
 
