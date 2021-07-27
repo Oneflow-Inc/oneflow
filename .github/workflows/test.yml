@@ -95,7 +95,6 @@ jobs:
           git push
       - name: Post Notice
         if: github.event.pull_request.head.repo.owner.login == 'Oneflow-Inc' && failure()
-        continue-on-error: true
         uses: actions/github-script@v4
         with:
           script: |
@@ -112,26 +111,12 @@ jobs:
           set -x
           git add -u
           git commit -m "auto format by CI"
-          git_branch=${{ github.event.pull_request.head.ref }}
-          auto_format_branch="ci_auto_format_${git_branch}"
-          git checkout -b ${auto_format_branch}
-          git remote add upstream https://github.com/Oneflow-Inc/oneflow.git
-          git push -f upstream ${auto_format_branch}
+          git checkout -b ${{ github.event.pull_request.head.ref }}
+          git remote add fork ${{ github.event.pull_request.head.repo.clone_url }}
+          git push -f fork ${{ github.event.pull_request.head.ref }}
           echo "::set-output name=auto_format_branch::$auto_format_branch"
-      - name: Post Notice (fork repo)
-        if: github.event.pull_request.head.repo.owner.login != 'Oneflow-Inc' && failure()
-        continue-on-error: true
-        uses: actions/github-script@v4
-        with:
-          script: |
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: "Oneflow-Inc",
-              repo: "oneflow",
-              body: "You code needs to be formatted. Please run `git pull upstream ${{ steps.git_push_fork.outputs.auto_format_branch }}`"
-            })
       - name: Please request CI again
-        if: ${{ failure() }}
+        if: github.event.pull_request.head.repo.owner.login == 'Oneflow-Inc' && failure()
         uses: actions/github-script@v4
         with:
           script: |
