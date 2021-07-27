@@ -488,8 +488,8 @@ class UserOpInferParallelDistributionFnContext
       parallel_distribution_infer_hint4ibn_fn_;
 };
 
-void UserOp::InitFromOpConf() {
-  CHECK(op_conf().has_user_conf());
+Maybe<void> UserOp::InitFromOpConf() {
+  CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
     EnrollRepeatedInputBn(pair.first, pair.second.s_size());
     for (int32_t i = 0; i < pair.second.s_size(); ++i) {
@@ -516,7 +516,7 @@ void UserOp::InitFromOpConf() {
         }
         return nullptr;
       };
-      val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_);
+      JUST(val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_));
     }
     if (val_->output_arg_modify_fn) {
       user_op::GetOutputArgModifier GetOutputArgModifierFn =
@@ -528,9 +528,10 @@ void UserOp::InitFromOpConf() {
         }
         return nullptr;
       };
-      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+      JUST(val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_));
     }
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferInternalBlobDescs(

@@ -31,7 +31,7 @@ namespace functional {
 
 namespace impl {
 
-class AddFunctor : public BinaryFunctor {
+class AddFunctor : public InplaceableBinaryFunctor {
  public:
   AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
 };
@@ -75,6 +75,13 @@ class BroadcastDivFunctor : public BinaryFunctor {
  public:
   BroadcastDivFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastFModFunctor : public BinaryFunctor {
+ public:
+  BroadcastFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_fmod").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -123,7 +130,7 @@ class BroadcastLessEqualFunctor : public BinaryFunctor {
   }
 };
 
-class ScalarAddByTensorFunctor : public BinaryFunctor {
+class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
     op_ = CHECK_JUST(
@@ -175,6 +182,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
+  m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
 };
 
 }  // namespace functional

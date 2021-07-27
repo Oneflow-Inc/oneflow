@@ -137,14 +137,15 @@ Maybe<void> GetSliceGradOpSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                    const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+                                           const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
-  CHECK_NOTNULL(dy_modifier);
+  CHECK_NOTNULL_OR_RETURN(dy_modifier);
   dy_modifier->set_requires_grad(false);
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-  CHECK_NOTNULL(like_modifier);
+  CHECK_NOTNULL_OR_RETURN(like_modifier);
   like_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
@@ -212,7 +213,7 @@ Maybe<void> GetSliceUpdateOpSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("slice_grad")
@@ -226,6 +227,7 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
@@ -269,14 +271,15 @@ Maybe<void> GetLogicalSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                             const user_op::UserOpConfWrapper& conf) {
+Maybe<void> InferLogicalSliceAssignInputArgModifier(
+    user_op::GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
-  CHECK(ref_modifier != nullptr);
+  CHECK_OR_RETURN(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
   user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
-  CHECK(value_modifier != nullptr);
+  CHECK_OR_RETURN(value_modifier != nullptr);
   value_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
@@ -319,7 +322,7 @@ Maybe<void> GetLogicalSliceSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_update_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("slice")
@@ -355,6 +358,7 @@ void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
     return ctx->GetOp(x_grad_op_name).output("y", 0);
   });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

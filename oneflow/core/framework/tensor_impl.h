@@ -63,10 +63,12 @@ class TensorImpl {
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
-  Maybe<TensorArg> now_grad_arg() const;
+  Maybe<TensorArg> current_grad() const;
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return autograd_meta_->retain_grad(); }
@@ -210,6 +212,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
+  Maybe<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
+  Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }

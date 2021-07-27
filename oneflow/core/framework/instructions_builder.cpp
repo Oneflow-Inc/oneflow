@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -234,6 +235,18 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   instruction->add_int64_operand(object_id);
   instruction_list_->PushBack(instruction.Mutable());
   return object_id;
+}
+
+Maybe<void> InstructionsBuilder::RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
+                                            const one::EagerBlobObjectListPtr& outputs,
+                                            const one::EagerBlobObjectListPtr& parameters,
+                                            const std::shared_ptr<NNGraphIf>& nn_graph) const {
+  static std::string instr_name("RunLazyJob");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::RunLazyJobPhyInstrOperand>(inputs, outputs, parameters, nn_graph);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
 }
 
 Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
@@ -886,7 +899,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -898,7 +911,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -929,7 +942,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -1565,6 +1578,12 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
+  if (JUST(GlobalMultiClientEnv())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return PhysicalRun(Build);
+  }
+
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
@@ -1581,7 +1600,7 @@ Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& B
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
