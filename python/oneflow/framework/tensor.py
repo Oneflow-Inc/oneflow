@@ -732,6 +732,25 @@ class Tensor:
             src_np = other
         _copy_from_numpy_to_eager_local_tensor(internal_tensor, src_np)
 
+    @_auto_determine
+    def to_consistent(self, sbp, placement):
+        assert sbp is not None
+        if isinstance(sbp, oneflow._oneflow_internal.sbp.sbp):
+            assert len(placement.hierarchy) == 1
+            parallel_distribution = [sbp]
+        else:
+            assert isinstance(sbp, (tuple, list)) and len(sbp) == len(
+                placement.hierarchy
+            )
+            for sbp_elem in sbp:
+                assert isinstance(
+                    sbp_elem, oneflow._oneflow_internal.sbp.sbp
+                ), "sbp must be sbp obj or list of sbp obj, please get sbp obj via oneflow.broadcast/oneflow.partial_sum/oneflow.split(axis=x)"
+            parallel_distribution = list(sbp)
+        return self._local_or_consistent_tensor.to_consistent(
+            parallel_distribution, placement
+        )
+
     def _init_by_initializer_conf(self, initializer_conf):
         if self.is_determined:
             if self.is_consistent:
