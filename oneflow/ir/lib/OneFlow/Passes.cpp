@@ -19,8 +19,10 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
@@ -148,21 +150,20 @@ namespace oneflow {
 
 LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
-  pm.addPass(createLowerOneFlowToTosaPass());
-  pm.addPass(createCSEPass());
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());
-  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
-  pm.addPass(createTensorConstantBufferizePass());
-  pm.addPass(createFuncBufferizePass());
-  pm.addPass(createBufferResultsToOutParamsPass());
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());
-  pm.addNestedPass<FuncOp>(createLowerToCFGPass());
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
-  // pm.addNestedPass<FuncOp>(createConvertLinalgToAffineLoopsPass());
-  // pm.addPass(createMemRefToLLVMPass());
-  // pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
+  pm.addPass(createLowerOneFlowToTosaPass());                     // -lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                    // -cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // -tosa-to-linalg-on-tensors
+  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());  // -linalg-fusion-for-tensor-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());          // -linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());          // -tensor-bufferize
+  pm.addPass(createTensorConstantBufferizePass());                // --tensor-constant-bufferize
+  pm.addPass(createFuncBufferizePass());                          // -func-bufferize
+  pm.addPass(createBufferResultsToOutParamsPass());               // -buffer-results-to-out-params
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());     // -convert-linalg-to-loops
+  pm.addNestedPass<FuncOp>(createLowerToCFGPass());               // -convert-scf-to-std
+  pm.addPass(createConvertLinalgToLLVMPass());                    // -convert-linalg-to-llvm
+  pm.addPass(createLowerToLLVMPass());                            // -convert-std-to-llvm
+  pm.addPass(createMemRefToLLVMPass());                           // -convert-memref-to-llvm
   return pm.run(module.get());
 }
 
