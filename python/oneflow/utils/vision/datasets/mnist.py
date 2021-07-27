@@ -105,7 +105,7 @@ class MNIST(VisionDataset):
         )
         self.train = train  # training set or test set
         if source_url is not None:
-            self.url = source_url
+            self.mirrors = [source_url]
 
         if self._check_legacy_exist():
             self.data, self.targets = self._load_legacy_data()
