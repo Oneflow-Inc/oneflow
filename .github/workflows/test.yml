@@ -81,7 +81,7 @@ jobs:
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
       - name: Setup Git
-        id: git_push
+        id: git_setup
         if: ${{ failure() }}
         run: |
           git config --global user.email "ci-bot@oneflow.org"
