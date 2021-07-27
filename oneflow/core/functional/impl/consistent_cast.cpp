@@ -76,10 +76,15 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
 
 class ToConsistentFunctor {
  public:
-  ToConsistentFunctor() = default;
+  ToConsistentFunctor() { op_ = CHECK_JUST(op_expr_helper::CastToConsistentOp()); }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            Symbol<ParallelDesc> parallel_desc) const {
+    cfg::ParallelDistribution parallel_distribution;
+    for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
+      *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
+    }
     if (x->is_consistent()) {
       UNIMPLEMENTED();
     } else {
@@ -94,17 +99,21 @@ class ToConsistentFunctor {
       }
       std::shared_ptr<Tensor> synced_tensor =
           JUST(SyncDataAndMetaInfo(mirrored_tensor, sbp_parallels, parallel_desc));
-      std::shared_ptr<OpExpr> op = JUST(CastToConsistentOpExpr::New(
-          *JUST(UniqueStr("cast_to_consistent")), sbp_parallels, parallel_desc));
-      const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {synced_tensor}));
+      const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *op_, {synced_tensor},
+          OpExprInterpContext(AttrMap{}, parallel_desc, SymbolOf(parallel_distribution))));
       return output;
     }
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ToLocalFunctor {
  public:
-  ToLocalFunctor() = default;
+  ToLocalFunctor() { op_ = CHECK_JUST(op_expr_helper::CastFromConsistentOp()); }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
     CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
@@ -117,12 +126,12 @@ class ToLocalFunctor {
       // should return UndefinesdLocalTensor here, the impl of which need to be discussed
       return std::shared_ptr<Tensor>();
     }
-    const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
-    std::shared_ptr<OpExpr> op = JUST(CastFromConsistentOpExpr::New(
-        *JUST(UniqueStr("cast_from_consistent")), *parallel_distribution, parallel_desc));
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {consistent_tensor}));
     return output;
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl

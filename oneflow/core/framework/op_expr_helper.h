@@ -286,16 +286,10 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
                                           const std::string& name);
 
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp();
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name);
 
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
-    Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp();
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow

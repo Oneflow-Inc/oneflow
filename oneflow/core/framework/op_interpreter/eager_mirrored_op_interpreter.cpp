@@ -195,8 +195,10 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
   bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
   input_mirrored_tensor->set_requires_grad(requires_grad);
   input_mirrored_tensor->set_is_leaf(!requires_grad);
-  const auto& parallel_distribution = op_expr.parallel_distribution();
-  const auto& parallel_desc = op_expr.parallel_desc();
+  CHECK_OR_RETURN(ctx.parallel_distribution);
+  CHECK_OR_RETURN(ctx.parallel_desc);
+  const auto& parallel_distribution = JUST(ctx.parallel_distribution.value());
+  const auto& parallel_desc = JUST(ctx.parallel_desc.value());
   std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl = JUST(
       EagerConsistentTensorImpl::New(input_mirrored_tensor, parallel_distribution, parallel_desc));
   std::shared_ptr<ConsistentTensor> consistent_tensor =

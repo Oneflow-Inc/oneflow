@@ -21,7 +21,10 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CastConsistentOpExprInterpState : public OpExprInterpState {};
+struct CastConsistentOpExprInterpState : public OpExprInterpState {
+  Symbol<ParallelDesc> parallel_desc;
+  Symbol<cfg::ParallelDistribution> parallel_distribution;
+};
 
 class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
  public:
@@ -29,8 +32,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
     const auto* fw_op_expr = dynamic_cast<const CastToConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(op_expr_helper::CastFromConsistentOp(
-        GradientOpName(op_name), fw_op_expr->parallel_distribution(), fw_op_expr->parallel_desc()));
+    grad_op_ = JUST(op_expr_helper::CastFromConsistentOp(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -58,20 +60,22 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
     const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(op_expr_helper::CastToConsistentOp(
-        GradientOpName(op_name), fw_op_expr->parallel_distribution(), fw_op_expr->parallel_desc()));
+    grad_op_ = JUST(op_expr_helper::CastToConsistentOp(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // do nothing
+    ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
+    ctx->parallel_distribution = JUST(inputs.at(0)->parallel_distribution());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *grad_op_, {out_grads.at(0)},
+        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->parallel_distribution)));
     return Maybe<void>::Ok();
   }
 
