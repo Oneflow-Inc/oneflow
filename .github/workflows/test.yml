@@ -1,9 +1,4 @@
 name: Build and Test CI
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 on:
   pull_request:
     types: [review_requested]
@@ -117,7 +112,7 @@ jobs:
           set -x
           git add -u
           git commit -m "auto format by CI"
-          git_branch=${GITHUB_REF##*/}
+          git_branch=${{ github.event.pull_request.head.ref }}
           auto_format_branch="ci_auto_format_${git_branch}"
           git checkout -b ${auto_format_branch}
           git remote add upstream https://github.com/Oneflow-Inc/oneflow.git
