@@ -20,7 +20,8 @@ import os
 import cv2
 import numpy as np
 
-import oneflow.experimental as flow
+import oneflow as flow
+import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -311,10 +312,6 @@ class TestCocoReader(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestOFRecordBytesDecoder(flow.unittest.TestCase):
     def test_OFRecordBytesDecoder(test_case):
         batch_size = 16
