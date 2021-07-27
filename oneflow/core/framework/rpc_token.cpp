@@ -57,14 +57,14 @@ class MetaRpcTokenView final {
 
   Maybe<void> set_thread_consistent_unique_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << 3);
+    CHECK_LT_OR_RETURN(val, 1 << kRpcTokenThreadConsistentUIdBit);
     thread_consistent_unique_id_ = val;
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> set_rank_group_level(int8_t val) {
+  Maybe<void> set_rank_group_level(int32_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << 3);
+    CHECK_LT_OR_RETURN(val, 1 << kRpcTokenRankGroupLevelBit);
     rank_group_level_ = val;
     return Maybe<void>::Ok();
   }
@@ -79,8 +79,8 @@ class MetaRpcTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // RpcTokenType
-  uint8_t thread_consistent_unique_id_ : 3;
-  uint8_t rank_group_level_ : 3;
+  uint8_t thread_consistent_unique_id_ : kRpcTokenThreadConsistentUIdBit;
+  uint8_t rank_group_level_ : kRpcTokenRankGroupLevelBit;
   uint8_t high_meta_seq_id_;
   uint16_t low_meta_seq_id_;
 };
@@ -103,13 +103,13 @@ class CtrlRpcTokenView final {
 
   Maybe<void> set_thread_consistent_unique_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << 3);
+    CHECK_LT_OR_RETURN(val, 1 << kRpcTokenThreadConsistentUIdBit);
     thread_consistent_unique_id_ = val;
     return Maybe<void>::Ok();
   }
-  Maybe<void> set_rank_group_level(int8_t val) {
+  Maybe<void> set_rank_group_level(int32_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << 3);
+    CHECK_LT_OR_RETURN(val, 1 << kRpcTokenRankGroupLevelBit);
     rank_group_level_ = val;
     return Maybe<void>::Ok();
   }
@@ -130,8 +130,8 @@ class CtrlRpcTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // RpcTokenType
-  uint8_t thread_consistent_unique_id_ : 3;
-  uint8_t rank_group_level_ : 3;
+  uint8_t thread_consistent_unique_id_ : kRpcTokenThreadConsistentUIdBit;
+  uint8_t rank_group_level_ : kRpcTokenRankGroupLevelBit;
   uint8_t cmd_;
   uint16_t ctrl_seq_id_;
 };
@@ -152,8 +152,8 @@ static_assert(sizeof(CtrlRpcTokenView) == sizeof(uint64_t), "");
   static const int kLimit = 128;
   CHECK_GE_OR_RETURN(rank_group_level, 0);
   CHECK_LT_OR_RETURN(rank_group_level, kLimit);
-  static thread_local std::array<std::unique_ptr<RpcToken>, kLimit> rank_group_stack;
-  auto* current_rpc_token = &rank_group_stack[rank_group_level];
+  static thread_local std::array<std::unique_ptr<RpcToken>, kLimit> rpc_token_stack;
+  auto* current_rpc_token = &rpc_token_stack[rank_group_level];
   if (!*current_rpc_token) {
     const auto& init = JUST(NewMetaRpcToken(thread_consistent_unique_id, rank_group_level));
     current_rpc_token->reset(new RpcToken(init));

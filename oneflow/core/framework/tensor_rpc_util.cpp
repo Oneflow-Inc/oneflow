@@ -50,14 +50,14 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
                     const RpcToken& tensor_rpc_token) {
     const auto& this_synced_tensor_meta =
         JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            this->synced_tensor_meta()));
+            this->synced_tensor_meta_symbol_id()));
     CHECK_OR_RETURN(this_synced_tensor_meta == tensor_meta);
     CHECK_EQ_OR_RETURN(consumer_parallel_distribution_constraint.has_value(),
-                       this->has_consumer_parallel_distribution_constraint());
-    if (this->has_consumer_parallel_distribution_constraint()) {
+                       this->has_consumer_parallel_distribution_constraint_symbol_id());
+    if (this->has_consumer_parallel_distribution_constraint_symbol_id()) {
       const auto& that_rank_constaint =
           JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            this->consumer_parallel_distribution_constraint()));
+            this->consumer_parallel_distribution_constraint_symbol_id()));
       const auto& this_rank_constaint = JUST(consumer_parallel_distribution_constraint.value());
       CHECK_OR_RETURN(this_rank_constaint == that_rank_constaint);
     }
@@ -68,22 +68,22 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   OF_PRIVATE Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
     const Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint,
                    const RpcToken& tensor_rpc_token) {
-    this->set_synced_tensor_meta(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
+    this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
         tensor_meta, &SyncSymbolConsistentTensorMeta)));
     if (consumer_parallel_distribution_constraint.has_value()) {
       const auto& this_rank_constaint = JUST(consumer_parallel_distribution_constraint.value());
-      this->set_consumer_parallel_distribution_constraint(
+      this->set_consumer_parallel_distribution_constraint_symbol_id(
         JUST(SyncedSymbolMap<cfg::ParallelDistribution>::FindOrSync(
               this_rank_constaint, &SyncSymbolParallelDistribution)));
     } else {
-      this->clear_consumer_parallel_distribution_constraint();
+      this->clear_consumer_parallel_distribution_constraint_symbol_id();
     }
     this->set_tensor_rpc_token(static_cast<uint64_t>(tensor_rpc_token));
     return Maybe<void>::Ok();
   }
   
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, synced_tensor_meta);
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, consumer_parallel_distribution_constraint);
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, synced_tensor_meta_symbol_id);
+  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, consumer_parallel_distribution_constraint_symbol_id);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, tensor_rpc_token);
 FLAT_MSG_END(FlatTensorConsistency);
 // clang-format off

@@ -21,6 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+const static int kRpcTokenTypeBit = 2;
+const static int kRpcTokenThreadConsistentUIdBit = 3;
+const static int kRpcTokenRankGroupLevelBit = 3;
+
 enum RpcTokenType {
   // Begin
   kDataRpcTokenType = 0,  // e.g. for tensor data transportation
@@ -31,7 +35,7 @@ enum RpcTokenType {
   kRpcTokenTypeSize,
 };
 
-static_assert(kRpcTokenTypeSize <= (1 << 2), "");
+static_assert(kRpcTokenTypeSize <= (1 << kRpcTokenTypeBit), "");
 
 enum RankGroupRpcCmd {
   // Begin
@@ -61,7 +65,7 @@ class RpcToken final {
   static Maybe<RpcToken> NewMetaRpcToken();
   static Maybe<RpcToken> NewCtrlRpcToken(RankGroupRpcCmd cmd);
 
-  static size_t MaxNumberOfThreadConsistentUId() { return (1 << 3); }
+  static constexpr size_t MaxNumberOfThreadConsistentUId() { return (1 << kRpcTokenThreadConsistentUIdBit); }
 
   // Getters
   int64_t src_rank() const { return src_rank_; }
