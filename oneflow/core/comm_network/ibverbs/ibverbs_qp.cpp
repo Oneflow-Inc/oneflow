@@ -62,7 +62,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   // recv_msg_buf_
   recv_msg_buf_.assign(max_recv_wr, nullptr);
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
-  // send_msg_buf_
+  // send_msg_buf_ init 
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = qp_init_attr.cap.max_send_wr;
