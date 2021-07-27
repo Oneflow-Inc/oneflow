@@ -448,7 +448,7 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
       const auto& input_lbi = op.BnInOp2Lbi(ibn);
       if (input_lbi.op_name() == src_op_name) {
         tick_op_conf.CopyFrom(op.op_conf());
-        break;
+        return Maybe<void>::Ok();
       }
     }
     return Maybe<void>::Ok();
