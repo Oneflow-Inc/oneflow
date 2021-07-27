@@ -77,8 +77,12 @@ class TestDDP(flow.unittest.TestCase):
         y.backward()
 
         test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([4])))
-        test_case.assertTrue(np.allclose(m.used_only_in_rank0.grad.numpy(), np.array([1])))
-        test_case.assertTrue(np.allclose(m.unused_in_all_ranks.grad.numpy(), np.array([0])))
+        test_case.assertTrue(
+            np.allclose(m.used_only_in_rank0.grad.numpy(), np.array([1]))
+        )
+        test_case.assertTrue(
+            np.allclose(m.unused_in_all_ranks.grad.numpy(), np.array([0]))
+        )
 
     def test_out_of_order_execution(test_case):
         class Model(flow.nn.Module):

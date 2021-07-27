@@ -295,7 +295,8 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, UserOpConf* user_conf, const std::string &error_msg_prefix) {
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, UserOpConf* user_conf,
+                                             const std::string& error_msg_prefix) {
   auto* attr_name2attr = user_conf->mutable_attr();
   HashSet<std::string> op_def_attr_names;
   for (const auto& attr : op_def.attr()) {

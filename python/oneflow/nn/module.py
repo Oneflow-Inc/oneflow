@@ -467,7 +467,7 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
-        
+
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         self._forward_hooks[len(self._forward_hooks)] = hook
 
