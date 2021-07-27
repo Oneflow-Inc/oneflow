@@ -443,22 +443,26 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
 
   // connect wait_and_send_ids to tick op which was connected to the src tick op
   OperatorConf tick_op_conf;
+  bool find_src_tick_consumer_tick = false;
   JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
+    // skip if the op is not a tick op
+    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
     for (const auto& ibn : op.input_bns()) {
       const auto& input_lbi = op.BnInOp2Lbi(ibn);
       if (input_lbi.op_name() == src_op_name) {
+        CHECK_OR_RETURN(!find_src_tick_consumer_tick);
         tick_op_conf.CopyFrom(op.op_conf());
-        return Maybe<void>::Ok();
+        find_src_tick_consumer_tick = true;
       }
     }
     return Maybe<void>::Ok();
   }));
+  CHECK_OR_RETURN(find_src_tick_consumer_tick);
   CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
-  auto* tick_conf = tick_op_conf.mutable_tick_conf();
-  CHECK_EQ_OR_RETURN(tick_conf->tick_size(), 1);
-  CHECK_EQ_OR_RETURN(tick_conf->tick(0), GenLogicalBlobName(src_op_name, "out"));
-  tick_conf->clear_tick();
-  tick_conf->add_tick(GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
+  CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
+  tick_op_conf.mutable_tick_conf()->clear_tick();
+  tick_op_conf.mutable_tick_conf()->add_tick(
+      GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
   JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
 
   // erase the src tick op

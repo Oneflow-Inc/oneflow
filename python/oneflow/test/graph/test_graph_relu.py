@@ -17,9 +17,10 @@ import unittest
 import numpy as np
 
 import oneflow as flow
+import oneflow.unittest
 
 
-class TestReluGraph(flow.unittest.TestCase):
+class TestReluGraph(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
         x = flow.tensor(data, dtype=flow.float32)
