@@ -308,11 +308,6 @@ Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
   return outputs->at(0);
 }
 
-Maybe<Tensor> ConvertTensorDevice(const std::shared_ptr<Tensor>& tensor,
-                                  const std::string& device_type, int64_t device_id) {
-  return functional::Copy(tensor, device_type, device_id);
-}
-
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
@@ -403,34 +398,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("to_local",
            [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
              return CastConsistentToLocal(tensor).GetPtrOrThrow();
-           })
-      .def("to",
-           [](const std::shared_ptr<Tensor>& tensor,
-              const std::string& type_and_id) -> std::shared_ptr<Tensor> {
-             if (tensor->is_consistent()) {
-               std::string type;
-               int device_id = -1;
-               ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-               if (device_id == -1) {
-                 if (type == "cpu") {
-                   device_id = GlobalProcessCtx::LocalRank()
-                               % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
-                 } else {
-                   device_id = GlobalProcessCtx::LocalRank()
-                               % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-                 }
-               }
-               return ConvertTensorDevice(tensor, type, device_id).GetPtrOrThrow();
-             } else {
-               UNIMPLEMENTED();
-             }
-           })
-      .def(
-          "to",
-          [](const std::shared_ptr<Tensor>& tensor,
-             Symbol<Device> device) -> std::shared_ptr<Tensor> {
-            return ConvertTensorDevice(tensor, device->type(), device->device_id()).GetPtrOrThrow();
-          });
+           });
 }
 
 }  // namespace one
