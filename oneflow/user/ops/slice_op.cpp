@@ -95,15 +95,19 @@ Maybe<void> GetSliceOpSbpSignature(user_op::SbpContext* ctx) {
 Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   const Shape& like_shape = ctx->InputShape("like", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  const int64_t ndim = dy_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
-
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  const int64_t ndim = dy_shape.NumAxes();
+  if( like_shape.NumAxes() ==1){
+    CHECK_EQ_OR_RETURN(ndim, 0);
+  }else{
+    CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
+    CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+    CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+    CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  }
 
   *ctx->OutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
