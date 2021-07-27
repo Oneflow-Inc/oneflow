@@ -65,7 +65,9 @@ class RpcToken final {
   static Maybe<RpcToken> NewMetaRpcToken();
   static Maybe<RpcToken> NewCtrlRpcToken(RankGroupRpcCmd cmd);
 
-  static constexpr size_t MaxNumberOfThreadConsistentUId() { return (1 << kRpcTokenThreadConsistentUIdBit); }
+  static constexpr size_t MaxNumberOfThreadConsistentUId() {
+    return (1 << kRpcTokenThreadConsistentUIdBit);
+  }
 
   // Getters
   int64_t src_rank() const { return src_rank_; }
