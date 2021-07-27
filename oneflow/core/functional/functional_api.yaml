@@ -733,3 +733,7 @@
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
+
+- name: "stack"
+  signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
+  bind_python: True
