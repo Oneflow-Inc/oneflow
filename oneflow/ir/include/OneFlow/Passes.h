@@ -30,7 +30,7 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module);
+LogicalResult Lower(mlir::MLIRContext* context, ModuleOp module);
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow

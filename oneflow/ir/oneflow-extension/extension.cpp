@@ -16,6 +16,9 @@ limitations under the License.
 #include "mlir/Parser.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -63,17 +66,21 @@ class MlirJitKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "MlirJitKernel::Compute";
     LOG(ERROR) << ctx->Attr<std::string>("mlir_assembly");
+    // TODO: extrac a function
     mlir::DialectRegistry registry;
     registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
                     mlir::memref::MemRefDialect, mlir::tosa::TosaDialect,
                     mlir::linalg::LinalgDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
     mlir::MLIRContext mlir_ctx(registry);
-
     mlir::OwningModuleRef module =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, module)))
+    llvm::InitializeNativeTarget();
+    CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
     module->dump();
+    auto jit = mlir::ExecutionEngine::create(*module);
+    CHECK(jit) << "failed to create JIT exe engine";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -24,6 +24,7 @@ target_link_libraries(MLIROneFlowExtension
   MLIRTranslation
   MLIRSupport
   MLIROneFlow
+  MLIRExecutionEngine
   of_protoobj
   of_ccobj
 )

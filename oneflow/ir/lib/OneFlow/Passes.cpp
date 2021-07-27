@@ -148,7 +148,7 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
+LogicalResult Lower(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                    // cse
@@ -164,7 +164,7 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   pm.addPass(createConvertLinalgToLLVMPass());                    // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                           // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                            // convert-std-to-llvm
-  return pm.run(module.get());
+  return pm.run(module);
 }
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
