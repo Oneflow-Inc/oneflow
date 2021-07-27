@@ -1,4 +1,9 @@
 name: Build and Test CI
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 on:
   pull_request:
     types: [review_requested]
