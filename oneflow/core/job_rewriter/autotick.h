@@ -24,9 +24,12 @@ namespace oneflow {
 
 Maybe<void> AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder);
 Maybe<void> AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder);
-Maybe<void> AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
-Maybe<void> AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
-Maybe<void> AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
+Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
+Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
+                                                       JobBuilder* job_builder);
+Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
+                                                        JobBuilder* job_builder);
+Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job);
 
 class MutOpConTickInputHelper {
  public:
