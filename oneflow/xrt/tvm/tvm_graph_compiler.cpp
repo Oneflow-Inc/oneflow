@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/tvm/graph_compiler.h"
-#include "oneflow/xrt/tvm/executable.h"
+#include "oneflow/xrt/tvm/tvm_graph_compiler.h"
+#include "oneflow/xrt/tvm/tvm_executable.h"
 #include "oneflow/xrt/tvm/ops/op_context.h"
 #include "oneflow/xrt/tvm/ops/op_kernel.h"
 #include "oneflow/xrt/node_util.h"
@@ -76,21 +76,24 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(
   return tvm::relay::Tuple(fields);
 }
 
-std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Function graph_func) {
+std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Function graph_func, const XrtDevice& device) {
   auto pfb = tvm::runtime::Registry::Get("relay.build_module._BuildModule");
   tvm::runtime::Module build_mod = (*pfb)();
   auto build_f = build_mod.GetFunction("build", false);
   auto json_f = build_mod.GetFunction("get_graph_json", false);
   auto mod_f = build_mod.GetFunction("get_module", false);
 
-  // tvm::Map<tvm::Integer, tvm::Target> target_map = {
-  //     {DLDeviceType::kDLGPU,
-  //      tvm::Target("cuda -model=2080ti")}};  // TODO(niuchong): support more devs and targets
   tvm::Map<tvm::Integer, tvm::Target> targets;
-  targets.Set(DLDeviceType::kDLGPU, tvm::Target("cuda"));
+  if (device == XrtDevice::GPU_CUDA) {
+    targets.Set(DLDeviceType::kDLGPU, tvm::Target("cuda"));
+  } else if (device == XrtDevice::CPU_X86) {
+    targets.Set(DLDeviceType::kDLCPU, tvm::Target("llvm"));
+  } else {
+    LOG(FATAL) << "Unsupported XrtDevice: " << device;
+  }
 
   auto relay_mod = tvm::IRModule::FromExpr(graph_func);
-  build_f(relay_mod, targets, tvm::Target("llvm"));  // TODO: save as above
+  build_f(relay_mod, targets, tvm::Target("llvm"));
 
   std::string json = json_f();
   tvm::runtime::Module mod = mod_f();
@@ -107,14 +110,14 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
   util::Map<std::string, tvm::relay::Expr> tensor_name2expr;
   tvm::Array<tvm::relay::Var> graph_input_vars;
   LOG(WARNING) << "Compile Xrt graph with TVM";
-  LOG(WARNING) << graph->ToDot();
+  VLOG(3) << graph->ToDot();
 
   ConvertEntryParamsToTVMExpr(entry_params, &tensor_name2expr, &graph_input_vars);
 
   algorithm::TopologyVisit(*graph, [&](const XrtNode* node) {
     if (node->IsArgumentNode()) { return; }
 
-    LOG(WARNING) << "TVM compiling node <" << node->type() << ">:" << node->name();
+    VLOG(3) << "TVM compiling node <" << node->type() << ">:" << node->name();
     util::Map<Argument, tvm::relay::Expr> input_arg2expr;
     for (const auto* in_edge : node->in_edges()) {
       const Argument& in_arg = in_edge->argument();
@@ -129,7 +132,7 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
     }
 
     TVMOpContext ctx(node, OpMessage(node), std::move(input_arg2expr), std::move(out_args));
-    auto op_kernel = BuildTVMOpKernel(node->type());
+    auto op_kernel = BuildTVMOpKernel(this->device_, node->type());
     op_kernel->Compile(&ctx);
 
     for (const auto* out_edge : node->out_edges()) {
@@ -150,12 +153,12 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
   tvm::runtime::Module built_mod;
   std::string graph_json;
 
-  std::tie(built_mod, graph_json) = BuildGraphModule(graph_func);
-  LOG(WARNING) << graph_json;
+  std::tie(built_mod, graph_json) = BuildGraphModule(graph_func, this->device_);
+  VLOG(3) << "Got TVM graph_json:\n" << graph_json;
 
   return std::make_shared<TVMExecutable>(this->name_, entry_params.size(), return_params,
                                          graph_json, built_mod,
-                                         XrtDevice::GPU_CUDA);  // only support GPU_CUDA now
+                                         this->device_);  // only support GPU_CUDA now
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TVM, TVMGraphCompiler);

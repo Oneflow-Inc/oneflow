@@ -39,13 +39,12 @@ class TVMOpKernel : public OpKernel<TVMOpContext> {
   static OpKernelRegistrar<TVMOpContext> _tvm_op_kernel_##OpName##_ __attribute__((unused)) = \
       OpKernelRegistrar<TVMOpContext>(#OpName)                                                \
           .SetField(XrtEngine::TVM)                                                           \
-          .SetDevice({XrtDevice::GPU_CUDA})                                                   \
           .SetFactory([]() -> OpKernel<TVMOpContext>* { return new KernelType; })
 
 using TVMOpKernelPtr = std::shared_ptr<OpKernel<TVMOpContext>>;
 
-inline TVMOpKernelPtr BuildTVMOpKernel(const std::string& op_name) {
-  auto field = MakeXrtField(XrtDevice::GPU_CUDA, XrtEngine::TVM);
+inline TVMOpKernelPtr BuildTVMOpKernel(const XrtDevice& device, const std::string& op_name) {
+  auto field = MakeXrtField(device, XrtEngine::TVM);
   return TVMOpKernelPtr(OpKernelBuilder<TVMOpContext>()(field, op_name));
 }
 

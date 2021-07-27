@@ -23,6 +23,8 @@ namespace of_tvm {
 class TransposeOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    VLOG(3) << ctx->DebugStr();
+
     tvm::Array<tvm::relay::Expr> node_inputs;
     node_inputs.push_back(ctx->GetExpr4InputName("input_0"));
 

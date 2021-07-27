@@ -22,7 +22,9 @@ namespace of_tvm {
 class AddOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
+    VLOG(3) << ctx->DebugStr();
     int32_t num_inputs = ctx->num_inputs();
+    // TODO: support multiple add
     CHECK_EQ(2, num_inputs) << "TVM only support Add operator with 2 inputs";
 
     tvm::Array<tvm::relay::Expr> node_inputs;

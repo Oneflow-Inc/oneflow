@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/tvm/executable.h"
+#include "oneflow/xrt/tvm/tvm_executable.h"
 #include <dlpack/dlpack.h>
 #include <cstdint>
 
@@ -29,13 +29,13 @@ bool IsAligned(void* data_ptr, std::uintptr_t alignment) {
   return (reinterpret_cast<std::uintptr_t>(data_ptr) & mask) == 0;
 }
 
-DLDeviceType XrtDev2DLDev(XrtDevice dev) {
-  if (dev == XrtDevice::CPU_X86) {
+DLDeviceType XrtDev2DLDev(XrtDevice device) {
+  if (device == XrtDevice::CPU_X86) {
     return DLDeviceType::kDLCPU;
-  } else if (dev == XrtDevice::GPU_CUDA) {
+  } else if (device == XrtDevice::GPU_CUDA) {
     return DLDeviceType::kDLGPU;
   } else {
-    LOG(FATAL) << "Unsupported DLDeviceType for XrtDevice: " << dev;
+    LOG(FATAL) << "Unsupported DLDeviceType for XrtDevice: " << device;
   }
 }
 

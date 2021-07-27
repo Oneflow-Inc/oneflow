@@ -24,7 +24,7 @@ namespace of_tvm {
 class AveragePooling2DOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
-    LOG(WARNING) << ctx->DebugStr();
+    VLOG(3) << ctx->DebugStr();
     tvm::Array<tvm::relay::Expr> node_inputs;
     node_inputs.push_back(ctx->GetExpr4InputName("x_0"));
 

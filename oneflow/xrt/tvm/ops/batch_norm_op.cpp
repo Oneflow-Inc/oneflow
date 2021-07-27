@@ -23,7 +23,7 @@ namespace of_tvm {
 class BatchNormOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
-    LOG(WARNING) << ctx->DebugStr();
+    VLOG(3) << ctx->DebugStr();
 
     tvm::Array<tvm::relay::Expr> inputs;
     inputs.push_back(ctx->GetExpr4InputName("x_0"));

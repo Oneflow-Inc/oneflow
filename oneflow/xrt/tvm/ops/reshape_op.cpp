@@ -23,7 +23,7 @@ namespace of_tvm {
 class ReshapeOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
-    LOG(WARNING) << ctx->DebugStr();
+    VLOG(3) << ctx->DebugStr();
     tvm::Array<tvm::relay::Expr> node_inputs;
     node_inputs.push_back(ctx->GetExpr4InputName("in_0"));
     const Shape& in_shape = ctx->GetShape4InputName("in_0");

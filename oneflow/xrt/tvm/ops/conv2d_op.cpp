@@ -66,7 +66,7 @@ tvm::Array<tvm::relay::IndexExpr> Calc2DPadding4Conv(const std::string& data_for
 class Conv2DOp final : public TVMOpKernel {
  public:
   void Compile(TVMOpContext* ctx) override {
-    LOG(WARNING) << ctx->DebugStr();
+    VLOG(3) << ctx->DebugStr();
 
     tvm::Array<tvm::relay::Expr> inputs;
     inputs.push_back(ctx->GetExpr4InputName("in_0"));
