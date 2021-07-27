@@ -25,6 +25,11 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -32,10 +37,17 @@ namespace functional {
 
 namespace impl {
 
-class ConstantFunctor {
+class ConsistentConstantFunctor {
  public:
-  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype) const {
+  ConsistentConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const int64_t& placement, const std::vector<int64_t>& sbp_tuple) const {
+    CHECK_NE_OR_RETURN(placement, 0);
+    const auto* placement_ptr = reinterpret_cast<const ParallelDesc*>(placement);
+    Symbol<ParallelDesc> parallel_desc =
+        JUST(SymbolUtil<ParallelDesc>::GetSymbolByExistedRawPtr(placement_ptr));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -46,7 +58,64 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution));
+  }
+
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<int64_t>& sbp_tuple) const {
+    static thread_local std::map<std::vector<int64_t>, Symbol<cfg::ParallelDistribution>> map;
+    auto iter = map.find(sbp_tuple);
+    if (iter == map.end()) {
+      cfg::ParallelDistribution parallel_distribution;
+      for (int64_t sbp_val : sbp_tuple) {
+        CHECK_NE_OR_RETURN(sbp_val, 0);
+        const auto* sbp_ptr = reinterpret_cast<cfg::SbpParallel*>(sbp_val);
+        Symbol<cfg::SbpParallel> sbp_parallel =
+            JUST(SymbolUtil<cfg::SbpParallel>::GetSymbolByExistedRawPtr(sbp_ptr));
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+      }
+      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+    }
+    return iter->second;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConstantFunctor {
+ public:
+  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const int64_t& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (IsIntegralDataType(dtype)) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    }
+    {
+      ParallelDistribution parallel_distribution;
+      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
+    }
+    if (device) {
+      int64_t device_val = device;
+      const auto* device_ptr = reinterpret_cast<Device*>(device_val);
+      Symbol<Device> device_symbol = JUST(SymbolUtil<Device>::GetSymbolByExistedRawPtr(device_ptr));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -953,6 +1022,7 @@ class TensorSetItemFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");

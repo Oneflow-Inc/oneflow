@@ -31,8 +31,7 @@ Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(op_expr_helper::EagerNcclAllGather(in_parallel_desc));
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op_expr, inputs, outputs, AttrMap{}));
+  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
 
@@ -46,8 +45,7 @@ Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(op_expr_helper::EagerNcclAllReduce(in_parallel_desc));
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op_expr, inputs, outputs, AttrMap{}));
+  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
 
@@ -64,8 +62,7 @@ Maybe<void> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(op_expr_helper::EagerNcclReduceScatter(in_parallel_desc, op_type_));
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op_expr, inputs, outputs, AttrMap{}));
+  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
 

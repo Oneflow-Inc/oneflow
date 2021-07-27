@@ -30,7 +30,7 @@ namespace cfg {
 class ParallelDistribution;
 }
 
-class PlacementScope;
+class ParallelDesc;
 
 namespace one {
 
@@ -75,8 +75,6 @@ class ConsistentTensorMetaInferArgs final {
   const std::vector<InputConsistentTensorMeta>& input_consistent_tensor_metas() const {
     return input_consistent_tensor_metas_;
   }
-  Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
-  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
   const AttrMap& attrs() const { return attrs_; }
 
   size_t hash_value() const;
@@ -94,19 +92,41 @@ class ConsistentTensorMetaInferArgs final {
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
       std::vector<ParallelDistributionInferHint>* hints) const;
 
-  static Maybe<ConsistentTensorMetaInferArgs> New(const TensorTuple& input_tensors,
-                                                  Symbol<PlacementScope> placement_scope,
-                                                  const AttrMap& attrs,
-                                                  Symbol<ParallelDesc> parallel_desc);
+  static Maybe<ConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
+                                                  const TensorTuple& input_tensors);
 
  private:
   ConsistentTensorMetaInferArgs() = default;
   Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors);
 
-  std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
-  Symbol<PlacementScope> placement_scope_;
-  Symbol<ParallelDesc> parallel_desc_;
   AttrMap attrs_;
+  std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
+};
+
+class SrcOpConsistentTensorMetaInferArgs final {
+ public:
+  SrcOpConsistentTensorMetaInferArgs(const SrcOpConsistentTensorMetaInferArgs&) = default;
+  SrcOpConsistentTensorMetaInferArgs(SrcOpConsistentTensorMetaInferArgs&&) = default;
+  ~SrcOpConsistentTensorMetaInferArgs() = default;
+
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  const AttrMap& attrs() const { return attrs_; }
+
+  size_t hash_value() const;
+
+  bool operator==(const SrcOpConsistentTensorMetaInferArgs& other) const;
+
+  static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
+      const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
+      Symbol<cfg::ParallelDistribution> parallel_distribution);
+
+ private:
+  SrcOpConsistentTensorMetaInferArgs() = default;
+
+  AttrMap attrs_;
+  Symbol<ParallelDesc> parallel_desc_;
+  Symbol<cfg::ParallelDistribution> parallel_distribution_;
 };
 
 class OpArgMutConsistentTensorMeta final {
@@ -141,6 +161,13 @@ struct hash<oneflow::one::InputConsistentTensorMeta> final {
 template<>
 struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
   size_t operator()(const oneflow::one::ConsistentTensorMetaInferArgs& val) const {
+    return val.hash_value();
+  }
+};
+
+template<>
+struct hash<oneflow::one::SrcOpConsistentTensorMetaInferArgs> final {
+  size_t operator()(const oneflow::one::SrcOpConsistentTensorMetaInferArgs& val) const {
     return val.hash_value();
   }
 };
@@ -183,15 +210,22 @@ class ConsistentTensorInferCache final {
       : user_op_expr_(user_op_expr) {}
 
   Maybe<const ConsistentTensorInferResult> GetOrInfer(
-      const ConsistentTensorMetaInferArgs& infer_args, Symbol<ParallelDesc> parallel_desc);
+      const ConsistentTensorMetaInferArgs& infer_args);
 
   static Maybe<const ConsistentTensorInferResult> Infer(
-      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args,
-      Symbol<ParallelDesc> parallel_desc);
+      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args);
+
+  Maybe<const ConsistentTensorInferResult> GetOrInfer(
+      const SrcOpConsistentTensorMetaInferArgs& infer_args);
+
+  static Maybe<const ConsistentTensorInferResult> Infer(
+      const UserOpExpr& user_op_expr, const SrcOpConsistentTensorMetaInferArgs& infer_args);
 
  private:
   std::weak_ptr<const UserOpExpr> user_op_expr_;
   HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;
+  HashMap<SrcOpConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>>
+      src_op_cache_;
 };
 
 }  // namespace one

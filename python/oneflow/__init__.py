@@ -318,6 +318,8 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
+from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
+from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
@@ -361,5 +363,4 @@ from oneflow.ops.user_op_builder import (
     api_user_op_module_builder as user_op_module_builder,
 )
 
-from . import autograd, distributed, linalg, optim, saved_model
-from . import sbp
+from . import autograd, distributed, linalg, optim, saved_model, sbp

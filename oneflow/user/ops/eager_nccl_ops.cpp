@@ -56,8 +56,10 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_broadcast")
           .Broadcast(user_op::OpArg("in", 0))
           .Broadcast(user_op::OpArg("out", 0))
           .Build();
-      ctx->NewBuilder().Split(user_op::OpArg("in", 0), 0).Broadcast(user_op::OpArg("out", 0)).Build();
-      return Maybe<void>::Ok();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("in", 0), 0)
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);

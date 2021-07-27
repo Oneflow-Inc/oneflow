@@ -1,0 +1,163 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/functional/function_library.h"
+
+#include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
+
+namespace oneflow {
+namespace one {
+namespace functional {
+
+namespace impl {
+
+namespace {
+
+Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
+                                  const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                  Symbol<ParallelDesc> parallel_desc) {
+  // TODO(hanbinbin): Sync data when sync_consistent_meta_info branch merged in master
+  if (sbp_parallels.size() == 1) {
+    const auto& sbp_parallel = sbp_parallels.at(0);
+    if (sbp_parallel->has_split_parallel()) {
+      return tensor;
+    } else if (sbp_parallel->has_broadcast_parallel()) {
+      if (parallel_desc->device_tag() == "gpu") {
+        TensorTuple input_list;
+        input_list.emplace_back(tensor);
+        int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
+        std::shared_ptr<UserOpExpr> op_expr =
+            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
+        return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+    } else if (sbp_parallel->has_partial_sum_parallel()) {
+      if (GlobalProcessCtx::Rank() == 0) {
+        const auto& out_tensor = JUST(tensor->detach());
+        bool requires_grad = autograd::GradMode::is_enabled() && tensor->requires_grad();
+        out_tensor->set_requires_grad(requires_grad);
+        out_tensor->set_is_leaf(!requires_grad);
+        return out_tensor;
+      } else {
+        return functional::ZerosLike(tensor);
+      }
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+  } else {
+    OF_UNIMPLEMENTED();
+  }
+}
+
+// used in consistent_tensor.to_consistent(sbp)
+Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
+                                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                       Symbol<ParallelDesc> parallel_desc) {
+  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+  std::vector<std::string> sbp_parallel_str_list(sbp_parallels.size());
+  {
+    for (int64_t i = 0; i < sbp_parallel_str_list.size(); ++i) {
+      sbp_parallel_str_list.at(i) = SbpParallelToString(*sbp_parallels.at(i));
+    }
+  }
+  const auto& parallel_distribution_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallel_str_list)
+               .Attr<std::string>("grad_mode", "restore")
+               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
+               .Build());
+  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr, {consistent_tensor}));
+}
+
+}  //  namespace
+
+class ToConsistentFunctor {
+ public:
+  ToConsistentFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                           Symbol<ParallelDesc> parallel_desc) const {
+    if (x->is_consistent()) {
+      return JUST(CastParallelDistribution(x, sbp_parallels, parallel_desc));
+    } else {
+      const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(x);
+      CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
+      CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
+      if (mirrored_tensor->is_cuda()) {
+        CHECK_EQ_OR_RETURN(
+            JUST(mirrored_tensor->device())->device_id(),
+            GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum()))
+            << "tensor must be on default device of rank!";
+      }
+      std::shared_ptr<Tensor> synced_tensor =
+          JUST(SyncDataAndMetaInfo(mirrored_tensor, sbp_parallels, parallel_desc));
+      std::shared_ptr<OpExpr> op = JUST(CastToConsistentOpExpr::New(
+          *JUST(UniqueStr("cast_to_consistent")), sbp_parallels, parallel_desc));
+      const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {synced_tensor}));
+      return output;
+    }
+  }
+};
+
+class ToLocalFunctor {
+ public:
+  ToLocalFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
+    CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+    CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+    int64_t machine_id = 0;
+    int64_t device_id = 0;
+    const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
+    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+    if (!parallel_desc->Containing(machine_id, device_id)) {
+      // should return UndefinesdLocalTensor here, the impl of which need to be discussed
+      return std::shared_ptr<Tensor>();
+    }
+    const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
+    std::shared_ptr<OpExpr> op = JUST(CastFromConsistentOpExpr::New(
+        *JUST(UniqueStr("cast_from_consistent")), *parallel_distribution, parallel_desc));
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}));
+    return output;
+  }
+};
+
+}  // namespace impl
+
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ToConsistentFunctor>("ToConsistent");
+  m.add_functor<impl::ToLocalFunctor>("ToLocal");
+};
+
+}  // namespace functional
+}  // namespace one
+}  // namespace oneflow
