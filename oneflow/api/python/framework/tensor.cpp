@@ -229,9 +229,7 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
         int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
         std::shared_ptr<UserOpExpr> op_expr =
             JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
-        auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-        JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
-        return outputs->at(0);
+        return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
       } else {
         OF_UNIMPLEMENTED();
       }
@@ -268,17 +266,9 @@ Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
   }
   std::shared_ptr<Tensor> synced_tensor =
       JUST(SyncDataAndMetaInfo(mirrored_tensor, sbp_parallels, parallel_desc));
-  TensorTuple input_list;
-  input_list.emplace_back(synced_tensor);
-  std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
   const auto& op_expr = JUST(CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent")),
                                                          sbp_parallels, parallel_desc));
-  const auto& session = JUST(GetDefaultSession());
-  session->PushMirroredStrategyEnabled(false);
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
-  session->PopMirroredStrategyEnabled();
-  return outputs->at(0);
+  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {synced_tensor}));
 }
 
 // used consistent_tensor.to_local()
@@ -294,22 +284,27 @@ Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
     // should return UndefinesdLocalTensor here, the impl of which need to be discussed
     return std::shared_ptr<Tensor>();
   }
-  TensorTuple input_list;
-  input_list.emplace_back(consistent_tensor);
-  auto outputs = std::make_shared<one::TensorTuple>(1);
   const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
   const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
                                                            *parallel_distribution, parallel_desc));
-  const auto& session = JUST(GetDefaultSession());
-  session->PushMirroredStrategyEnabled(false);
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
-  session->PopMirroredStrategyEnabled();
-  return outputs->at(0);
+  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {consistent_tensor}));
 }
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
+}
+
+Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
+  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
+  }
+  return tuple;
+}
+
+py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
+  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
 }  // namespace
@@ -398,7 +393,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("to_local",
            [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
              return CastConsistentToLocal(tensor).GetPtrOrThrow();
-           });
+           })
+      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
 }
 
 }  // namespace one

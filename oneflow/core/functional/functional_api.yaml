@@ -264,7 +264,11 @@
   bind_python: True
 
 - name: "constant"
-  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype, Int64 device)"
+  bind_python: True
+
+- name: "consistent_constant"
+  signature: "Tensor ConsistentConstant(*, Shape shape, Scalar value, DataType dtype, Int64 placement, Int64List sbp_tuple)"
   bind_python: True
 
 - name: "zeros_like"
@@ -732,4 +736,8 @@
 
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
+  bind_python: True
+
+- name: "stack"
+  signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True

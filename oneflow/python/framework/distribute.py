@@ -13,14 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import traceback
+from __future__ import absolute_import
+
 from contextlib import contextmanager
 
+import oneflow.python.framework.distribute_context as distribute_ctx
+from oneflow.python.oneflow_export import (
+    oneflow_export,
+    oneflow_deprecate,
+    oneflow_export_value,
+)
 import oneflow._oneflow_internal
-import oneflow.framework.distribute_context as distribute_ctx
-from oneflow import oneflow_deprecate
+import traceback
 
 
+@oneflow_export("distribute.mirrored_strategy")
 @oneflow_deprecate()
 def deprecated_mirrored_strategy():
     print(
@@ -34,8 +41,9 @@ def deprecated_mirrored_strategy():
     return DistributeMirroredStrategy()
 
 
+@oneflow_export("scope.mirrored_view")
 class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
-    """Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
+    r"""Create a scope in mirrored view. All operators within the scope will be mirrored among diffierent accelerators.
     Usage::
 
         with oneflow.scope.mirrored_view():
@@ -47,9 +55,7 @@ class DistributeMirroredStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, True)
 
 
-from oneflow import oneflow_deprecate
-
-
+@oneflow_export("distribute.mirrored_strategy_enabled")
 @oneflow_deprecate()
 def deprecated_mirrored_strategy_enabled():
     print(
@@ -63,8 +69,9 @@ def deprecated_mirrored_strategy_enabled():
     return MirroredStrategyEnabled()
 
 
+@oneflow_export("scope.mirrored_view_enabled")
 def MirroredStrategyEnabled() -> bool:
-    """
+    r"""
 
     Returns:
         bool: `True` if mirrored strategy is enabled in current context where this function is called.
@@ -73,9 +80,7 @@ def MirroredStrategyEnabled() -> bool:
     return distribute_ctx.IsMirroredStrategyEnabled()
 
 
-from oneflow import oneflow_deprecate
-
-
+@oneflow_export("distribute.consistent_strategy")
 @oneflow_deprecate()
 def deprecated_consistent_strategy():
     print(
@@ -89,8 +94,9 @@ def deprecated_consistent_strategy():
     return DistributeConsistentStrategy()
 
 
+@oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
-    """Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
+    r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
 
     Usage::
 
@@ -103,9 +109,7 @@ class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
         distribute_ctx.DistributeStrategy.__init__(self, False)
 
 
-from oneflow import oneflow_deprecate
-
-
+@oneflow_export("distribute.consistent_strategy_enabled")
 @oneflow_deprecate()
 def deprecated_consistent_strategy_enabled():
     print(
@@ -119,8 +123,9 @@ def deprecated_consistent_strategy_enabled():
     return ConsistentStrategyEnabled()
 
 
+@oneflow_export("scope.consistent_view_enabled")
 def ConsistentStrategyEnabled() -> bool:
-    """
+    r"""
 
     Returns:
         bool: `True` if consistent strategy is enabled in current context where this function is called.
@@ -129,8 +134,9 @@ def ConsistentStrategyEnabled() -> bool:
     return distribute_ctx.IsConsistentStrategyEnabled()
 
 
+@oneflow_export("distribute.split")
 def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
-    """Generate a split scheme in which op will be splitted at `axis`.
+    r"""Generate a split scheme in which op will be splitted at `axis`.
 
     Args:
         axis (int): At `axis` the op will be splitted.
@@ -146,8 +152,9 @@ def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     return oneflow._oneflow_internal.distribute.split(axis)
 
 
+@oneflow_export("distribute.broadcast")
 def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
-    """Generate a broadcast scheme.
+    r"""Generate a broadcast scheme.
 
     Returns:
         BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
@@ -159,8 +166,9 @@ def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     return oneflow._oneflow_internal.distribute.broadcast()
 
 
+@oneflow_export("distribute.auto")
 def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
-    """Generate a broadcast scheme.
+    r"""Generate a broadcast scheme.
 
     Returns:
         AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
@@ -169,20 +177,24 @@ def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     return oneflow._oneflow_internal.distribute.auto()
 
 
+@oneflow_export("distribute.assert_is_valid_distribute")
 def assert_is_valid_distribute(
     distribute: oneflow._oneflow_internal.distribute.Distribute,
 ) -> None:
     assert isinstance(
         distribute, oneflow._oneflow_internal.distribute.Distribute
-    ), "not a valid distribute policy.\n           expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"
+    ), """not a valid distribute policy.
+           expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 
+@oneflow_export("distributed.get_local_rank")
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
 
 
+@oneflow_export("distributed.get_rank")
 def get_rank():
-    """Returns the rank of current process group.
+    r"""Returns the rank of current process group.
 
     Returns:
         The rank of the process group.
@@ -191,8 +203,9 @@ def get_rank():
     return oneflow._oneflow_internal.GetRank()
 
 
+@oneflow_export("distributed.get_world_size")
 def get_world_size():
-    """Returns the number of processes in the current process group.
+    r"""Returns the number of processes in the current process group.
 
     Returns:
         The world size of the process group.
@@ -201,12 +214,14 @@ def get_world_size():
     return oneflow._oneflow_internal.GetWorldSize()
 
 
+@oneflow_export("distributed.is_multi_client")
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
 
 
+@oneflow_export("sbp.split")
 def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
-    """Generate a split scheme in which op will be splitted at `axis`.
+    r"""Generate a split scheme in which op will be splitted at `axis`.
 
     Args:
         axis (int): At `axis` the op will be splitted.
@@ -222,3 +237,34 @@ def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
     """
     assert type(axis) is int
     return oneflow._oneflow_internal.sbp.split(axis)
+
+
+@oneflow_export_value("sbp.broadcast")
+def broadcast_sbp() -> oneflow._oneflow_internal.sbp.sbp:
+    r"""Generate a broadcast scheme.
+    Returns:
+        SbpParallel: Broadcast scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.broadcast, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.broadcast()
+
+
+@oneflow_export_value("sbp.sbp")
+def sbp_sbp():
+    return oneflow._oneflow_internal.sbp.sbp
+
+
+@oneflow_export_value("sbp.partial_sum")
+def partial_sum_sbp() -> oneflow._oneflow_internal.sbp.sbp:
+    r"""Generate a partial_sum scheme.
+    Returns:
+        SbpParallel: PartialSum scheme object,, often required by `to_consistent` method of `Tensor`
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.partial_sum, placement=("cuda", {0: [0, 1, 2, 3]}))
+    """
+    return oneflow._oneflow_internal.sbp.partial_sum()
