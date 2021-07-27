@@ -641,6 +641,7 @@ class ImageBatchAlign(Module):
     def forward(self, input):
         return self._op(input)[0]
 
+
 @oneflow_export("nn.OFRecordBytesDecoder")
 @experimental_api
 class OFRecordBytesDecoder(Module):
@@ -654,10 +655,11 @@ class OFRecordBytesDecoder(Module):
     Returns:
         The result bytes Tensor.
     """
-    def __init__(self, blob_name: str,name: Optional[str] = None):
+
+    def __init__(self, blob_name: str, name: Optional[str] = None):
         super().__init__()
         self._op = (
-            flow.builtin_op("ofrecord_bytes_decoder",name)
+            flow.builtin_op("ofrecord_bytes_decoder", name)
             .Input("in")
             .Output("out")
             .Attr("name", blob_name)
@@ -667,6 +669,8 @@ class OFRecordBytesDecoder(Module):
     def forward(self, input):
         return self._op(input)[0]
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)
