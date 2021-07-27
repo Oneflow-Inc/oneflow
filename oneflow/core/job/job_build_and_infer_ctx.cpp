@@ -967,6 +967,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_GT_OR_RETURN(job().net().op_size(), 0)
+      << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
@@ -1319,12 +1321,9 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
-  // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
   return op_name;
 }
 

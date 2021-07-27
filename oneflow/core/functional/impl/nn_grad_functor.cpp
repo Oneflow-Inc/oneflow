@@ -113,7 +113,7 @@ class PoolingNdGradFunctor {
  public:
   PoolingNdGradFunctor() {
     for (const auto& mode : {"max"}) {
-      for (int ndims = 2; ndims <= 3; ++ndims) {
+      for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
                                                     .Input("x")
@@ -133,16 +133,13 @@ class PoolingNdGradFunctor {
                            const std::shared_ptr<one::Tensor>& indice,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
                            const int32_t& ndims, const std::string& data_format,
-                           const std::string& padding, const std::vector<int32_t>& padding_before,
-                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                            const bool& return_indices, const bool& ceil_mode) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
@@ -202,6 +199,35 @@ class PoolNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+class AdaptivePoolNdGradFunctor {
+ public:
+  AdaptivePoolNdGradFunctor() {
+    for (const auto& mode : {"avg"}) {
+      for (int ndims = 1; ndims <= 3; ++ndims) {
+        const auto& op_type_name = GetOpTypeName(mode, ndims);
+        op_expr_map_[op_type_name] =
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+      }
+    }
+  }
+  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
+    return "adaptive_" + mode + "_pool" + std::to_string(ndims) + "d_grad";
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
+                           const int32_t& ndims) const {
+    const auto& op_type_name = GetOpTypeName(mode, ndims);
+    const auto& it = op_expr_map_.find(op_type_name);
+    CHECK_OR_RETURN(it != op_expr_map_.end())
+        << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
+  }
+
+ protected:
+  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
@@ -227,8 +253,12 @@ class SmoothL1LossGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    constant_pad_grad_ =
+    constant_pad_1d_grad_ =
+        CHECK_JUST(one::OpBuilder("constant_pad1d_grad").Input("dy").Output("dx").Build());
+    constant_pad_2d_grad_ =
         CHECK_JUST(one::OpBuilder("constant_pad2d_grad").Input("dy").Output("dx").Build());
+    constant_pad_3d_grad_ =
+        CHECK_JUST(one::OpBuilder("constant_pad3d_grad").Input("dy").Output("dx").Build());
     reflect_pad_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
     replicate_pad_grad_ =
@@ -251,7 +281,14 @@ class PadGradFunctor {
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
-      return OpInterpUtil::Dispatch<Tensor>(*constant_pad_grad_, {dy}, attrs);
+      switch (dy->shape()->NumAxes()) {
+        case 3: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_1d_grad_, {dy}, attrs);
+        case 4: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_2d_grad_, {dy}, attrs);
+        case 5: return OpInterpUtil::Dispatch<Tensor>(*constant_pad_3d_grad_, {dy}, attrs);
+        default:
+          UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode << ", but "
+                                      << dy->shape()->NumAxes() << "d-tensor is not support yet! ";
+      }
     } else if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
     } else if (mode == "replicate") {
@@ -263,9 +300,11 @@ class PadGradFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> constant_pad_grad_;
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
+  std::shared_ptr<OpExpr> constant_pad_1d_grad_;
+  std::shared_ptr<OpExpr> constant_pad_2d_grad_;
+  std::shared_ptr<OpExpr> constant_pad_3d_grad_;
 };
 
 }  // namespace impl
@@ -275,6 +314,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+  m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
