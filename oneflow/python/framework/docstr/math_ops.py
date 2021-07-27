@@ -76,3 +76,35 @@ add_docstr(
 
 """,
 )
+
+add_docstr(
+    oneflow.F.floor,
+    r"""
+    oneflow.F.floor(x: Tensor) -> Tensor
+    
+    The floor function takes a input x, and outpus the greates integer less than or equal to x, that is
+    
+    .. math::
+        \lfoor{x}\rfloor = max{m \in \mathbb{Z} | m \le x}
+    
+    Args:
+        x(tensor, dtype=flow.float32): the input real number
+        output(tensor, dtype=flow.float32)
+    
+    For example:
+
+    ..code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor(15.37)
+        >>> x1 = flow.F.floor(x)
+        >>> x1
+        tensor([15.], dtype=oneflow.float32)
+    
+        
+    """,
+)
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

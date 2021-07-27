@@ -6,3 +6,4 @@ Functional functions
 .. autofunction:: oneflow.F.bernoulli
 .. autofunction:: oneflow.F.cos
 .. autofunction:: oneflow.F.sin
+.. autofunction:: oneflow.F.floor
