@@ -75,6 +75,7 @@ def glob_files(path: str = None, exclude=None):
     for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
         if not exclude:
             if path.startswith(exclude):
+                print("[exclude]", path)
                 continue
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
