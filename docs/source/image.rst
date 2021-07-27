@@ -1,8 +1,11 @@
-oneflow.image
-===================================
-Image processing
-----------------------------------
-.. currentmodule:: oneflow.image
-.. automodule:: oneflow.image
-    :members:
-    :imported-members:
+oneflow.nn.image
+======================================
+Image operations for neural networks
+--------------------------------------
+.. currentmodule:: oneflow.nn.image
+.. automodule:: oneflow.nn.image
+    :members: Resize,
+        batch_align,
+        decode,
+        flip,
+        normalize
