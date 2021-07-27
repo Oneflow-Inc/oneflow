@@ -174,4 +174,4 @@ void Runtime::DeleteAllGlobal() {
   Global<summary::EventsWriter>::Delete();
 }
 
-}  // namespace oneflow 
+}  // namespace oneflow
