@@ -184,22 +184,6 @@ def rdma_mem_block_mbyte(val):
     sess.config_proto.resource.rdma_mem_block_mbyte = val
 
 
-def api_rdma_recv_msg_buf_mbyte(val: int) -> None:
-    """Set up the buffer size for receiving messages in rama mode
-
-    Args:
-        val (int): buffer size, e.g. 1024(mb)
-    """
-    return enable_if.unique([rdma_recv_msg_buf_mbyte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def rdma_recv_msg_buf_mbyte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.rdma_recv_msg_buf_mbyte = val
-
-
 def api_reserved_host_mem_mbyte(val: int) -> None:
     """Set up the memory size of reserved host
 
