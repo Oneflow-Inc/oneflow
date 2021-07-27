@@ -21,14 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-
-///  A tag type to tell optional to construct its value in-place
-struct in_place_t {
-  explicit in_place_t() = default;
-};
-
-static constexpr in_place_t in_place{};
-
 namespace internal {
 
 template<typename T, typename U = void>
@@ -41,7 +33,7 @@ class Storage<T, typename std::enable_if<IsScalarType<T>::value>::type> {
 
   template<typename... Args,
            typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>
-  Storage(in_place_t, Args&&... args) {
+  Storage(Args&&... args) {
     new (&value_) T(std::forward<Args>(args)...);
   }
 
@@ -75,11 +67,11 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
 
   template<typename... Args,
            typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>
-  Storage(in_place_t, Args&&... args) {
+  Storage(Args&&... args) {
     value_ = std::make_shared<T>(std::forward<Args>(args)...);
   }
 
-  Storage(in_place_t, const std::shared_ptr<T>& value) : value_(value) {}
+  Storage(const std::shared_ptr<T>& value) : value_(value) {}
 
   Storage& operator=(const T& value) {
     if (value_) {
@@ -115,25 +107,19 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
 }  // namespace internal
 
 template<typename T>
-class Optional {
+class Optional final {
  private:
   template<typename U>
   using is_self = std::is_same<Optional, typename std::decay<U>::type>;
-  template<typename U>
-  using is_tag = std::is_same<in_place_t, typename std::decay<U>::type>;
 
  public:
   Optional() : init_(false) {}
 
-  template<typename... Args>
-  Optional(in_place_t, Args&&... args)
-      : init_(true), storage_(in_place, std::forward<Args>(args)...) {}
-
-  template<typename U, typename std::enable_if<
-                           !is_self<U>::value && !is_tag<U>::value
-                               && std::is_constructible<internal::Storage<T>, in_place_t, U>::value,
-                           int>::type = 0>
-  Optional(U&& val) : init_(true), storage_(in_place, std::forward<U>(val)) {}
+  template<typename U,
+           typename std::enable_if<!is_self<U>::value
+                                       && std::is_constructible<internal::Storage<T>, U>::value,
+                                   int>::type = 0>
+  Optional(U&& val) : init_(true), storage_(std::forward<U>(val)) {}
 
   ~Optional() = default;
 
@@ -183,12 +169,11 @@ class Optional {
 };
 
 template<typename T>
-class Optional<T&> {
+class Optional<T&> final {
  public:
   Optional() : value_ptr_(nullptr) {}
 
   Optional(T& val) : value_ptr_(&val) {}
-  Optional(in_place_t, T& val) : value_ptr_(&val) {}
 
   ~Optional() = default;
 
@@ -201,8 +186,6 @@ class Optional<T&> {
     CHECK_OR_RETURN(has_value()) << "Optional has no value.";
     return *value_ptr_;
   }
-
-  void Clear() { value_ptr_ = nullptr; }
 
   bool has_value() const { return value_ptr_ != nullptr; }
   operator bool() const { return has_value(); }
