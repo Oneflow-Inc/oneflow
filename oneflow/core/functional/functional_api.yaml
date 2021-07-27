@@ -733,3 +733,7 @@
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
+
+- name: "F.floor"
+  signature: "Tensor floor(Tensor x)"
+  bind_python: True
