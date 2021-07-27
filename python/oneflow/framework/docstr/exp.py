@@ -40,5 +40,5 @@ add_docstr(
         >>> y
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
-    """,
+""",
 )
