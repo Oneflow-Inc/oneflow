@@ -14,8 +14,10 @@ import oneflow
 from oneflow.python.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.floor
-    r"""oneflow.F.floor
+    oneflow.F.floor,
+    r"""
+    oneflow.F.floor(x: Tensor) -> Tensor
+    
     The floor function takes a input x, and outpus the greates integer less than or equal to x, that is
     
     .. math::
