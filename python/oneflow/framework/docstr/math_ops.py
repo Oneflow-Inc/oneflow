@@ -24,3 +24,27 @@ add_docstr(
     oneflow.F.cos,
     "\n    cos(x: Tensor) -> Tensor\n\n    Returns a new tensor with the cosine  of the elements of :attr:`input`.\n    \n    .. math::\n        \\text{y}_{i} = \\cos(\\text{x}_{i})\n\n    Args:\n        x (Tensor): the input tensor.\n\n    For example:\n\n    .. code-block:: python\n\n        >>> import oneflow as flow\n        >>> import numpy as np\n        >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])\n        >>> x = flow.Tensor(x, dtype=flow.float32)\n        >>> y = flow.F.cos(x)\n        >>> y\n        tensor([0.1394, 0.2957, 0.6553, 0.5574], dtype=oneflow.float32)\n\n",
 )
+
+add_docstr(
+    oneflow.F.abs,
+    r"""
+    abs(x: Tensor) -> Tensor
+    
+    Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
+        >>> flow.abs(x)
+        tensor([1., 2., 3., 4.], dtype=oneflow.float32)
+
+    """
+)
