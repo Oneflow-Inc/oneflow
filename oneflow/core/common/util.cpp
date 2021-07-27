@@ -104,4 +104,29 @@ size_t GetAvailableCpuMemSize() {
 
 bool IsKernelSafeInt32(int64_t n) { return n <= GetMaxVal<int32_t>() / 2; }
 
+namespace {
+
+bool CaseInsensitiveStringEquals(const std::string& lhs, const std::string& rhs) {
+  return lhs.size() == rhs.size()
+         && std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                       [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+}
+
+bool StringToBool(const std::string& str) {
+  return CaseInsensitiveStringEquals(str, "1") || CaseInsensitiveStringEquals(str, "true")
+         || CaseInsensitiveStringEquals(str, "yes") || CaseInsensitiveStringEquals(str, "on")
+         || CaseInsensitiveStringEquals(str, "y");
+}
+
+}  // namespace
+
+bool ParseBooleanFromEnv(const std::string& env_var, bool default_value) {
+  const char* env_p = std::getenv(env_var.c_str());
+  if (env_p == nullptr) {
+    return default_value;
+  } else {
+    return StringToBool(env_p);
+  }
+}
+
 }  // namespace oneflow
