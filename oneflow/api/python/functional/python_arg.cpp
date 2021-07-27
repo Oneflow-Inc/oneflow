@@ -174,6 +174,17 @@ Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
 }
 
 template<>
+Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(Borrow()));
+}
+
+template<>
+Maybe<std::vector<Symbol<cfg::SbpParallel>>>
+PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  return *JUST(detail::cast<std::vector<Symbol<cfg::SbpParallel>>>(Borrow()));
+}
+
+template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   auto tensor_index = std::make_shared<TensorIndex>();
   // Obvious single-entry cases.
