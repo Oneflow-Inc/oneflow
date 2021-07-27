@@ -173,7 +173,6 @@ class TestRepeat(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    
 
 if __name__ == "__main__":
     unittest.main()
