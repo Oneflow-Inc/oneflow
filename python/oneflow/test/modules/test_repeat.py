@@ -128,6 +128,7 @@ def _test_repeat_same_dim_backward(test_case, device):
     ]
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
 
+
 def _test_repeat_flow_size(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 4, 1, 3),
@@ -180,6 +181,7 @@ def _test_repeat_int(test_case, device):
         ],
     ]
     test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
