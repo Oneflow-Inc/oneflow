@@ -162,8 +162,8 @@ LogicalResult Lower(mlir::MLIRContext* context, OwningModuleRef& module) {
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());     // -convert-linalg-to-loops
   pm.addNestedPass<FuncOp>(createLowerToCFGPass());               // -convert-scf-to-std
   pm.addPass(createConvertLinalgToLLVMPass());                    // -convert-linalg-to-llvm
-  pm.addPass(createLowerToLLVMPass());                            // -convert-std-to-llvm
   pm.addPass(createMemRefToLLVMPass());                           // -convert-memref-to-llvm
+  pm.addPass(createLowerToLLVMPass());                            // -convert-std-to-llvm
   return pm.run(module.get());
 }
 
