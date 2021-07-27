@@ -83,16 +83,6 @@ def long_op(input):
     return Long()(input)
 
 
-def return_first_input(*args):
-    op = (
-        flow.builtin_op("return_first_input")
-        .Input("in", len(args))
-        .Output("out")
-        .Build()
-    )
-    return op(*args)[0]
-
-
 if __name__ == "__main__":
     import doctest
 

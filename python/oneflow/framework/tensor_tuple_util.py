@@ -28,12 +28,15 @@ def convert_to_tensor_tuple(
     elif isinstance(args, collections.abc.Sequence):
         if len(args) == 0:
             return TensorTuple()
-        if isinstance(args[0], PyTensor):
-            for tensor in args:
+        new_args = []
+        for tensor in args:
+            if hasattr(tensor, "is_determined"):
                 if not tensor.is_determined:
                     tensor.determine()
-            return TensorTuple([x._local_or_consistent_tensor for x in args])
-        return TensorTuple(args)
+                new_args.append(tensor._local_or_consistent_tensor)
+            else:
+                new_args.append(tensor)
+        return TensorTuple(new_args)
     else:
         tensor_tuple = TensorTuple()
         if isinstance(args, PyTensor):

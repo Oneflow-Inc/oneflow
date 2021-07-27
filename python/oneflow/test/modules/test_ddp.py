@@ -22,8 +22,8 @@ import numpy as np
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestAllReduce(flow.unittest.TestCase):
-    def test_all_reduce(test_case):
+class TestDDP(flow.unittest.TestCase):
+    def test_ddp(test_case):
         class Mul(flow.nn.Module):
             def __init__(self):
                 super().__init__()

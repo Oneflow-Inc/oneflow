@@ -16,14 +16,13 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
+import oneflow.nn as nn
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.nn.module import Module
+from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreducefn(reversed_param_list, param, nccl_allreduce_op):
-    assert param.device.type == "cuda"
-    assert param.device.index == flow.framework.distribute.get_local_rank()
-
+def allreducefn(reversed_param_list, param, allreduce_module):
     def allreduce(grad):
         reversed_param_list[param][0] = True
         ret = None
@@ -33,9 +32,9 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
             if ready:
                 reversed_param_list[cur_param][1] = True
                 if cur_param == param:
-                    ret = nccl_allreduce_op(grad)[0]
+                    ret = allreduce_module(grad)[0]
                 else:
-                    cur_param.grad = nccl_allreduce_op(cur_param.grad)[0]
+                    cur_param.grad = allreduce_module(cur_param.grad)[0]
             else:
                 break
         return ret
@@ -45,27 +44,20 @@ def allreducefn(reversed_param_list, param, nccl_allreduce_op):
 
 def ddp(module: Module):
     world_size = flow.framework.distribute.get_world_size()
-    nccl_allreduce_op = (
-        builtin_op("eager_nccl_all_reduce")
-        .Input("in")
-        .Output("out")
-        # .Attr("sorted_ranks", [0, 1])
-        .Attr("parallel_conf", f'device_tag: "gpu", device_name: "0:0-{world_size-1}"',)
-        .Build()
-    )
+    allreduce_module = nn.AllReduce(list(range(world_size)))
     reversed_param_list = OrderedDict(
         reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
     )
     module._reversed_param_list = reversed_param_list
     for _, param in module.named_parameters():
-        param.register_hook(allreducefn(reversed_param_list, param, nccl_allreduce_op))
+        param.register_hook(allreducefn(reversed_param_list, param, allreduce_module))
 
     def hook(module, input, output):
         reversed_param_list = module._reversed_param_list
         for item in reversed_param_list.values():
             item[0], item[1] = False, False
-        output = flow.return_first_input(
-            output, *reversed_param_list.keys()
+        output = flow.F.return_first_input(
+            convert_to_tensor_tuple([output, *reversed_param_list.keys()])
         )
         return output
 

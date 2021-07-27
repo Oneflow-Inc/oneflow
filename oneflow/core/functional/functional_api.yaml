@@ -733,3 +733,7 @@
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
+
+- name: "return_first_input"
+  signature: "Tensor ReturnFirstInput(TensorTuple inputs)"
+  bind_python: True
