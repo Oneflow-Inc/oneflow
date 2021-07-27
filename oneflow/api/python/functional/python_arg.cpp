@@ -181,7 +181,11 @@ Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() 
 template<>
 Maybe<std::vector<Symbol<cfg::SbpParallel>>>
 PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
-  return *JUST(detail::cast<std::vector<Symbol<cfg::SbpParallel>>>(Borrow()));
+  const auto& v =
+      JUST(detail::cast<std::vector<std::shared_ptr<Symbol<cfg::SbpParallel>>>>(Borrow()));
+  auto sbp_list = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(v->size());
+  for (int i = 0; i < v->size(); ++i) { sbp_list->at(i) = *(v->at(i)); }
+  return sbp_list;
 }
 
 template<>
