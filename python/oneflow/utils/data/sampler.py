@@ -13,19 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import builtins
-from typing import Generic, Iterator, List, Optional, Sequence, Sized, TypeVar, Union
-
+from typing import Iterator, Optional, Sequence, List, TypeVar, Generic, Sized
 import numpy as np
 
 import oneflow as flow
-from oneflow.framework.tensor import Tensor
+
 
 T_co = TypeVar("T_co", covariant=True)
 
 
 class Sampler(Generic[T_co]):
-    """Base class for all Samplers.
+    r"""Base class for all Samplers.
 
     Every Sampler subclass has to provide an :meth:`__iter__` method, providing a
     way to iterate over indices of dataset elements, and a :meth:`__len__` method
@@ -42,14 +40,40 @@ class Sampler(Generic[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         raise NotImplementedError
 
+    # NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
+    #
+    # Many times we have an abstract class representing a collection/iterable of
+    # data, e.g., `flow.utils.data.Sampler`, with its subclasses optionally
+    # implementing a `__len__` method. In such cases, we must make sure to not
+    # provide a default implementation, because both straightforward default
+    # implementations have their issues:
+    #
+    #   + `return NotImplemented`:
+    #     Calling `len(subclass_instance)` raises:
+    #       TypeError: 'NotImplementedType' object cannot be interpreted as an integer
+    #
+    #   + `raise NotImplementedError()`:
+    #     This prevents triggering some fallback behavior. E.g., the built-in
+    #     `list(X)` tries to call `len(X)` first, and executes a different code
+    #     path if the method is not found or `NotImplemented` is returned, while
+    #     raising an `NotImplementedError` will propagate and and make the call
+    #     fail where it could have use `__iter__` to complete the call.
+    #
+    # Thus, the only two sensible things to do are
+    #
+    #   + **not** provide a default `__len__`.
+    #
+    #   + raise a `TypeError` instead, which is what Python uses when users call
+    #     a method that is not defined on an object.
+    #     (@ssnl verifies that this works on at least Python 3.7.)
+
 
 class SequentialSampler(Sampler[int]):
-    """Samples elements sequentially, always in the same order.
+    r"""Samples elements sequentially, always in the same order.
 
     Args:
         data_source (Dataset): dataset to sample from
     """
-
     data_source: Sized
 
     def __init__(self, data_source):
@@ -63,7 +87,7 @@ class SequentialSampler(Sampler[int]):
 
 
 class RandomSampler(Sampler[int]):
-    """Samples elements randomly. If without replacement, then sample from a shuffled dataset.
+    r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
     If with replacement, then user can specify :attr:`num_samples` to draw.
 
     Args:
@@ -73,7 +97,6 @@ class RandomSampler(Sampler[int]):
             is supposed to be specified only when `replacement` is ``True``.
         generator (Generator): Generator used in sampling.
     """
-
     data_source: Sized
     replacement: bool
 
@@ -88,25 +111,28 @@ class RandomSampler(Sampler[int]):
         self.replacement = replacement
         self._num_samples = num_samples
         self.generator = generator
+
         if not isinstance(self.replacement, bool):
             raise TypeError(
-                "replacement should be a boolean value, but got replacement={}".format(
-                    self.replacement
-                )
+                "replacement should be a boolean value, but got "
+                "replacement={}".format(self.replacement)
             )
-        if self._num_samples is not None and (not replacement):
+
+        if self._num_samples is not None and not replacement:
             raise ValueError(
-                "With replacement=False, num_samples should not be specified, since a random permute will be performed."
+                "With replacement=False, num_samples should not be specified, "
+                "since a random permute will be performed."
             )
+
         if not isinstance(self.num_samples, int) or self.num_samples <= 0:
             raise ValueError(
-                "num_samples should be a positive integer value, but got num_samples={}".format(
-                    self.num_samples
-                )
+                "num_samples should be a positive integer "
+                "value, but got num_samples={}".format(self.num_samples)
             )
 
     @property
     def num_samples(self) -> int:
+        # dataset size might change at runtime
         if self._num_samples is None:
             return len(self.data_source)
         return self._num_samples
@@ -121,22 +147,40 @@ class RandomSampler(Sampler[int]):
         else:
             generator = self.generator
         if self.replacement:
-            raise NotImplementedError("Not support replacement yet!")
+            np.random.randint()
+            for _ in range(self.num_samples // 32):
+                yield from np.random.randint(
+                    high=n, size=(32,), dtype=np.int64
+                ).tolist()
+                # TODO: use flow.randint replace np.randint
+                # yield from flow.randint(
+                #     high=n, size=(32,), dtype=flow.int64, generator=generator
+                # ).tolist()
+            yield from np.random.randint(
+                high=n, size=(self.num_samples % 32,), dtype=np.int64
+            ).tolist()
+            # yield from flow.randint(
+            #     high=n,
+            #     size=(self.num_samples % 32,),
+            #     dtype=flow.int64,
+            #     generator=generator,
+            # ).tolist()
         else:
             yield from np.random.permutation(n).tolist()
+            # TODO: flow.randperm
+            # yield from flow.randperm(n, generator=generator).tolist()
 
     def __len__(self):
         return self.num_samples
 
 
 class SubsetRandomSampler(Sampler[int]):
-    """Samples elements randomly from a given list of indices, without replacement.
+    r"""Samples elements randomly from a given list of indices, without replacement.
 
     Args:
         indices (sequence): a sequence of indices
         generator (Generator): Generator used in sampling.
     """
-
     indices: Sequence[int]
 
     def __init__(self, indices: Sequence[int], generator=None) -> None:
@@ -154,7 +198,7 @@ class SubsetRandomSampler(Sampler[int]):
 
 
 class BatchSampler(Sampler[List[int]]):
-    """Wraps another sampler to yield a mini-batch of indices.
+    r"""Wraps another sampler to yield a mini-batch of indices.
 
     Args:
         sampler (Sampler or Iterable): Base sampler. Can be any iterable object
@@ -170,21 +214,22 @@ class BatchSampler(Sampler[List[int]]):
     """
 
     def __init__(self, sampler: Sampler[int], batch_size: int, drop_last: bool) -> None:
+        # Since collections.abc.Iterable does not check for `__getitem__`, which
+        # is one way for an object to be an iterable, we don't do an `isinstance`
+        # check here.
         if (
             not isinstance(batch_size, int)
             or isinstance(batch_size, bool)
             or batch_size <= 0
         ):
             raise ValueError(
-                "batch_size should be a positive integer value, but got batch_size={}".format(
-                    batch_size
-                )
+                "batch_size should be a positive integer value, "
+                "but got batch_size={}".format(batch_size)
             )
         if not isinstance(drop_last, bool):
             raise ValueError(
-                "drop_last should be a boolean value, but got drop_last={}".format(
-                    drop_last
-                )
+                "drop_last should be a boolean value, but got "
+                "drop_last={}".format(drop_last)
             )
         self.sampler = sampler
         self.batch_size = batch_size
@@ -197,11 +242,15 @@ class BatchSampler(Sampler[List[int]]):
             if len(batch) == self.batch_size:
                 yield batch
                 batch = []
-        if len(batch) > 0 and (not self.drop_last):
+        if len(batch) > 0 and not self.drop_last:
             yield batch
 
     def __len__(self):
+        # Can only be called if self.sampler has __len__ implemented
+        # We cannot enforce this condition, so we turn off typechecking for the
+        # implementation below.
+        # Somewhat related: see NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
         if self.drop_last:
-            return len(self.sampler) // self.batch_size
+            return len(self.sampler) // self.batch_size  # type: ignore
         else:
-            return (len(self.sampler) + self.batch_size - 1) // self.batch_size
+            return (len(self.sampler) + self.batch_size - 1) // self.batch_size  # type: ignore
