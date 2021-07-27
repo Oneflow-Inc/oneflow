@@ -45,6 +45,7 @@ class _ConstantBase(Module):
         elif isinstance(device, str):
             self.device = flow.device(device)
         else:
+            assert isinstance(device, flow.device)
             self.device = device
         self.shape = size
         self.value = value
