@@ -68,12 +68,14 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && (is_dynamic() == rhs.is_dynamic());
 }
 
-size_t BlobDesc::ByteSizeOfBlobHeader() const { 
-  return shape().is_initialized() ? shape().NumAxes() * sizeof(int64_t):0;
+size_t BlobDesc::ByteSizeOfBlobHeader() const {
+  return shape().is_initialized() ? shape().NumAxes() * sizeof(int64_t) : 0;
 }
 
 size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
-  return shape().is_initialized() ? RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kHeaderAlignSize) : RoundUp(0,  BlobDesc::kHeaderAlignSize);
+  return shape().is_initialized()
+             ? RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kHeaderAlignSize)
+             : RoundUp(0, BlobDesc::kHeaderAlignSize);
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
