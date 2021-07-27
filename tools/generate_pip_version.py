@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--xla", default=False, action="store_true", required=False)
 parser.add_argument("--cuda", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
+parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
 
 local_label = ""
@@ -54,8 +55,7 @@ if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv(
     version += f".git.{git_hash}"
 
 
-dst = os.path.join(args.src, "oneflow/python/version.py")
-print(f"-- Generating pip version: {version}, writing to: {dst}")
-assert args.src
-with open(dst, "w+") as f:
+print(f"-- Generating pip version: {version}, writing to: {args.out}")
+assert args.out
+with open(args.out, "w+") as f:
     f.write(f'__version__ = "{version}"')

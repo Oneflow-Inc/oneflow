@@ -761,3 +761,7 @@
                        String data_format, Int32List padding, Int32List kernel_size,
                        Int32List stride, Bool ceil_mode, Bool count_include_pad, Int64 divisor_override=0)"
   bind_python: True 
+  
+- name: "stack"
+  signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
+  bind_python: True
