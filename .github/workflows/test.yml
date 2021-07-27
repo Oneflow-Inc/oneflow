@@ -135,7 +135,7 @@ jobs:
         uses: actions/github-script@v4
         with:
           script: |
-            github.issues.removeRequestedReviewers({
+            github.pulls.removeRequestedReviewers({
               pull_number: context.issue.number,
               owner: "Oneflow-Inc",
               repo: "oneflow",
