@@ -47,7 +47,7 @@ class ConsistentConstantFunctor {
     CHECK_NE_OR_RETURN(placement, 0);
     const auto* placement_ptr = reinterpret_cast<const ParallelDesc*>(placement);
     Symbol<ParallelDesc> parallel_desc =
-      JUST(SymbolUtil<ParallelDesc>::GetSymbolByExistedRawPtr(placement_ptr));
+        JUST(SymbolUtil<ParallelDesc>::GetSymbolByExistedRawPtr(placement_ptr));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -111,8 +111,7 @@ class ConstantFunctor {
     if (device) {
       int64_t device_val = device;
       const auto* device_ptr = reinterpret_cast<Device*>(device_val);
-      Symbol<Device> device_symbol =
-        JUST(SymbolUtil<Device>::GetSymbolByExistedRawPtr(device_ptr));
+      Symbol<Device> device_symbol = JUST(SymbolUtil<Device>::GetSymbolByExistedRawPtr(device_ptr));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);

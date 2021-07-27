@@ -23,8 +23,7 @@ namespace oneflow {
 
 namespace one {
 
-TensorInfo::TensorInfo(const Tensor& tensor)
-    : shape_(tensor.shape()), dtype_(tensor.dtype()) {
+TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {
   if (TRY(tensor.device()).IsOk()) { device_ = CHECK_JUST(tensor.device()); }
   if (TRY(tensor.parallel_desc()).IsOk()) { parallel_desc_ = CHECK_JUST(tensor.parallel_desc()); }
   if (TRY(tensor.parallel_distribution()).IsOk()) {

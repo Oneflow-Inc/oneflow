@@ -56,7 +56,8 @@ class Symbol final {
   std::shared_ptr<const T> shared_from_symbol() const;
 
  private:
-  template<typename SymbolT> friend struct SymbolUtil;
+  template<typename SymbolT>
+  friend struct SymbolUtil;
   static const T* GetOrCreatePtr(const T& obj);
 
   const T* ptr_;

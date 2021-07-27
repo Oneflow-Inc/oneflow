@@ -82,7 +82,7 @@ class _ConstantBase(Module):
                 self.shape,
                 self.value,
                 self.dtype,
-                int(self.device) if self.device is not None else None
+                int(self.device) if self.device is not None else None,
             )
         res.requires_grad = self.requires_grad
         return res
