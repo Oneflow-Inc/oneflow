@@ -23,7 +23,6 @@ class Function:
         self.handle = handle
 
     def __call__(self, *args, **kwargs):
-        args = list(args)
         return self.handle(*args, **kwargs)
 
 

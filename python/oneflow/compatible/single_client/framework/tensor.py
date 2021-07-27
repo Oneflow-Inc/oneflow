@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.oneflow_export import oneflow_export, experimental_api
 from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
@@ -348,7 +347,5 @@ def register_tensor_op(op_name):
     return set_tensor_op
 
 
-@oneflow_export("tensor")
-@experimental_api
-def new_tensor(*args, **kwargs):
+def tensor(*args, **kwargs):
     return flow._oneflow_internal.tensor(*args, **kwargs)

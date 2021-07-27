@@ -228,8 +228,8 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
     return (poly_array_list, poly_index_array_list)
 
 
-@flow.unittest.skip_unless_1n1d()
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+@unittest.skip("")
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"

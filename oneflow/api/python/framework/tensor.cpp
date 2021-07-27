@@ -67,8 +67,7 @@ std::shared_ptr<Tensor> MakeConsistentTensor(
 }
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = std::dynamic_pointer_cast<MirroredTensor>(t);
-  CHECK_NOTNULL_OR_RETURN(tensor) << "local tensors supported only";
+  const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
@@ -92,8 +91,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
                                               py::array_t<T> array,
                                               void (*Copy)(uint64_t, py::array_t<T>),
                                               const std::string& modifier) {
-  const auto& tensor = std::dynamic_pointer_cast<MirroredTensor>(t);
-  CHECK_NOTNULL_OR_RETURN(tensor) << "local tensors supported only";
+  auto tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::atomic<bool> synced(false);
 
@@ -208,8 +206,7 @@ Symbol<ParallelDesc> TensorGetParallelDesc(const Tensor& tensor) {
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<const DType*>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = std::dynamic_pointer_cast<MirroredTensor>(t);
-  CHECK_NOTNULL_OR_RETURN(tensor) << "local tensors supported only";
+  const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
   std::vector<const DType*> dtypes;
@@ -255,7 +252,8 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
 
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype) {
+Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
+                        bool treat_single_int_as_size) {
   Symbol<Device> device;
   if (kwargs.contains("device")) {
     const auto& device_kwarg = kwargs["device"];
@@ -287,27 +285,41 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
       }
       return tensor;
     } else {
-      return MakeLocalTensorByNumpy(arg, desired_dtype, device, requires_grad);
-    }
-  } else {
-    DimVector dim_vector;
-    for (const auto& arg : args) {
-      try {
-        dim_vector.push_back(py::cast<int>(arg));
-      } catch (const py::cast_error& e) {
-        return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
+      if (!treat_single_int_as_size || !py::isinstance<py::int_>(arg)) {
+        return MakeLocalTensorByNumpy(arg, desired_dtype, device, requires_grad);
       }
     }
-    CHECK_NOTNULL_OR_RETURN(desired_dtype);
-    std::shared_ptr<MirroredTensor> tensor = JUST(
-        MirroredTensor::MakeTensor(std::make_shared<Shape>(dim_vector), desired_dtype->data_type(),
-                                   device, /* is_lazy */ false, requires_grad, /* is_leaf */ true));
-    return std::static_pointer_cast<Tensor>(tensor);
   }
+  DimVector dim_vector;
+  for (const auto& arg : args) {
+    try {
+      dim_vector.push_back(py::cast<int>(arg));
+    } catch (const py::cast_error& e) {
+      return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
+    }
+  }
+  CHECK_NOTNULL_OR_RETURN(desired_dtype);
+  std::shared_ptr<MirroredTensor> tensor = JUST(
+      MirroredTensor::MakeTensor(std::make_shared<Shape>(dim_vector), desired_dtype->data_type(),
+                                 device, /* is_lazy */ false, requires_grad, /* is_leaf */ true));
+  return std::static_pointer_cast<Tensor>(tensor);
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  return NewTensor(args, kwargs, DType::Float().get()).GetPtrOrThrow();
+  return NewTensor(args, kwargs, DType::Float().get(), true).GetPtrOrThrow();
+}
+
+void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
+  if (tensor.is_leaf()) {
+    tensor.set_requires_grad(requires_grad);
+  } else {
+    throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
+  }
+}
+
+std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
+                                           bool requires_grad) {
+  return std::make_shared<Parameter>(data, requires_grad);
 }
 
 }  // namespace
@@ -316,7 +328,7 @@ using namespace pybind11::literals;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("tensor", [](py::args args, py::kwargs kwargs) -> std::shared_ptr<Tensor> {
-    return NewTensor(args, kwargs, nullptr).GetPtrOrThrow();
+    return NewTensor(args, kwargs, nullptr, false).GetPtrOrThrow();
   });
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
@@ -353,16 +365,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("is_contiguous", &ApiIsContiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
-      .def_property(
-          "requires_grad", &Tensor::requires_grad,
-          [](Tensor& t, bool requires_grad) {
-            if (t.is_leaf()) {
-              t.set_requires_grad(requires_grad);
-            } else {
-              throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
-            }
-          })
+      .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
       // Methods of pytorch
+      .def("requires_grad_", &ApiSetRequiresGrad)
       .def("retain_grad",
            [](Tensor& t) {
              if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
@@ -390,6 +395,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc);
+
+  auto nn = m.def_submodule("nn");
+  py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
+      .def(py::init(&ApiNewParameter), "data"_a, "requires_grad"_a = true);
 }
 
 }  // namespace one

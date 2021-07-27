@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.oneflow_export import oneflow_export, experimental_api
 from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
@@ -31,7 +30,7 @@ def _tensor_numpy(eager_local_tensor):
     if eager_local_tensor.dtype == flow.tensor_buffer:
         shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(
-            Tensor(eager_local_tensor), shapes, dtypes
+            eager_local_tensor, shapes, dtypes
         )
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
@@ -139,7 +138,7 @@ def _sub(self, other):
 
 
 def _rsub(self, other):
-    return flow.experimental.sub(other, self)
+    return flow.sub(other, self)
 
 
 def _truediv(self, other):
@@ -147,15 +146,15 @@ def _truediv(self, other):
 
 
 def _rtruediv(self, other):
-    return flow.experimental.div(other, self)
+    return flow.div(other, self)
 
 
 def _neg(self):
-    return flow.experimental.neg(self)
+    return flow.neg(self)
 
 
 def _pow(self, b):
-    return flow.experimental.pow(self, b)
+    return flow.pow(self, b)
 
 
 def _uniform_(self, a=0, b=1):
@@ -301,7 +300,7 @@ def RegisterMethods():
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.tolist = lambda self: self.numpy().tolist()
-    Tensor.ndim = _ndim
+    Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
     Tensor.dim = _ndim
@@ -348,6 +347,5 @@ def register_tensor_op(op_name):
     return set_tensor_op
 
 
-@oneflow_export("tensor")
-def new_tensor(*args, **kwargs):
+def tensor(*args, **kwargs):
     return flow._oneflow_internal.tensor(*args, **kwargs)

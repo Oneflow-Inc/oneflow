@@ -40,7 +40,6 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_property(test_case):
         shape = (2, 3, 4, 5)
         tensor = flow.Tensor(*shape)
-        tensor.determine()
         test_case.assertEqual(tensor.storage_offset(), 0)
         test_case.assertEqual(tensor.stride(), (60, 20, 5, 1))
         test_case.assertEqual(tensor.is_cuda, False)
@@ -121,7 +120,12 @@ class TestTensor(flow.unittest.TestCase):
         x.set_placement(flow.placement("cpu", ["0:0"], None))
         x.set_is_consistent(True)
         test_case.assertTrue(not x.is_cuda)
-        x.determine()
+
+    def test_tensor_with_single_int(test_case):
+        x = flow.Tensor(5)
+        test_case.assertEqual(x.shape, flow.Size([5]))
+        x = flow.tensor(5)
+        test_case.assertEqual(x.numpy().item(), 5)
 
     def test_tensor_device(test_case):
         shape = (2, 3, 4, 5)

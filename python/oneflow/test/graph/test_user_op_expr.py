@@ -77,14 +77,8 @@ class TestUserOpGraph(unittest.TestCase):
                 "cc_Output_0", output_conf, ["in_0"], ["out_0"]
             )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-            if not x0.is_determined:
-                x0.determine()
             x0_tensor_in_c = x0._local_or_consistent_tensor
-            if not x1.is_determined:
-                x1.determine()
             x1_tensor_in_c = x1._local_or_consistent_tensor
-            if not weight0.is_determined:
-                weight0.determine()
             weight0_tensor_in_c = weight0._local_or_consistent_tensor
             x0_lazy_tensor = x0_op.apply([x0_tensor_in_c], attrs)[0]
             x1_lazy_tensor = x1_op.apply([x1_tensor_in_c], attrs)[0]
