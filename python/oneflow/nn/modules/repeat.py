@@ -18,18 +18,22 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
+
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 class Repeat(Module):
-    def __init__(self, *sizes) -> None:
+    def __init__(self, sizes) -> None:
         super().__init__()
-        assert isinstance(
-            sizes, (tuple)
-        ), "sizes should be tuple flow.Size or tuple int!"
-        self.sizes = _single(*sizes)
-        if isinstance(self.sizes[0], flow.Size):
-            assert len(self.sizes) == 1, "len of tuple flow.Size must be 1!"
-            self.sizes = self.sizes[0]
-
+        if _input_args_is_int(sizes):
+            self.sizes = _single(sizes)
+        elif _input_args_is_flow_size(sizes):
+            self.sizes = _single(sizes)[0]
+        else:
+            raise ValueError("input sizes parameter is not illegal!")
+ 
     def forward(self, input):
         repeat = self.sizes
         for repeat_v in repeat:
