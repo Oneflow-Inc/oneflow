@@ -106,7 +106,7 @@ jobs:
               body: "You code has been formatted by CI. Please pull from remote to update your local branch and request review from oneflow-ci-bot again if you still want to run CI."
             })
       - name: Git push (fork repo)
-        id: git_push
+        id: git_push_fork
         if: ${{ failure() }} && contains(${{ github.repository }}, "Oneflow-Inc") == false
         run: |
           set -x
