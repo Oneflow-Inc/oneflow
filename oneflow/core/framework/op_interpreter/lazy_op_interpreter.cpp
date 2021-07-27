@@ -89,11 +89,7 @@ Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>&
 
 Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  if (tensor->is_local()) {
-    parallel_conf->InitFromProto(JUST(tensor->device())->parallel_desc_ptr()->parallel_conf());
-  } else {
-    parallel_conf->InitFromProto(JUST(tensor->parallel_desc())->parallel_conf());
-  }
+  parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
   const auto& old_scope = JUST(GetCurrentScope());
   std::shared_ptr<Scope> new_scope;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

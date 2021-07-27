@@ -33,8 +33,10 @@ def _get_c_tensor(t):
         if not t.is_determined:
             t.determine()
         return t._local_or_consistent_tensor
-    else:
+    elif isinstance(t, oneflow._oneflow_internal.Tensor):
         return t
+    else:
+        raise NotImplementError
 
 
 def _test_user_op_graph(test_case, is_cuda):
