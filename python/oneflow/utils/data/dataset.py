@@ -15,28 +15,30 @@ limitations under the License.
 """
 import bisect
 import functools
-import warnings
 from typing import (
-    Callable,
-    Dict,
+    TypeVar,
     Generic,
     Iterable,
     Iterator,
+    Sequence,
     List,
     Optional,
-    Sequence,
     Tuple,
-    TypeVar,
+    Dict,
+    Callable,
 )
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
-default_generator = flow.Generator()
 
+default_generator = flow._oneflow_internal.default_generator("auto")
 
+# Taken from python 3.5 docs
 def _accumulate(iterable, fn=lambda x, y: x + y):
-    """Return running totals"""
+    "Return running totals"
+    # _accumulate([1,2,3,4,5]) --> 1 3 6 10 15
+    # _accumulate([1,2,3,4,5], operator.mul) --> 1 2 6 24 120
     it = iter(iterable)
     try:
         total = next(it)
@@ -53,7 +55,7 @@ T = TypeVar("T")
 
 
 class Dataset(Generic[T_co]):
-    """An abstract class representing a :class:`Dataset`.
+    r"""An abstract class representing a :class:`Dataset`.
 
     All datasets that represent a map from keys to data samples should subclass
     it. All subclasses should overwrite :meth:`__getitem__`, supporting fetching a
@@ -76,7 +78,7 @@ class Dataset(Generic[T_co]):
 
 
 class IterableDataset(Dataset[T_co]):
-    """An iterable Dataset.
+    r"""An iterable Dataset.
 
     All datasets that represent an iterable of data samples should subclass it.
     Such form of datasets is particularly useful when data come from a stream.
@@ -133,12 +135,14 @@ class IterableDataset(Dataset[T_co]):
         [3, 4, 5, 6]
 
     """
-
     functions: Dict[str, Callable] = {}
     reduce_ex_hook: Optional[Callable] = None
 
     def __iter__(self) -> Iterator[T_co]:
         raise NotImplementedError
+
+    def __add__(self, other: Dataset[T_co]):
+        return ChainDataset([self, other])
 
     def __getattr__(self, attribute_name):
         if attribute_name in IterableDataset.functions:
@@ -184,44 +188,42 @@ class IterableDataset(Dataset[T_co]):
 
 
 class TensorDataset(Dataset[Tuple[Tensor, ...]]):
-    """Dataset wrapping tensors.
+    r"""Dataset wrapping tensors.
 
     Each sample will be retrieved by indexing tensors along the first dimension.
 
     Args:
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
-
     tensors: Tuple[Tensor, ...]
 
     def __init__(self, *tensors: Tensor) -> None:
         assert all(
-            (tensors[0].size(0) == tensor.size(0) for tensor in tensors)
+            tensors[0].size(0) == tensor.size(0) for tensor in tensors
         ), "Size mismatch between tensors"
         self.tensors = tensors
 
     def __getitem__(self, index):
-        return tuple((tensor[index] for tensor in self.tensors))
+        return tuple(tensor[index] for tensor in self.tensors)
 
     def __len__(self):
         return self.tensors[0].size(0)
 
 
 class ConcatDataset(Dataset[T_co]):
-    """Dataset as a concatenation of multiple datasets.
+    r"""Dataset as a concatenation of multiple datasets.
 
     This class is useful to assemble different existing datasets.
 
     Args:
         datasets (sequence): List of datasets to be concatenated
     """
-
     datasets: List[Dataset[T_co]]
     cumulative_sizes: List[int]
 
     @staticmethod
     def cumsum(sequence):
-        (r, s) = ([], 0)
+        r, s = [], 0
         for e in sequence:
             l = len(e)
             r.append(l + s)
@@ -230,7 +232,8 @@ class ConcatDataset(Dataset[T_co]):
 
     def __init__(self, datasets: Iterable[Dataset]) -> None:
         super(ConcatDataset, self).__init__()
-        assert len(datasets) > 0, "datasets should not be an empty iterable"
+        # Cannot verify that datasets is Sized
+        assert len(datasets) > 0, "datasets should not be an empty iterable"  # type: ignore
         self.datasets = list(datasets)
         for d in self.datasets:
             assert not isinstance(
@@ -256,15 +259,48 @@ class ConcatDataset(Dataset[T_co]):
         return self.datasets[dataset_idx][sample_idx]
 
 
-class Subset(Dataset[T_co]):
+class ChainDataset(IterableDataset):
+    r"""Dataset for chainning multiple :class:`IterableDataset` s.
+
+    This class is useful to assemble different existing dataset streams. The
+    chainning operation is done on-the-fly, so concatenating large-scale
+    datasets with this class will be efficient.
+
+    Args:
+        datasets (iterable of IterableDataset): datasets to be chained together
     """
+
+    def __init__(self, datasets: Iterable[Dataset]) -> None:
+        super(ChainDataset, self).__init__()
+        self.datasets = datasets
+
+    def __iter__(self):
+        for d in self.datasets:
+            assert isinstance(
+                d, IterableDataset
+            ), "ChainDataset only supports IterableDataset"
+            for x in d:
+                yield x
+
+    def __len__(self):
+        total = 0
+        for d in self.datasets:
+            assert isinstance(
+                d, IterableDataset
+            ), "ChainDataset only supports IterableDataset"
+            # Cannot verify that all self.datasets are Sized
+            total += len(d)
+        return total
+
+
+class Subset(Dataset[T_co]):
+    r"""
     Subset of a dataset at specified indices.
 
     Args:
         dataset (Dataset): The whole Dataset
         indices (sequence): Indices in the whole set selected for subset
     """
-
     dataset: Dataset[T_co]
     indices: Sequence[int]
 
@@ -282,9 +318,9 @@ class Subset(Dataset[T_co]):
 def random_split(
     dataset: Dataset[T],
     lengths: Sequence[int],
-    generator: Optional[flow.Generator] = default_generator,
+    generator: Optional[object] = default_generator,
 ) -> List[Subset[T]]:
-    """
+    r"""
     Randomly split a dataset into non-overlapping new datasets of given lengths.
     Optionally fix the generator for reproducible results, e.g.:
 
@@ -295,12 +331,14 @@ def random_split(
         lengths (sequence): lengths of splits to be produced
         generator (Generator): Generator used for the random permutation.
     """
-    if sum(lengths) != len(dataset):
+    # Cannot verify that dataset is Sized
+    if sum(lengths) != len(dataset):  # type: ignore
         raise ValueError(
             "Sum of input lengths does not equal the length of the input dataset!"
         )
+
     indices = flow.randperm(sum(lengths), generator=generator).tolist()
     return [
         Subset(dataset, indices[offset - length : offset])
-        for (offset, length) in zip(_accumulate(lengths), lengths)
+        for offset, length in zip(_accumulate(lengths), lengths)
     ]
