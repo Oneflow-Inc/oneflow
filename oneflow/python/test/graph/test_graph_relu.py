@@ -18,7 +18,6 @@ import os
 import numpy as np
 
 import oneflow as flow
-import oneflow.python.framework.graph_build_util as graph_build_util
 
 
 class TestReluGraph(flow.unittest.TestCase):
@@ -28,7 +27,7 @@ class TestReluGraph(flow.unittest.TestCase):
 
         MyRelu = flow.nn.ReLU()
         y_eager = MyRelu(x)
-        print("eager out :", y_eager)
+        # print("eager out :", y_eager)
 
         class ReluGraph(flow.nn.Graph):
             def __init__(self):
