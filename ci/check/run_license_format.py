@@ -70,9 +70,12 @@ def do_format(x):
     return (x, format_file(x))
 
 
-def glob_files(path):
+def glob_files(path: str = None, exclude=None):
     files = []
     for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
+        if not exclude:
+            if path.startswith(exclude):
+                continue
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
     files = [f for f in files if "version.py" not in f]
@@ -92,8 +95,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-f", "--fix", default=False, action="store_true", required=False
     )
+    parser.add_argument("--exclude", action="append", default=[])
     args = parser.parse_args()
-    files = glob_files(args.root_path)
+    files = glob_files(args.root_path, exclude=args.exclude)
     assert args.check != args.fix
     with Pool(10) as p:
         if args.check:
