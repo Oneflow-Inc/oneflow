@@ -18,11 +18,14 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
+
 def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
 
+
 def _input_args_is_flow_size(args):
     return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
+
 
 class Repeat(Module):
     def __init__(self, sizes) -> None:
@@ -33,7 +36,7 @@ class Repeat(Module):
             self.sizes = _single(sizes)[0]
         else:
             raise ValueError("input sizes parameter is not illegal!")
- 
+
     def forward(self, input):
         repeat = self.sizes
         for repeat_v in repeat:
