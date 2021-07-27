@@ -44,6 +44,7 @@ enum RankGroupRpcCmd {
   kRankGroupRpcCmdSyncSymbolParallelDistribution,
   kRankGroupRpcCmdSyncSymbolConsistentTensorMeta,
   kRankGroupRpcCmdCheckRankGroupConsistency,
+  kRankGroupRpcCmdCheckTensorConsistency,
   // End
   kSizeOfRankGroupRpcCmd
 };
@@ -63,7 +64,8 @@ class RpcToken final {
 
   static RpcToken NewDataRpcToken();
   static Maybe<RpcToken> NewMetaRpcToken();
-  static Maybe<RpcToken> NewCtrlRpcToken(RankGroupRpcCmd cmd);
+  static Maybe<RpcToken> AcquireCtrlRpcToken(RankGroupRpcCmd cmd);
+  Maybe<void> ReleaseCtrlRpcToken() const;
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() { return (1 << kRpcTokenThreadConsistentUIdBit); }
 

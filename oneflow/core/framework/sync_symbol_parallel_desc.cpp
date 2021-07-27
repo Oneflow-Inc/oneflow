@@ -68,8 +68,9 @@ struct FlatParallelConf {
 }  // namespace
 
 Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
+  const auto& rpc_token = JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
   NaiveAsyncRpcCtx send_ctx(
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer = JUST(FlatParallelConf::New(symbol_id, parallel_desc));
         *buffer = send_buffer.get();
         *size = send_buffer->available_size();
@@ -78,14 +79,13 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
       });
   const auto& recv_buffer = std::make_shared<FlatParallelConf>();
   NaiveAsyncRpcCtx recv_ctx(
-      [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token, [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_buffer.get();
         *size = recv_buffer->capacity();
         *Cb = [recv_buffer] {};
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& rpc_token = JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));

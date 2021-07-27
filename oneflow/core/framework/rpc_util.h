@@ -25,23 +25,26 @@ namespace oneflow {
 
 class AsyncRpcCtx {
  public:
-  AsyncRpcCtx() : flying_cnt_(new std::atomic<int64_t>(0)) {}
+  explicit AsyncRpcCtx(const RpcToken& rpc_token) : rpc_token_(rpc_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
   virtual ~AsyncRpcCtx() = default;
 
+  const RpcToken& rpc_token() const { return rpc_token_; }
   std::shared_ptr<std::atomic<int64_t>> flying_cnt() const { return flying_cnt_; }
 
   virtual Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                                 std::function<void()>* Callback) = 0;
 
  private:
+  RpcToken rpc_token_;
   std::shared_ptr<std::atomic<int64_t>> flying_cnt_;
 };
 
 class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
  public:
   explicit NaiveAsyncRpcCtx(
+      const RpcToken& rpc_token,
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare)
-      : prepare_(Prepare) {}
+      : AsyncRpcCtx(rpc_token), prepare_(Prepare) {}
   ~NaiveAsyncRpcCtx() override = default;
 
   Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,

@@ -68,8 +68,10 @@ struct FlatConsistentTensorMeta final {
 
 Maybe<void> SyncSymbolConsistentTensorMeta(
     uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+  const auto& rpc_token =
+      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolConsistentTensorMeta));
   NaiveAsyncRpcCtx send_ctx(
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer =
             JUST(FlatConsistentTensorMeta::New(symbol_id, consistent_tensor_meta));
         *buffer = send_buffer.get();
@@ -79,15 +81,13 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
       });
   const auto& recv_buffer = std::make_shared<FlatConsistentTensorMeta>();
   NaiveAsyncRpcCtx recv_ctx(
-      [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token, [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_buffer.get();
         *size = sizeof(FlatConsistentTensorMeta);
         *Cb = [recv_buffer] {};
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& rpc_token =
-      JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdSyncSymbolConsistentTensorMeta));
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));

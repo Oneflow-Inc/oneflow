@@ -35,6 +35,7 @@ namespace oneflow {
     CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
         << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
   }
+  if (ctx.rpc_token().type() == kCtrlRpcTokenType) { ctx.rpc_token().ReleaseCtrlRpcToken(); }
   return Maybe<void>::Ok();
 }
 

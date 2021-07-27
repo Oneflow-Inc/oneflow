@@ -113,7 +113,7 @@ Maybe<void> SendTensorMetaToNextRankInRing(const one::Tensor& tensor, Symbol<Ran
   const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
   const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
   NaiveAsyncRpcCtx ctx(
-      [&](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
+      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
         const auto& tensor_consistency =
             JUST(FlatTensorConsistency::New(tensor_meta, constaint, tensor_rpc_token));
         *buffer = tensor_consistency.get();
@@ -131,7 +131,7 @@ Maybe<CheckConsistencyAsyncRpcCtx> ReceiveTensorMetaFromPrevRankInRing(const one
   const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
   const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
   const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
-  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(tensor_meta, constaint, tensor_rpc_token);
+  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(rpc_token, tensor_meta, constaint, tensor_rpc_token);
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
   return ctx;
 }
@@ -140,7 +140,8 @@ Maybe<CheckConsistencyAsyncRpcCtx> ReceiveTensorMetaFromPrevRankInRing(const one
 
 Maybe<CheckConsistencyAsyncRpcCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
+  const auto& rpc_token =
+      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckTensorConsistency));
   JUST(SendTensorMetaToNextRankInRing(tensor, rank_group, rpc_token));
   return ReceiveTensorMetaFromPrevRankInRing(tensor, rank_group, rpc_token);
 }

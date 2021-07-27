@@ -29,9 +29,9 @@ namespace oneflow {
 
 Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
   const auto& rpc_token =
-      JUST(RpcToken::NewCtrlRpcToken(kRankGroupRpcCmdCheckRankGroupConsistency));
+      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckRankGroupConsistency));
   const auto& ctx = std::make_shared<NaiveAsyncRpcCtx>(
-      [](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
+      rpc_token, [](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
         const auto& placeholder = std::make_shared<uint32_t>();
         *buffer = placeholder.get();
         *size = sizeof(uint32_t);
