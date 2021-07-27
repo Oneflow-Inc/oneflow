@@ -56,6 +56,7 @@ def _test_slice(test_case, device):
         test_case.assertEqual(scalar_i.numel(), 1)
         test_case.assertEqual(scalar_i.ndimension(), 0)
 
+
 def _test_slice_backward(test_case, device):
     np_grad = np.zeros(10)
     x = flow.tensor(np.arange(10), device=device, requires_grad=True)
@@ -71,7 +72,12 @@ def _test_slice_backward(test_case, device):
 class TestZeroDimensionTensor(flow.unittest.TestCase):
     def test_0_dim_tensor(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_0_dim_tensor, _test_scalar_mul, _test_slice, _test_slice_backward]
+        arg_dict["test_fun"] = [
+            _test_0_dim_tensor,
+            _test_scalar_mul,
+            _test_slice,
+            _test_slice_backward,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

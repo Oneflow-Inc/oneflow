@@ -100,9 +100,9 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
 
   const int64_t ndim = dy_shape.NumAxes();
-  if( like_shape.NumAxes() ==1){
+  if (like_shape.NumAxes() == 1) {
     CHECK_EQ_OR_RETURN(ndim, 0);
-  }else{
+  } else {
     CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
     CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
     CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
