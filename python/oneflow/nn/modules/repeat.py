@@ -23,9 +23,8 @@ class Repeat(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
         assert isinstance(
-            *sizes, (int, tuple, flow.Size)
+            sizes, (tuple, flow.Size)
         ), "sizes should be flow.Size or tuple int!"
-        
         self.sizes = _single(*sizes)
         if isinstance(self.sizes[0], flow.Size):
             self.sizes = self.sizes[0]
