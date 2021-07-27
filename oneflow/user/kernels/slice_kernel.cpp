@@ -149,7 +149,6 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
     params.dims[0] = entire->shape().At(0);
     params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
     params.step[0] = step_vec.at(0);
-    ;
     params.size[0] = 1;
     return params;
   }
