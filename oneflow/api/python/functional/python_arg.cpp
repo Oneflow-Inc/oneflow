@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
@@ -120,7 +121,6 @@ template<>
 Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
   const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
   return std::make_shared<AttrMap>(*attrs);
-  ;
 }
 
 template<>
@@ -167,6 +167,31 @@ Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::
 template<>
 Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
   return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<Device>>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<ParallelDesc>>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(Borrow()));
+}
+
+template<>
+Maybe<std::vector<Symbol<cfg::SbpParallel>>>
+PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  const auto& v =
+      JUST(detail::cast<std::vector<std::shared_ptr<Symbol<cfg::SbpParallel>>>>(Borrow()));
+  auto sbp_list = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(v->size());
+  for (int i = 0; i < v->size(); ++i) { sbp_list->at(i) = *(v->at(i)); }
+  return sbp_list;
 }
 
 template<>

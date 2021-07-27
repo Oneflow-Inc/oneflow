@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_addmm(test_case, shape, alpha, beta, device):
@@ -64,6 +65,36 @@ class TestAddmm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_addmm_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        y = torch.addmm(
+            input,
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
+        return y
+
+    @autotest()
+    def test_addmm_broadcast_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
+        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        y = torch.addmm(
+            input,
+            mat1,
+            mat2,
+            beta=random().to(float) | nothing(),
+            alpha=random().to(float) | nothing(),
+        )
+        return y
 
 
 if __name__ == "__main__":
