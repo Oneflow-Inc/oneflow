@@ -45,17 +45,17 @@ namespace {
 
 template<typename T, typename K>
 __global__ void DivideGpu(const int64_t n, const T* x, const K* count, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] / count[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] / count[i]; }
 }
 
 template<typename T, typename K>
 __global__ void MaskGpu(const int64_t n, const T* x, const K* mask, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(mask[i]) * x[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(mask[i]) * x[i]; }
 }
 
 template<typename T, typename K>
 __global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * scale[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * scale[i]; }
 }
 
 }  // namespace
@@ -63,17 +63,17 @@ __global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
 template<typename T, typename K>
 struct TwoStageReduceKernelUtil<DeviceType::kGPU, T, K> {
   static void Divide(DeviceCtx* ctx, const int64_t n, const T* x, const K* count, T* y) {
-    DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, x, count, y);
   }
 
   static void Mask(DeviceCtx* ctx, const int64_t n, const T* x, const K* mask, T* y) {
-    MaskGpu<T, K><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    MaskGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, x, mask, y);
   }
 
   static void Scale(DeviceCtx* ctx, const int64_t n, const T* x, const K* scale, T* y) {
-    ScaleGpu<T, K><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    ScaleGpu<T, K><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, x, scale, y);
   }
 };

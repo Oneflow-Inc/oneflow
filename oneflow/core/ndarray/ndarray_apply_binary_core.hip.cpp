@@ -54,13 +54,13 @@ struct NdarrayApplyBinaryCoreWrapper<DeviceType::kGPU, T, binary_func> final {
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
-    RUN_ROCM_KERNEL((NdarrayApplyBinaryApplyGpu<T, binary_func>), ctx, n, 0, n, y.host_ptr(),
+    RUN_HIP_KERNEL((NdarrayApplyBinaryApplyGpu<T, binary_func>), ctx, n, n, y.host_ptr(),
                     a.host_ptr(), b.host_ptr());
   }
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();
-    RUN_ROCM_KERNEL((NdarrayApplyBinaryInplaceApplyGpu<T, binary_func>), ctx, n, 0, n, y.host_ptr(),
+    RUN_HIP_KERNEL((NdarrayApplyBinaryInplaceApplyGpu<T, binary_func>), ctx, n, n, y.host_ptr(),
                     x.host_ptr());
   }
 };

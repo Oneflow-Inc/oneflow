@@ -21,7 +21,7 @@ limitations under the License.
 #endif  // WITH_CUDA
 
 #ifdef WITH_HIP
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #endif  // WITH_HIP
 
 namespace oneflow {
@@ -100,7 +100,7 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
           CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(i)));
     }
   });
-  if (device_index == -1) { OF_ROCM_CHECK(hipGetDevice(&device_index)); }
+  if (device_index == -1) { OF_HIP_CHECK(hipGetDevice(&device_index)); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
       << "Invalid device index " << device_index;
   return default_cuda_generator.at(device_index);
@@ -129,7 +129,7 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
 
 #ifdef WITH_HIP
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
-  if (device_index == -1) { OF_ROCM_CHECK(hipGetDevice(&device_index)); }
+  if (device_index == -1) { OF_HIP_CHECK(hipGetDevice(&device_index)); }
   CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
       << "Invalid device index " << device_index;
   return std::make_shared<Generator>(

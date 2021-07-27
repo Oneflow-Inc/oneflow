@@ -65,7 +65,7 @@ __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
                                       const NdIndexOffsetHelper<IDX, 3> out_helper, const U* data,
                                       const K* segment_ids, const IDX num_segments,
                                       const IDX segment_id_offset, T* out) {
-  ROCM_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
     if (val != static_cast<U>(0)) {
       IDX outer_idx, segment_id_idx, inner_idx;
@@ -88,7 +88,7 @@ __global__ void UnsortedSegmentColSumGpu(const IDX data_elem_cnt,
                                          const U* data, const K* segment_ids,
                                          const IDX num_segments, const IDX segment_id_offset,
                                          T* out) {
-  ROCM_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
     if (val != static_cast<U>(0)) {
       IDX outer_idx, segment_id_idx;
@@ -111,7 +111,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
                                          const U* data, const K* segment_ids,
                                          const IDX num_segments, const IDX segment_id_offset,
                                          T* out) {
-  ROCM_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
     if (val != static_cast<U>(0)) {
       IDX segment_id_idx, inner_idx;
@@ -136,7 +136,7 @@ void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
     NdIndexOffsetHelper<IDX, 2> in_helper(outer_dim_size, num_segment_ids);
     NdIndexOffsetHelper<IDX, 2> out_helper(outer_dim_size, num_segments);
     UnsortedSegmentColSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
             segment_id_offset, out);
 
@@ -144,7 +144,7 @@ void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
     NdIndexOffsetHelper<IDX, 2> in_helper(num_segment_ids, inner_dim_size);
     NdIndexOffsetHelper<IDX, 2> out_helper(num_segments, inner_dim_size);
     UnsortedSegmentRowSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
             segment_id_offset, out);
 
@@ -152,7 +152,7 @@ void UnsortedSegmentSumUtil(DeviceCtx* ctx, const K* segment_ids, const U* data,
     NdIndexOffsetHelper<IDX, 3> in_helper(outer_dim_size, num_segment_ids, inner_dim_size);
     NdIndexOffsetHelper<IDX, 3> out_helper(outer_dim_size, num_segments, inner_dim_size);
     UnsortedSegmentSumGpu<T, K, IDX, U>
-        <<<BlocksNum4ThreadsNum(data_elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(data_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             data_elem_cnt, in_helper, out_helper, data, segment_ids, num_segments,
             segment_id_offset, out);
   }

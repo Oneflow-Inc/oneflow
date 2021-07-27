@@ -130,7 +130,7 @@ template<typename T, typename K, typename IDX>
 __global__ void GatherForwardGpu(const IDX elem_cnt, const K* indices, const IDX num_indices,
                                  const T* in, const IDX gather_dim_size, const IDX inner_dim_size,
                                  T* out, const IDX offset) {
-  ROCM_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
     const IDX in_offset =
         GetInOffset<K, IDX>(i, indices, num_indices, gather_dim_size, inner_dim_size, offset);
     if (in_offset < 0) {
@@ -156,12 +156,12 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
     const int64_t out_elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
     if (IsSafeUseIndex32(flat_in_shape, num_indices)) {
       GatherForwardGpu<T, K, int32_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
               out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
               offset);
     } else {
       GatherForwardGpu<T, K, int64_t>
-          <<<BlocksNum4ThreadsNum(out_elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(out_elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
               out_elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out,
               offset);
     }

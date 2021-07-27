@@ -22,7 +22,7 @@ limitations under the License.
 #if defined(WITH_CUDA) || defined(WITH_HIP)
 
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 

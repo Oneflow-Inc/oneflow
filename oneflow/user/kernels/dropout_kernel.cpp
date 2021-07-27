@@ -105,13 +105,13 @@ REGISTER_DROPOUT_GRAD_KERNEL_CPU(double)
 template<typename T>
 __global__ void MaskAndScaleGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
                                 T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
 
 template<typename T>
 __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, const int8_t* mask,
                                    const T* addend, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale + addend[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(mask[i]) * scale + addend[i]; }
 }
 
 // template<>
@@ -122,7 +122,7 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 //   const auto* x_h2 = reinterpret_cast<const half2*>(x);
 //   const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
 //   auto* y_h2 = reinterpret_cast<half2*>(y);
-//   ROCM_1D_KERNEL_LOOP(i, h2_n) {
+//   HIP_1D_KERNEL_LOOP(i, h2_n) {
 //     char2 mask_val = mask_c2[i];
 //     half2 one_or_zero_h2;
 //     one_or_zero_h2.x = mask_val.x;
@@ -145,7 +145,7 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 //   const auto* addend_h2 = reinterpret_cast<const half2*>(addend);
 //   const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
 //   auto* y_h2 = reinterpret_cast<half2*>(y);
-//   ROCM_1D_KERNEL_LOOP(i, h2_n) {
+//   HIP_1D_KERNEL_LOOP(i, h2_n) {
 //     char2 mask_val = mask_c2[i];
 //     half2 one_or_zero_h2;
 //     one_or_zero_h2.x = mask_val.x;
@@ -162,7 +162,7 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 template<typename T>
 void GpuMaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
                   T* y) {
-  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, scale, x, mask, y);
 }
 
@@ -170,7 +170,7 @@ void GpuMaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
 // void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
 //                         const int8_t* mask, half* y) {
 //   MaskAndScaleGpu<half>
-//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
 //           n, scale, x, mask, y);
 // }
 
@@ -178,7 +178,7 @@ template<typename T>
 void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
                      const T* addend, T* y) {
   MaskAndScaleAddGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           n, scale, x, mask, addend, y);
 }
 
@@ -186,7 +186,7 @@ void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
 // void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
 //                            const int8_t* mask, const half* addend, half* y) {
 //   MaskAndScaleAddGpu<half>
-//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+//       <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
 //           n, scale, x, mask, addend, y);
 // }
 

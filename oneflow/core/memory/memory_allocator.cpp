@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/register/blob.h"
@@ -32,7 +32,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
 #ifdef WITH_CUDA
       NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
 #elif WITH_HIP
-      NumaAwareRocmMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
+      NumaAwareHipMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
 #else
       UNIMPLEMENTED();
 #endif
@@ -45,8 +45,8 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaMalloc(&ptr, size));
 #elif WITH_HIP
-    RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_ROCM_CHECK(hipMalloc(&ptr, size));
+    HipCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    OF_HIP_CHECK(hipMalloc(&ptr, size));
 #else
     UNIMPLEMENTED();
 #endif
@@ -62,7 +62,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 #ifdef WITH_CUDA
       OF_CUDA_CHECK(cudaFreeHost(ptr));
 #elif WITH_HIP
-      OF_ROCM_CHECK(hipHostFree(ptr));
+      OF_HIP_CHECK(hipHostFree(ptr));
 #else
       UNIMPLEMENTED();
 #endif
@@ -74,8 +74,8 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaFree(ptr));
 #elif WITH_HIP
-    RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_ROCM_CHECK(hipFree(ptr));
+    HipCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    OF_HIP_CHECK(hipFree(ptr));
 #else
     UNIMPLEMENTED();
 #endif
@@ -106,8 +106,8 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
 #elif WITH_HIP
-    RocmCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_ROCM_CHECK(hipMemset(dptr, memset_val, size));
+    HipCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    OF_HIP_CHECK(hipMemset(dptr, memset_val, size));
 #else
     UNIMPLEMENTED();
 #endif

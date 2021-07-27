@@ -34,12 +34,12 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SLICE_BOXING_KERNEL_UTIL_CPU,
 
 template<typename T>
 __global__ void AddGpu(int64_t n, const T* a, const T* b, T* out) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = a[i] + b[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = a[i] + b[i]; }
 }
 
 template<>
 __global__ void AddGpu(int64_t n, const half* a, const half* b, half* out) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = __hadd(a[i], b[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = __hadd(a[i], b[i]); }
 }
 
 template<typename T>
@@ -51,7 +51,7 @@ template<typename T>
 void SliceBoxingKernelUtil<DeviceType::kGPU, T>::Add(DeviceCtx* ctx, int64_t n, const T* a,
                                                      const T* b, T* out) {
   AddGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, a, b, out);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, a, b, out);
 }
 
 template<>

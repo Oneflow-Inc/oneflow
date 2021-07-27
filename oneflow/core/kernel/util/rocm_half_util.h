@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_ROCM_HALF_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_UTIL_ROCM_HALF_UTIL_H_
 
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 

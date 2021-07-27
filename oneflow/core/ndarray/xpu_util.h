@@ -18,14 +18,14 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
 #if defined(__CUDACC__)
 #define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
 #elif defined(__HIP_DEVICE_COMPILE__)
-#define XPU_1D_KERNEL_LOOP(i, n) ROCM_1D_KERNEL_LOOP(i, n)
+#define XPU_1D_KERNEL_LOOP(i, n) HIP_1D_KERNEL_LOOP(i, n)
 #else
 #define XPU_1D_KERNEL_LOOP(i, n) FOR_RANGE(int64_t, i, 0, n)
 #endif

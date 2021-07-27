@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 

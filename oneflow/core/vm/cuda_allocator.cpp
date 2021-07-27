@@ -323,7 +323,7 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 #ifdef WITH_HIP
 
 #include "oneflow/core/vm/cuda_allocator.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include <iostream>
 
 namespace oneflow {
@@ -362,7 +362,7 @@ CudaAllocator::~CudaAllocator() {
     return;
   }
   hipSetDevice(device_id_);
-  for (auto& pair : mem_ptr2block_) { OF_ROCM_CHECK(hipFree(pair.first)); }
+  for (auto& pair : mem_ptr2block_) { OF_HIP_CHECK(hipFree(pair.first)); }
 }
 
 void CudaAllocator::InsertPiece2Bin(Piece* piece) {
@@ -474,7 +474,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   hipSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
-  OF_ROCM_CHECK(hipMemGetInfo(&free_bytes, &total_bytes));
+  OF_HIP_CHECK(hipMemGetInfo(&free_bytes, &total_bytes));
   const size_t remain_bytes = 50 * 1048576;
   const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
 
@@ -558,7 +558,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
       CHECK_EQ(block.size, piece_size_sum);
 
       mem_ptr2block_.erase(it);
-      OF_ROCM_CHECK(hipFree(ptr));
+      OF_HIP_CHECK(hipFree(ptr));
     }
   }
 

@@ -84,12 +84,12 @@ namespace {
 
 template<template<typename> class UnaryFunctor, typename T>
 __global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
 }
 
 template<template<typename> class UnaryFunctor, typename T>
 __global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T* dy, T* dx) {
-  ROCM_1D_KERNEL_LOOP(i, n) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
 }
 
 }  // namespace
@@ -109,7 +109,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -133,7 +133,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -173,7 +173,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -197,7 +197,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

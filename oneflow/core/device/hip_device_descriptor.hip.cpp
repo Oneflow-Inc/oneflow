@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/device/rocm_device_descriptor.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_device_descriptor.hip.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 #ifdef WITH_HIP
 
@@ -39,7 +39,7 @@ constexpr char kJsonKeyPCIBusID[] = "pci_bus_id";
 
 }  // namespace
 
-struct RocmDeviceDescriptor::Impl {
+struct HipDeviceDescriptor::Impl {
   int32_t ordinal{};
   std::string name;
   size_t total_global_memory_bytes{};
@@ -51,38 +51,38 @@ struct RocmDeviceDescriptor::Impl {
   std::string pci_bus_id;
 };
 
-RocmDeviceDescriptor::RocmDeviceDescriptor() { impl_.reset(new Impl()); }
+HipDeviceDescriptor::HipDeviceDescriptor() { impl_.reset(new Impl()); }
 
-RocmDeviceDescriptor::~RocmDeviceDescriptor() = default;
+HipDeviceDescriptor::~HipDeviceDescriptor() = default;
 
-int32_t RocmDeviceDescriptor::Ordinal() const { return impl_->ordinal; }
+int32_t HipDeviceDescriptor::Ordinal() const { return impl_->ordinal; }
 
-const std::string& RocmDeviceDescriptor::Name() const { return impl_->name; }
+const std::string& HipDeviceDescriptor::Name() const { return impl_->name; }
 
-size_t RocmDeviceDescriptor::GlobalMemorySizeBytes() const {
+size_t HipDeviceDescriptor::GlobalMemorySizeBytes() const {
   return impl_->total_global_memory_bytes;
 }
 
-int32_t RocmDeviceDescriptor::ClockRateKHz() const { return impl_->clock_rate_khz; }
+int32_t HipDeviceDescriptor::ClockRateKHz() const { return impl_->clock_rate_khz; }
 
-int32_t RocmDeviceDescriptor::ComputeCapabilityMajor() const {
+int32_t HipDeviceDescriptor::ComputeCapabilityMajor() const {
   return impl_->compute_capability_major;
 }
 
-int32_t RocmDeviceDescriptor::ComputeCapabilityMinor() const {
+int32_t HipDeviceDescriptor::ComputeCapabilityMinor() const {
   return impl_->compute_capability_minor;
 }
 
-int32_t RocmDeviceDescriptor::MemoryClockRateKHz() const { return impl_->memory_clock_rate_khz; }
+int32_t HipDeviceDescriptor::MemoryClockRateKHz() const { return impl_->memory_clock_rate_khz; }
 
-int32_t RocmDeviceDescriptor::MemoryBusWidthBit() const { return impl_->memory_bus_width_bit; }
+int32_t HipDeviceDescriptor::MemoryBusWidthBit() const { return impl_->memory_bus_width_bit; }
 
-const std::string& RocmDeviceDescriptor::PCIBusID() const { return impl_->pci_bus_id; }
+const std::string& HipDeviceDescriptor::PCIBusID() const { return impl_->pci_bus_id; }
 
-std::shared_ptr<const RocmDeviceDescriptor> RocmDeviceDescriptor::Query(int32_t ordinal) {
+std::shared_ptr<const HipDeviceDescriptor> HipDeviceDescriptor::Query(int32_t ordinal) {
   hipDeviceProp_t prop{};
-  OF_ROCM_CHECK(hipGetDeviceProperties(&prop, ordinal));
-  auto* desc = new RocmDeviceDescriptor();
+  OF_HIP_CHECK(hipGetDeviceProperties(&prop, ordinal));
+  auto* desc = new HipDeviceDescriptor();
   desc->impl_->ordinal = ordinal;
   desc->impl_->name = prop.name;
   desc->impl_->total_global_memory_bytes = prop.totalGlobalMem;
@@ -100,10 +100,10 @@ std::shared_ptr<const RocmDeviceDescriptor> RocmDeviceDescriptor::Query(int32_t 
   } else {
     desc->impl_->pci_bus_id = "";
   }
-  return std::shared_ptr<const RocmDeviceDescriptor>(desc);
+  return std::shared_ptr<const HipDeviceDescriptor>(desc);
 }
 
-void RocmDeviceDescriptor::Serialize(std::string* serialized) const {
+void HipDeviceDescriptor::Serialize(std::string* serialized) const {
   nlohmann::json json_object;
   json_object[kJsonKeyOrdinal] = impl_->ordinal;
   json_object[kJsonKeyName] = impl_->name;
@@ -117,10 +117,10 @@ void RocmDeviceDescriptor::Serialize(std::string* serialized) const {
   *serialized = json_object.dump(2);
 }
 
-std::shared_ptr<const RocmDeviceDescriptor> RocmDeviceDescriptor::Deserialize(
+std::shared_ptr<const HipDeviceDescriptor> HipDeviceDescriptor::Deserialize(
     const std::string& serialized) {
   auto json_object = nlohmann::json::parse(serialized);
-  auto* desc = new RocmDeviceDescriptor();
+  auto* desc = new HipDeviceDescriptor();
   desc->impl_->ordinal = json_object[kJsonKeyOrdinal];
   desc->impl_->name = json_object[kJsonKeyName];
   desc->impl_->total_global_memory_bytes = json_object[kJsonKeyTotalGlobalMemory];
@@ -130,7 +130,7 @@ std::shared_ptr<const RocmDeviceDescriptor> RocmDeviceDescriptor::Deserialize(
   desc->impl_->memory_clock_rate_khz = json_object[kJsonKeyMemoryClockRate];
   desc->impl_->memory_bus_width_bit = json_object[kJsonKeyMemoryBusWidth];
   desc->impl_->pci_bus_id = json_object[kJsonKeyPCIBusID];
-  return std::shared_ptr<const RocmDeviceDescriptor>(desc);
+  return std::shared_ptr<const HipDeviceDescriptor>(desc);
 }
 
 }  // namespace device

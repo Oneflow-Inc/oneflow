@@ -47,7 +47,7 @@ template<typename T, template<typename> class unary_func>
 struct NdarrayApplyUnaryCoreWrapper<DeviceType::kGPU, T, unary_func> final {
   static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
     size_t n = y.host_shape().HostElemNum();
-    RUN_ROCM_KERNEL((NdarrayApplyUnaryInplaceApplyGpu<T, unary_func>), ctx, n, 0, y.host_ptr(), n);
+    RUN_HIP_KERNEL((NdarrayApplyUnaryInplaceApplyGpu<T, unary_func>), ctx, n, y.host_ptr(), n);
   }
 };
 

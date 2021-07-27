@@ -121,7 +121,7 @@ constexpr int64_t kSoftmaxGpuBlockSize = 128;
 int64_t GetSoftmaxBlockSize() { return kSoftmaxGpuBlockSize; }
 
 int64_t GetSoftmaxNumBlocks(const int64_t num_instances) {
-  return std::min(static_cast<int32_t>(num_instances), kRocmMaxBlocksNum);
+  return std::min(static_cast<int32_t>(num_instances), kHipMaxBlocksNum);
 }
 
 template<typename T>

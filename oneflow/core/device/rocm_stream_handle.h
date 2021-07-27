@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_ROCM_STREAM_HANDLE_H_
 
 #include "oneflow/core/common/channel.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 

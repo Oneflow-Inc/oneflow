@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
@@ -36,12 +36,12 @@ void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
   if (dst == src) { return; }
-  OF_ROCM_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->rocm_stream()));
 }
 
 template<>
 void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  OF_ROCM_CHECK(hipMemsetAsync(dst, value, sz, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemsetAsync(dst, value, sz, ctx->rocm_stream()));
 }
 
 #endif
@@ -58,12 +58,12 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
   OF_CUDA_CHECK(cudaFreeHost(host_raw_dptr));
 #elif WITH_HIP
   char* host_raw_dptr = nullptr;
-  OF_ROCM_CHECK(hipHostMalloc(&host_raw_dptr, blob->AlignedTotalByteSize()));
+  OF_HIP_CHECK(hipHostMalloc(&host_raw_dptr, blob->AlignedTotalByteSize()));
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
   Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody());
-  OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
-  OF_ROCM_CHECK(hipHostFree(host_raw_dptr));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipHostFree(host_raw_dptr));
 #else
   UNIMPLEMENTED();
 #endif

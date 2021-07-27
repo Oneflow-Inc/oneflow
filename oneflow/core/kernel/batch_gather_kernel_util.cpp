@@ -155,7 +155,7 @@ template<typename T, typename K>
 __global__ void BatchGatherForwardGpu(const int64_t elem_cnt, const T* in, const K* indices,
                                       const int64_t indices_num, const int64_t instance_size,
                                       const int64_t gather_dim_size, T* out) {
-  ROCM_1D_KERNEL_LOOP(i, elem_cnt) {
+  HIP_1D_KERNEL_LOOP(i, elem_cnt) {
     out[i] = in[GetInOffset<K>(i, indices, indices_num, instance_size, gather_dim_size)];
   }
 }
@@ -164,7 +164,7 @@ template<typename T, typename K>
 __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff, const K* indices,
                                        const int64_t indices_num, const int64_t instance_size,
                                        const int64_t gather_dim_size, T* in_diff) {
-  ROCM_1D_KERNEL_LOOP(i, elem_cnt) {
+  HIP_1D_KERNEL_LOOP(i, elem_cnt) {
     rocm::atomic::Add(
         in_diff + GetInOffset<K>(i, indices, indices_num, instance_size, gather_dim_size),
         out_diff[i]);
@@ -192,7 +192,7 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(DeviceCtx* ctx, 
   const int64_t instance_size = flat_out_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
   BatchGatherForwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           elem_cnt, in, indices, indices_num, instance_size, gather_dim_size, out);
 }
 
@@ -207,7 +207,7 @@ void BatchGatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx,
   const int64_t instance_size = flat_out_diff_shape.At(2);
   const int64_t elem_cnt = batch_num * indices_num * instance_size;
   BatchGatherBackwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           elem_cnt, out_diff, indices, indices_num, instance_size, gather_dim_size, in_diff);
 }
 

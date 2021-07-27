@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/device/cuda_device_descriptor.h"
-#include "oneflow/core/device/rocm_device_descriptor.h"
+#include "oneflow/core/device/hip_device_descriptor.hip.h"
 
 namespace oneflow {
 
@@ -88,8 +88,8 @@ namespace {
 void SetAffinityByDevice(int64_t dev_id) {
   auto node_device_desc =
       Global<device::NodeDeviceDescriptorManager>::Get()->GetLocalNodeDeviceDescriptor();
-  auto cuda_device = std::dynamic_pointer_cast<const device::RocmDeviceDescriptor>(
-      node_device_desc->GetDevice(device::kRocmDeviceDescriptorClassName, dev_id));
+  auto cuda_device = std::dynamic_pointer_cast<const device::HipDeviceDescriptor>(
+      node_device_desc->GetDevice(device::kHipDeviceDescriptorClassName, dev_id));
   if (!cuda_device) { return; }
   node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
@@ -103,7 +103,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     SetAffinityByDevice(dev_id);
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
                                       + std::to_string(thrd_id) + ")");
-    OF_ROCM_CHECK(hipSetDevice(dev_id));
+    OF_HIP_CHECK(hipSetDevice(dev_id));
     ThreadCtx ctx;
     ctx.g_rocm_stream.reset(new RocmStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;
@@ -113,12 +113,12 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     SetAffinityByDevice(dev_id);
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
                                       + std::to_string(thrd_id) + ")");
-    OF_ROCM_CHECK(hipSetDevice(dev_id));
+    OF_HIP_CHECK(hipSetDevice(dev_id));
     RocmCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
-      OF_ROCM_CHECK(hipEventSynchronize(cb_event.event));
+      OF_HIP_CHECK(hipEventSynchronize(cb_event.event));
       cb_event.callback();
-      OF_ROCM_CHECK(hipEventDestroy(cb_event.event));
+      OF_HIP_CHECK(hipEventDestroy(cb_event.event));
     }
   });
 }

@@ -306,9 +306,9 @@ namespace {
 
 bool CanCurDevAccessPointer(const void* ptr) {
   int device_id;
-  OF_ROCM_CHECK(hipGetDevice(&device_id));
+  OF_HIP_CHECK(hipGetDevice(&device_id));
   hipPointerAttribute_t attributes;
-  OF_ROCM_CHECK(hipPointerGetAttributes(&attributes, ptr));
+  OF_HIP_CHECK(hipPointerGetAttributes(&attributes, ptr));
   return (attributes.memoryType == hipMemoryTypeDevice && attributes.device == device_id)
          || (attributes.memoryType == hipMemoryTypeHost);
 }
@@ -324,7 +324,7 @@ __global__ void CopyNDGpu(const int n, T* dst, const T* src,
                           NdIndexOffsetHelper<I, NDIMS> src_helper,
                           NdIndexOffsetHelper<I, NDIMS> copy_helper, SOA<NDIMS, I> dst_pos,
                           SOA<NDIMS, I> src_pos) {
-  ROCM_1D_KERNEL_LOOP_T(I, i, n) {
+  HIP_1D_KERNEL_LOOP_T(I, i, n) {
     I copy_idx[NDIMS];
     I src_idx[NDIMS];
     I dst_idx[NDIMS];
@@ -395,7 +395,7 @@ void CopyNDByPackByIndexTypeGpu(DeviceCtx* ctx, void* dst, const void* src,
   NdIndexOffsetHelper<I, NDIMS> copy_helper(extent_dim_arr);
   const int64_t elem_cnt = desc.extent.elem_cnt() / pack_size;
   CopyNDGpu<NDIMS, P, I>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           elem_cnt, reinterpret_cast<P*>(dst), reinterpret_cast<const P*>(src), dst_helper,
           src_helper, copy_helper, dst_pos, src_pos);
 }
@@ -468,12 +468,12 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
 }
 
 void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
-  OF_ROCM_CHECK(hipMemcpyAsync(dst, src, count, hipMemcpyDefault, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, count, hipMemcpyDefault, ctx->rocm_stream()));
 }
 
 void CudaAsyncMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                                    size_t src_pitch, size_t width, size_t height) const {
-  OF_ROCM_CHECK(hipMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, hipMemcpyDefault,
+  OF_HIP_CHECK(hipMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, hipMemcpyDefault,
                                   ctx->rocm_stream()));
 }
 
@@ -488,7 +488,7 @@ void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
       make_hipPitchedPtr(dst, desc.dst_shape.At(2), desc.dst_shape.At(2), desc.dst_shape.At(1));
   params.extent = make_hipExtent(desc.extent.At(2), desc.extent.At(1), desc.extent.At(0));
   params.kind = hipMemcpyDefault;
-  OF_ROCM_CHECK(hipMemcpy3DAsync(&params, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpy3DAsync(&params, ctx->rocm_stream()));
 }
 
 void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,

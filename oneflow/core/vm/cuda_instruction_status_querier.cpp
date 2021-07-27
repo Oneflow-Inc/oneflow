@@ -40,8 +40,8 @@ bool CudaInstrStatusQuerier::event_completed() const {
 
 void CudaInstrStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   hipSetDevice(device_id_);
-  OF_ROCM_CHECK(hipEventCreateWithFlags	(&event_, hipEventBlockingSync | hipEventDisableTiming));
-  OF_ROCM_CHECK(hipEventRecord(event_, device_ctx->rocm_stream()));
+  OF_HIP_CHECK(hipEventCreateWithFlags	(&event_, hipEventBlockingSync | hipEventDisableTiming));
+  OF_HIP_CHECK(hipEventRecord(event_, device_ctx->rocm_stream()));
   launched_ = true;
 }
 #endif

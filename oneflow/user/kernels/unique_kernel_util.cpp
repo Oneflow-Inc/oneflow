@@ -86,7 +86,7 @@ int64_t GetTempBufferSize(int64_t n) {
 template<typename KEY, typename IDX>
 int64_t GetCubSortTempStorageSize(int64_t n) {
   size_t cub_sort_temp_store_size = 0;
-  OF_ROCM_CHECK((hipcub::DeviceRadixSort::SortPairs<KEY, IDX>(nullptr, cub_sort_temp_store_size,
+  OF_HIP_CHECK((hipcub::DeviceRadixSort::SortPairs<KEY, IDX>(nullptr, cub_sort_temp_store_size,
                                                            nullptr, nullptr, nullptr, nullptr, n)));
   CHECK_GE(cub_sort_temp_store_size, 0);
   CHECK_LT(cub_sort_temp_store_size, GetMaxVal<int64_t>());
@@ -98,7 +98,7 @@ int64_t GetCubScanTempStorageSize(int64_t n) {
   size_t cub_scan_temp_store_size = 0;
   NotEqualToPreviousAdjacentIterator<IDX, KEY> unique_counting_iter(nullptr, 0);
   PermutationIterator<IDX, IDX*, IDX*> remapping_iter(nullptr, nullptr);
-  OF_ROCM_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<IDX, KEY>,
+  OF_HIP_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<IDX, KEY>,
                                                PermutationIterator<IDX, IDX*, IDX*>>(
       nullptr, cub_scan_temp_store_size, unique_counting_iter, remapping_iter, n)));
   CHECK_GE(cub_scan_temp_store_size, 0);
@@ -109,7 +109,7 @@ int64_t GetCubScanTempStorageSize(int64_t n) {
 template<typename KEY, typename IDX>
 int64_t GetCubRleTempStorageSize(int64_t n) {
   size_t cub_rle_temp_store_size = 0;
-  OF_ROCM_CHECK((hipcub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, int64_t*>(
+  OF_HIP_CHECK((hipcub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, int64_t*>(
       nullptr, cub_rle_temp_store_size, nullptr, nullptr, nullptr, nullptr, n)));
   CHECK_GE(cub_rle_temp_store_size, 0);
   CHECK_LT(cub_rle_temp_store_size, GetMaxVal<int64_t>());
@@ -148,7 +148,7 @@ void UniqueAliasWorkspace(DeviceCtx* ctx, int64_t n, void* workspace,
 
 template<typename IDX>
 __global__ void IotaKernel(int64_t n, IDX* out) {
-  ROCM_1D_KERNEL_LOOP_T(IDX, i, n) { out[i] = static_cast<IDX>(i); }
+  HIP_1D_KERNEL_LOOP_T(IDX, i, n) { out[i] = static_cast<IDX>(i); }
 }
 
 }  // namespace
@@ -190,17 +190,17 @@ void UniqueKernelUtil<DeviceType::kGPU, KEY, IDX>::UniqueWithCounts(
   UniqueAliasWorkspace<KEY, IDX>(ctx, n, workspace, &rt_workspace_size, &cub_sort_keys_out,
                                  &cub_sort_values_out, &cub_temp_storage);
   CHECK_LE(rt_workspace_size, workspace_size_in_bytes);
-  IotaKernel<IDX><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  IotaKernel<IDX><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, cub_sort_values_in_ptr);
-  OF_ROCM_CHECK((hipcub::DeviceRadixSort::SortPairs<KEY, IDX>(
+  OF_HIP_CHECK((hipcub::DeviceRadixSort::SortPairs<KEY, IDX>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, in, cub_sort_keys_out.ptr,
       cub_sort_values_in_ptr, cub_sort_values_out.ptr, n, 0, sizeof(KEY) * 8, ctx->rocm_stream())));
-  OF_ROCM_CHECK((hipcub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, IDX*>(
+  OF_HIP_CHECK((hipcub::DeviceRunLengthEncode::Encode<KEY*, KEY*, IDX*, IDX*>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, cub_sort_keys_out.ptr, unique_out,
       count, num_unique, n, ctx->rocm_stream())));
   NotEqualToPreviousAdjacentIterator<IDX, KEY> unique_counting_iter(cub_sort_keys_out.ptr, 0);
   PermutationIterator<IDX, IDX*, IDX*> remapping_iter(idx_out, cub_sort_values_out.ptr);
-  OF_ROCM_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<IDX, KEY>,
+  OF_HIP_CHECK((hipcub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<IDX, KEY>,
                                                PermutationIterator<IDX, IDX*, IDX*>>(
       cub_temp_storage.ptr, cub_temp_storage.size_in_bytes, unique_counting_iter, remapping_iter, n,
       ctx->rocm_stream())));

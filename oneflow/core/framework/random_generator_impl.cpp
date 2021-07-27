@@ -23,7 +23,7 @@ limitations under the License.
 #endif  // WITH_CUDA
 
 #ifdef WITH_HIP
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #endif  // WITH_HIP
 
 namespace oneflow {
@@ -112,15 +112,15 @@ void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, hipr
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
     : DeviceGeneratorImpl(seed, detail::DeviceKey{DeviceType::kGPU, device_index}) {
   hipDeviceProp_t prop;
-  OF_ROCM_CHECK(hipGetDeviceProperties(&prop, 0));
+  OF_HIP_CHECK(hipGetDeviceProperties(&prop, 0));
   max_block_num_ = prop.multiProcessorCount;
   max_thread_num_ = GetThreadNum(prop);
-  OF_ROCM_CHECK(
+  OF_HIP_CHECK(
       hipMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(hiprandState_t)));
   detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
 }
 
-CUDAGeneratorImpl::~CUDAGeneratorImpl() { OF_ROCM_CHECK(hipFree(curand_states_)); }
+CUDAGeneratorImpl::~CUDAGeneratorImpl() { OF_HIP_CHECK(hipFree(curand_states_)); }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   seed_ = seed;
@@ -174,13 +174,13 @@ Maybe<CUDAGeneratorImpl> MakeGeneratorImpl<CUDAGeneratorImpl>(uint64_t seed, int
 #ifdef WITH_HIP
 int GetCudaDeviceCount() {
   /*static*/ int cuda_device_count;
-  OF_ROCM_CHECK(hipGetDeviceCount(&cuda_device_count));
+  OF_HIP_CHECK(hipGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
 }
 
 template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
-  if (device_index == -1) { OF_ROCM_CHECK(hipGetDevice(&device_index)); }
+  if (device_index == -1) { OF_HIP_CHECK(hipGetDevice(&device_index)); }
   return DeviceKey{DeviceType::kGPU, device_index};
 }
 

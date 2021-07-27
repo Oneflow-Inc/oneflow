@@ -136,7 +136,7 @@ struct NdarrayApplyBroadcastBinaryGPUCore final {
 template<typename T, typename K, template<typename> class binary_func, typename OffsetFunctor>
 __global__ void PartialBroadcastGpu(K n, typename BinaryFuncTrait<binary_func, T>::return_type* y,
                                     const T* a, const T* b, OffsetFunctor offset_functor) {
-  ROCM_1D_KERNEL_LOOP_T(K, i, n) { y[i] = binary_func<T>::Invoke(a[i], b[offset_functor(i)]); }
+  HIP_1D_KERNEL_LOOP_T(K, i, n) { y[i] = binary_func<T>::Invoke(a[i], b[offset_functor(i)]); }
 }
 
 template<typename T, int NDIMS, template<typename> class binary_func>
@@ -161,7 +161,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
     size_t n = y.host_shape().HostElemNum();
     if (IsKernelSafeInt32(n) && PartialBroadcast<int32_t>(ctx, y, a, b)) { return; }
     if (!IsKernelSafeInt32(n) && PartialBroadcast<int64_t>(ctx, y, a, b)) { return; }
-    RUN_ROCM_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, 0, y, a, b);
+    RUN_HIP_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, a, b);
   }
 
   template<typename K>
@@ -177,13 +177,13 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
         const K b_dim1 = b.host_shape().At(1);
         if (b_dim0 == y_dim0 && b_dim1 == 1) {
           XY2XFunctor<K> xy2x(y_dim1);
-          RUN_ROCM_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2XFunctor<K>>), ctx, n, 0, n,
+          RUN_HIP_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2XFunctor<K>>), ctx, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xy2x);
           return true;
         }
         if (b_dim0 == 1 && b_dim1 == y_dim1) {
           XY2YFunctor<K> xy2y(y_dim1);
-          RUN_ROCM_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2YFunctor<K>>), ctx, n, 0, n,
+          RUN_HIP_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2YFunctor<K>>), ctx, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xy2y);
           return true;
         }
@@ -197,13 +197,13 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
         const K b_dim2 = b.host_shape().At(2);
         if (b_dim0 == y_dim0 && b_dim1 == 1 && b_dim2 == y_dim2) {
           XYZ2XZFunctor<K> xyz2xz(y_dim1, y_dim2);
-          RUN_ROCM_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2XZFunctor<K>>), ctx, n, 0, n,
+          RUN_HIP_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2XZFunctor<K>>), ctx, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xyz2xz);
           return true;
         }
         if (b_dim0 == 1 && b_dim1 == y_dim1 && b_dim2 == 1) {
           XYZ2YFunctor<K> xyz2y(y_dim1, y_dim2);
-          RUN_ROCM_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2YFunctor<K>>), ctx, n, 0, n,
+          RUN_HIP_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2YFunctor<K>>), ctx, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xyz2y);
           return true;
         }
@@ -223,7 +223,7 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS,
     using NBB = NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>;
     if (IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int32_t>(ctx, y, a, x)) { return; }
     if (!IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int64_t>(ctx, y, a, x)) { return; }
-    RUN_ROCM_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, 0, y, x);
+    RUN_HIP_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, x);
   }
 };
 

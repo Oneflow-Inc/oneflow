@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
 #include "oneflow/core/operator/operator.h"
@@ -130,7 +130,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     //   hipGetLastError();
     //   return;
     // }
-    // OF_ROCM_CHECK(cuda_error);
+    // OF_HIP_CHECK(cuda_error);
   }
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
@@ -158,7 +158,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     //   hipGetLastError();
     //   return;
     // }
-    // OF_ROCM_CHECK(cuda_error);
+    // OF_HIP_CHECK(cuda_error);
   }
 };
 COMMAND(

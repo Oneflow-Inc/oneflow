@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
@@ -63,12 +63,12 @@ template<>
 void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
                                                    const std::vector<MemcpyParam>& params) {
   if (params.size() == 1) {
-    OF_ROCM_CHECK(hipMemcpyAsync(params.front().dst, params.front().src, params.front().count,
+    OF_HIP_CHECK(hipMemcpyAsync(params.front().dst, params.front().src, params.front().count,
                                   hipMemcpyDefault, ctx->rocm_stream()));
   } else {
     int block_size = 0;
     int num_blocks = 0;
-    OF_ROCM_CHECK(hipOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
+    OF_HIP_CHECK(hipOccupancyMaxPotentialBlockSize(&num_blocks, &block_size, GpuCopy));
     BatchMemcpyParam batch_memcpy_param{};
     batch_memcpy_param.batch_size = 0;
     for (const MemcpyParam& param : params) {
@@ -82,7 +82,7 @@ void BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(DeviceCtx* ctx,
           batch_memcpy_param.batch_size = 0;
         }
       } else {
-        OF_ROCM_CHECK(hipMemcpyAsync(param.dst, param.src, param.count, hipMemcpyDefault,
+        OF_HIP_CHECK(hipMemcpyAsync(param.dst, param.src, param.count, hipMemcpyDefault,
                                       ctx->rocm_stream()));
       }
     }

@@ -50,7 +50,7 @@ __global__ void GenerateGpu(hiprandState_t* state, const int64_t n, const float 
   hiprandState_t localState = state[id];
   PackType* pack_mask = reinterpret_cast<PackType*>(mask);
   Pack pack;
-  ROCM_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
+  HIP_1D_KERNEL_LOOP(i, n / sizeof(PackType)) {
 #pragma unroll
     for (int j = 0; j < sizeof(PackType); ++j) { pack.b_value[j] = GenMask(&localState, rate); }
     pack_mask[i] = pack.p_value;

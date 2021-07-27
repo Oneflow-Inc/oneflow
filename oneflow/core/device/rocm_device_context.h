@@ -46,7 +46,7 @@ class RocmDeviceCtx : public DeviceCtx {
 
   const miopenHandle_t& miopen_handle() const override { return *(rocm_handler_->miopen_handle()); }
   
-  void SyncDevice() override { OF_ROCM_CHECK(hipStreamSynchronize(rocm_stream())); }
+  void SyncDevice() override { OF_HIP_CHECK(hipStreamSynchronize(rocm_stream())); }
 
   void AddCallBack(std::function<void()> callback) const override {
     rocm_handler_->AddCallBack(callback);

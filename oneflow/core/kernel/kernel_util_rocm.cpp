@@ -18,7 +18,7 @@ limitations under the License.
 #include <hipcub/hipcub.hpp>
 #include <hipblas.h>
 #include <math.h>
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -30,133 +30,133 @@ namespace {
 
 template<typename T>
 __global__ void RsqrtGpu(const int64_t n, T* x, const float epsilon) {
-  ROCM_1D_KERNEL_LOOP(i, n) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+  HIP_1D_KERNEL_LOOP(i, n) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
 }
 
 template<typename T>
 __global__ void RsqrtGpu(const int64_t n, const T* x, T* y, const float epsilon) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
 }
 
 template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }
 
 template<typename T>
 __global__ void DivByConstParaPtrGpu(const int64_t n, T* x, const T* alpha_ptr) {
-  ROCM_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
+  HIP_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
 }
 
 template<typename T>
 __global__ void DivGpu(const int64_t n, const T* x, const T* y, T* z) {
-  ROCM_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
 }
 
 template<typename T>
 __global__ void DivByConstParaGpu(const int64_t n, T* x, const T alpha) {
-  ROCM_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
+  HIP_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
 }
 
 template<typename T>
 __global__ void ReplicateGpu(const int64_t n, T* y, const T* x) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = *x; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = *x; }
 }
 
 template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
-  ROCM_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
 template<typename T>
 __global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
 
 template<typename T>
 __global__ void SquareGpu(const int64_t n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
 }
 
 template<typename T>
 __global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
 }
 
 template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx, T* y,
                         const int incy) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
 }
 
 template<typename T>
 __global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / (1.0 + std::exp(-x[i])); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / (1.0 + std::exp(-x[i])); }
 }
 
 template<typename T>
 __global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  ROCM_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
 }
 
 template<typename T>
 __global__ void ReluForwardGpu(const int n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
 }
 
 template<typename T>
 __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  ROCM_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+  HIP_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
 }
 
 template<typename T>
 __global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     if (in_1[i]) { out[i] += in_1[i]; }
   }
 }
 
 template<typename T>
 __global__ void gpu_assign_add(const int64_t n, T* out, const T* in_1, const T* in_2) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] += in_1[i] + in_2[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] += in_1[i] + in_2[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i]; }
 }
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3, const T* in_4) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3, const T* in_4, const T* in_5) {
-  ROCM_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i]; }
+  HIP_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i]; }
 }
 
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3, const T* in_4, const T* in_5, const T* in_6) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
   }
 }
@@ -164,7 +164,7 @@ __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, c
 template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3, const T* in_4, const T* in_5, const T* in_6, const T* in_7) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
   }
 }
@@ -173,7 +173,7 @@ template<typename T>
 __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
                         const T* in_3, const T* in_4, const T* in_5, const T* in_6, const T* in_7,
                         const T* in_8) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     out[i] =
         in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i] + in_8[i];
   }
@@ -207,7 +207,7 @@ template<typename T>
 __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
                                   const int64_t x_col_offset, const int64_t x_lda, T* y,
                                   const int64_t y_col_offset, const int64_t y_lda) {
-  ROCM_1D_KERNEL_LOOP(index, row_num * col_num) {
+  HIP_1D_KERNEL_LOOP(index, row_num * col_num) {
     const int64_t i = index / col_num;
     const int64_t j = index % col_num;
     y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
@@ -235,7 +235,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
     x_strides_shared[tid] = x_strides.val[tid];
   }
   __syncthreads();
-  ROCM_1D_KERNEL_LOOP(y_idx, elem_cnt) {
+  HIP_1D_KERNEL_LOOP(y_idx, elem_cnt) {
     const int32_t x_idx = GetXIndex<NDIMS>(y_dims_shared, x_strides_shared, y_idx);
     y[y_idx] = x[x_idx];
   }
@@ -256,7 +256,7 @@ void Transpose(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shap
   }
   for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
   TransposeGpu<NDIMS, T>
-      <<<dim3(SMBlocksNum4ThreadsNum(elem_cnt)), dim3(kRocmThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
+      <<<dim3(SMBlocksNum4ThreadsNum(elem_cnt)), dim3(kHipThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
           y_shape_struct, x_strides, elem_cnt, x, y);
 }
 
@@ -273,7 +273,7 @@ __device__ void MatrixShrinkCols(const size_t row_num, const size_t thread_col_n
                                  const size_t y_col_num, const size_t y_lda) {
   const size_t thread_num = blockDim.x * gridDim.x;
   const size_t total_shrink_scale = thread_col_num / y_col_num;
-  ROCM_1D_KERNEL_LOOP(index, row_num * thread_col_num) {
+  HIP_1D_KERNEL_LOOP(index, row_num * thread_col_num) {
     const int32_t thread_col = index % thread_col_num;
     if (((index / thread_num) % total_shrink_scale) != thread_col / y_col_num) { continue; }
     const int32_t row = index / thread_col_num;
@@ -313,23 +313,23 @@ void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num,
   CHECK_GT(temp_storage_bytes / sizeof(T), row_num);
   const size_t temp_col_num_shift =
       std::floor(std::log2(std::min(temp_storage_bytes / sizeof(T) / row_num, col_num)));
-  const size_t temp_col_num = std::min(static_cast<size_t>(kRocmThreadsNumPerBlock),
+  const size_t temp_col_num = std::min(static_cast<size_t>(kHipThreadsNumPerBlock),
                                        static_cast<size_t>(1 << temp_col_num_shift));
   MatrixRowReduceGpu<T, reduce_core_func>
-      <<<dim3(BlocksNum4ThreadsNum(row_num * temp_col_num)), dim3(kRocmThreadsNumPerBlock), 0,
+      <<<dim3(BlocksNum4ThreadsNum(row_num * temp_col_num)), dim3(kHipThreadsNumPerBlock), 0,
          ctx->rocm_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
 }
 
 template<typename T>
 __global__ void AssignStridedAddrGpu(T** dev_ptrs, T* start_ptr, int32_t stride_len,
                                      int32_t stride_num) {
-  ROCM_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
+  HIP_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
 }
 
 template<typename T>
 void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_len, int stride_num) {
   AssignStridedAddrGpu<T>
-      <<<dim3(BlocksNum4ThreadsNum(stride_num)), dim3(kRocmThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
+      <<<dim3(BlocksNum4ThreadsNum(stride_num)), dim3(kHipThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
           dev_ptrs, start_ptr, stride_len, stride_num);
 }
 
@@ -353,19 +353,19 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 KU_IF_METHOD Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr, T* temp_storage,
                  size_t temp_storage_bytes) {
-  OF_ROCM_CHECK(
+  OF_HIP_CHECK(
       hipcub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n, ctx->rocm_stream()));
 }
 KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
                  size_t temp_storage_bytes) {
-  OF_ROCM_CHECK(
+  OF_HIP_CHECK(
       hipcub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n, ctx->rocm_stream()));
 }
 KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
                             const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
                             const int64_t y_col_offset, const int64_t y_lda) {
   CopyColsRegionGpu<T>
-      <<<dim3(BlocksNum4ThreadsNum(row_num * col_num)), dim3(kRocmThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
+      <<<dim3(BlocksNum4ThreadsNum(row_num * col_num)), dim3(kHipThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(
           row_num, col_num, x, x_col_offset, x_lda, y, y_col_offset, y_lda);
 }
 KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
@@ -399,7 +399,7 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
 }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   ReplicateGpu<T>
-      <<<dim3(BlocksNum4ThreadsNum(n)), dim3(kRocmThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(n, y, x);
+      <<<dim3(BlocksNum4ThreadsNum(n)), dim3(kHipThreadsNumPerBlock), 0, ctx->rocm_stream()>>>(n, y, x);
 }
 
 #define KU_FLOATING_METHOD \
@@ -534,7 +534,7 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
 // #if CUDA_VERSION >= 9010
-  hipblasDatatype_t data_type = RocmDataType<T>::value;
+  hipblasDatatype_t data_type = HipDataType<T>::value;
   hipblasGemmBatchedEx(ctx->hipblas_pmh_handle(), hipblas_trans_b, hipblas_trans_a, n, m, k,
                       reinterpret_cast<const void*>(&alpha),
                       reinterpret_cast<const void**>(const_cast<const T**>(dev_b_ptrs)), data_type,
@@ -550,76 +550,76 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 }
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  ExpGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+  ExpGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
   DivByConstParaPtrGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, alpha);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, alpha);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
   DivByConstParaGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, alpha);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, alpha);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   DivGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
 }
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
 }
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   ReciprocalGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   SquareGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   RsqrtGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, epsilon);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, epsilon);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y, const float epsilon) {
-  RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y,
+  RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y,
                                                                                            epsilon);
 }
 
 KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
   SigmoidForwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 
 KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                    const T* dy, T* dx) {
   SigmoidBackwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, y, dy, dx);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, y, dy, dx);
 }
 
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
   ReluForwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
 }
 
 KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                 const T* dy, T* dx) {
   ReluBackwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, y, dy, dx);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, y, dy, dx);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
   gpu_add<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, out, in_0);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, out, in_0);
 }
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1) {
   if (out == in_0) {
     gpu_assign_add<T>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, out, in_1);
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, out, in_1);
   } else {
-    gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, out, in_0, in_1);
   }
 }
@@ -627,50 +627,50 @@ KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2) {
   if (out == in_0) {
-    gpu_assign_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    gpu_assign_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, out, in_1, in_2);
   } else {
-    gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+    gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
         n, out, in_0, in_1, in_2);
   }
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3, const T* in_4) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3, const T* in_4, const T* in_5) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
                             const T* in_6) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
                             const T* in_6, const T* in_7) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7);
 }
 
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
                             const T* in_6, const T* in_7, const T* in_8) {
-  gpu_add<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
 }
 
@@ -680,13 +680,13 @@ KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in
 
 KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
                         T* y, const int incy) {
-  AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, alpha, x, incx, y, incy);
 }
 
 KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
+      <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y, z);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
@@ -696,7 +696,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<typename T, typename U>
 __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
-  ROCM_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
+  HIP_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
 }
 
 template<>
@@ -704,7 +704,7 @@ __global__ void CastOnGpu<float, half>(const float* in, half* out, int64_t elem_
   const int64_t elem_num_2 = elem_num / 2;
   const auto* in_2 = reinterpret_cast<const float2*>(in);
   auto* out_2 = reinterpret_cast<half2*>(out);
-  ROCM_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __float22half2_rn(in_2[i]); }
+  HIP_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __float22half2_rn(in_2[i]); }
   if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
     out[elem_num - 1] = __float2half(in[elem_num - 1]);
   }
@@ -715,7 +715,7 @@ __global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_
   const int64_t elem_num_2 = elem_num / 2;
   const auto* in_2 = reinterpret_cast<const half2*>(in);
   auto* out_2 = reinterpret_cast<float2*>(out);
-  ROCM_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __half22float2(in_2[i]); }
+  HIP_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __half22float2(in_2[i]); }
   if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
     out[elem_num - 1] = __half2float(in[elem_num - 1]);
   }
@@ -727,7 +727,7 @@ void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_n
     Memcpy<DeviceType::kGPU>(ctx, out_dptr, in_dptr, elem_num * sizeof(T));
   } else {
     CastOnGpu<T, U>
-        <<<BlocksNum4ThreadsNum(elem_num), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             in_dptr, out_dptr, elem_num);
   }
 }
@@ -736,7 +736,7 @@ template<>
 void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<float, half>
-      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kRocmThreadsNumPerBlock, 0,
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kHipThreadsNumPerBlock, 0,
          ctx->rocm_stream()>>>(in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
 }
 
@@ -744,7 +744,7 @@ template<>
 void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<half, float>
-      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kRocmThreadsNumPerBlock, 0,
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kHipThreadsNumPerBlock, 0,
          ctx->rocm_stream()>>>(reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
 }
 

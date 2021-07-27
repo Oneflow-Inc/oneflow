@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_CUDA_VM_INSTRUCTION_STATUS_QUERIER_H_
 
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 

@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DEVICE_ROCM_DEVICE_DESCRIPTOR_H_
-#define ONEFLOW_CORE_DEVICE_ROCM_DEVICE_DESCRIPTOR_H_
+#ifndef ONEFLOW_CORE_DEVICE_HIP_DEVICE_DESCRIPTOR_H_
+#define ONEFLOW_CORE_DEVICE_HIP_DEVICE_DESCRIPTOR_H_
 
 #include "oneflow/core/device/device_descriptor.h"
 #include <string>
@@ -26,11 +26,11 @@ namespace oneflow {
 
 namespace device {
 
-constexpr char kRocmDeviceDescriptorClassName[] = "cuda";
+constexpr char kHipDeviceDescriptorClassName[] = "cuda";
 
-class RocmDeviceDescriptor : public DeviceDescriptor {
+class HipDeviceDescriptor : public DeviceDescriptor {
  public:
-  ~RocmDeviceDescriptor() override;
+  ~HipDeviceDescriptor() override;
 
   int32_t Ordinal() const;
   const std::string& Name() const;
@@ -42,11 +42,11 @@ class RocmDeviceDescriptor : public DeviceDescriptor {
   int32_t MemoryBusWidthBit() const;
   const std::string& PCIBusID() const;
   void Serialize(std::string* serialized) const;
-  static std::shared_ptr<const RocmDeviceDescriptor> Query(int32_t ordinal);
-  static std::shared_ptr<const RocmDeviceDescriptor> Deserialize(const std::string& serialized);
+  static std::shared_ptr<const HipDeviceDescriptor> Query(int32_t ordinal);
+  static std::shared_ptr<const HipDeviceDescriptor> Deserialize(const std::string& serialized);
 
  private:
-  RocmDeviceDescriptor();
+  HipDeviceDescriptor();
 
   struct Impl;
   std::unique_ptr<Impl> impl_;
@@ -58,4 +58,4 @@ class RocmDeviceDescriptor : public DeviceDescriptor {
 
 #endif  // WITH_HIP
 
-#endif  // ONEFLOW_CORE_DEVICE_ROCM_DEVICE_DESCRIPTOR_H_
+#endif  // ONEFLOW_CORE_DEVICE_HIP_DEVICE_DESCRIPTOR_H_

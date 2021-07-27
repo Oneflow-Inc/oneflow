@@ -37,7 +37,7 @@ limitations under the License.
 #endif  // WITH_CUDA
 
 #ifdef WITH_HIP
-#include "oneflow/core/device/rocm_device_descriptor.h"
+#include "oneflow/core/device/hip_device_descriptor.hip.h"
 #endif  // WITH_HIP
 
 namespace oneflow {
@@ -66,14 +66,14 @@ AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
 #endif
 #ifdef WITH_HIP
   const auto rocm_device_list =
-      node_desc->GetDeviceDescriptorList(device::kRocmDeviceDescriptorClassName);
+      node_desc->GetDeviceDescriptorList(device::kHipDeviceDescriptorClassName);
   CHECK(rocm_device_list);
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
     if (i >= rocm_device_list->DeviceCount()) {
       LOG(WARNING) << "Invalid ROCM device ordinal: rank " << rank << " ordinal " << i;
       machine_mem_desc.add_zone_size(0);
     } else {
-      const auto rocm_device = std::dynamic_pointer_cast<const device::RocmDeviceDescriptor>(
+      const auto rocm_device = std::dynamic_pointer_cast<const device::HipDeviceDescriptor>(
           rocm_device_list->GetDevice(i));
       CHECK(rocm_device);
       machine_mem_desc.add_zone_size(rocm_device->GlobalMemorySizeBytes());

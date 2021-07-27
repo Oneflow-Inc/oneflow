@@ -99,7 +99,7 @@ namespace {
 
 template<template<typename> class R, typename T, typename K>
 __global__ void MatrixColReduceBy1ThreadPerColumn(K num_elems, K num_cols, const T* in, T* out) {
-  ROCM_1D_KERNEL_LOOP_T(K, j, num_cols) {
+  HIP_1D_KERNEL_LOOP_T(K, j, num_cols) {
     K index = j;
     T sum = in[index];
     for (index += num_cols; index < num_elems; index += num_cols) {
@@ -119,12 +119,12 @@ struct WithAlign2 {
 
 template<template<typename> class R, typename T, typename K>
 __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in, T* out) {
-  const K thread_col = threadIdx.x % kRocmWarpSize;
-  const K thread_row = threadIdx.x / kRocmWarpSize;
-  const K thread_dim_row = blockDim.x / kRocmWarpSize;
+  const K thread_col = threadIdx.x % kHipWarpSize;
+  const K thread_row = threadIdx.x / kHipWarpSize;
+  const K thread_dim_row = blockDim.x / kHipWarpSize;
   const K num_valid_threads = thread_dim_row * num_cols;  // ASSERT: always <= num_elems
-  const K col = blockIdx.x * kRocmWarpSize + thread_col;
-  __shared__ WithAlign2<T> partial_values[kRocmWarpSize * kRocmWarpSize];
+  const K col = blockIdx.x * kHipWarpSize + thread_col;
+  __shared__ WithAlign2<T> partial_values[kHipWarpSize * kHipWarpSize];
   if (col < num_cols) {
     K index = thread_row * num_cols + col;
     T val = in[index];
@@ -137,7 +137,7 @@ __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in,
   if (col < num_cols && thread_row == 0) {
     int index = thread_col;
     T val = partial_values[index].value;
-    for (index += kRocmWarpSize; index < blockDim.x; index += kRocmWarpSize) {
+    for (index += kHipWarpSize; index < blockDim.x; index += kHipWarpSize) {
       val = R<T>::Invoke(val, partial_values[index].value);
     }
     out[col] = val;
@@ -146,22 +146,22 @@ __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in,
 
 template<template<typename> class R, typename T, typename K>
 void MatrixColReduceBy1BlockLayer(DeviceCtx* ctx, K num_elems, K num_cols, const T* in, T* out) {
-  CHECK_LE(num_cols, kRocmMaxBlocksNum * kRocmWarpSize);
+  CHECK_LE(num_cols, kHipMaxBlocksNum * kHipWarpSize);
   const K num_rows = num_elems / num_cols;
   CHECK_GT(num_rows, 0);
-  if (num_rows < kRocmWarpSize) {
-    RUN_ROCM_KERNEL((MatrixColReduceBy1ThreadPerColumn<R, T, K>), ctx, num_cols, 0, num_elems,
+  if (num_rows < kHipWarpSize) {
+    RUN_HIP_KERNEL((MatrixColReduceBy1ThreadPerColumn<R, T, K>), ctx, num_cols, num_elems,
                     num_cols, in, out);
   } else {
-    const int num_blocks = (num_cols + kRocmWarpSize - 1) / kRocmWarpSize;
-    const int num_threads = kRocmWarpSize * kRocmWarpSize;
+    const int num_blocks = (num_cols + kHipWarpSize - 1) / kHipWarpSize;
+    const int num_threads = kHipWarpSize * kHipWarpSize;
     auto Reduce = &MatrixColReduceByWarpBlock<R, T, K>;
     Reduce<<<num_blocks, num_threads, 0, ctx->rocm_stream()>>>(num_elems, num_cols, in, out);
   }
 }
 
-const static int32_t kNumRows4OneBlockLayer = kRocmWarpSize * kRocmWarpSize;
-const static int32_t kNumCols4OneBlockLayer = kRocmMaxBlocksNum * kRocmWarpSize / 2;
+const static int32_t kNumRows4OneBlockLayer = kHipWarpSize * kHipWarpSize;
+const static int32_t kNumCols4OneBlockLayer = kHipMaxBlocksNum * kHipWarpSize / 2;
 
 template<template<typename> class R, typename T, typename K>
 void MatrixColReduceK(DeviceCtx* ctx, K num_rows, K num_cols, const T* in, T* out, T* tmp) {
@@ -409,7 +409,7 @@ struct NdarrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
-    RUN_ROCM_KERNEL((NdarrayReduceGpuInplaceReduceAxis<T, NDIMS, binary_func>), ctx, n, 0, dst_reduced,
+    RUN_HIP_KERNEL((NdarrayReduceGpuInplaceReduceAxis<T, NDIMS, binary_func>), ctx, n, dst_reduced,
                     x, axis);
   }
 };

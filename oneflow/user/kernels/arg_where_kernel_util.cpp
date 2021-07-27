@@ -66,7 +66,7 @@ constexpr int kBlockSize = rocm::elementwise::kBlockSize;
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;
-  OF_ROCM_CHECK(rocm::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
+  OF_HIP_CHECK(rocm::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
   return num_blocks;
 }
 
@@ -95,7 +95,7 @@ template<typename T, int NDIM>
 __global__ void __launch_bounds__(kBlockSize)
     RocmOffsetToNdIndexInplace(NdIndexOffsetHelper<T, NDIM> index_converter,
                                const T* output_size_ptr, T* output_ptr) {
-  ROCM_1D_KERNEL_LOOP_T(T, i, *output_size_ptr) {
+  HIP_1D_KERNEL_LOOP_T(T, i, *output_size_ptr) {
     T* index_ptr = output_ptr + i * NDIM;
     index_converter.OffsetToNdIndex(*index_ptr, index_ptr);
   }
@@ -139,13 +139,13 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
     CHECK_LE(workspace, temp_storage_bytes);
 
     if (NDIM == 1) {
-      OF_ROCM_CHECK(
+      OF_HIP_CHECK(
           (SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->rocm_stream(), input_shape.elem_cnt(), temp_storage,
                                            workspace, input_ptr, output_ptr, output_size_ptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(output_ptr, elem_cnt);
-      OF_ROCM_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->rocm_stream(), elem_cnt,
+      OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->rocm_stream(), elem_cnt,
                                                              temp_storage, workspace, input_ptr,
                                                              output_iter, output_size_ptr)));
 
@@ -163,12 +163,12 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
     hipStream_t stream = ctx ? ctx->rocm_stream() : 0;
     size_t workspace = 0;
     if (NDIM == 1) {
-      OF_ROCM_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(stream, elem_cnt, nullptr, workspace, nullptr,
+      OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(stream, elem_cnt, nullptr, workspace, nullptr,
                                                      nullptr, nullptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(nullptr, elem_cnt);
-      OF_ROCM_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(stream, elem_cnt, nullptr, workspace,
+      OF_HIP_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(stream, elem_cnt, nullptr, workspace,
                                                              nullptr, output_iter, nullptr)));
     }
     return workspace;

@@ -94,7 +94,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
 #elif defined(WITH_HIP)
-  OF_ROCM_CHECK(hipGetDevice(&dev));
+  OF_HIP_CHECK(hipGetDevice(&dev));
 #endif
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -121,7 +121,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamId(
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaGetDevice(&dev));
 #elif defined(WITH_HIP)
-  OF_ROCM_CHECK(hipGetDevice(&dev));
+  OF_HIP_CHECK(hipGetDevice(&dev));
 #endif
 
   std::vector<std::pair<int64_t, int64_t>> device_vec(device_set.cbegin(), device_set.cend());

@@ -84,14 +84,14 @@ struct Param {
 template<typename T, int32_t N>
 __global__ void gpu_add(const int64_t n, Param<T, N> para) {
   if (para.out == para.in[0]) {
-    ROCM_1D_KERNEL_LOOP(i, n) {
+    HIP_1D_KERNEL_LOOP(i, n) {
       T tmp = 0;
 #pragma unroll
       for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
       if (tmp != 0) { para.out[i] += tmp; }
     }
   } else {
-    ROCM_1D_KERNEL_LOOP(i, n) {
+    HIP_1D_KERNEL_LOOP(i, n) {
       T tmp = para.in[0][i];
 #pragma unroll
       for (int j = 1; j < N; ++j) { tmp += para.in[j][i]; }
@@ -114,7 +114,7 @@ struct GpuAddCaller {
     }
 
     gpu_add<T, N>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, para);
   }
 };
@@ -187,14 +187,14 @@ namespace {
 template<int32_t N>
 __global__ void gpu_half_add(const int64_t n, Param<half, N> para) {
   if (para.out == para.in[0]) {
-    ROCM_1D_KERNEL_LOOP(i, n) {
+    HIP_1D_KERNEL_LOOP(i, n) {
       half tmp = 0;
 #pragma unroll
       for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
       para.out[i] = __hadd(para.out[i], tmp);
     }
   } else {
-    ROCM_1D_KERNEL_LOOP(i, n) {
+    HIP_1D_KERNEL_LOOP(i, n) {
       half tmp = para.in[0][i];
 #pragma unroll
       for (int j = 1; j < N; ++j) { tmp = __hadd(tmp, para.in[j][i]); }
@@ -218,7 +218,7 @@ struct GpuAddCaller<float16, N> {
     }
 
     gpu_half_add<N>
-        <<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->device_ctx()->rocm_stream()>>>(
             n, para);
   }
 };

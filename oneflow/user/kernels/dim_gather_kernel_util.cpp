@@ -62,7 +62,7 @@ struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-    RUN_ROCM_KERNEL((DoCUDADimGather<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), 0,
+    RUN_HIP_KERNEL((DoCUDADimGather<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input, output);
   }
 };
@@ -73,7 +73,7 @@ struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const float16* input, float16* output) {
-    RUN_ROCM_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), 0,
+    RUN_HIP_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index,
                     reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));
   }
@@ -93,7 +93,7 @@ struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-    RUN_ROCM_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), 0,
+    RUN_HIP_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);
   }
 };
@@ -104,7 +104,7 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const float16* input, float16* output) {
-    RUN_ROCM_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), 0,
+    RUN_HIP_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
                     reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));
   }

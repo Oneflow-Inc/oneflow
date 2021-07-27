@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/clip_by_value_kernel.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
@@ -232,12 +232,12 @@ namespace {
 
 template<typename T, typename F>
 __global__ void CudaClipForward(F clip_func, int64_t n, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = clip_func(x[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = clip_func(x[i]); }
 }
 
 template<typename T, typename F>
 __global__ void CudaClipBackward(F clip_func, int64_t n, const T* x, const T* dy, T* dx) {
-  ROCM_1D_KERNEL_LOOP(i, n) { dx[i] = clip_func(x[i], dy[i]); }
+  HIP_1D_KERNEL_LOOP(i, n) { dx[i] = clip_func(x[i], dy[i]); }
 }
 
 }  // namespace
@@ -246,13 +246,13 @@ template<typename T>
 struct ClipKernelUtil<DeviceType::kGPU, T> {
   template<typename F>
   static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
-    RUN_ROCM_KERNEL((CudaClipForward<T, F>), ctx, n, 0, clip_func, n, x, y);
+    RUN_HIP_KERNEL((CudaClipForward<T, F>), ctx, n, clip_func, n, x, y);
   }
 
   template<typename F>
   static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx) {
-    RUN_ROCM_KERNEL((CudaClipBackward<T, F>), ctx, n, 0, clip_func, n, x, dy, dx);
+    RUN_HIP_KERNEL((CudaClipBackward<T, F>), ctx, n, clip_func, n, x, dy, dx);
   }
 };
 

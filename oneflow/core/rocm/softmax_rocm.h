@@ -111,11 +111,11 @@ __inline__ __device__ double Div<double>(double a, double b) {
 
 inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
   int dev;
-  OF_ROCM_CHECK(hipGetDevice(&dev));
+  OF_HIP_CHECK(hipGetDevice(&dev));
   int sm_count;
-  OF_ROCM_CHECK(hipDeviceGetAttribute(&sm_count, hipDeviceAttributeMultiprocessorCount, dev));
+  OF_HIP_CHECK(hipDeviceGetAttribute(&sm_count, hipDeviceAttributeMultiprocessorCount, dev));
   int tpm;
-  OF_ROCM_CHECK(hipDeviceGetAttribute(&tpm, hipDeviceAttributeMaxThreadsPerMultiProcessor, dev));
+  OF_HIP_CHECK(hipDeviceGetAttribute(&tpm, hipDeviceAttributeMaxThreadsPerMultiProcessor, dev));
   return std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
 }
 
@@ -464,13 +464,13 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(hipStream_t stream, LOAD lo
   constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(ComputeType);
   int max_active_blocks_conf_1;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_1,
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_1>,
       block_size_conf_1, smem));
   if (max_active_blocks_conf_1 <= 0) { return false; }
   int max_active_blocks_conf_4;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_4,
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
       block_size_conf_4, smem));
@@ -480,7 +480,7 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(hipStream_t stream, LOAD lo
     return true;
   }
   int max_active_blocks_conf_3;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_3,
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3>,
       block_size_conf_3, smem));
@@ -490,7 +490,7 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(hipStream_t stream, LOAD lo
     return true;
   }
   int max_active_blocks_conf_2;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_2,
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2>,
       block_size_conf_2, smem));
@@ -885,13 +885,13 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(hipStream_t stream, LOA
   constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(ComputeType) * 2;
   int max_active_blocks_conf_1;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_1,
       SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_1>,
       block_size_conf_1, smem));
   if (max_active_blocks_conf_1 <= 0) { return false; }
   int max_active_blocks_conf_4;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_4,
       SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_4>,
       block_size_conf_4, smem));
@@ -902,7 +902,7 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(hipStream_t stream, LOA
     return true;
   }
   int max_active_blocks_conf_3;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_3,
       SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_3>,
       block_size_conf_3, smem));
@@ -913,7 +913,7 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(hipStream_t stream, LOA
     return true;
   }
   int max_active_blocks_conf_2;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks_conf_2,
       SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_2>,
       block_size_conf_2, smem));

@@ -122,7 +122,7 @@ class LayerNormMiopenBnCtx final {
 template<typename T, bool do_scale, bool do_center>
 __global__ void InstanceScaleCenterGpu(const int64_t elem_cnt, const int64_t instance_size,
                                        const T* in, const T* gamma, const T* beta, T* out) {
-  ROCM_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
     const int64_t elem_id = i % instance_size;
     T v = in[i];
     if (do_scale) { v *= gamma[elem_id]; }
@@ -139,7 +139,7 @@ __global__ void InstanceScaleCenterH2Gpu(const int64_t h2_elem_cnt, const int64_
   const auto* gamma_h2 = reinterpret_cast<const half2*>(gamma);
   const auto* beta_h2 = reinterpret_cast<const half2*>(beta);
   auto* out_h2 = reinterpret_cast<half2*>(out);
-  ROCM_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
+  HIP_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
     const int64_t elem_id = i % h2_instance_size;
     half2 v2 = in_h2[i];
     if (do_scale) { v2 = __hmul2(v2, gamma_h2[elem_id]); }
@@ -154,15 +154,15 @@ void InstanceScaleCenter(DeviceCtx* ctx, const int64_t batch_size, const int64_t
   const int64_t elem_cnt = batch_size * instance_size;
   if (beta != nullptr && gamma != nullptr) {  // scale and center
     InstanceScaleCenterGpu<T, true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt, instance_size, in, gamma, beta, out);
   } else if (gamma != nullptr) {  // scale only
     InstanceScaleCenterGpu<T, true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt, instance_size, in, gamma, nullptr, out);
   } else if (beta != nullptr) {  // center only
     InstanceScaleCenterGpu<T, false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt, instance_size, in, nullptr, beta, out);
   } else {
     UNIMPLEMENTED();
@@ -176,15 +176,15 @@ void InstanceScaleCenterH2(DeviceCtx* ctx, const int64_t batch_size, const int64
   const int64_t instance_size_h2 = instance_size / 2;
   if (beta != nullptr && gamma != nullptr) {  // scale and center
     InstanceScaleCenterH2Gpu<true, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, gamma, beta, out);
   } else if (gamma != nullptr) {  // scale only
     InstanceScaleCenterH2Gpu<true, false>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, gamma, nullptr, out);
   } else if (beta != nullptr) {  // center only
     InstanceScaleCenterH2Gpu<false, true>
-        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_cnt_h2), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
             elem_cnt_h2, instance_size_h2, in, nullptr, beta, out);
   } else {
     UNIMPLEMENTED();
@@ -230,7 +230,7 @@ int GetForwardDynamicSharedMemorySize(const int norm_size) {
 int GetLayerNormForwardBlockSize() { return kLayerNormForwardGpuBlockSize; }
 
 int GetLayerNormForwardNumBlocks(const int num_instances) {
-  return std::min(static_cast<int>(num_instances), kRocmMaxBlocksNum);
+  return std::min(static_cast<int>(num_instances), kHipMaxBlocksNum);
 }
 
 template<typename T, typename ComputeType>
@@ -327,7 +327,7 @@ int GetForwardFusedKernelMinNormSize() { return 64; }
 template<typename T>
 int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
   int max_active_blocks;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>,
       GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<T>(norm_size)));
   return max_active_blocks;
@@ -336,7 +336,7 @@ int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
 template<>
 int GetForwardFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
   int max_active_blocks;
-  OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+  OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>,
       GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<half>(norm_size)));
   return max_active_blocks;
@@ -386,7 +386,7 @@ __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T
     beta_diff_sum_buf[elem_id] = 0;
   }
   __syncthreads();
-  ROCM_1D_KERNEL_LOOP_T(I, i, n) {
+  HIP_1D_KERNEL_LOOP_T(I, i, n) {
     const I elem_id = i % instance_size;
     T dy_val = dy[i];
     T normalized_val = normalized[i];
@@ -416,7 +416,7 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
     beta_diff_sum_buf[elem_id] = 0;
   }
   __syncthreads();
-  ROCM_1D_KERNEL_LOOP_T(I, i, n) {
+  HIP_1D_KERNEL_LOOP_T(I, i, n) {
     const I elem_id = i % instance_size;
     half dy_val = dy[i];
     half normalized_val = normalized[i];
@@ -625,7 +625,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = dy->shape().elem_cnt();
     const int64_t m = dy->shape().Count(begin_params_axis);
     int max_active_blocks;
-    OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+    OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks, LayerNormParamGradImpl<T, int64_t>, GetLayerNormParamGradBlockSize(),
         GetParamGradDynamicSharedMemorySize<T>(m)));
     if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
@@ -720,7 +720,7 @@ REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 //     const int64_t elem_cnt = dy->shape().elem_cnt();
 //     const int64_t m = dy->shape().Count(begin_params_axis);
 //     int max_active_blocks;
-//     OF_ROCM_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
+//     OF_HIP_CHECK(hipOccupancyMaxActiveBlocksPerMultiprocessor(
 //         &max_active_blocks, LayerNormParamGradHalfImpl<int64_t>, GetLayerNormParamGradBlockSize(),
 //         GetParamGradDynamicSharedMemorySize<float16>(m)));
 //     if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {

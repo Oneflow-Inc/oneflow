@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -115,7 +115,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #elif WITH_HIP
-  InitGlobalRocmDeviceProp();
+  InitGlobalHipDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();

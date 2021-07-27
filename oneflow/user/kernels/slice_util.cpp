@@ -102,7 +102,7 @@ __global__ void SliceForwardGpu(const int n, SliceParams params,
                                 SliceIndexHelper<NDIM> entire_idx_cvtr,
                                 SliceIndexHelper<NDIM> sliced_idx_cvtr, const T* entire,
                                 T* sliced) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
     sliced[i] = entire[offset];
   }
@@ -113,7 +113,7 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
                                  SliceIndexHelper<NDIM> entire_idx_cvtr,
                                  SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
                                  const T* sliced) {
-  ROCM_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
     entire[offset] = sliced[i];
   }
@@ -126,7 +126,7 @@ void LaunchSliceForward(DeviceCtx* ctx, const SliceParams& params, const T* enti
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceForwardGpu<T, NDIM>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
 }
 
@@ -137,7 +137,7 @@ void LaunchSliceBackward(DeviceCtx* ctx, const SliceParams& params, const T* sli
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceBackwardGpu<T, NDIM>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
 }
 

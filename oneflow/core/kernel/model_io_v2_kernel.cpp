@@ -101,9 +101,9 @@ void SyncCopyToHost<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst
 #ifdef WITH_HIP
 template<>
 void SyncCopyToHost<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
-  OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
-  OF_ROCM_CHECK(hipMemcpyAsync(dst, src, size, hipMemcpyDefault, ctx->rocm_stream()));
-  OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, size, hipMemcpyDefault, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
 }
 #endif
 
@@ -127,9 +127,9 @@ void SyncCopyToDevice<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* d
 #ifdef WITH_HIP
 template<>
 void SyncCopyToDevice<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
-  OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
-  OF_ROCM_CHECK(hipMemcpyAsync(dst, src, size, hipMemcpyDefault, ctx->rocm_stream()));
-  OF_ROCM_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, size, hipMemcpyDefault, ctx->rocm_stream()));
+  OF_HIP_CHECK(hipStreamSynchronize(ctx->rocm_stream()));
 }
 #endif
 

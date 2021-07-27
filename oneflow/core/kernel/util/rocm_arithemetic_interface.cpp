@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/device/rocm_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/rocm/elementwise_rocm.h"
 #include "oneflow/core/kernel/util/rocm_half_util.h"
 
@@ -49,7 +49,7 @@ __device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, i
 template<int32_t NDIMS, typename T>
 __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<NDIMS> x_strides,
                              const int32_t elem_cnt, const T* x, T* y) {
-  ROCM_1D_KERNEL_LOOP(y_idx, elem_cnt) {
+  HIP_1D_KERNEL_LOOP(y_idx, elem_cnt) {
     const int32_t x_idx = GetXIndex<NDIMS>(y_shape.val, x_strides.val, y_idx);
     y[y_idx] = x[x_idx];
   }
@@ -71,7 +71,7 @@ void LaunchTransposeGpu(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeVie
   }
   for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
   TransposeGpu<NDIMS, T>
-      <<<SMBlocksNum4ThreadsNum(elem_cnt), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<SMBlocksNum4ThreadsNum(elem_cnt), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           y_shape_struct, x_strides, elem_cnt, x, y);
 }
 
@@ -290,26 +290,26 @@ struct UnaryByScalarPtrFunctorFactory {
 
 template<template<typename> typename Op, typename T>
 void LaunchUnaryByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  OF_ROCM_CHECK(
+  OF_HIP_CHECK(
       (rocm::elementwise::Unary(UnaryByScalarFunctor<Op, T>(y), n, z, x, ctx->rocm_stream())));
 }
 
 template<template<typename> typename Op, typename T>
 void LaunchUnaryByScalarPtr(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  OF_ROCM_CHECK((rocm::elementwise::UnaryWithFactory(UnaryByScalarPtrFunctorFactory<Op, T>(y), n, z,
+  OF_HIP_CHECK((rocm::elementwise::UnaryWithFactory(UnaryByScalarPtrFunctorFactory<Op, T>(y), n, z,
                                                      x, ctx->rocm_stream())));
 }
 
 template<typename T>
 __global__ void FillGpu(const int64_t n, const T value, T* y) {
-  ROCM_1D_KERNEL_LOOP(i, n) { y[i] = value; }
+  HIP_1D_KERNEL_LOOP(i, n) { y[i] = value; }
 }
 
 template<typename T>
 __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
                                   const int64_t x_col_offset, const int64_t x_lda, T* y,
                                   const int64_t y_col_offset, const int64_t y_lda) {
-  ROCM_1D_KERNEL_LOOP(index, row_num * col_num) {
+  HIP_1D_KERNEL_LOOP(index, row_num * col_num) {
     const int64_t i = index / col_num;
     const int64_t j = index % col_num;
     y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
@@ -372,7 +372,7 @@ DEFINE_OP_BY_SCALAR_PTR(Div)
 #define FILL(T)                                                                              \
   void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const T value, \
                                              T* y) {                                         \
-    FillGpu<T><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>( \
+    FillGpu<T><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>( \
         n, value, y);                                                                         \
   }
 
@@ -387,7 +387,7 @@ FILL(int64_t)
 
 void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, const float16 value,
                                            float16* y) {
-  FillGpu<half><<<BlocksNum4ThreadsNum(n), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+  FillGpu<half><<<BlocksNum4ThreadsNum(n), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
       n, float16_2half(value), reinterpret_cast<half*>(y));
 }
 
@@ -396,7 +396,7 @@ void ArithemeticIf<DeviceType::kGPU>::Fill(DeviceCtx* ctx, const int64_t n, cons
       DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,                \
       const int64_t x_col_offset, const int64_t x_lda, T* y, const int64_t y_col_offset,       \
       const int64_t y_lda) {                                                                   \
-    CopyColsRegionGpu<T><<<dim3(BlocksNum4ThreadsNum(row_num* col_num)), dim3(kRocmThreadsNumPerBlock), 0, \
+    CopyColsRegionGpu<T><<<dim3(BlocksNum4ThreadsNum(row_num* col_num)), dim3(kHipThreadsNumPerBlock), 0, \
                            ctx->rocm_stream()>>>(row_num, col_num, x, x_col_offset, x_lda, y,  \
                                                  y_col_offset, y_lda);                         \
   }
@@ -416,7 +416,7 @@ void ArithemeticIf<DeviceType::kGPU>::CopyColsRegion(DeviceCtx* ctx, const int64
                                                      const int64_t y_col_offset,
                                                      const int64_t y_lda) {
   CopyColsRegionGpu<half>
-      <<<BlocksNum4ThreadsNum(row_num * col_num), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+      <<<BlocksNum4ThreadsNum(row_num * col_num), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
           row_num, col_num, reinterpret_cast<const half*>(x), x_col_offset, x_lda,
           reinterpret_cast<half*>(y), y_col_offset, y_lda);
 }

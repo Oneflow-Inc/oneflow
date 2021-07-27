@@ -52,8 +52,8 @@ namespace {
 template<typename T, bool ONE_BLOCK>
 __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
   T t_sum = 0;
-  ROCM_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
-  typedef hipcub::BlockReduce<T, kRocmThreadsNumPerBlock> BlockReduce;
+  HIP_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
+  typedef hipcub::BlockReduce<T, kHipThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
   if (threadIdx.x == 0) {
@@ -78,9 +78,9 @@ __global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
   T t_sum = 0;
   for (int i = 0; i < params.size; ++i) {
     const SquareSumParam<T> param = params.params[i];
-    ROCM_1D_KERNEL_LOOP(j, param.count) { t_sum += param.ptr[j] * param.ptr[j]; }
+    HIP_1D_KERNEL_LOOP(j, param.count) { t_sum += param.ptr[j] * param.ptr[j]; }
   }
-  typedef hipcub::BlockReduce<T, kRocmThreadsNumPerBlock> BlockReduce;
+  typedef hipcub::BlockReduce<T, kHipThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
   if (threadIdx.x == 0) { rocm::atomic::Add(y, b_sum); }
@@ -96,11 +96,11 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
     if (num_blocks == 0) {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
     } else if (num_blocks == 1) {
-      SquareSumGpu<T, true><<<1, kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+      SquareSumGpu<T, true><<<1, kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
     } else {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
       SquareSumGpu<T, false>
-          <<<num_blocks, kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
+          <<<num_blocks, kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(n, x, y);
     }
   }
 
@@ -115,7 +115,7 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
         max_count = std::max(max_count, gpu_params.params[i].count);
       }
       MultiSquareSumGpu<T>
-          <<<BlocksNum4ThreadsNum(max_count), kRocmThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
+          <<<BlocksNum4ThreadsNum(max_count), kHipThreadsNumPerBlock, 0, ctx->rocm_stream()>>>(
               gpu_params, y);
     }
   }

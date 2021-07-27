@@ -59,7 +59,7 @@ namespace {
 template<typename T>
 __global__ void InTopkGpu(const int instance_num, const int classes_num, const T* targets,
                           const float* predictions, const int k, int8_t* out) {
-  ROCM_1D_KERNEL_LOOP(idx, instance_num) {
+  HIP_1D_KERNEL_LOOP(idx, instance_num) {
     T target = targets[idx];
     bool cannot_say = (target >= classes_num) || !isfinite(predictions[idx * classes_num + target]);
 
@@ -88,7 +88,7 @@ template<typename T>
 struct InTopkKernelUtil<DeviceType::kGPU, T> {
   static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
                      const T* targets, const float* predictions, const int k, int8_t* out) {
-    RUN_ROCM_KERNEL((InTopkGpu<T>), ctx, instance_num, 0, instance_num, classes_num, targets,
+    RUN_HIP_KERNEL((InTopkGpu<T>), ctx, instance_num, instance_num, classes_num, targets,
                     predictions, k, out);
   }
 };
