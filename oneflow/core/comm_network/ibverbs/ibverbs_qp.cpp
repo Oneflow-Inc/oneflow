@@ -74,8 +74,6 @@ IBVerbsQP::~IBVerbsQP() {
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
-  ibv_port_attr port_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(ctx_, port_num_, &port_attr), 0);
   ibv_qp_attr qp_attr{};
 
   // IBV_QPS_INIT
