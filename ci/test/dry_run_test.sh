@@ -9,7 +9,7 @@ test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
 
 rm -rf $test_tmp_dir
 mkdir -p $test_tmp_dir
-cp -r $src_dir/oneflow/compatible_single_client_python/benchmarks $test_tmp_dir
+cp -r $src_dir/python/oneflow/compatible/single_client/benchmarks $test_tmp_dir
 cd $test_tmp_dir/benchmarks
 
 export ONEFLOW_DRY_RUN=1
