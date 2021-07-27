@@ -152,7 +152,7 @@ class TestClampModule(flow.unittest.TestCase):
             input, min=random().to(float), max=random().to(float) | nothing()
         )
         return y
-    
+
 
 if __name__ == "__main__":
     unittest.main()
