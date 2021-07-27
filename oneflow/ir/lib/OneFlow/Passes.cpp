@@ -99,12 +99,12 @@ using namespace mlir::oneflow;
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
 
-      // TODO: is it a good idea to insert the sub-graph at entry block?
       // TODO: add dedicated op definition for this kind OneFlow_JitFunc
       // TODO: save input output alias info in OneFlow_JitFunc's attr
       auto* context = rewriter.getContext();
       OpBuilder builder(context);
 
+      // TODO: save outlined function as a block in OneFlow_JitFunc
       OwningModuleRef jit_module(
           ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
 
