@@ -34,7 +34,7 @@ def _test_repeat_new_dim(test_case, device):
     )
     sizes = (4, 3, 2, 3, 3)
     np_out = np_repeat(input.numpy(), sizes)
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(4, 3, 2, 3, 3)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
@@ -43,7 +43,7 @@ def _test_repeat_same_dim(test_case, device):
         np.random.randn(1, 2, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     sizes = (4, 2, 3, 19)
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(4, 2, 3, 19)
     np_out = np_repeat(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
@@ -54,7 +54,7 @@ def _test_repeat_same_dim_int(test_case, device):
     )
     size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
     sizes = size_tensor.size()
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(size_tensor.size())
     np_out = np_repeat(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
@@ -65,7 +65,7 @@ def _test_repeat_same_dim_int8(test_case, device):
     )
     size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
     sizes = size_tensor.size()
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(sizes)
     np_out = np_repeat(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
@@ -78,7 +78,7 @@ def _test_repeat_new_dim_backward(test_case, device):
         requires_grad=True,
     )
     sizes = (4, 3, 2, 3, 3)
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(4, 3, 2, 3, 3)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [
@@ -105,8 +105,7 @@ def _test_repeat_same_dim_backward(test_case, device):
         device=flow.device(device),
         requires_grad=True,
     )
-    sizes = (1, 2, 3, 1)
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(1, 2, 3, 1)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [
@@ -137,7 +136,33 @@ def _test_repeat_flow_size(test_case, device):
         requires_grad=True,
     )
     sizes = flow.Size([4, 3, 2, 3, 3])
-    of_out = input.repeat(sizes=sizes)
+    of_out = input.repeat(sizes)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+        ],
+        [
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+            [[216.0, 216.0, 216.0]],
+        ],
+    ]
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+
+def _test_repeat_int(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 4, 1, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    of_out = input.repeat(4, 3, 2, 3, 3)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [
@@ -168,6 +193,7 @@ class TestRepeat(flow.unittest.TestCase):
             _test_repeat_new_dim_backward,
             _test_repeat_same_dim_backward,
             _test_repeat_flow_size,
+            _test_repeat_int,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

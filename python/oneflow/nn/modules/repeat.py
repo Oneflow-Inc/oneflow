@@ -19,12 +19,15 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
 class Repeat(Module):
-    def __init__(self, sizes) -> None:
+    def __init__(self, *sizes) -> None:
         super().__init__()
         assert isinstance(
-            sizes, (tuple, flow.Size)
+            *sizes, (int, tuple, flow.Size)
         ), "sizes should be flow.Size or tuple int!"
-        self.sizes = _single(sizes)
+        
+        self.sizes = _single(*sizes)
+        if isinstance(self.sizes[0], flow.Size):
+            self.sizes = self.sizes[0]
 
     def forward(self, input):
         repeat = self.sizes
@@ -63,12 +66,12 @@ class Repeat(Module):
 
 
 @register_tensor_op("repeat")
-def repeat_op(x, sizes):
+def repeat_op(x, *sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
         x (oneflow.Tensor): The input Tensor.
-        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+        *size (flow.Size or int): The number of times to repeat this tensor along each dimension
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -84,11 +87,11 @@ def repeat_op(x, sizes):
         ...               [[4, 5]]]]).astype(np.int32)
 
         >>> input = flow.Tensor(x)
-        >>> out = input.repeat(sizes=(1, 1, 2, 2))
+        >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
         flow.Size([1, 3, 2, 4])
     """
-    return Repeat(sizes=sizes)(x)
+    return Repeat(sizes)(x)
 
 
 if __name__ == "__main__":
