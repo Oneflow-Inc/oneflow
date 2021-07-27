@@ -27,8 +27,8 @@ message JobHelperConf {
 }
 
 message Job {
-  required DLNetConf net = 1;
-  required Placement placement = 2;
+  optional DLNetConf net = 1;
+  optional Placement placement = 2;
   required JobConfigProto job_conf = 3;
   optional JobParallelViewConf job_parallel_view_conf = 4;
   optional JobHelperConf helper = 5;

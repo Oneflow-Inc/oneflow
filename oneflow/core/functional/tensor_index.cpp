@@ -28,14 +28,15 @@ int64_t CountSpecifiedDims(const TensorIndex& index) {
   return specified_ndims;
 }
 
-Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& shape) {
-  int64_t specified_ndims = CountSpecifiedDims(index);
+Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
+                                std::vector<detail::Slice>* slice_indices,
+                                std::vector<std::shared_ptr<Tensor>>* tensor_indices,
+                                std::vector<int64_t>* target_dims) {
   int64_t ndims = shape.NumAxes();
+  int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
       << "Too many indices for tensor of dimension " << ndims;
-
-  auto regular_index = std::make_shared<TensorIndex>();
-  int64_t dim = 0;
+  int dim = 0;
   for (int i = 0; i < index.size(); ++i) {
     const auto& index_item = index.at(i);
     if (index_item.IsSlice()) {
@@ -50,36 +51,40 @@ Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& sha
       if (start < 0) { start = 0; }
       if (end < 0) { end += shape.At(dim); }
       if (end < start) { end = start; }
-      regular_index->emplace_back(detail::IndexItem(start, end, step));
+      slice_indices->emplace_back(start, end, step);
+      int64_t length = (end - start + step - 1) / step;
+      target_dims->emplace_back(length);
       dim++;
     } else if (index_item.IsInteger()) {
       CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
-      CHECK_OR_RETURN(integer >= 0 && integer < shape.At(dim))
-          << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
-          << " with size " << shape.At(dim);
-      regular_index->emplace_back(detail::IndexItem(integer));
+      if (integer < 0 || integer >= shape.At(dim)) {
+        return Error::IndexError()
+               << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
+               << " with size " << shape.At(dim);
+      }
+      slice_indices->emplace_back(integer, integer + 1, 1);
       dim++;
     } else if (index_item.IsEllipsis()) {
       int64_t unspecified_ndims = ndims - specified_ndims;
       unspecified_ndims = std::min(ndims - dim, unspecified_ndims);
       for (int j = 0; j < unspecified_ndims; ++j) {
-        regular_index->emplace_back(detail::IndexItem(0, shape.At(dim + j), 1));
+        slice_indices->emplace_back(0, shape.At(dim + j), 1);
+        target_dims->emplace_back(shape.At(dim + j));
       }
       dim += unspecified_ndims;
-    } else {
-      // None or Boolean.
-      if (index_item.IsBoolean()) {
-        CHECK_OR_RETURN(index_item.boolean()) << "Index false is not supported.";
-      }
-      regular_index->emplace_back(index_item);
+    } else if (index_item.IsNone()) {
+      target_dims->emplace_back(1);
+    } else if (index_item.IsBoolean()) {
+      target_dims->emplace_back(index_item.boolean());
     }
   }
   for (int i = dim; i < ndims; ++i) {
-    regular_index->emplace_back(detail::IndexItem(0, shape.At(i), 1));
+    slice_indices->emplace_back(0, shape.At(i), 1);
+    target_dims->emplace_back(shape.At(i));
   }
-  return regular_index;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

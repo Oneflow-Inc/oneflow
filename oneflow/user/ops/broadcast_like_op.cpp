@@ -91,16 +91,17 @@ REGISTER_USER_OP("broadcast_like")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_modifier != nullptr);
+      CHECK_OR_RETURN(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures)
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
       ctx->DefineOp(x_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("reduce_sum_like")
@@ -115,6 +116,7 @@ REGISTER_USER_OP_GRAD("broadcast_like")
                                 [&ctx, &x_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(x_grad_op_name).output("y", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

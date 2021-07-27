@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -26,7 +29,7 @@ namespace oneflow {
 
 namespace one {
 
-/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+/* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
@@ -46,7 +49,7 @@ namespace one {
   }
 }
 
-/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
+/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
     const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
   const auto& blob_desc = eager_blob_object->blob_desc();
