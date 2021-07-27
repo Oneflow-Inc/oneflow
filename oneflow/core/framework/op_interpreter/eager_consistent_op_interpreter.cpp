@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +26,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/rank_group_rpc_util.h"
+#include "oneflow/core/job/rank_group.h"
+#include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -63,6 +67,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
         JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
+    const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
+    JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.

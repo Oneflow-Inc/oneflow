@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
@@ -203,6 +204,13 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
+  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  JUST(ctx->Check());
+  return Maybe<void>::Ok();
+}
+
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
@@ -283,6 +291,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
+      .def("rpc_token",
+           [](const one::Tensor& tensor) -> int64_t {
+             return static_cast<uint64_t>(tensor.rpc_token().GetOrThrow());
+           })
+      .def("check_meta_consistency",
+           [](const one::Tensor& tensor) {
+             return CheckConsistentTensorMeta(tensor, 60 * 5).GetOrThrow();
+           })
+      .def("check_meta_consistency",
+           [](const one::Tensor& tensor, int64_t seconds) {
+             return CheckConsistentTensorMeta(tensor, seconds).GetOrThrow();
+           })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
