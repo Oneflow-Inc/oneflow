@@ -74,15 +74,15 @@ class _ConstantBase(Module):
                 self.shape,
                 self.value,
                 self.dtype,
-                int(self.placement),
-                list(map(int, self.sbp)),
+                self.placement,
+                self.sbp,
             )
         else:
             res = flow.F.constant(
                 self.shape,
                 self.value,
                 self.dtype,
-                int(self.device) if self.device is not None else None,
+                self.device,
             )
         res.requires_grad = self.requires_grad
         return res
@@ -308,10 +308,10 @@ class NewOnes(Module):
         ), f"requires_grad parameter not correct, please check!"
         if self.placement is not None:
             res = flow.F.consistent_constant(
-                new_size, 1.0, new_dtype, int(self.placement), tuple(map(int, self.sbp))
+                new_size, 1.0, new_dtype, self.placement, self.sbp
             )
         else:
-            res = flow.F.constant(new_size, 1.0, new_dtype, int(new_device))
+            res = flow.F.constant(new_size, 1.0, new_dtype, new_device)
         res.requires_grad = new_requires_grad
         return res
 
