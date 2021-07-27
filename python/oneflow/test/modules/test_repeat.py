@@ -140,8 +140,6 @@ class TestRepeat(flow.unittest.TestCase):
             _test_repeat_same_dim_int8,
             _test_repeat_new_dim_backward,
             _test_repeat_same_dim_backward,
-            _test_repeat_flow_size,
-            _test_repeat_int,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
