@@ -20,17 +20,15 @@ from oneflow.framework.attr_util import convert_to_user_attr_value
 
 def user_op_expr_call(self, *args, **kwargs):
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-    for attr_name, attr_value in kwargs.items():
+    for (attr_name, attr_value) in kwargs.items():
         assert isinstance(attr_name, str)
         attrs[attr_name] = convert_to_user_attr_value(
             self.op_type_name, attr_name, attr_value
         )
-
     try:
         results = self.apply(args, attrs)
     except flow._oneflow_internal.exception.Exception:
         raise oneflow._oneflow_internal.exception.GetThreadLocalLastError()
-
     return results
 
 

@@ -28,6 +28,7 @@ class Function:
 
 def RegisterFunctionalApis():
     import inspect
+
     import oneflow.F
 
     for s in dir(oneflow._oneflow_internal.F):
@@ -38,10 +39,7 @@ def RegisterFunctionalApis():
                 func_name = _function_name_aliases[s]
                 setattr(oneflow.F, func_name, Function(func_name, f))
             setattr(oneflow.F, s, Function(func_name, f))
-
     del inspect
 
 
-_function_name_aliases = {
-    "add_scalar": "scalar_add",
-}
+_function_name_aliases = {"add_scalar": "scalar_add"}

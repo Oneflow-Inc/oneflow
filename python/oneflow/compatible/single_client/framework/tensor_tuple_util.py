@@ -15,9 +15,9 @@ limitations under the License.
 """
 
 import collections
-from typing import Union, Sequence, Tuple, Optional
+from typing import Optional, Sequence, Union
 
-from oneflow._oneflow_internal import TensorTuple, Tensor
+from oneflow._oneflow_internal import Tensor, TensorTuple
 
 
 def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
@@ -29,3 +29,4 @@ def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
         tensor_tuple = TensorTuple()
         tensor_tuple.append(args)
         return tensor_tuple
+
