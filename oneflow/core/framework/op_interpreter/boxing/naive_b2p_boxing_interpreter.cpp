@@ -34,7 +34,6 @@ Maybe<void> NaiveB2PBoxingInterpreter::Interpret(
   } else {
     outputs->at(0) = JUST(one::functional::ZerosLike(inputs.at(0)));
   }
-  *outputs = inputs;
   return Maybe<void>::Ok();
 }
 
