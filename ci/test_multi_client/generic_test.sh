@@ -4,11 +4,9 @@ set -xe
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_dir=${ONEFLOW_TEST_DIR:-"$PWD/oneflow/python/test/modules"}
+test_dir=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
 test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
-test_dir=${ONEFLOW_TEST_DIR:-"$PWD/oneflow/python/test/tensor"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
-export ONEFLOW_TEST_UTILS_DIR=$src_dir/oneflow/python/test_utils
+export ONEFLOW_TEST_UTILS_DIR=$src_dir/python/oneflow/test_utils
 
 
 rm -rf $test_tmp_dir
