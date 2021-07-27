@@ -115,7 +115,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseUninitializedShapeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->shape().is_uninitialized();
+        return !it->second->shape().is_initialized();
       });
 }
 

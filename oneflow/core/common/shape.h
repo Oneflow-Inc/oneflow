@@ -55,13 +55,16 @@ class Shape final {
   void SerializeWithTextFormat(StreamT& out_stream) const;
 
   // Getters and Setters
-  bool is_uninitialized() const { return !elem_cnt_.has_value(); }
+  bool is_initialized() const { return elem_cnt_.has_value(); }
   const DimVector& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_.value()); }
   int64_t At(int64_t index) const { return dim_vec_.at(index); }
   void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
-    CHECK(!is_uninitialized());
+    if (!is_initialized()){
+      return 0;
+    }
+    // CHECK(is_initialized());
     return dim_vec_.size();
   }
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
