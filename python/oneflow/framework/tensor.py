@@ -59,12 +59,8 @@ def _local_tensor_numpy(eager_local_tensor):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
 
-    n_shape = (
-        () if len(eager_local_tensor.shape) == 0 else tuple(eager_local_tensor.shape)
-    )
-
     ndarray = np.empty(
-        n_shape,
+        shape=tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
     copy_to_numpy(ndarray)
