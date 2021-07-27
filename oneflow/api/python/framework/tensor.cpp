@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/framework/device.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -177,25 +178,23 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtyp
   auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
   auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
   bool init_from_numpy = py::isinstance<py::array>(array);
-  {
-    DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-    if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
-      desired_dtype = DType::Float().get();
-    }
-  }
-  if (desired_dtype != nullptr) {
-    np_arr_raii = py::reinterpret_steal<py::array>(
-        PyArray_Cast(np_arr, JUST(numpy::OFDataTypeToNumpyType(desired_dtype->data_type()))));
-    np_arr = reinterpret_cast<PyArrayObject*>(np_arr_raii.ptr());
-  }
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const auto shape = std::make_shared<Shape>(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  auto tensor = MirroredTensor::MakeTensor(shape, flow_dtype, device, /* is_lazy */ false,
-                                           requires_grad, /* is_leaf */ true)
-                    .GetPtrOrThrow();
+  std::shared_ptr<Tensor> tensor =
+      MirroredTensor::MakeTensor(shape, flow_dtype, device, /* is_lazy */ false, requires_grad,
+                                 /* is_leaf */ true)
+          .GetPtrOrThrow();
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
-  return std::static_pointer_cast<Tensor>(tensor);
+  if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
+    desired_dtype = DType::Float().get();
+  }
+  if (desired_dtype != nullptr) {
+    autograd::NoGradGuard no_grad;
+    tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
+    tensor->set_requires_grad(requires_grad);
+  }
+  return tensor;
 }
 
 Symbol<Device> TensorGetDevice(const Tensor& tensor) { return tensor.device().GetOrThrow(); }
