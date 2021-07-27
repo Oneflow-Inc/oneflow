@@ -120,7 +120,6 @@ template<>
 Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
   const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
   return std::make_shared<AttrMap>(*attrs);
-  ;
 }
 
 template<>
@@ -167,6 +166,26 @@ Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::
 template<>
 Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
   return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<ParallelDesc>>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(Borrow()));
+}
+
+template<>
+Maybe<std::vector<Symbol<cfg::SbpParallel>>>
+PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  const auto& v =
+      JUST(detail::cast<std::vector<std::shared_ptr<Symbol<cfg::SbpParallel>>>>(Borrow()));
+  auto sbp_list = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(v->size());
+  for (int i = 0; i < v->size(); ++i) { sbp_list->at(i) = *(v->at(i)); }
+  return sbp_list;
 }
 
 template<>

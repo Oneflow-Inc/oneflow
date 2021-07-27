@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_clamp(test_case, shape, device):
@@ -105,6 +106,52 @@ class TestClampModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_clamp_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clamp_min_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clamp_max_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clamp(
+            input, min=random().to(float), max=random().to(float) | nothing()
+        )
+        return y
+
+    @autotest()
+    def test_clip_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_min_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(input, min=random().to(float), max=random().to(float))
+        return y
+
+    @autotest()
+    def test_clip_max_none_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = torch.clip(
+            input, min=random().to(float), max=random().to(float) | nothing()
+        )
+        return y
 
 
 if __name__ == "__main__":
