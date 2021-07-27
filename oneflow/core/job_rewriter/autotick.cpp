@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/autotick.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/common/protobuf.h"
@@ -421,8 +420,8 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddWaitAndSendIds(const OpGraph& op_graph, JobBuilder* job_builder,
-                                         int64_t machine_id, const std::string& src_op_name) {
+Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
+                                         const std::string& src_op_name) {
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
@@ -575,7 +574,7 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
   {
     JobBuilder job_builder(job);
     for (const auto& pair : machine_id2src_op_name) {
-      JUST(MultiClientAddWaitAndSendIds(op_graph, &job_builder, pair.first, pair.second));
+      JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
     }
     for (const auto& pair : machine_id2sink_op_name) {
       JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));

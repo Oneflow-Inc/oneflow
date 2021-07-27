@@ -95,8 +95,7 @@ class RunLazyJobInstructionType final : public InstructionType {
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
-        auto status = buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
-        CHECK_EQ(status, kBufferStatusSuccess);
+        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
         buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
