@@ -120,7 +120,6 @@ template<>
 Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
   const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
   return std::make_shared<AttrMap>(*attrs);
-  ;
 }
 
 template<>
@@ -167,6 +166,11 @@ Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::
 template<>
 Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
   return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<ParallelDesc>>>(Borrow()));
 }
 
 template<>

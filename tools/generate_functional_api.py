@@ -151,6 +151,7 @@ types_allowed = {
     "Shape",
     "Generator",
     "TensorIndex",
+    "ParallelDesc",
 }
 
 generic_type_aliases = {
@@ -179,6 +180,7 @@ argument_type_aliases = {
     "Shape": "const Shape&",
     "Generator": "const std::shared_ptr<one::Generator>&",
     "TensorIndex": "const TensorIndex&",
+    "ParallelDesc": "const Symbol<ParallelDesc>&",
     **generic_type_aliases,
 }
 
@@ -199,6 +201,7 @@ optional_argument_type_aliases = {
     "Shape": "const Optional<Shape>&",
     "Generator": "const Optional<one::Generator>&",
     "TensorIndex": "const Optional<TensorIndex>&",
+    "ParallelDesc": "const Optional<Symbol<ParallelDesc>>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
