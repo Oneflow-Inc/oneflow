@@ -213,83 +213,6 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
-                                  const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                  Symbol<ParallelDesc> parallel_desc) {
-  // TODO(hanbinbin): Sync data when sync_consistent_meta_info branch merged in master
-  if (sbp_parallels.size() == 1) {
-    const auto& sbp_parallel = sbp_parallels.at(0);
-    if (sbp_parallel->has_split_parallel()) {
-      return tensor;
-    } else if (sbp_parallel->has_broadcast_parallel()) {
-      if (parallel_desc->device_tag() == "gpu") {
-        TensorTuple input_list;
-        input_list.emplace_back(tensor);
-        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-        int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
-        std::shared_ptr<UserOpExpr> op_expr =
-            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
-        return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
-      } else {
-        OF_UNIMPLEMENTED();
-      }
-    } else if (sbp_parallel->has_partial_sum_parallel()) {
-      if (GlobalProcessCtx::Rank() == 0) {
-        const auto& out_tensor = JUST(tensor->detach());
-        bool requires_grad = autograd::GradMode::is_enabled() && tensor->requires_grad();
-        out_tensor->set_requires_grad(requires_grad);
-        out_tensor->set_is_leaf(!requires_grad);
-        return out_tensor;
-      } else {
-        return functional::ZerosLike(tensor);
-      }
-    } else {
-      OF_UNIMPLEMENTED();
-    }
-  } else {
-    OF_UNIMPLEMENTED();
-  }
-}
-
-// used in mirrored_tensor.to_consistent(sbp, placement)
-Maybe<Tensor> CastLocalToConsistent(const std::shared_ptr<Tensor>& tensor,
-                                    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                    Symbol<ParallelDesc> parallel_desc) {
-  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor);
-  CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";
-  CHECK_OR_RETURN(mirrored_tensor->is_eager()) << "eager tensors supported only";
-  if (mirrored_tensor->is_cuda()) {
-    CHECK_EQ_OR_RETURN(
-        JUST(mirrored_tensor->device())->device_id(),
-        GlobalProcessCtx::LocalRank() % (Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum()))
-        << "tensor must be on default device of rank!";
-  }
-  std::shared_ptr<Tensor> synced_tensor =
-      JUST(SyncDataAndMetaInfo(mirrored_tensor, sbp_parallels, parallel_desc));
-  const auto& op_expr = JUST(CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent")),
-                                                         sbp_parallels, parallel_desc));
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {synced_tensor}));
-}
-
-// used consistent_tensor.to_local()
-Maybe<Tensor> CastConsistentToLocal(const std::shared_ptr<Tensor>& tensor) {
-  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  if (!parallel_desc->Containing(machine_id, device_id)) {
-    // should return UndefinesdLocalTensor here, the impl of which need to be discussed
-    return std::shared_ptr<Tensor>();
-  }
-  const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
-  const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
-                                                           *parallel_distribution, parallel_desc));
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {consistent_tensor}));
-}
-
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
@@ -380,20 +303,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
-      .def("to_consistent",
-           [](const std::shared_ptr<Tensor>& tensor,
-              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-              Symbol<ParallelDesc> parallel_desc) -> std::shared_ptr<Tensor> {
-             if (tensor->is_consistent()) {
-               UNIMPLEMENTED();
-             } else {
-               return CastLocalToConsistent(tensor, sbp_parallels, parallel_desc).GetPtrOrThrow();
-             }
-           })
-      .def("to_local",
-           [](const std::shared_ptr<Tensor>& tensor) -> std::shared_ptr<Tensor> {
-             return CastConsistentToLocal(tensor).GetPtrOrThrow();
-           })
       .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
 }
 

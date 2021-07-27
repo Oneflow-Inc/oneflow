@@ -741,3 +741,11 @@
 - name: "stack"
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True
+
+- name: "to_consistent"
+  signature: "Tensor ToConsistent(Tensor x, *, SbpParallelList sbp, ParallelDesc placement)"
+  bind_python: True
+
+- name: "to_local"
+  signature: "Tensor ToLocal(Tensor x)"
+  bind_python: True
