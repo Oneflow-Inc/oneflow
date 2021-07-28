@@ -106,6 +106,36 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.F.broadcast_less,
+    r"""
+    broadcast_less(Tensor x, Tensor y) -> Tensor
+
+    Returns the truth value of :math:`x < y` element-wise
+
+    Args:
+        x (Tensor): the input tensor.
+        y (Tensor): the input tensor.
+		
+    Returns:
+        z (Tensor): A Blob with int8 type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> y = flow.Tensor(np.array([1, 2, 4]).astype(np.float32))
+        >>> z = flow.F.broadcast_less(x,y)
+        >>> z
+        tensor([0, 0, 1], dtype=oneflow.int8)
+
+    """,
+)
+
+
 
 
 
