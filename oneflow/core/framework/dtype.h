@@ -38,7 +38,7 @@ namespace oneflow {
 
 class DType final {
  public:
-  // DType(const DType&) = delete;
+  DType(const DType&) = delete;
   DType(DType&&) = delete;
   ~DType() = default;
 

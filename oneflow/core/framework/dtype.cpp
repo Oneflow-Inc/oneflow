@@ -106,12 +106,12 @@ const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(da
 
 /* static */ Maybe<Symbol<DType>> DType::New(DataType data_type) {
   DType dtype(data_type);
-  return SymbolOf(dtype);
+  return SymbolOf(JUST(dtype));
 }
 
 #define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                                   \
-  Symbol<DType> DType::data_type() {                                         \
-    Symbol<DType> dtype = DType::New(OF_PP_CAT(DataType::k, data_type)); \
+  Maybe<Symbol<DType>> DType::data_type() {                                         \
+    Maybe<Symbol<DType>>dtype = DType::New(OF_PP_CAT(DataType::k, data_type)); \
     return dtype;                                                                                  \
   }
 
