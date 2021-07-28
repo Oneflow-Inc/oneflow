@@ -174,6 +174,7 @@ def _test_expand_backward(test_case, device):
     np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
+
 def _test_expand_input_list(test_case, device):
     input_shape = (1, 6, 5, 3)
     expand_dim = [4, -1, 5, 3]
@@ -181,6 +182,7 @@ def _test_expand_input_list(test_case, device):
     of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(expand_dim)
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
+
 
 def _test_expand_input_flow_size(test_case, device):
     input_shape = (1, 4, 1, 2)

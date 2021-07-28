@@ -32,6 +32,7 @@ def _input_args_is_tuple_int(args):
 def _input_args_is_flow_size(args):
     return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
+
 class Expand(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
