@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/common.h"
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 
@@ -23,28 +24,23 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type_and_id) {
+  std::string type;
+  int device_id = -1;
+  ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
+  if (device_id == -1) { device_id = 0; }
+  return MakeDevice(type, device_id);
+}
 
-struct DeviceExportUtil final {
-  static Symbol<Device> MakeDevice(const std::string& type_and_id) {
-    std::string type;
-    int device_id = -1;
-    ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-    if (device_id == -1) { device_id = 0; }
-    return MakeDevice(type, device_id);
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type,
+                                                         int64_t device_id) {
+  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+    std::string error_msg =
+        "Expected one of cpu, cuda device type at start of device string " + type;
+    throw std::runtime_error(error_msg);
   }
-
-  static Symbol<Device> MakeDevice(const std::string& type, int64_t device_id) {
-    if (Device::type_supported.find(type) == Device::type_supported.end()) {
-      std::string error_msg =
-          "Expected one of cpu, cuda device type at start of device string " + type;
-      throw std::runtime_error(error_msg);
-    }
-    return Device::New(type, device_id).GetOrThrow();
-  }
-};
-
-}  // namespace
+  return Device::New(type, device_id).GetOrThrow();
+}
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
