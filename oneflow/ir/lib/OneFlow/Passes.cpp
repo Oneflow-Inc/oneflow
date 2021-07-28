@@ -114,7 +114,7 @@ using namespace mlir::oneflow;
       auto func_type =
           rewriter.getFunctionType(created->getOperandTypes(), created->getResultTypes());
       auto function = builder.create<mlir::FuncOp>(mul_op->getLoc(), op_name, func_type);
-
+      function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
       auto& entry_block = *function.addEntryBlock();
       builder.setInsertionPointToStart(&entry_block);
 
