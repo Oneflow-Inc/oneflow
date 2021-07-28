@@ -65,10 +65,7 @@ class TestFetchOutputTensor(unittest.TestCase):
             output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
                 "cc_Output_0", output_conf, ["in_0"], ["out_0"]
             )
-            if not x.is_determined:
-                x.determine()
-            x_tensor_in_c = x._local_or_consistent_tensor
-            lazy_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
+            lazy_tensor = input_op.apply([x], attrs)[0]
             test_case.assertEqual(lazy_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(lazy_tensor.is_lazy)
             test_case.assertTrue(lazy_tensor.is_local)
