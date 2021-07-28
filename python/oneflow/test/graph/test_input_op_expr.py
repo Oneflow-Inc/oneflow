@@ -58,10 +58,7 @@ class TestFeedInputTensor(unittest.TestCase):
                 op_name, input_conf, ["in_0"], ["out_0"]
             )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-            if not x.is_determined:
-                x.determine()
-            x_tensor_in_c = x._local_or_consistent_tensor
-            out_tensor = input_op.apply([x_tensor_in_c], attrs)[0]
+            out_tensor = input_op.apply([x], attrs)[0]
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)
             test_case.assertTrue(out_tensor.is_local)

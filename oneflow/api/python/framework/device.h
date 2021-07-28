@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/common.h"
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/device.h"
 
-import collections
-from typing import Optional, Sequence, Union
+namespace oneflow {
+struct DeviceExportUtil final {
+  static Symbol<Device> MakeDevice(const std::string& type_and_id);
 
-from oneflow._oneflow_internal import Tensor, TensorTuple
+  static Symbol<Device> MakeDevice(const std::string& type, int64_t device_id);
+};
 
-
-def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
-    if args is None:
-        return TensorTuple()
-    elif isinstance(args, collections.abc.Sequence):
-        return TensorTuple(args)
-    else:
-        tensor_tuple = TensorTuple()
-        tensor_tuple.append(args)
-        return tensor_tuple
+}  // namespace oneflow

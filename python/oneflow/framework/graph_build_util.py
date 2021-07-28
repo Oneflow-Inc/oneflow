@@ -27,8 +27,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
-from oneflow._oneflow_internal import Tensor as InternalTensor
-from oneflow.framework.tensor import Tensor as PyTensor
+from oneflow.framework.tensor import Tensor as Tensor
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -129,7 +128,7 @@ def scope_to_proto(scope):
 
 
 def build_graph_input_arg(op_name, arg):
-    assert isinstance(arg, (PyTensor, InternalTensor))
+    assert isinstance(arg, Tensor)
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
     )
@@ -138,15 +137,7 @@ def build_graph_input_arg(op_name, arg):
         op_name, input_conf, ["in_0"], ["out_0"]
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-    if isinstance(arg, PyTensor):
-        if not arg.is_determined:
-            arg.determine()
-        tensor_in_c = arg._local_or_consistent_tensor
-    else:
-        tensor_in_c = arg
-
-    lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
+    lazy_arg = input_op.apply([arg], attrs)[0]
     return lazy_arg
 
 
@@ -158,19 +149,15 @@ def build_graph_state(op_name, state_tensor, state_config):
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
         op_name, var_conf, ["in_0"], ["out_0"]
     )
+    
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-    assert isinstance(state_tensor, PyTensor)
-    if not state_tensor.is_determined:
-        state_tensor.determine()
-    tensor_in_c = state_tensor._local_or_consistent_tensor
-
     if state_config is not None:
         attr_l2 = user_op_attr_cfg.AttrValue()
         attr_l2.set_at_double(state_config.l2)
         attrs["l2"] = attr_l2
 
-    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
+    assert isinstance(state_tensor, Tensor)
+    lazy_tensor = var_op.apply([state_tensor], attrs)[0]
     return lazy_tensor
 
 

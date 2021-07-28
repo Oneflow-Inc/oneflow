@@ -213,7 +213,12 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
             ):
                 checker = value
                 break
-    assert checker is not None
+    assert checker is not None, (
+        "checker not found for type "
+        + type(dual_object.pytorch)
+        + " and "
+        + type(dual_object.oneflow)
+    )
     return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
 
 
@@ -235,6 +240,11 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
         atol=atol,
         equal_nan=True,
     )
+
+
+@equality_checker(type(None), type(None))
+def check_nonetype_equality(a, b, ignored1, ignored2):
+    return True
 
 
 def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
