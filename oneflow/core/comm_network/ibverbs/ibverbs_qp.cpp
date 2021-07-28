@@ -63,7 +63,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
-  max_outstanding_send_wr_ = qp_init_attr.cap.max_send_wr;
+  max_outstanding_send_wr_ = queue_depth;
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -283,3 +283,4 @@ void IBVerbsQP::DeleteWorkRequestId(WorkRequestId* wr_id) {
 }  // namespace oneflow
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+
