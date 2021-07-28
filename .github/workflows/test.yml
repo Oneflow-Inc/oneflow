@@ -453,7 +453,7 @@ jobs:
             ${bin_dir}/oneflow_testexe
       - name: Build documentation
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cpu'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
