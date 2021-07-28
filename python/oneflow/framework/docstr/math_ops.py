@@ -71,13 +71,40 @@ add_docstr(
 
         >>> arr = np.array([0.5, 0.6, 0.7])
         >>> input = flow.Tensor(arr, dtype=flow.float32)
-        >>> output = flow.acos(input)
+        >>> output = flow.F.acos(input)
         >>> output
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
 
     """,
 )
 
+add_docstr(
+    oneflow.F.atanh,
+    r"""
+    atanh(x: Tensor) -> Tensor
+
+    Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.F.atanh(input)
+        >>> output
+        tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
+
+    """,
+)
 
 
 

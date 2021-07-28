@@ -8,3 +8,5 @@ Functional functions
 .. autofunction:: oneflow.F.sin
 .. autofunction:: oneflow.F.abs
 .. autofunction:: oneflow.F.acos
+.. autofunction:: oneflow.F.atanh
+
