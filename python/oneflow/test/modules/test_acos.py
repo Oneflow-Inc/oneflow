@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_acos_impl(test_case, shape, device):
@@ -49,6 +50,20 @@ class TestAcos(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_acos_impl(test_case, *arg)
+
+    @autotest()
+    def test_acos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.acos(x)
+        return z
+
+    @autotest()
+    def test_acos_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.acos()
+        return z
 
 
 if __name__ == "__main__":

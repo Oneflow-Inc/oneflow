@@ -88,7 +88,7 @@ def _test_sinh_impl(test_case, shape, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testsinh(flow.unittest.TestCase):
+class TestSinh(flow.unittest.TestCase):
     def test_sinh(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
@@ -102,6 +102,45 @@ class Testsinh(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.sinh(x)
         return y
+
+
+def _test_cosh_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    np_x_grad = np.sinh(np_input)
+    of_out = flow.cosh(of_input)
+    np_out = np.cosh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestCosh(flow.unittest.TestCase):
+    def test_cosh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_cosh_impl(test_case, *arg)
+
+    @autotest()
+    def test_cosh_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.cosh(x)
+        return z
+
+    @autotest()
+    def test_cosh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.cosh()
+        return z
 
 
 def _test_sin(test_case, shape, device):
@@ -264,6 +303,26 @@ class TestStd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_flow_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = torch.std(x, dim=dim)
+        return z
+
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_tensor_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = x.std(dim=dim)
+        return z
+
 
 def _test_sqrt(test_case, shape, device):
     np_arr = np.random.randn(*shape)
@@ -298,6 +357,20 @@ class TestSqrt(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_sqrt_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.sqrt(x)
+        return z
+
+    @autotest()
+    def test_sqrt_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.sqrt()
+        return z
 
 
 def _test_rsqrt(test_case, shape, device):
@@ -368,6 +441,20 @@ class TestSquare(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
+    def test_square_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.square(x)
+        return z
+
+    @autotest()
+    def test_square_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.square()
+        return z
+
 
 def _test_pow(test_case, shape, device):
     input = flow.Tensor(
@@ -405,6 +492,22 @@ class TestPow(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_pow_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random(1, 5).to(device)
+        z = torch.pow(x, y)
+        return z
+
+    @autotest()
+    def test_pow_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random(1, 5).to(device)
+        z = x.pow(y)
+        return z
 
 
 def _test_asin(test_case, shape, device):
