@@ -237,9 +237,15 @@ class TestGelu(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_gelu_impl(test_case, *arg)
 
+    @autotest()
     def test_gelu_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.GELU", device=device, n=2)
+        m = torch.nn.GELU()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def numpy_sigmoid(x):
@@ -309,17 +315,29 @@ class TestSigmoid(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
     def test_sigmoid_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Sigmoid", device=device, n=2)
+        m = torch.nn.Sigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
+    @autotest()
     def test_sigmoid_flow_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(test_case, "sigmoid", device=device, n=2)
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.sigmoid(x)
+        return y
 
+    @autotest()
     def test_sigmoid_tensor_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_tensor_against_pytorch(test_case, "sigmoid", device=device, n=2)
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.sigmoid()
+        return y
 
 
 def _test_softmax(test_case, device):
@@ -441,10 +459,15 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_hardsigmoid_impl(test_case, *arg)
 
+    @autotest()
     def test_hardsigmoid_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Hardsigmoid", device=device, n=2)
-
+        m = torch.nn.Hardsigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 def _test_logsoftmax(test_case, device):
     dim = 1
@@ -618,10 +641,15 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
     def test_logsigmoid_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.LogSigmoid", device=device, n=2)
-
+        m = torch.nn.LogSigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
