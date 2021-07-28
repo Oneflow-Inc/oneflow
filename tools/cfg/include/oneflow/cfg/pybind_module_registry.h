@@ -1,6 +1,6 @@
 #ifndef ONEFLOW_CFG_PYBIND_REGISTRY_H_
 #define ONEFLOW_CFG_PYBIND_REGISTRY_H_
-#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 #include <map>
 #include <vector>
 #include <functional>

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/api/python/functional/indexing.h"
 
-#include <pybind11/pybind11.h>
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/device.h"

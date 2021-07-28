@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include <memory>
-#include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 

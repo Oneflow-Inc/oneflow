@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/api/foreign_lock_helper.h"
 
-#include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/global.h"
 

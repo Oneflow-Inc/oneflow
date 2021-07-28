@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"

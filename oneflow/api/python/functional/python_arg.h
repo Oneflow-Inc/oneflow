@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
 
-#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 
 #include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"

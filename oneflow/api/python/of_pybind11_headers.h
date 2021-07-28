@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/shut_down_util.h"
+#ifndef ONEFLOW_API_PYTHON_OF_PYBIND11_HEADERS_H_
+#define ONEFLOW_API_PYTHON_OF_PYBIND11_HEADERS_H_
 
-namespace py = pybind11;
+#include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
+#include <pybind11/numpy.h>
+#include <pybind11/operators.h>
+#include <pybind11/stl.h>
 
-namespace oneflow {
-
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("SetShuttingDown", []() { return SetShuttingDown(); });
-}
-
-}  // namespace oneflow
+#endif  // ONEFLOW_API_PYTHON_OF_PYBIND11_HEADERS_H_

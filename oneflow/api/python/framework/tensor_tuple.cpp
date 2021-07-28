@@ -15,8 +15,6 @@ limitations under the License.
 */
 
 #include <vector>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor.h"

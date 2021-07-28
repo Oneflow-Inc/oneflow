@@ -15,11 +15,12 @@ limitations under the License.
 */
 
 #include <vector>
-#include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 
 namespace py = pybind11;
+
+PYBIND11_MAKE_OPAQUE(std::vector<std::shared_ptr<oneflow::one::FunctionNode>>)
 
 namespace oneflow {
 

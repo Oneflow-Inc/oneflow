@@ -18,8 +18,7 @@ limitations under the License.
 
 #include "oneflow/api/foreign_lock_helper.h"
 #include "oneflow/core/common/type_traits.h"
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"

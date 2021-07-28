@@ -17,8 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_H_
 
 #include "oneflow/core/common/type_traits.h"
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 #include "oneflow/core/register/ofblob.h"
 
 namespace py = pybind11;

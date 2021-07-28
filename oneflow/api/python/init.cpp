@@ -15,8 +15,6 @@ limitations under the License.
 */
 #include <vector>
 #include <unordered_map>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "oneflow/api/python/of_api_registry.h"

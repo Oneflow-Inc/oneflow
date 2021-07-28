@@ -101,7 +101,6 @@ pybind_fmt = (
     + """
 
 #include <vector>
-#include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/functional/function_def.h"

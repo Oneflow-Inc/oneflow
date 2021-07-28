@@ -1,5 +1,4 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/operators.h>
+#include "oneflow/api/python/of_pybind11_headers.h"
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "{{ util.module_cfg_header_name(module) }}"
 {% for dependency in util.module_dependencies(module) %}
