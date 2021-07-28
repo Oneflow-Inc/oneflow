@@ -281,5 +281,13 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
 
 Maybe<one::UserOpExpr> SoftmaxGradOp();
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
+
+Maybe<one::UserOpExpr> DimScatterUpdateScalarOp(const int32_t dim, const float value);
+Maybe<one::UserOpExpr> DimScatterUpdateScalarOp(const int32_t dim, const float value,
+                                                const std::string& name);
+
+Maybe<one::UserOpExpr> DimGatherOp(const int32_t dim);
+Maybe<one::UserOpExpr> DimGatherOp(const int32_t dim, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

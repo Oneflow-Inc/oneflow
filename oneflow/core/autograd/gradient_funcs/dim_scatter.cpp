@@ -24,8 +24,8 @@ namespace one {
 
 struct DimScatterInterpState : public OpExprInterpState {
   int32_t dim;
-  bool requires_input;
-  bool requires_src;
+  bool input_requires_grad;
+  bool src_requires_grad;
 };
 
 class DimScatter : public OpExprGradFunction<DimScatterInterpState> {
@@ -43,22 +43,58 @@ class DimScatter : public OpExprGradFunction<DimScatterInterpState> {
 };
 
 Maybe<void> DimScatter::Init(const OpExpr& op) {
-
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  const std::string& op_name = fw_op_expr->op_name();
+  dim_gather_op_ = JUST(op_expr_helper::DimGatherOp(0, GradientOpName(op_name) + "0"));
+  dim_scatter_scalar_op_ =
+      JUST(op_expr_helper::DimScatterUpdateScalarOp(0, 0.0f, GradientOpName(op_name) + "1"));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DimScatter::Capture(DimScatterInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrMap& attrs) const {
+                                const TensorTuple& outputs, const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);
 
+  ctx->input_requires_grad = inputs.at(0)->requires_grad();
+  ctx->src_requires_grad = inputs.at(2)->requires_grad();
+  if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
+
+  ctx->SaveTensorForBackward(inputs.at(1));  // index saved
+
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DimScatter::Apply(const DimScatterInterpState* ctx, const TensorTuple& out_grads,
-                             TensorTuple* in_grads) const {
+                              TensorTuple* in_grads) const {
+  if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
+
+  in_grads->resize(3);
+
+  if (ctx->input_requires_grad) {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
+    JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
+    in_grads->at(0) = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*dim_scatter_scalar_op_, {out_grads.at(0), index}, attrs));
+  }
+
+  if (ctx->src_requires_grad) {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
+    in_grads->at(2) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*dim_gather_op_, {out_grads.at(0), index}, attrs));
+  }
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter", DimScatter);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update", DimScatter);
 
 }  // namespace one
 }  // namespace oneflow

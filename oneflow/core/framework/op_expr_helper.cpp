@@ -654,6 +654,32 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string&
       .Build();
 }
 
+Maybe<one::UserOpExpr> DimScatterUpdateScalarOp(const int32_t dim, const float value) {
+  return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_update_scalar"));
+}
+Maybe<one::UserOpExpr> DimScatterUpdateScalarOp(const int32_t dim, const float value,
+                                                const std::string& name) {
+  return one::OpBuilder("dim_scatter_update_scalar", name)
+      .Input("input")
+      .Input("index")
+      .Output("output")
+      .Attr<int32_t>("dim", dim)
+      .Attr<float>("src_scalar", value)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> DimGatherOp(const int32_t dim) {
+  return DimGatherOp(dim, UniqueOpName("dim_gather"));
+}
+Maybe<one::UserOpExpr> DimGatherOp(const int32_t dim, const std::string& name) {
+  return one::OpBuilder("dim_gather", name)
+      .Input("input")
+      .Input("index")
+      .Output("output")
+      .Attr<int32_t>("dim", dim)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm) {
   return TransposeOp(perm, UniqueOpName("transpose"));
 }
