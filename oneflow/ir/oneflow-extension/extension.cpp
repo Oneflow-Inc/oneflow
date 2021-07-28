@@ -94,7 +94,7 @@ class MlirJitKernel final : public user_op::OpKernel {
         {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
     LOG(ERROR) << "Start JIT: " << ctx->op_name();
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke(ctx->op_name(), &*A, &*B, &*C).success();
+    auto error = jit->invoke(ctx->op_name(), &*A, &*B, &*C);
     CHECK(!error) << "fail to invoke jit engine, error:" << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
