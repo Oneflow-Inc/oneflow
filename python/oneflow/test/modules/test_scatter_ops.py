@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -27,7 +23,7 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestClampModule(flow.unittest.TestCase):
     @autotest()
-    def test_scatter_random_data(test_case):
+    def test_scatter_random_data_at_dim_0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
         src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -38,7 +34,18 @@ class TestClampModule(flow.unittest.TestCase):
         return y
 
     @autotest()
-    def test_scatter_scalar_random_data(test_case):
+    def test_scatter_random_data_at_dim_1(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        index = random_pytorch_tensor(ndim=2, dim0=2, dim1=2, high=2, dtype=int).to(
+            device
+        )
+        y = torch.scatter(input, 1, index, src)
+        return y
+
+    @autotest()
+    def test_scatter_scalar_random_data_at_dim0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
         src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -49,7 +56,18 @@ class TestClampModule(flow.unittest.TestCase):
         return y
 
     @autotest()
-    def test_scatter_add_random_data(test_case):
+    def test_scatter_scalar_random_data_at_dim1(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        index = random_pytorch_tensor(ndim=2, dim0=2, dim1=2, high=2, dtype=int).to(
+            device
+        )
+        y = torch.scatter(input, 1, index, 3.14)
+        return y
+
+    @autotest()
+    def test_scatter_add_random_data_at_dim0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
         src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -59,6 +77,16 @@ class TestClampModule(flow.unittest.TestCase):
         y = torch.scatter_add(input, 0, index, src)
         return y
 
+    @autotest()
+    def test_scatter_add_random_data_at_dim1(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        index = random_pytorch_tensor(ndim=2, dim0=2, dim1=2, high=2, dtype=int).to(
+            device
+        )
+        y = torch.scatter_add(input, 1, index, src)
+        return y
 
 if __name__ == "__main__":
     unittest.main()

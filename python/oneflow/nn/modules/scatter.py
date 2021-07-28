@@ -69,11 +69,10 @@ def scatter(input, dim, index, src):
     """
     assert type(src) in [
         flow.Tensor,
-        float,
-        flow._oneflow_internal.Tensor,
+        float
     ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
 
-    if isinstance(src, flow.Tensor) or isinstance(src, flow._oneflow_internal.Tensor):
+    if isinstance(src, flow.Tensor):
         return flow.F.dim_scatter(input, index, src, dim)
     elif isinstance(src, float):
         return flow.F.dim_scatter_scalar(input, index, src, dim)
@@ -117,8 +116,7 @@ def scatter_add(input, dim, index, src):
     """
 
     assert type(src) in [
-        flow.Tensor,
-        flow._oneflow_internal.Tensor,
+        flow.Tensor
     ], f"type of src must be oneflow.Tensor, but %s givien" % type(src)
 
     return flow.F.dim_scatter_add(input, index, src, dim)

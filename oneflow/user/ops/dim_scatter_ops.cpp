@@ -280,7 +280,6 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
-REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_OP("dim_scatter_add");
 REGISTER_SCATTER_OP("dim_scatter_update");
 REGISTER_SCATTER_OP("dim_scatter_mul");
