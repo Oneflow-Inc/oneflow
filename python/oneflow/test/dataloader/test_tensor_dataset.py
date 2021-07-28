@@ -25,7 +25,6 @@ import oneflow.optim as optim
 import oneflow.utils.data as data
 
 
-
 class LinearNet(nn.Module):
     def __init__(self, n_feature):
         super(LinearNet, self).__init__()
