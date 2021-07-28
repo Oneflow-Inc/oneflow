@@ -108,3 +108,4 @@ StreamT& operator>>(StreamT& in_stream, const ActorMsg& msg) {
 
 #endif  // ONEFLOW_CORE_ACTOR_ACTOR_MESSAGE_H_
 
+
