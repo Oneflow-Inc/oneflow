@@ -64,14 +64,14 @@ class IBVerbsQP final {
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
-  void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
 
   void ReadDone(WorkRequestId*);
   void SendDone(WorkRequestId*);
   void RecvDone(WorkRequestId*);
-  void PostPenddingSendWR();
 
  private:
+  void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
+  void PostPenddingSendWR();
   WorkRequestId* NewWorkRequestId();
   void DeleteWorkRequestId(WorkRequestId* wr_id);
   ActorMsgMR* GetOneSendMsgMRFromBuf();
