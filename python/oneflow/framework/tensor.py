@@ -18,6 +18,7 @@ from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
+import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 import numpy as np
 from typing import Union
@@ -71,7 +72,13 @@ def _element_size(self):
 
 
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
-    flow.autograd.backward(self, gradient, retain_graph, create_graph)
+    if not lazy_mode.is_enabled():
+        flow.autograd.backward(self, gradient, retain_graph, create_graph)
+    else:
+        assert (
+            self.is_lazy
+        ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
+        flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
 def _getitem(self, key):
