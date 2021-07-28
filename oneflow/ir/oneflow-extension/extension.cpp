@@ -17,6 +17,7 @@ limitations under the License.
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
@@ -34,7 +35,7 @@ REGISTER_USER_OP("mlir_jit")
     .OutputWithMinimum("out", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // TODO: infer shape by extracting Ops from mlir_assembly
-      CHECK_EQ(ctx->inputs().size(), 1);
+      CHECK_EQ(ctx->inputs().size(), 2);
       CHECK_EQ(ctx->outputs().size(), 1);
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->OutputShape("out", 0);
@@ -81,6 +82,13 @@ class MlirJitKernel final : public user_op::OpKernel {
     module->dump();
     auto jit = mlir::ExecutionEngine::create(*module);
     CHECK(jit) << "failed to create JIT exe engine";
+    user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
+    // TODO: extract a function
+    mlir::OwningMemRef<int64_t, 2> A(
+        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
+    user_op::Tensor* in_1 = ctx->Tensor4ArgNameAndIndex("in", 1);
+    mlir::OwningMemRef<float, 1> B(
+        {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()});
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -65,7 +65,7 @@ using namespace mlir::oneflow;
       LBNVec input_lbn_segment_keys;
       LBNSegVec input_lbn_segment_sizes;
       input_lbn_segment_keys.push_back("in");
-      input_lbn_segment_sizes.push_back(1);
+      input_lbn_segment_sizes.push_back(2);
 
       attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
       attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
