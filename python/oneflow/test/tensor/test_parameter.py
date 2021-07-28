@@ -14,18 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import collections
-from typing import Optional, Sequence, Union
+import unittest
+from collections import OrderedDict
 
-from oneflow._oneflow_internal import Tensor, TensorTuple
+import numpy as np
+from automated_test_util import *
+
+import oneflow as flow
+import oneflow.typing as oft
+import oneflow.unittest
 
 
-def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
-    if args is None:
-        return TensorTuple()
-    elif isinstance(args, collections.abc.Sequence):
-        return TensorTuple(args)
-    else:
-        tensor_tuple = TensorTuple()
-        tensor_tuple.append(args)
-        return tensor_tuple
+@flow.unittest.skip_unless_1n1d()
+class TestParameter(flow.unittest.TestCase):
+    @autotest(n=1)
+    def test_parameter_grad_fn_none(test_case):
+        x = torch.Tensor(2, 3).requires_grad_(True)
+        y = x + x
+        z = torch.nn.Parameter(y)
+        return z.grad_fn
+
+
+if __name__ == "__main__":
+    unittest.main()
