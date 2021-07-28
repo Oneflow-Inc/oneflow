@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <infiniband/verbs.h>
-
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -22,9 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-
-#include <memory>
-#include <mutex>
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
