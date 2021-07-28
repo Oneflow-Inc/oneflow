@@ -35,7 +35,7 @@ class RegstMgr final {
   RegstMgr() = default;
   ~RegstMgr() = default;
 
-  void AddPlan(const Plan& plan, HashMap<std::string, Blob*> variable_op_name2eager_blob);
+  void AddPlan(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
   void AddPlan(const Plan& plan);
   void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
   const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;

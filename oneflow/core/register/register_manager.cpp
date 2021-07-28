@@ -39,7 +39,8 @@ struct PackedChunkInfo {
 
 }  // namespace
 
-void RegstMgr::AddPlan(const Plan& plan, HashMap<std::string, Blob*> variable_op_name2eager_blob) {
+void RegstMgr::AddPlan(const Plan& plan,
+                       const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   // TODO(chengcheng): create chunk mgr for reuse memory between plans.

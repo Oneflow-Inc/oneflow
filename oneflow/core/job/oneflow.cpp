@@ -1025,7 +1025,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     LOG(ERROR) << "this is dry run, exiting";
     exit(0);
   }
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false, variable_op_name2eager_blob));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
