@@ -180,7 +180,7 @@ class BroadcastSub(Module):
 def scalar_add_inplace(x, alpha, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
-    return flow.F.add_scalar(x, alpha, inplace)    
+    return flow.F.add_scalar(x, alpha, inplace)
 
 
 @register_tensor_op("sub")
@@ -340,10 +340,10 @@ def scalar_add_by_tensor_inplace(x, y, inplace: bool = False):
     return flow.F.add_scalar_by_tensor(x, y, inplace)
 
 
-def elementwise_add_inplace(x, y,  inplace: bool = False):
+def elementwise_add_inplace(x, y, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
-    return flow.F.add(x, y, inplace) 
+    return flow.F.add(x, y, inplace)
 
 
 @register_tensor_op("add")
@@ -1049,7 +1049,7 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
-def addmm( x, mat1, mat2, alpha=1, beta=1):
+def addmm(x, mat1, mat2, alpha=1, beta=1):
     if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
         raise ValueError("input matrixes shape can not be greater than 2")
     else:
