@@ -37,6 +37,7 @@ def _test_repeat_new_dim(test_case, device):
     of_out = input.repeat(4, 3, 2, 3, 3)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_repeat_input_list_new_dim(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 4, 1, 3), dtype=flow.float32, device=flow.device(device)
@@ -45,6 +46,7 @@ def _test_repeat_input_list_new_dim(test_case, device):
     np_out = np_repeat(input.numpy(), sizes)
     of_out = input.repeat(sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
 
 def _test_repeat_same_dim(test_case, device):
     input = flow.Tensor(
