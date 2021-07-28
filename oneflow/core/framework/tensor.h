@@ -180,10 +180,11 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<const Stride> stride() const override { return tensor_->stride(); }
   Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
+  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&> consumer_parallel_distribution_constraint()
       const override {
     return tensor_->consumer_parallel_distribution_constraint();
   }
+  Maybe<RpcToken> rpc_token() const override { return tensor_->rpc_token(); }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
