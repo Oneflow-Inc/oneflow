@@ -79,14 +79,11 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     const auto& op_conf =
         GetOpAttribute(plan, task->job_id(), task->exec_sequence().exec_node(0).kernel_conf())
             .op_conf();
-    if (op_conf.has_variable_conf()) {
-      const std::string& var_name = op_conf.name();
-      if (variable_op_names.find(var_name) != variable_op_names.end()) {
-        *name = var_name;
-        return true;
-      }
-    }
-    return false;
+    if (!op_conf.has_variable_conf()) { return false; }
+    const std::string& var_name = op_conf.name();
+    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    *name = var_name;
+    return true;
   };
 
   auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
