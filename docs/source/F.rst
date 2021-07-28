@@ -7,4 +7,4 @@ Functional functions
 .. autofunction:: oneflow.F.cos
 .. autofunction:: oneflow.F.sin
 .. autofunction:: oneflow.F.abs
-
+.. autofunction:: oneflow.F.acos
