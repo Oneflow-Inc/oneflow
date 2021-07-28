@@ -870,5 +870,34 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
+
+Maybe<one::UserOpExpr> ElementwiseMinimumGradOp() {
+  return ElementwiseMinimumGradOp(UniqueOpName("elementwise_minimum_grad"));
+}
+
+Maybe<one::UserOpExpr> ElementwiseMinimumGradOp(const std::string& name) {
+  return one::OpBuilder("elementwise_minimum_backward", name)
+      .Input("dz")
+      .Input("x")
+      .Input("y")
+      .Output("dx")
+      .Output("dy")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ElementwiseMaximumGradOp() {
+  return ElementwiseMaximumGradOp(UniqueOpName("elementwise_maximum_grad"));
+}
+
+Maybe<one::UserOpExpr> ElementwiseMaximumGradOp(const std::string& name) {
+  return one::OpBuilder("elementwise_maximum_backward", name)
+      .Input("dz")
+      .Input("x")
+      .Input("y")
+      .Output("dx")
+      .Output("dy")
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

@@ -281,5 +281,11 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
 
 Maybe<one::UserOpExpr> SoftmaxGradOp();
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ElementwiseMinimumGradOp();
+Maybe<one::UserOpExpr> ElementwiseMinimumGradOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ElementwiseMaximumGradOp();
+Maybe<one::UserOpExpr> ElementwiseMaximumGradOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow
