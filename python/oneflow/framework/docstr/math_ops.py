@@ -26,7 +26,11 @@ add_docstr(
 )
 add_docstr(
     oneflow.F.ceil,
-    """Returns a new tensor with the ceil of the elements of :attr:`x`,
+    """
+    ceil(x: Tensor) -> Tensor
+
+
+    Returns a new tensor with the ceil of the elements of :attr:`x`,
     the smallest integer greater than or equal to each element.
 
     The equation is: 
@@ -48,25 +52,15 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np   
         >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
-        >>> y = flow.ceil(x)
+        >>> y = flow.F.ceil(x)
         >>> print(y.shape)
         flow.Size([3])
         >>> print(y.numpy())
         [ 1. -2.  4.]
 
 
-        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
-        >>> y = x.ceil()
-        >>> print(y.shape)
-        flow.Size([2, 3])
-        >>> print(y.numpy())
-        [[ 3.  5.  1.]
-         [ 8.  9. 10.]]
-
-
-
         >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
-        >>> y = flow.ceil(x)
+        >>> y = flow.F.ceil(x)
         >>> print(y.shape)
         flow.Size([2, 2, 3])
         >>> print(y.numpy())
@@ -80,7 +74,10 @@ add_docstr(
 )
 add_docstr(
     oneflow.F.broadcast_add,
-    """ Returns a new tensor of the broadcast addition between two tensors.
+    r""" 
+    broadcast_add(x: Tensor,y : Tensor) -> Tensor
+    
+    Returns a new tensor of the broadcast addition between two tensors.
     A broadcast operator process two tensors in different shapes. Normally, one of the operands has a particular dimension to be 1, which will be broadcast along the corresponding dimension of the other operator to perform the given calculation. Common scalar calculations can all be broadcast.
 
     The equation is: 
@@ -91,6 +88,7 @@ add_docstr(
     Args:
         x (oneflow.Tensor): A Tensor.
         y (oneflow.Tensor): A Tensor.
+        out: the output tensor
 
     Returns:
         oneflow.Tensor: The result Tensor broadcast_added by x and y 
