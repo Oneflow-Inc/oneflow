@@ -25,7 +25,6 @@ namespace oneflow {
 namespace {
 struct ShapeExportUtil final {
   static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
-    if (py_shape.empty()) { return std::make_shared<Shape>(DimVector{}); }
     DimVector shape_dims;
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     return std::make_shared<Shape>(shape_dims);
