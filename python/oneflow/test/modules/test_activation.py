@@ -823,9 +823,15 @@ class TestMishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=5)
     def test_mish_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Mish", device=device, n=2)
+        m = torch.nn.Mish()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def _np_silu_grad(x):
@@ -861,9 +867,15 @@ class TestSiluModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=5)
     def test_silu_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.SiLU", device=device, n=2)
+        m = torch.nn.SiLU()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 def _np_selu(x):
@@ -906,16 +918,28 @@ class TestSeluModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=5)
     def test_selu_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.SELU", device=device, n=2)
+        m = torch.nn.SELU()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftsignModule(flow.unittest.TestCase):
+    @autotest(n=5)
     def test_softsign_module_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(test_case, "nn.Softsign", device=device, n=2)
+        m = torch.nn.Softsign()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
