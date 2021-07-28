@@ -800,6 +800,13 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor().to(device)
         y = input.expm1()
         return y
+    
+    @autotest()
+    def test_floor_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.floor()
+        return y
 
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(
