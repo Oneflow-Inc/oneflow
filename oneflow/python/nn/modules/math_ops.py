@@ -1754,7 +1754,7 @@ def minimum(x, y):
 
     For example:
 
-    ..code-block:: python
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -1800,7 +1800,7 @@ def maximum(x, y):
 
     For example:
 
-    ..code-block:: python
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
