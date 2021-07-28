@@ -44,8 +44,6 @@ class TestLinearGraph(oneflow.unittest.TestCase):
         of_eager_out = linear(x)
         np_out = np.matmul(input_arr, np_weight)
         test_case.assertTrue(np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05))
-        print("of_eager_out: ", of_eager_out)
-        print("np_out: ", np_out)
 
         class LinearGraph(flow.nn.Graph):
             def __init__(self):
@@ -57,9 +55,6 @@ class TestLinearGraph(oneflow.unittest.TestCase):
 
         linear_g = LinearGraph()
         of_lazy_out = linear_g(x)
-        print("of_lazy_out: ", of_lazy_out)
-        # print(f"type of lazy y: {type(y_lazy)}")
-        # print(f"lazy y shape: {y_lazy.shape}, data: {y_lazy}")
         test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
 

@@ -54,7 +54,6 @@ void RegstMgr::AddPlan(const Plan& plan,
 
   HashSet<int64_t> all_block_ids;
   HashMap<int64_t, PackedChunkInfo> zone_id2packed_chunk;
-  HashMap<int64_t, MemBlockProto*> mem_block_id2proto;
   for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }

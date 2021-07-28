@@ -21,22 +21,12 @@ RuntimeJobDescs::RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto) {
   for (const auto& pair : proto) {
     auto job_desc = std::make_unique<JobDesc>(pair.second, pair.first);
     CHECK(job_id2job_desc_.emplace(pair.first, std::move(job_desc)).second);
-    std::cout << " RuntimeJobDescs::emplace job_id: " << pair.first
-              << " with job_conf: " << pair.second.DebugString();
   }
 }
 
 const JobDesc& RuntimeJobDescs::job_desc(int64_t job_id) const {
   auto it = job_id2job_desc_.find(job_id);
-  if (it == job_id2job_desc_.end()) {
-    std::cout << " ERROR! Cannot find job_id: " << job_id << " in RuntimeJobDescs,"
-              << " And current job_id2job_desc_.size() = " << job_id2job_desc_.size() << "\n\n";
-    for (const auto& pair : job_id2job_desc_) {
-      std::cout << " In RuntimeJobDescs::job_id2job_desc_, job_id : " << pair.first
-                << " job_conf_ : " << pair.second->job_conf().DebugString() << "\n\n";
-    }
-    LOG(FATAL) << " RuntimeJobDescs::Error.";
-  }
+  CHECK(it != job_id2job_desc_.end());
   return *(it->second);
 }
 
