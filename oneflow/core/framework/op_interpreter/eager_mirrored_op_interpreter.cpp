@@ -59,6 +59,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       if (enable_dtr) {
@@ -69,9 +71,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
             std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
       }
     }
+    if (JUST(outputs->at(i)->has_eager_blob_object())) {
+      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+    }
   }
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
   Symbol<Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
@@ -107,9 +110,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
-    output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    if (!output_eager_blob_objects->at(i)) {
+      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
+      output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    }
   }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
@@ -123,7 +128,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     if (need_event_record) {
       for (const auto& input_tensor : inputs) {
-        const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
+        const auto& tensor = JUST(input_tensor->AsMirroredTensor());
         CHECK_OR_RETURN(static_cast<bool>(tensor));
         // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
         // stream
