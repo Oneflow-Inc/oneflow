@@ -8,3 +8,5 @@ Functional functions
 .. autofunction:: oneflow.F.sin
 .. autofunction:: oneflow.F.ceil
 .. autofunction:: oneflow.F.broadcast_add
+.. autofunction:: oneflow.F.broadcast_div
+.. autofunction:: oneflow.F.broadcast_greater

@@ -77,8 +77,7 @@ add_docstr(
     r""" 
     broadcast_add(x: Tensor,y : Tensor) -> Tensor
     
-    Returns a new tensor of the broadcast addition between two tensors.
-    A broadcast operator process two tensors in different shapes. Normally, one of the operands has a particular dimension to be 1, which will be broadcast along the corresponding dimension of the other operator to perform the given calculation. Common scalar calculations can all be broadcast.
+    Returns a new tensor of the element-wise sum of the input arrays `x` and `y` with broadcasting.
 
     The equation is: 
 
@@ -91,7 +90,7 @@ add_docstr(
         out: the output tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor broadcast_added by x and y 
+        oneflow.Tensor: element-wise sum of the input arrays `x` and `y` with broadcasting.
 
     For example: 
 
@@ -109,6 +108,79 @@ add_docstr(
         [[2. 4. 3. 8.]
          [2. 1. 3. 2.]
          [5. 6. 7. 3.]]
+
+    """,
+)
+
+add_docstr(
+    oneflow.F.broadcast_div,
+    r""" 
+    broadcast_div(x: Tensor,y : Tensor) -> Tensor
+    
+    Returns element-wise division of the input arrays `x` and `y` with broadcasting.
+
+    The equation is: 
+
+    .. math::
+        out = \frac{x}{y}
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+        y (oneflow.Tensor): A Tensor.
+        out: the output tensor
+
+    Returns:
+        oneflow.Tensor: element-wise division of the input arrays `x` and `y` with broadcasting
+
+    For example: 
+
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([[6,6,6], [6,6,6]]).astype(np.float32))
+        >>> y = flow.Tensor(np.array([[2],[3]]).astype(np.float32))
+        >>> z = flow.F.broadcast_div(x,y)
+        >>> print(z.shape)
+        flow.Size([2, 3])
+        >>> print(z.numpy())
+        [[3. 3. 3.]
+         [2. 2. 2.]]
+
+    """,
+)
+
+add_docstr(
+    oneflow.F.broadcast_greater,
+    r""" 
+    broadcast_greater(x: Tensor,y : Tensor) -> Tensor
+    
+    Returns the result of element-wise greater than (>) comparison operation with broadcasting.
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+        y (oneflow.Tensor): A Tensor.
+        out: the output tensor
+
+    Returns:
+        oneflow.Tensor: the result of element-wise greater than (>) comparison operation with broadcasting.
+
+    For example: 
+
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([[6,6,6], [6,6,6]]).astype(np.float32))
+        >>> y = flow.Tensor(np.array([[9],[3]]).astype(np.float32))
+        >>> z = flow.F.broadcast_greater(x,y)
+        >>> print(z.shape)
+        flow.Size([2, 3])
+        >>> print(z.numpy())
+        [[0 0 0]
+         [1 1 1]]
 
     """,
 )
