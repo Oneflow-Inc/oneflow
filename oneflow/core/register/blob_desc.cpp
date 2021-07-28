@@ -77,7 +77,7 @@ size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
-  return shape().elem_cnt() * GetSizeOfDataType(data_type());
+  return shape().is_initialized() ? shape().elem_cnt() * GetSizeOfDataType(data_type()) : 0;
 }
 
 size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
