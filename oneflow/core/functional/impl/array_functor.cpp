@@ -43,7 +43,8 @@ class ConsistentConstantFunctor {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
-                           const Symbol<ParallelDesc>& placement, const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -64,7 +65,9 @@ class ConsistentConstantFunctor {
 
   Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
       const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>> map;
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
     auto iter = map.find(sbp_tuple);
     if (iter == map.end()) {
       cfg::ParallelDistribution parallel_distribution;
