@@ -135,8 +135,7 @@ def build_graph_state(op_name, state_tensor):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
     assert isinstance(state_tensor, Tensor)
-    tensor_in_c = state_tensor._local_or_consistent_tensor
-    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
+    lazy_tensor = var_op.apply([state_tensor], attrs)[0]
     return lazy_tensor
 
 
