@@ -160,16 +160,18 @@ static_assert(sizeof(CtrlRpcTokenView) == sizeof(uint64_t), "");
 
 namespace {
 
-Maybe<bool*> ThreadLocalMutLock4CtrlRpcToken(int32_t thread_consistent_unique_id, int32_t rank_group_level, RankGroupRpcCmd cmd) {
+Maybe<bool*> ThreadLocalMutLock4CtrlRpcToken(int32_t thread_consistent_unique_id,
+                                             int32_t rank_group_level, RankGroupRpcCmd cmd) {
   CHECK_EQ_OR_RETURN(thread_consistent_unique_id, JUST(GetThisThreadConsistentUniqueId()));
   static const int kRpcTokenRankGroupLevelLimit = (1 << kRpcTokenRankGroupLevelBit);
   CHECK_LT_OR_RETURN(rank_group_level, kRpcTokenRankGroupLevelLimit);
-  static thread_local std::array<std::array<bool, kSizeOfRankGroupRpcCmd>, kRpcTokenRankGroupLevelLimit>
+  static thread_local std::array<std::array<bool, kSizeOfRankGroupRpcCmd>,
+                                 kRpcTokenRankGroupLevelLimit>
       rpc_token_lock;
   return &rpc_token_lock[rank_group_level][cmd];
 }
 
-}
+}  // namespace
 
 /*static*/ Maybe<RpcToken> RpcToken::AcquireCtrlRpcToken(RankGroupRpcCmd cmd) {
   int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
@@ -195,8 +197,8 @@ Maybe<bool*> ThreadLocalMutLock4CtrlRpcToken(int32_t thread_consistent_unique_id
 }
 
 Maybe<void> RpcToken::ReleaseCtrlRpcToken() const {
-  auto* lock = JUST(ThreadLocalMutLock4CtrlRpcToken(
-    JUST(thread_consistent_unique_id()), JUST(rank_group_level()), JUST(cmd())));
+  auto* lock = JUST(ThreadLocalMutLock4CtrlRpcToken(JUST(thread_consistent_unique_id()),
+                                                    JUST(rank_group_level()), JUST(cmd())));
   CHECK_OR_RETURN(*lock);
   *lock = false;
   return Maybe<void>::Ok();

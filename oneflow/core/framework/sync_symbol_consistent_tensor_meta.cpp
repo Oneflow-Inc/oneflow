@@ -81,7 +81,8 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
       });
   const auto& recv_buffer = std::make_shared<FlatConsistentTensorMeta>();
   NaiveAsyncRpcCtx recv_ctx(
-      rpc_token, [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token,
+      [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_buffer.get();
         *size = sizeof(FlatConsistentTensorMeta);
         *Cb = [recv_buffer] {};

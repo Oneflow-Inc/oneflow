@@ -98,7 +98,9 @@ class SendFlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
  public:
   SendFlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
                                           Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : AsyncRpcCtx(rpc_token), symbol_id_(symbol_id), parallel_distribution_(parallel_distribution) {}
+      : AsyncRpcCtx(rpc_token),
+        symbol_id_(symbol_id),
+        parallel_distribution_(parallel_distribution) {}
 
   ~SendFlatParallelDistributionAsyncRpcCtx() override {}
 
@@ -121,7 +123,9 @@ class RecvFlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
  public:
   RecvFlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
                                           Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : AsyncRpcCtx(rpc_token), symbol_id_(symbol_id), parallel_distribution_(parallel_distribution) {}
+      : AsyncRpcCtx(rpc_token),
+        symbol_id_(symbol_id),
+        parallel_distribution_(parallel_distribution) {}
 
   ~RecvFlatParallelDistributionAsyncRpcCtx() override {}
 

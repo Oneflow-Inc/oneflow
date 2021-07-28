@@ -31,7 +31,8 @@ Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
   const auto& rpc_token =
       JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckRankGroupConsistency));
   const auto& ctx = std::make_shared<NaiveAsyncRpcCtx>(
-      rpc_token, [](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
+      rpc_token,
+      [](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
         const auto& placeholder = std::make_shared<uint32_t>();
         *buffer = placeholder.get();
         *size = sizeof(uint32_t);

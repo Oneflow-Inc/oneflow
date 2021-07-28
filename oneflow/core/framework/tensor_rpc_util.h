@@ -27,11 +27,11 @@ class FlatTensorConsistency;
 class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
  public:
   CheckConsistencyAsyncRpcCtx(
-      const RpcToken& rpc_token,
-      Symbol<one::ConsistentTensorMeta> tensor_meta,
+      const RpcToken& rpc_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
       const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint,
       const RpcToken& tensor_rpc_token)
-      : AsyncRpcCtx(rpc_token), tensor_meta_(tensor_meta),
+      : AsyncRpcCtx(rpc_token),
+        tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint),
         tensor_rpc_token_(tensor_rpc_token) {}
 

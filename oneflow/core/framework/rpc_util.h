@@ -25,7 +25,8 @@ namespace oneflow {
 
 class AsyncRpcCtx {
  public:
-  explicit AsyncRpcCtx(const RpcToken& rpc_token) : rpc_token_(rpc_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
+  explicit AsyncRpcCtx(const RpcToken& rpc_token)
+      : rpc_token_(rpc_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
   virtual ~AsyncRpcCtx() = default;
 
   const RpcToken& rpc_token() const { return rpc_token_; }
