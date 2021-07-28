@@ -16,12 +16,32 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
+
+
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
+
+
+def _input_args_is_tuple_int(args):
+    return all((_input_args_is_int(x) for x in args))
+
+
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
 class Repeat(Module):
-    def __init__(self, sizes) -> None:
+    def __init__(self, *sizes) -> None:
         super().__init__()
-        self.sizes = sizes
+        if _input_args_is_int(sizes):
+            self.sizes = _single(sizes)
+        elif _input_args_is_tuple_int(sizes):
+            self.sizes = _single(*sizes)
+        elif _input_args_is_flow_size(sizes):
+            self.sizes = _single(*sizes)[0]
+        else:
+            raise ValueError("input sizes parameter is not illegal!")
 
     def forward(self, input):
         repeat = self.sizes
@@ -60,12 +80,12 @@ class Repeat(Module):
 
 
 @register_tensor_op("repeat")
-def repeat_op(x, sizes):
+def repeat_op(x, *sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
         x (oneflow.Tensor): The input Tensor.
-        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+        *size (flow.Size or int): The number of times to repeat this tensor along each dimension
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -81,11 +101,11 @@ def repeat_op(x, sizes):
         ...               [[4, 5]]]]).astype(np.int32)
 
         >>> input = flow.Tensor(x)
-        >>> out = input.repeat(sizes=(1, 1, 2, 2))
+        >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
         flow.Size([1, 3, 2, 4])
     """
-    return Repeat(sizes=sizes)(x)
+    return Repeat(*sizes)(x)
 
 
 if __name__ == "__main__":
