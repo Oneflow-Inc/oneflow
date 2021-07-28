@@ -122,13 +122,7 @@ def build_graph_input_arg(op_name, arg):
         op_name, input_conf, ["in_0"], ["out_0"]
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-    if isinstance(arg, Tensor):
-        if not arg.is_determined:
-            arg.determine()
-        tensor_in_c = arg._local_or_consistent_tensor
-    else:
-        tensor_in_c = arg
-    lazy_arg = input_op.apply([tensor_in_c], attrs)[0]
+    lazy_arg = input_op.apply([arg], attrs)[0]
     return lazy_arg
 
 
@@ -141,10 +135,7 @@ def build_graph_state(op_name, state_tensor):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
     assert isinstance(state_tensor, Tensor)
-    if not state_tensor.is_determined:
-        state_tensor.determine()
-    tensor_in_c = state_tensor._local_or_consistent_tensor
-    lazy_tensor = var_op.apply([tensor_in_c], attrs)[0]
+    lazy_tensor = var_op.apply([state_tensor], attrs)[0]
     return lazy_tensor
 
 
