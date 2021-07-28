@@ -46,7 +46,7 @@ namespace one {
 
 namespace {
 
-const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
+Symbol<DType>* GetTensorDType(const Tensor& tensor) {
   return DType::Get(tensor.dtype()).GetOrThrow().get();
 }
 
