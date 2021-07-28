@@ -71,7 +71,7 @@ class IBVerbsQP final {
 
  private:
   void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
-  void PostPenddingSendWR();
+  void PostPendingSendWR();
   WorkRequestId* NewWorkRequestId();
   void DeleteWorkRequestId(WorkRequestId* wr_id);
   ActorMsgMR* GetOneSendMsgMRFromBuf();
