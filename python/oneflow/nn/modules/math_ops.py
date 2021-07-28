@@ -363,14 +363,6 @@ def elementwise_add_inplace(x, y,  inplace: bool = False):
     return flow.F.add(x, y, inplace) 
 
 
-class BroadcastAdd(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_add(x, y)
-
-
 @register_tensor_op("add")
 def _add(x, y):
     """Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
