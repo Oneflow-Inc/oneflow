@@ -235,11 +235,9 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
 };
 
 class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(DTREagerMirroredTensorImpl);
   DTREagerMirroredTensorImpl() {}
-  DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                          const std::shared_ptr<AutogradMeta>& autograd_meta) : EagerMirroredTensorImpl(tensor_meta, autograd_meta) {}
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                           bool requires_grad, bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
