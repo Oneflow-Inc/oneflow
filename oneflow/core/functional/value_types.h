@@ -27,8 +27,14 @@ namespace oneflow {
 class Shape;
 class AttrMap;
 
+template<typename T>
+class Symbol;
+
+class ParallelDesc;
+
 namespace cfg {
 class AttrValue;
+class SbpParallel;
 }  // namespace cfg
 
 namespace one {
@@ -82,6 +88,9 @@ enum ValueType {
   kGENERATOR_REF,
   kGENERATOR_MAYBE,
   kTENSOR_INDEX,
+  kPARALLEL_DESC,
+  kSBP_PARALLEL,
+  kSBP_PARALLEL_LIST,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -132,6 +141,9 @@ VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
+VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
+VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
+VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
 
 #undef VALUE_TYPE_OF_IMPL
 
