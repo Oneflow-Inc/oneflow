@@ -104,7 +104,7 @@ class Tensor {
   virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
-  virtual user_op::TensorDesc* mut_tensor_meta() = 0;
+  virtual TensorMeta* mut_tensor_meta() = 0;
 
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
 
@@ -218,7 +218,7 @@ class Parameter final : public TensorIf<Parameter> {
     return tensor_->set_autograd_meta(autograd_meta);
   }
 
-  user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
+  TensorMeta* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override {
     if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
@@ -306,7 +306,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
   }
-  user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+  TensorMeta* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
@@ -406,7 +406,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->tensor_meta();
   }
 
-  user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+  TensorMeta* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { UNIMPLEMENTED_THEN_RETURN(); }
 

@@ -40,6 +40,7 @@ class Shape final {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
+  Shape& assign(const DimVector& dim_vec);
   Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
   Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
 

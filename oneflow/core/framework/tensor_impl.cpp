@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 namespace one {
@@ -144,9 +145,14 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   std::atomic<bool> synced(false);
 
+  const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
   CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
-        this, [&synced](uint64_t) { synced = true; }, "const"));
+        this, [&synced, &shape_ptr](uint64_t of_blob_ptr) {
+          const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
+          synced = true;
+        }, "const"));
     return Maybe<void>::Ok();
   }));
 
@@ -156,7 +162,7 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   });
 
   eager_blob_object_->set_is_shape_synced(true);
-  return eager_blob_object_->blob_desc().shape_ptr();
+  return shape_ptr;
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {

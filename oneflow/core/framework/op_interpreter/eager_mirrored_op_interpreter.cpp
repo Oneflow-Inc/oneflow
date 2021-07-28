@@ -44,6 +44,30 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
   return tensor->mut_eager_mirrored_tensor_impl();
 }
 
+class MutMirroredTensorMeta : public TensorMeta {
+ public:
+  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
+  MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
+  ~MutMirroredTensorMeta() override = default;
+};
+
+std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
+  static thread_local std::vector<MutMirroredTensorMeta> struct_vec;
+  static thread_local std::vector<TensorMeta*> ptr_vec;
+  struct_vec.resize(size);
+  ptr_vec.resize(size);
+  if (size == 1) {
+    ptr_vec.at(0) = &struct_vec.at(0); // unfold loop
+  } else if (size == 2) {
+    ptr_vec.at(0) = &struct_vec.at(0); // unfold loop
+    ptr_vec.at(1) = &struct_vec.at(1); // unfold loop
+  } else {
+    for (int i = 0; i < size; ++i) { ptr_vec.at(i) = &struct_vec.at(i); }
+  }
+  return &ptr_vec;
+}
+
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
@@ -61,12 +85,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
+  auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      outputs->at(i) =
+      const auto& tensor_impl = 
           std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
-    }
-    if (JUST(outputs->at(i)->has_eager_blob_object())) {
+      outputs->at(i) = tensor_impl;
+      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+    } else {
+      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+      CHECK_OR_RETURN(has_eager_blob_object);
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
@@ -101,14 +129,21 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
+        // using thread_local TensorMeta pointer if inplace.
+        // using tensor_impl TensorMeta pointer if not inplace.
+        return output_tensor_metas->at(i);
       }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    } else {
+      // output i is inplaced.
+      // check thread_local TensorMeta and tensor_impl TensorMeta.
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
 

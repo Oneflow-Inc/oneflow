@@ -70,6 +70,12 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
+Shape& Shape::assign(const DimVector& dim_vec) {
+  dim_vec_ = dim_vec;
+  UpdateElemCnt();
+  return *this;
+}
+
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
