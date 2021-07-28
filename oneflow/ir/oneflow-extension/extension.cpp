@@ -76,6 +76,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     mlir::MLIRContext mlir_ctx(registry);
     mlir::OwningModuleRef module =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    CHECK(!!module);
     llvm::InitializeNativeTarget();
     CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
@@ -91,8 +92,10 @@ class MlirJitKernel final : public user_op::OpKernel {
         {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()});
     mlir::OwningMemRef<float, 2> C(
         {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
-    auto err = jit.get()->invoke(ctx->op_name(), &*A, &*B, &*C).success();
-    CHECK(!err) << "fail to invoke jit engine, error:" << llvm::toString(std::move(err));
+    LOG(ERROR) << "Start JIT: " << ctx->op_name();
+    auto error = jit.get()->invoke(ctx->op_name(), &*A, &*B, &*C).success();
+    CHECK(!!error);
+    CHECK(!error) << "fail to invoke jit engine, error:" << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
