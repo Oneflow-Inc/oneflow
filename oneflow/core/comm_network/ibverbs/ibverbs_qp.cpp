@@ -190,7 +190,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
 }
 
 void IBVerbsQP::EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge) {
-  std::unique_lock<std::mutex> num_outstanding_send_wr_lck(pending_send_wr_mutex_);
+  std::unique_lock<std::mutex> ending_send_wr_lock_(pending_send_wr_mutex_);
   if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
     num_outstanding_send_wr_++;
     ibv_send_wr* bad_wr = nullptr;
@@ -229,7 +229,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::PostPenddingSendWR() {
-  std::unique_lock<std::mutex> num_outstanding_send_wr_lck(pending_send_wr_mutex_);
+  std::unique_lock<std::mutex> ending_send_wr_lock_(pending_send_wr_mutex_);
   if (pending_send_wr_queue_.empty() == false) {
     std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(pending_send_wr_queue_.front());
     ibv_send_wr wr = ibv_send_wr_sge.first;
