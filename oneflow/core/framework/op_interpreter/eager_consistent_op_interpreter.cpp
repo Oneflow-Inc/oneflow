@@ -36,24 +36,24 @@ namespace one {
 
 namespace {
 
-std::string GetDynamicOpConsistentFailedDebugString(
-    const UserOpExpr& user_op_expr, const StatefulLocalOpKernel& kernel) {
+std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
+                                                    const StatefulLocalOpKernel& kernel) {
   CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
   std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
   std::stringstream ss;
   ss << "operator `" << user_op_expr.op_type_name() << "`"
-     << " does not support consistent mode because the shape" << plentysuffix 
-     << " of output tensor" << plentysuffix << " ";
+     << " does not support consistent mode because the shape" << plentysuffix << " of output tensor"
+     << plentysuffix << " ";
   int i = 0;
   for (const auto& out_index : kernel.output_tuple_indexes4mut2_obns()) {
     if (i++ > 0) { ss << ", "; }
-    ss << out_index ;
+    ss << out_index;
   }
   ss << " are not infered before op computation.";
   return ss.str();
 }
 
-}
+}  // namespace
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
