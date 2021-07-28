@@ -26,7 +26,10 @@ import oneflow.unittest
 dummy_val = np.random.randn(2, 3)
 in_val = np.full((2, 3), -2)
 cpu0_device = flow.device("cpu")
-gpu0_device = flow.device("cuda")
+if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+    gpu0_device = cpu0_device
+else:
+    gpu0_device = flow.device("cuda")
 
 
 class DummyModule(flow.nn.Module):
