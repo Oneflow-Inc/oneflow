@@ -21,7 +21,7 @@ from oneflow.framework.tensor import Tensor, register_tensor_op
 from oneflow.nn.module import Module
 
 
-__all__ = ["scatter", "scatter_add", "scatter_mul"]
+__all__ = ["scatter", "scatter_add"]
 
 
 def scatter(input, dim, index, src):
@@ -67,11 +67,10 @@ def scatter(input, dim, index, src):
                 [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
 
     """
-    if isinstance(src, flow.Tensor):
-        assert type(src) in [
-            flow.Tensor,
-            float,
-        ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
+    assert type(src) in [
+        flow.Tensor,
+        float,
+    ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
 
     if isinstance(src, flow.Tensor):
         return flow.F.dim_scatter(input, index, src, dim)
@@ -94,7 +93,7 @@ def scatter_add(input, dim, index, src):
         input (Tensor): The input blob.
         dim (int): The axis along which to index
         index (Tensor): The index blob of elements to scatter. 
-        src (Tensor or float): The source blob whose elements will be scatterd and added to output.
+        src (Tensor): The source blob whose elements will be scatterd and added to output.
 
     Returns:
         Tensor: The scatterd Tensor. 
@@ -113,77 +112,14 @@ def scatter_add(input, dim, index, src):
         tensor([[ 2., 12., 22.,  2.,  2.],
                 [52., 62.,  2.,  2., 72.],
                 [ 2.,  2.,  2.,  2.,  2.]], dtype=oneflow.float32)
-        >>> out = flow.scatter_add(input, 1, index, 3.14)
-        >>> out
-        tensor([[5.14, 5.14, 5.14, 2.  , 2.  ],
-                [5.14, 5.14, 2.  , 2.  , 5.14],
-                [2.  , 2.  , 2.  , 2.  , 2.  ]], dtype=oneflow.float32)
 
     """
-    if isinstance(src, flow.Tensor):
-        assert type(src) in [
-            flow.Tensor,
-            float,
-        ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
 
-    if isinstance(src, flow.Tensor):
-        return flow.F.dim_scatter_add(input, index, src, dim)
-    elif isinstance(src, float):
-        return flow.F.dim_scatter_add_scalar(input, index, src, dim)
+    assert type(src) in [
+        flow.Tensor
+    ], f"type of src must be oneflow.Tensor, but %s givien" % type(src)
 
-
-def scatter_mul(input, dim, index, src):
-    r"""This operator scatter the src with multiplying operation according to index along dim into the input.
-
-    Take a 3-D blob as example, the output is specified by:
-    
-    .. code-block:: python
-
-        input[index[i][j][k]][j][k] *= src[i][j][k]  # if dim == 0
-        input[i][index[i][j][k]][k] *= src[i][j][k]  # if dim == 1
-        input[i][j][index[i][j][k]] *= src[i][j][k]  # if dim == 2
-
-    Args:
-        input (Tensor): The input blob.
-        dim (int): The axis along which to index
-        index (Tensor): The index blob of elements to scatter. 
-        src (Tensor or float): The source blob whose elements will be scatterd and multiplied to output.
-
-    Returns:
-        Tensor: The scatterd Tensor. 
-
-    For example: 
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> input = flow.ones((3,5))*2
-        >>> index = flow.tensor(np.array([[0,1,2],[0,1,4]], ), dtype=flow.int32)
-        >>> src = flow.Tensor(np.array([[0,10,20,30,40],[50,60,70,80,90]]))
-        >>> out = flow.scatter_mul(input, 1, index, src)
-        >>> out
-        tensor([[  0.,  20.,  40.,   2.,   2.],
-                [100., 120.,   2.,   2., 140.],
-                [  2.,   2.,   2.,   2.,   2.]], dtype=oneflow.float32)
-        >>> out = flow.scatter_mul(input, 1, index, 3.14)
-        >>> out
-        tensor([[6.28, 6.28, 6.28, 2.  , 2.  ],
-                [6.28, 6.28, 2.  , 2.  , 6.28],
-                [2.  , 2.  , 2.  , 2.  , 2.  ]], dtype=oneflow.float32)
-
-
-    """
-    if isinstance(src, flow.Tensor):
-        assert type(src) in [
-            flow.Tensor,
-            float,
-        ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
-
-    if isinstance(src, flow.Tensor):
-        return flow.F.dim_scatter_mul(input, index, src, dim)
-    elif isinstance(src, float):
-        return flow.F.dim_scatter_mul_scalar(input, index, src, dim)
+    return flow.F.dim_scatter_add(input, index, src, dim)
 
 
 if __name__ == "__main__":
