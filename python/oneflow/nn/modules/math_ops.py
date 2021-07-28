@@ -221,7 +221,7 @@ def _sub(input, other):
 
     """
     if isinstance(input, (int, float)):
-        return flow.F.add_scalar(ScalarMul(-1)(other), other)
+        return flow.F.add_scalar(ScalarMul(-1)(other), input)
     elif isinstance(other, (int, float)):
         return flow.F.add_scalar(input, -1 * other)
     elif input.shape == other.shape:
