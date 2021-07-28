@@ -46,12 +46,12 @@ namespace one {
 
 namespace {
 
-const DType* GetTensorDType(const Tensor& tensor) {
+const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
   return DType::Get(tensor.dtype()).GetOrThrow().get();
 }
 
 std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shape,
-                                        const DType* dtype, const Symbol<Device>& device,
+                                        const Symbol<DType>* dtype, const Symbol<Device>& device,
                                         bool is_lazy, bool requires_grad, bool is_leaf) {
   return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
                                     is_leaf)
@@ -59,7 +59,7 @@ std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shap
 }
 
 std::shared_ptr<Tensor> MakeConsistentTensor(
-    const std::shared_ptr<const Shape>& shape, const DType* dtype,
+    const std::shared_ptr<const Shape>& shape, const Symbol<DType>* dtype,
     Symbol<cfg::ParallelDistribution>& parallel_distribution, Symbol<ParallelDesc> parallel_desc,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   return ConsistentTensor::MakeTensor(shape, dtype->data_type(), parallel_distribution,
@@ -167,7 +167,7 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
-Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtype,
+Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const Symbol<DType>* desired_dtype,
                                      const Symbol<Device>& device, bool requires_grad) {
   // Executing any numpy c api before _import_array() results in segfault
   if (PyArray_API == nullptr) { _import_array(); }
@@ -203,12 +203,12 @@ Symbol<ParallelDesc> TensorGetParallelDesc(const Tensor& tensor) {
   return tensor.parallel_desc().GetOrThrow();
 }
 
-Maybe<std::tuple<std::vector<Shape>, std::vector<const DType*>>>
+Maybe<std::tuple<std::vector<Shape>, std::vector<const Symbol<DType>*>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
-  std::vector<const DType*> dtypes;
+  std::vector<const Symbol<DType>*> dtypes;
   std::atomic<bool> synced(false);
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -232,7 +232,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   return std::make_tuple(shapes, dtypes);
 }
 
-std::tuple<std::vector<Shape>, std::vector<const DType*>> GetTensorBufferShapesAndDTypes(
+std::tuple<std::vector<Shape>, std::vector<const Symbol<DType>*>> GetTensorBufferShapesAndDTypes(
     const std::shared_ptr<Tensor>& tensor) {
   return MaybeGetTensorBufferShapesAndDTypes(tensor).GetOrThrow();
 }
@@ -251,7 +251,7 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
 
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
+Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const Symbol<DType>* desired_dtype,
                         bool treat_single_int_as_size) {
   Symbol<Device> device;
   if (kwargs.contains("device")) {
@@ -268,7 +268,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
     device = JUST(Device::New("cpu"));
   }
 
-  desired_dtype = kwargs.contains("dtype") ? kwargs["dtype"].cast<const DType*>() : desired_dtype;
+  desired_dtype = kwargs.contains("dtype") ? kwargs["dtype"].cast<const Symbol<DType>*>() : desired_dtype;
 
   bool requires_grad = false;
   if (kwargs.contains("requires_grad")) { requires_grad = kwargs["requires_grad"].cast<bool>(); }
