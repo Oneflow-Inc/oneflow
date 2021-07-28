@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import Optional, List, Tuple
-
 import oneflow as flow
-from oneflow.framework.tensor import Tensor, register_tensor_op
+from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 
 
