@@ -357,17 +357,8 @@ class ScalarAddByTensor(Module):
         return flow.F.add_scalar_by_tensor(x, y, self.inplace)
 
 
-class ElementwiseAdd(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x, y):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.add(x, y, self.inplace)
-def Elementwise_add_inplace(x, y,  inplace: bool = False):
-    if self.inplace:
+def elementwise_add_inplace(x, y,  inplace: bool = False):
+    if inplace:
         _check_inplace_valid(x)
     return flow.F.add(x, y, inplace) 
 
@@ -447,7 +438,7 @@ def _add_inplace(x, y):
     if isinstance(y, (int, float)):
         return scalar_add_inplace(x, y, inplace=True)
     elif x.shape == y.shape:
-        return ElementwiseAdd(inplace=True)(x, y)
+        return elementwise_add_inplace(x, y, inplace=True)
     elif x.shape == (1,):
         raise RuntimeError(
             f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
@@ -456,7 +447,7 @@ def _add_inplace(x, y):
         return ScalarAddByTensor(inplace=True)(x, y)
     else:
         y = flow.broadcast_like(y, x)
-        return ElementwiseAdd(inplace=True)(x, y)
+        return elementwise_add_inplace(x, y, inplace=True)
 
 
 class Asin(Module):
