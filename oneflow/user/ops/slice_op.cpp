@@ -45,11 +45,11 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     const int64_t len = diff / step + 1;
     CHECK_GE_OR_RETURN(len, 1);
-    if (len==1){
+    if (len == 1) {
       // return a 0-dim tensor
       DimVector zero_dim_vec(0);
       *ctx->OutputShape("y", 0) = Shape(zero_dim_vec);
-    }else{
+    } else {
       DimVector one_dim_vec(1);
       one_dim_vec[0] = len;
       *ctx->OutputShape("y", 0) = Shape(one_dim_vec);
@@ -120,15 +120,15 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     const int64_t len = diff / step + 1;
     CHECK_GE_OR_RETURN(len, 1);
-    if (len==1){
+    if (len == 1) {
       CHECK_EQ_OR_RETURN(ndim, 0);
-    }else{
+    } else {
       CHECK_EQ_OR_RETURN(ndim, 1);
     }
     CHECK_EQ_OR_RETURN(start_vec.size(), 1);
     CHECK_EQ_OR_RETURN(stop_vec.size(), 1);
     CHECK_EQ_OR_RETURN(step_vec.size(), 1);
-  }else{
+  } else {
     CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
     CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
     CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
