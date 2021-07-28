@@ -923,7 +923,7 @@ class Mish(Module):
     """
 
     def __init__(self, inplace: bool = False):
-        assert not inplace, "In-place operation is not currently supported"
+        self.inplace = inplace
         super().__init__()
 
     def forward(self, x):
@@ -990,6 +990,7 @@ class SiLU(Module):
     """
 
     def __init__(self, inplace: bool = False):
+        self.inplace = inplace
         super().__init__()
 
     def forward(self, x):
@@ -1068,6 +1069,7 @@ class SELU(Module):
     """
 
     def __init__(self, inplace: bool = False):
+        self.inplace = inplace
         super().__init__()
 
     def forward(self, x):
@@ -1081,10 +1083,11 @@ def selu_op(x):
     
     .. math::  
     
-        \text{SELU}(x) = \begin{cases}
-				scale * (x & \text{ if } x \gt 0  \\
-                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
-    		    \end{cases}
+        \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
+    
+    with :math:`\alpha = 1.6732632423543772848170429916717` and
+    
+    :math:`\text{scale} = 1.0507009873554804934193349852946`.
 
     See :mod:`oneflow.nn.SELU`
     """
@@ -1095,6 +1098,7 @@ def selu_op(x):
 def selu_op_tensor(x):
     r"""
     selu() -> Tensor
+    
     See :func:`oneflow.selu`
     """
     return SELU()(x)
@@ -1129,6 +1133,7 @@ class Softsign(Module):
     """
 
     def __init__(self, inplace: bool = False):
+        self.inplace = inplace
         super().__init__()
 
     def forward(self, x):
@@ -1137,10 +1142,13 @@ class Softsign(Module):
 
 def softsign_op(x):
     r"""The SoftSign activation.
+
     The formula is: 
     
     .. math::  
+
         SoftSign(x) = \frac{x}{1 + |x|}
+    
     See :mod:`oneflow.nn.Softsign`
     """
     return Softsign()(x)
