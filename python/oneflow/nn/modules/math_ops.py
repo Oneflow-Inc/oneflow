@@ -346,15 +346,10 @@ def _reciprocal(x):
     return Reciprocal()(x)
 
 
-class ScalarAddByTensor(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x, y):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.add_scalar_by_tensor(x, y, self.inplace)
+def scalar_add_by_tensor_inplace(x, y, inplace: bool = False):
+    if inplace:
+        _check_inplace_valid(x)
+    return flow.F.add_scalar_by_tensor(x, y, inplace)
 
 
 def elementwise_add_inplace(x, y,  inplace: bool = False):
@@ -414,14 +409,6 @@ def _add(x, y):
         return flow.F.broadcast_add(x, y)
 
 
-    # elif x.shape == (1,):
-    #     return ScalarAddByTensor()(y, x)
-    # elif y.shape == (1,):
-    #     return ScalarAddByTensor()(x, y)
-    # else:
-    #     return BroadcastAdd()(x, y)
-
-
 @register_tensor_op("add_")
 def _add_inplace(x, y):
     """
@@ -436,7 +423,7 @@ def _add_inplace(x, y):
             f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
         )
     elif y.shape == (1,):
-        return ScalarAddByTensor(inplace=True)(x, y)
+        return scalar_add_by_tensor_inplace(x, y, inplace=True)
     else:
         y = flow.broadcast_like(y, x)
         return elementwise_add_inplace(x, y, inplace=True)
