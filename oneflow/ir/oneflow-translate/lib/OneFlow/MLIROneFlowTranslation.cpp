@@ -655,9 +655,9 @@ LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op
       return failure();
     };
     // every key
-    for (int32_t key_idx = 0; key_idx < keys.size(); key_idx++) {
-      auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
-      auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+    for (auto tuple : llvm::zip(keys, sizes)) {
+      auto input_key = std::get<0>(tuple).dyn_cast<StringAttr>().getValue().str();
+      auto input_size = std::get<1>(tuple).dyn_cast<IntegerAttr>().getInt();
       // every input for one key
       for (int32_t i = 0; i < input_size; i++) {
         if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
