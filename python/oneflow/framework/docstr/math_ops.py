@@ -60,8 +60,6 @@ add_docstr(
         >>> print(y.shape)
         flow.Size([2, 3])
         >>> print(y.numpy())
-        [[ 3.  5.  1.]
-         [ 8.  9. 10.]]
 
 
 
