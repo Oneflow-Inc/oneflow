@@ -87,7 +87,6 @@ add_docstr(
     Args:
         x (oneflow.Tensor): A Tensor.
         y (oneflow.Tensor): A Tensor.
-        out: the output tensor
 
     Returns:
         oneflow.Tensor: element-wise sum of the input arrays `x` and `y` with broadcasting.
@@ -100,7 +99,15 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.array([[2], [1], [3]]).astype(np.float32))
+        >>> print(x.numpy())
+        [[2.]
+         [1.]
+         [3.]]
         >>> y = flow.Tensor(np.array([[0,2,1,6], [1,0,2,1], [2,3,4,0]]).astype(np.float32))
+        >>> y
+        tensor([[0., 2., 1., 6.],
+                [1., 0., 2., 1.],
+                [2., 3., 4., 0.]], dtype=oneflow.float32)
         >>> z = flow.F.broadcast_add(x,y)
         >>> print(z.shape)
         flow.Size([3, 4])
@@ -111,6 +118,8 @@ add_docstr(
 
     """,
 )
+#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
+
 
 add_docstr(
     oneflow.F.broadcast_div,
@@ -127,7 +136,6 @@ add_docstr(
     Args:
         x (oneflow.Tensor): A Tensor.
         y (oneflow.Tensor): A Tensor.
-        out: the output tensor
 
     Returns:
         oneflow.Tensor: element-wise division of the input arrays `x` and `y` with broadcasting
@@ -140,7 +148,13 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.array([[6,6,6], [6,6,6]]).astype(np.float32))
+        >>> x
+        tensor([[6., 6., 6.],
+                [6., 6., 6.]], dtype=oneflow.float32)
         >>> y = flow.Tensor(np.array([[2],[3]]).astype(np.float32))
+        >>> y
+        tensor([[2.],
+                [3.]], dtype=oneflow.float32)
         >>> z = flow.F.broadcast_div(x,y)
         >>> print(z.shape)
         flow.Size([2, 3])
@@ -150,6 +164,7 @@ add_docstr(
 
     """,
 )
+#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
 
 add_docstr(
     oneflow.F.broadcast_greater,
@@ -174,7 +189,13 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.array([[6,6,6], [6,6,6]]).astype(np.float32))
+        >>> x
+        tensor([[6., 6., 6.],
+                [6., 6., 6.]], dtype=oneflow.float32)
         >>> y = flow.Tensor(np.array([[9],[3]]).astype(np.float32))
+        >>> y
+        tensor([[9.],
+                [3.]], dtype=oneflow.float32)
         >>> z = flow.F.broadcast_greater(x,y)
         >>> print(z.shape)
         flow.Size([2, 3])
@@ -184,3 +205,42 @@ add_docstr(
 
     """,
 )
+#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
+
+add_docstr(
+    oneflow.F.add_scalar_by_tensor,
+    r""" 
+    add_scalar_by_tensor(x: Tensor,y : Tensor(1 dimension,1 element),Bool inplace=False) -> Tensor
+    
+    Adds the element of `y` (scalar) to each element of the input tensor `x` and return a new Tensor 
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+        y (oneflow.Tensor): A scalar saved in Tensor.
+        inplace(Bool): if true, will do inplace.Default False 
+
+    For example: 
+
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([[6,2,0], [-1,5,3]]).astype(np.float32))
+        >>> x
+        tensor([[ 6.,  2.,  0.],
+                [-1.,  5.,  3.]], dtype=oneflow.float32)
+        >>> y = flow.Tensor(np.array([2]).astype(np.float32))
+        >>> print(y.numpy())
+        [2.]
+        >>> z = flow.F.add_scalar_by_tensor(x,y,True)
+        >>> print(z.shape)
+        flow.Size([2, 3])
+        >>> print(z.numpy())
+        [[8. 4. 2.]
+         [1. 7. 5.]]
+
+    """,
+)
+
+
