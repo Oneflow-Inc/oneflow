@@ -13,19 +13,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import collections
-from typing import Optional, Sequence, Union
-
-from oneflow._oneflow_internal import Tensor, TensorTuple
-
-
-def convert_to_tensor_tuple(args: Optional[Union[Tensor, Sequence[Tensor]]]):
-    if args is None:
-        return TensorTuple()
-    elif isinstance(args, collections.abc.Sequence):
-        return TensorTuple(args)
-    else:
-        tensor_tuple = TensorTuple()
-        tensor_tuple.append(args)
-        return tensor_tuple
+from oneflow.nn.utils.clip_grad import clip_grad_norm_
