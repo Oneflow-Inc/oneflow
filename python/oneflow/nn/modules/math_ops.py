@@ -177,18 +177,6 @@ class BroadcastSub(Module):
         return flow.F.broadcast_sub(x, y)
 
 
-# class ScalarAdd(Module):
-#     def __init__(self, alpha, inplace: bool = False) -> None:
-#         super().__init__()
-#         if not isinstance(alpha, int) and (not isinstance(alpha, float)):
-#             raise ValueError("scalar type can only be int or float")
-#         self.alpha = alpha
-#         self.inplace = inplace
-
-#     def forward(self, x):
-#         if self.inplace:
-#             _check_inplace_valid(x)
-#         return flow.F.add_scalar(x, self.alpha, self.inplace)
 def scalar_add_inplace(x, alpha, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
@@ -1060,16 +1048,6 @@ def pow_op(tensor, exponent):
     """
     return Pow()(tensor, exponent)
 
-
-# class Addmm(Module):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     def forward(self, x, mat1, mat2, alpha=1, beta=1):
-#         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
-#             raise ValueError("input matrixes shape can not be greater than 2")
-#         else:
-#             return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
 
 def addmm( x, mat1, mat2, alpha=1, beta=1):
     if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
