@@ -29,7 +29,7 @@ from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.utils import add_indent
+from oneflow.nn.util import add_indent
 
 
 class Graph(object):
