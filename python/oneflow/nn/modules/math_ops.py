@@ -1061,15 +1061,21 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
-class Addmm(Module):
-    def __init__(self) -> None:
-        super().__init__()
+# class Addmm(Module):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    def forward(self, x, mat1, mat2, alpha=1, beta=1):
-        if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
-            raise ValueError("input matrixes shape can not be greater than 2")
-        else:
-            return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
+#     def forward(self, x, mat1, mat2, alpha=1, beta=1):
+#         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
+#             raise ValueError("input matrixes shape can not be greater than 2")
+#         else:
+#             return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
+
+def addmm( x, mat1, mat2, alpha=1, beta=1):
+    if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
+        raise ValueError("input matrixes shape can not be greater than 2")
+    else:
+        return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
 
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
@@ -1125,7 +1131,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> output2.shape
         flow.Size([3, 3])
     """
-    return Addmm()(input, mat1, mat2, alpha, beta)
+    return addmm(input, mat1, mat2, alpha, beta)
 
 
 @register_tensor_op("addmm")
@@ -1133,7 +1139,7 @@ def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     """
     See :func:`oneflow.addmm`
     """
-    return Addmm()(input, mat1, mat2, alpha, beta)
+    return addmm(input, mat1, mat2, alpha, beta)
 
 
 class Clamp(Module):
