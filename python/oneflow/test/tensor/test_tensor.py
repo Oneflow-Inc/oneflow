@@ -854,6 +854,19 @@ class TestTensor(flow.unittest.TestCase):
         y = x.acosh()
         return y
 
+    @autotest()
+    def test_atan_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.atan()
+        return y
+    
+    @autotest()
+    def test_arctan_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.arctan()
+        return y
 
     def test_tensor_arctanh(test_case):
         np_input = np.random.random((2, 3)) - 0.5
