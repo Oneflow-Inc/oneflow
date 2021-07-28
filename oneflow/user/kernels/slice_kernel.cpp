@@ -134,7 +134,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   const int64_t ndim = entire->shape().NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
   if (entire->shape().NumAxes() == 1) {
-    CHECK_EQ(sliced->shape().NumAxes(), 0);
+    CHECK_LE(sliced->shape().NumAxes(), 1);
   } else {
     CHECK_EQ(sliced->shape().NumAxes(), ndim);
   }

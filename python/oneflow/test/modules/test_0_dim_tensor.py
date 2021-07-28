@@ -65,7 +65,15 @@ def _test_slice_backward(test_case, device):
         z = y.sum()
         z.backward()
         np_grad[i] = 1
-        test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-04, 1e-04))
+    
+    x2 = flow.tensor(np.arange(100), device=device, requires_grad=True)
+    y2 = x2[1:100]
+    z2 = y2.sum()
+    z2.backward()
+    np_grad2 = np.ones(100)
+    np_grad2[0] = 0
+    test_case.assertTrue(np.allclose(x2.grad.numpy(), np_grad2, 1e-04, 1e-04))
 
 
 @flow.unittest.skip_unless_1n1d()
