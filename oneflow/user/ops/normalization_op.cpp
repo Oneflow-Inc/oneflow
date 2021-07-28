@@ -68,8 +68,8 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
   };
 }
 
-void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                        const user_op::UserOpConfWrapper& conf) {
+Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                               const user_op::UserOpConfWrapper& conf) {
   bool training;
   if (conf.op_type_name() == "normalization") {
     training = conf.attr<bool>("training");
@@ -77,13 +77,14 @@ void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierF
     training = true;
   }
   user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
-  CHECK(moving_mean_modifier != nullptr);
+  CHECK_OR_RETURN(moving_mean_modifier != nullptr);
   moving_mean_modifier->set_is_mutable(training);
   moving_mean_modifier->set_requires_grad(false);
   user_op::InputArgModifier* moving_variance_modifier = GetInputArgModifierFn("moving_variance", 0);
-  CHECK(moving_variance_modifier != nullptr);
+  CHECK_OR_RETURN(moving_variance_modifier != nullptr);
   moving_variance_modifier->set_is_mutable(training);
   moving_variance_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
@@ -145,7 +146,7 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
-      CHECK(reserve_space_infer_fn);
+      CHECK_OR_RETURN(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();
@@ -177,7 +178,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     JUST(SetParamDataType("mean"));
     JUST(SetParamDataType("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
-      CHECK(reserve_space_infer_fn);
+      CHECK_OR_RETURN(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();
@@ -484,7 +485,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
 #endif
 
 REGISTER_USER_OP_GRAD("normalization")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
@@ -655,10 +656,11 @@ REGISTER_USER_OP_GRAD("normalization")
                                 [&ctx, &beta_identity_op_name]() -> const std::string& {
                                   return ctx->GetOp(beta_identity_op_name).output("out", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("normalization_add_relu")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_add_relu_grad")
@@ -717,6 +719,7 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                 [&ctx, &beta_identity_op_name]() -> const std::string& {
                                   return ctx->GetOp(beta_identity_op_name).output("out", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

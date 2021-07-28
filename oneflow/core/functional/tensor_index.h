@@ -25,6 +25,10 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
+class Tensor;
+class TensorTuple;
+
 namespace functional {
 
 namespace detail {
@@ -63,6 +67,9 @@ class IndexItem {
   explicit IndexItem(bool boolean) : item_{.b = boolean}, tag_(HAS_BOOLEAN) {}
   explicit IndexItem(EllipsisIndex ellipsis) : item_{.dummy = 0}, tag_(HAS_ELLIPSIS) {}
 
+  explicit IndexItem(const std::shared_ptr<Tensor>& tensor)
+      : item_{.dummy = 0}, tensor_(tensor), tag_(HAS_TENSOR) {}
+
   bool IsSlice() const { return tag_ == HAS_SLICE; }
   const Slice& slice() const { return item_.slice; }
 
@@ -76,6 +83,9 @@ class IndexItem {
 
   bool IsNone() const { return tag_ == HAS_NONE; }
 
+  bool IsTensor() const { return tag_ == HAS_TENSOR; }
+  const std::shared_ptr<Tensor>& tensor() const { return tensor_; }
+
  private:
   union {
     Slice slice;
@@ -83,7 +93,8 @@ class IndexItem {
     int64_t i;
     char dummy;
   } item_;
-  enum { HAS_SLICE, HAS_BOOLEAN, HAS_INT, HAS_ELLIPSIS, HAS_NONE } tag_;
+  std::shared_ptr<Tensor> tensor_;
+  enum { HAS_SLICE, HAS_BOOLEAN, HAS_INT, HAS_ELLIPSIS, HAS_NONE, HAS_TENSOR } tag_;
 };
 
 }  // namespace detail
@@ -94,7 +105,13 @@ class TensorIndex : public std::vector<detail::IndexItem> {
 };
 
 int64_t CountSpecifiedDims(const TensorIndex& index);
-Maybe<TensorIndex> RegularTensorIndex(const TensorIndex& index, const Shape& shape);
+
+Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
+                                std::vector<detail::Slice>* slice_indices,
+                                TensorTuple* tensor_indices, std::vector<int64_t>* target_dims);
+
+Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
+                                    const TensorTuple& indices);
 
 }  // namespace functional
 }  // namespace one
