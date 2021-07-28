@@ -89,6 +89,10 @@ class MlirJitKernel final : public user_op::OpKernel {
     user_op::Tensor* in_1 = ctx->Tensor4ArgNameAndIndex("in", 1);
     mlir::OwningMemRef<float, 1> B(
         {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()});
+    mlir::OwningMemRef<float, 2> C(
+        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
+    auto err = jit.get()->invoke(ctx->op_name(), &*A, &*B, &*C).success();
+    CHECK(!err) << "fail to invoke jit engine, error:" << llvm::toString(std::move(err));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
