@@ -149,7 +149,7 @@ def build_graph_state(op_name, state_tensor, state_config):
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
         op_name, var_conf, ["in_0"], ["out_0"]
     )
-    
+
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
     if state_config is not None:
         attr_l2 = user_op_attr_cfg.AttrValue()
