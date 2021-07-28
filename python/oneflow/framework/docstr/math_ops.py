@@ -165,7 +165,62 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.F.log,
+    r"""
+    log(Tensor x) -> Tensor
 
+    Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
+    
+    .. math::
+        \text{out}_{i}=\log_e(\text{input}_{i})
 
+    Args:
+        input (Tensor): the input tensor.
+        	
+    Returns:
+        output (Tensor): the ouput tensor .
 
+    For example:
 
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> y = flow.F.log(x)
+        >>> y
+        tensor([0.2624, 0.4055, 0.9933], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.F.log1p,
+    r"""
+    log1p(Tensor x) -> Tensor
+
+    Returns a new tensor with the natural logarithm of (1 + input).
+    
+    .. math::
+        \text{out}_{i}=\log_e(1+\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+        	
+    Returns:
+        output (Tensor): the ouput tensor .
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> y = flow.F.log1p(x)
+        >>> y
+        tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
+
+    """,
+)
