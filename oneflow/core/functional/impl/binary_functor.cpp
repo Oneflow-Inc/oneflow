@@ -115,6 +115,22 @@ class BroadcastGreaterEqualFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastLogicalAndFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalAndFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalOrFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalOrFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_or").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastLessFunctor : public BinaryFunctor {
  public:
   BroadcastLessFunctor() {
@@ -176,6 +192,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
+  m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
+  m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
