@@ -10,3 +10,4 @@ Functional functions
 .. autofunction:: oneflow.F.acos
 .. autofunction:: oneflow.F.atanh
 .. autofunction:: oneflow.F.broadcast_less
+.. autofunction:: oneflow.F.broadcast_less_equal
