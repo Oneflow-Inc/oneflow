@@ -230,7 +230,6 @@ from oneflow.compatible.single_client.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
 from oneflow.compatible.single_client.framework.tensor import Tensor
-from oneflow.compatible.single_client.framework.tensor import construct_tensor as tensor
 from oneflow.compatible.single_client.nn.modules.to import to_op as to
 from oneflow.compatible.single_client.ops.array_ops import amp_white_identity
 from oneflow.compatible.single_client.ops.array_ops import (
