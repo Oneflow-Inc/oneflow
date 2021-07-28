@@ -114,6 +114,7 @@ Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinOpInterpState* ctx, const Te
                                       const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->keepdims = JUST(composed_attrs.GetAttr<bool>("keepdims"));
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
@@ -126,14 +127,20 @@ Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
   const auto& dy = out_grads.at(0);
 
   MutableAttrMap bcast_attrs;
+  MutableAttrMap reduce_sum_attrs;
   JUST(bcast_attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", ctx->axis));
+  JUST(reduce_sum_attrs.SetAttr<std::vector<int32_t>>("axis", ctx->axis));
+  JUST(reduce_sum_attrs.SetAttr<bool>("keepdims", ctx->keepdims));
   const auto& bcast_like =
       JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {output, input}, bcast_attrs));
   const auto& bcast_eq =
       JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_equal_op_, {input, bcast_like}));
   const auto& cast_like = JUST(OpInterpUtil::Dispatch<Tensor>(*cast_like_op_, {bcast_eq, input}));
+  const auto& reduce_sum_ =
+      JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {cast_like}, reduce_sum_attrs));
+  const auto& bcast_div_ = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_div_op_, {dy, reduce_sum_}));
   const auto& bcast_like_div =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {dy, input}, bcast_attrs));
+      JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {bcast_div_, input}, bcast_attrs));
 
   in_grads->resize(1);
   in_grads->at(0) =
