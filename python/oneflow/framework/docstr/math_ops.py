@@ -78,3 +78,39 @@ add_docstr(
 
     """,
 )
+add_docstr(
+    oneflow.F.broadcast_add,
+    """ Returns a new tensor of the broadcast addition between two tensors.
+    A broadcast operator process two tensors in different shapes. Normally, one of the operands has a particular dimension to be 1, which will be broadcast along the corresponding dimension of the other operator to perform the given calculation. Common scalar calculations can all be broadcast.
+
+    The equation is: 
+
+    .. math::
+        out = x + y
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+        y (oneflow.Tensor): A Tensor.
+
+    Returns:
+        oneflow.Tensor: The result Tensor broadcast_added by x and y 
+
+    For example: 
+
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([[2], [1], [3]]).astype(np.float32))
+        >>> y = flow.Tensor(np.array([[0,2,1,6], [1,0,2,1], [2,3,4,0]]).astype(np.float32))
+        >>> z = flow.F.broadcast_add(x,y)
+        >>> print(z.shape)
+        flow.Size([3, 4])
+        >>> print(z.numpy())
+        [[2. 4. 3. 8.]
+         [2. 1. 3. 2.]
+         [5. 6. 7. 3.]]
+
+    """,
+)
