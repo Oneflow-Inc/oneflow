@@ -21,7 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow._oneflow_internal import Tensor as InternalTensor
+from oneflow.framework.tensor import Tensor
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
@@ -158,7 +158,7 @@ class Graph(object):
                 if outputs is None:
                     outputs = ()
                 else:
-                    assert type(outputs) is InternalTensor
+                    assert type(outputs) is Tensor
                     outputs = (outputs,)
             eager_outputs = []
             eager_output_op_names = []

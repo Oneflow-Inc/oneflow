@@ -27,7 +27,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
-from oneflow.framework.tensor import Tensor as Tensor
+from oneflow.framework.tensor import Tensor
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -162,7 +162,7 @@ def build_graph_state(op_name, state_tensor, state_config):
 
 
 def build_graph_output(op_name, out):
-    assert isinstance(out, InternalTensor)
+    assert isinstance(out, Tensor)
     assert out.is_lazy
 
     output_conf = (
