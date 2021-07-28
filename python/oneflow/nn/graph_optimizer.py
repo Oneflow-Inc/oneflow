@@ -30,3 +30,28 @@ class OptimizerConfig(object):
         self.lr_scheduler = lr_scheduler
         self.grad_clipping_conf = grad_clipping_conf
         self.weight_decay_conf = weight_decay_conf
+
+    def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
+        self.optimizer.generate_conf_for_graph(train_conf, vars_conf)
+
+
+class VariableConfig(object):
+    def __init__(self, name: str):
+        assert name != ""
+        self._name = name
+        self._l2 = 0.0
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def l2(self):
+        return self._l2
+
+    @l2.setter
+    def l2(self, l2: float = 0.0):
+        self._l2 = l2
+
+    def __repr__(self):
+        return "(variable name: " + self._name + "):(l2: " + str(self._l2) + ".)"
