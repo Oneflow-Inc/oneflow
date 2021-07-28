@@ -27,8 +27,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_signed", [](const Symbol<DType>& d) { return d->is_signed(); })
       .def_property_readonly("is_complex", [](const Symbol<DType>& d) { return d->is_complex(); })
       .def_property_readonly("is_floating_point", [](const Symbol<DType>& d) { return d->is_floating_point(); })
-      .def("__str__", [](const Symbol<DType>& d) { return d->ToString(); })
-      .def("__repr__", [](const Symbol<DType>& d) { return d->ToRepr(); })
+      .def("__str__", [](const Symbol<DType>& d) { return d->name(); })
+      .def("__repr__", [](const Symbol<DType>& d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def_property_readonly("bytes",
