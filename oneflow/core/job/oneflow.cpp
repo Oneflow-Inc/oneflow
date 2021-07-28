@@ -210,6 +210,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     Compiler().Compile(job, plan, need_job_complete);
+    PlanUtil::GenMemBlockAndChunk4Plan(plan);
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";

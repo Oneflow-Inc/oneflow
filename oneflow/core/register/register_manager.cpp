@@ -39,29 +39,59 @@ struct PackedChunkInfo {
 
 }  // namespace
 
-RegstMgr::RegstMgr(const Plan& plan) {
+Maybe<void> RegstMgr::AddPlan(const Plan& plan,
+                              HashMap<std::string, Blob*> variable_op_name2eager_blob) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
+  // TODO(chengcheng): create chunk mgr for reuse memory between plans.
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
-    CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
+    CHECK_OR_RETURN(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 
   HashSet<int64_t> all_block_ids;
   HashMap<int64_t, PackedChunkInfo> zone_id2packed_chunk;
+  HashMap<int64_t, MemBlockProto*> mem_block_id2proto;
   for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }
     const int64_t mem_block_id = mem_block.mem_block_id();
-    CHECK(all_block_ids.insert(mem_block_id).second);
+    CHECK_OR_RETURN(all_block_ids.insert(mem_block_id).second);
+
     if (mem_block.has_chunk_id()) {
-      CHECK(mem_block.has_chunk_offset());
-      CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
+      CHECK_OR_RETURN(mem_block.has_chunk_offset());
+      CHECK_OR_RETURN(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
-      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+      CHECK_OR_RETURN(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+      CHECK_OR_RETURN(!mem_block.has_variable_op_name());
+    } else if (mem_block.has_variable_op_name()) {
+      // NOTE(chengcheng): bind mem_block_ptr to variable blob header_ptr and body_ptr
+      CHECK_OR_RETURN(!mem_block.enable_reuse_mem());
+      const std::string& var_name = mem_block.variable_op_name();
+      CHECK_OR_RETURN(!var_name.empty());
+      auto it = variable_op_name2eager_blob.find(var_name);
+      CHECK_OR_RETURN(it != variable_op_name2eager_blob.end())
+          << " CANNOT find variable op name: " << var_name;
+      CHECK_OR_RETURN(mem_block.has_is_separated_header());
+      Blob* var_blob = it->second;
+      CHECK_OR_RETURN(var_blob) << " variable op name: " << var_name
+                                << " in rank: " << this_machine_id << " CANNNOT NULL.";
+      if (mem_block.is_separated_header()) {
+        CHECK_GE_OR_RETURN(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(),
+                           mem_block.mem_size());
+        CHECK_GE_OR_RETURN(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
+        CHECK_OR_RETURN(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
+        CHECK_OR_RETURN(mem_block.mem_case().has_host_mem());
+      } else {
+        CHECK_GE_OR_RETURN(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
+        CHECK_GE_OR_RETURN(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
+        CHECK_OR_RETURN(
+            mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
+        CHECK_OR_RETURN(mem_block.mem_case() == var_blob->mem_case());
+      }
     } else {
       int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
@@ -70,7 +100,7 @@ RegstMgr::RegstMgr(const Plan& plan) {
       PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
       packed_chunk->blocks.push_back(&mem_block);
       packed_chunk->size += mem_block.mem_size();
-      CHECK(packed_chunk->mem_case == mem_block.mem_case());
+      CHECK_OR_RETURN(packed_chunk->mem_case == mem_block.mem_case());
     }
   }
 
@@ -89,14 +119,14 @@ RegstMgr::RegstMgr(const Plan& plan) {
               });
     int64_t offset = 0;
     for (const MemBlockProto* block : packed_chunk->blocks) {
-      CHECK(mem_block_id2ptr_.emplace(block->mem_block_id(), ptr + offset).second);
+      CHECK_OR_RETURN(mem_block_id2ptr_.emplace(block->mem_block_id(), ptr + offset).second);
       offset += block->mem_size();
     }
-    CHECK_EQ(offset, packed_chunk->size);
+    CHECK_EQ_OR_RETURN(offset, packed_chunk->size);
   }
 
   for (int64_t mem_block_id : all_block_ids) {
-    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
+    CHECK_OR_RETURN(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
   }
 
   for (const TaskProto& task : plan.task()) {
@@ -104,15 +134,21 @@ RegstMgr::RegstMgr(const Plan& plan) {
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
       const int64_t regst_desc_id = regst_desc.regst_desc_id();
-      CHECK(regst_desc_id2rt_regst_desc_
-                .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
-                .second);
-      CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
+      CHECK_OR_RETURN(regst_desc_id2rt_regst_desc_
+                          .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
+                          .second);
+      CHECK_OR_RETURN(
+          regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
   for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
-    CHECK(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
+    CHECK_OR_RETURN(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
   }
+}
+
+Maybe<void> RegstMgr::AddPlan(const Plan& plan) {
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  JUST(AddPlan(plan, variable_op_name2eager_blob));
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
