@@ -689,6 +689,14 @@ class TestTopk(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+@flow.unittest.skip_unless_1n1d()
+class TestAtanh(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_atanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-0.5, high=0.49).to(device)
+        y = torch.atanh(x)
+        return y
 
 def arccosh_input_tensor(shape):
     def generator(_):

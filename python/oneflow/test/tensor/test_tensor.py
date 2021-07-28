@@ -833,22 +833,12 @@ class TestTensor(flow.unittest.TestCase):
         of_out_magic = input ** 2.1
         test_case.assertTrue(np.allclose(of_out_magic.numpy(), np_out, 1e-05, 1e-05))
 
-    def test_tensor_atanh(test_case):
-        np_input = np.random.random((2, 3)) - 0.5
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
-        of_out = of_input.atanh()
-        np_out = np.arctanh(np_input)
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001, equal_nan=True)
-        )
-        of_out = of_out.sum()
-        of_out.backward()
-        np_out_grad = 1.0 / (1.0 - np.square(np_input))
-        test_case.assertTrue(
-            np.allclose(
-                of_input.grad.numpy(), np_out_grad, 0.0001, 0.0001, equal_nan=True
-            )
-        )
+    @autotest()
+    def test_atanh_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-0.5, high=0.49).to(device)
+        y = x.atanh()
+        return y
 
     def test_tensor_arctanh(test_case):
         np_input = np.random.random((2, 3)) - 0.5
