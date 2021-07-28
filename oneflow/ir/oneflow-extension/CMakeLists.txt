@@ -38,4 +38,4 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 mlir_check_link_libraries(MLIROneFlowExtension)
-add_custom_target(moe DEPENDS MLIROneFlowExtension)
+add_custom_target(mex DEPENDS MLIROneFlowExtension)
