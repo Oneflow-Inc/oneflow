@@ -132,7 +132,7 @@ using namespace mlir::oneflow;
       jit_module->push_back(function);
       std::string mlir;
       llvm::raw_string_ostream os_mlir(mlir);
-      function->print(os_mlir);
+      jit_module->print(os_mlir);
       created->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
       cast_op.erase();
       return created->getResults();
