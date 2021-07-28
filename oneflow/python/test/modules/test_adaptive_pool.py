@@ -20,6 +20,8 @@ import numpy as np
 
 import oneflow.experimental as flow
 from oneflow.python.nn.common_types import _size_1_t
+from packaging import version
+import torch as torch_original
 from typing import Union, Tuple
 
 from test_util import GenArgList
@@ -889,6 +891,10 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) < version.parse("1.10.0"),
+        "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'"
+    )
     @autotest()
     def test_adaptive_avgpool3d(test_case):
         m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
