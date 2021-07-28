@@ -43,8 +43,9 @@ add_docstr(
         >>> import numpy as np
 
         >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
-        >>> flow.abs(x)
+        >>> flow.F.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
 
     """
 )
+
