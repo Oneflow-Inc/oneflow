@@ -127,6 +127,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdInterpState> {
   AttrMap base_attrs_;
 };
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad1d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
 

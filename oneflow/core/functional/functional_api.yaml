@@ -144,6 +144,10 @@
   signature: "Tensor Cosh(Tensor x)"
   bind_python: True
 
+- name: "fmod"
+  signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "log"
   signature: "Tensor Log(Tensor x)"
   bind_python: True
@@ -744,4 +748,8 @@
 
 - name: "elementwise_max"
   signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "stack"
+  signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True

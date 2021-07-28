@@ -420,6 +420,75 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
+                                         const std::string& src_op_name) {
+  ParallelConf parallel_conf;
+  {
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
+  }
+
+  // add wait_and_send_ids op conf
+  OperatorConf wait_and_send_ids_op_conf;
+  {
+    wait_and_send_ids_op_conf.set_name(std::string("System-Src-WaitAndSendIds_") + NewUniqueId());
+    wait_and_send_ids_op_conf.set_pass_tag(kMainOp);
+    auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
+    wait_and_send_ids_conf->set_out("out");
+    wait_and_send_ids_conf->set_wait_buffer_name("UnimplementedBufferName");
+    wait_and_send_ids_conf->set_data_type(DataType::kInt32);
+    // wait_and_send_ids_conf->id_list() is unused in multi-client mode.
+  }
+  JUST(job_builder->AddOp(parallel_conf, wait_and_send_ids_op_conf));
+
+  // connect wait_and_send_ids to tick op which was connected to the src tick op
+  OperatorConf tick_op_conf;
+  bool find_src_tick_consumer_tick = false;
+  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
+    // skip if the op is not a tick op
+    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
+    for (const auto& ibn : op.input_bns()) {
+      const auto& input_lbi = op.BnInOp2Lbi(ibn);
+      if (input_lbi.op_name() == src_op_name) {
+        CHECK_OR_RETURN(!find_src_tick_consumer_tick);
+        tick_op_conf.CopyFrom(op.op_conf());
+        find_src_tick_consumer_tick = true;
+      }
+    }
+    return Maybe<void>::Ok();
+  }));
+  CHECK_OR_RETURN(find_src_tick_consumer_tick);
+  CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
+  CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
+  tick_op_conf.mutable_tick_conf()->clear_tick();
+  tick_op_conf.mutable_tick_conf()->add_tick(
+      GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
+  JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
+
+  // erase the src tick op
+  job_builder->DelOps({src_op_name});
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientAddCallbackNotifier(JobBuilder* job_builder, int64_t machine_id,
+                                           const std::string& sink_op_name) {
+  ParallelConf parallel_conf;
+  {
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
+  }
+  OperatorConf callback_notify_op_conf;
+  {
+    callback_notify_op_conf.set_name(std::string("System-Sink-CallbackNotify_") + NewUniqueId());
+    callback_notify_op_conf.set_pass_tag(kMainOp);
+    auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
+    callback_notify_conf->set_in(GenLogicalBlobName(sink_op_name, "out"));
+    // callback_notify_conf->callback_buffer_name() is unused in multi-client mode.
+  }
+  JUST(job_builder->AddOp(parallel_conf, callback_notify_op_conf));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 Maybe<void> AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder) {
@@ -487,6 +556,34 @@ Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilde
     return Maybe<void>::Ok();
   };
   JUST(AutoSourceAndSinkTick(op_graph, job_builder, DoEachSrc, DoEachSink));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) {
+  if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return Maybe<void>::Ok(); }
+  HashMap<int64_t, std::string> machine_id2src_op_name;
+  HashMap<int64_t, std::string> machine_id2sink_op_name;
+  {
+    JobBuilder job_builder(job);
+    const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+      CHECK_OR_RETURN(machine_id2src_op_name.emplace(machine_id, op_name).second);
+      return Maybe<void>::Ok();
+    };
+    const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
+      CHECK_OR_RETURN(machine_id2sink_op_name.emplace(machine_id, op_name).second);
+      return Maybe<void>::Ok();
+    };
+    JUST(AutoSourceAndSinkTick(op_graph, &job_builder, DoEachSrc, DoEachSink));
+  }
+  {
+    JobBuilder job_builder(job);
+    for (const auto& pair : machine_id2src_op_name) {
+      JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
+    }
+    for (const auto& pair : machine_id2sink_op_name) {
+      JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
+    }
+  }
   return Maybe<void>::Ok();
 }
 

@@ -31,10 +31,30 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_source_tick_conf()); }
+    if (in_cnt == 0) {
+      // NOTE(chengcheng):
+      //   in single-client source op is SourceTickOpConf,
+      //   in multi-client source op is WaitAndSendIdsOpConf_
+      if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+        CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf());
+      } else {
+        CHECK_OR_RETURN(op_node->op().op_conf().has_source_tick_conf());
+      }
+    }
+
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
-    if (out_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_sink_tick_conf()); }
+
+    if (out_cnt == 0) {
+      // NOTE(chengcheng):
+      //   in single-client source op is SinkTickOpConf,
+      //   in multi-client source op is CallbackNotifyOpConf.
+      if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+        CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf());
+      } else {
+        CHECK_OR_RETURN(op_node->op().op_conf().has_sink_tick_conf());
+      }
+    }
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -114,6 +134,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAutoSourceAndSinkTick));
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
+  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT

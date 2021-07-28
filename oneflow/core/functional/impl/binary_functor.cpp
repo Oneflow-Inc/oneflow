@@ -78,6 +78,13 @@ class BroadcastDivFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastFModFunctor : public BinaryFunctor {
+ public:
+  BroadcastFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_fmod").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastEqualFunctor : public BinaryFunctor {
  public:
   BroadcastEqualFunctor() {
@@ -209,6 +216,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::ElementwiseMinimumFunctor>("ElementwiseMin");
   m.add_functor<impl::ElementwiseMaximumFunctor>("ElementwiseMax");
+  m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
 };
 
 }  // namespace functional

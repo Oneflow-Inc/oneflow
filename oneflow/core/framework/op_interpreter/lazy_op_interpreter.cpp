@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -62,6 +63,45 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distr
   return Maybe<void>::Ok();
 }
 
+Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
+    VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
+  var_conf->clear_parallel_distribution();
+  if (tensor->is_local()) {
+    cfg::SbpParallel broadcast;
+    broadcast.mutable_broadcast_parallel();
+    var_conf->add_parallel_distribution(SbpParallelToString(broadcast));
+  } else {
+    const cfg::ParallelDistribution& parallel_distribution = *JUST(tensor->parallel_distribution());
+    for (const auto& sbp_parallel : parallel_distribution.sbp_parallel()) {
+      var_conf->add_parallel_distribution(SbpParallelToString(sbp_parallel));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_local()) {
+    return JUST(tensor->device())->parallel_desc_ptr();
+  } else {
+    return JUST(tensor->parallel_desc()).shared_from_symbol();
+  }
+}
+
+Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
+  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
+  const auto& old_scope = JUST(GetCurrentScope());
+  std::shared_ptr<Scope> new_scope;
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    new_scope = JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_conf));
+    return Maybe<void>::Ok();
+  }));
+  // NOTE(chengcheng): need sync vm for get scope right now
+  JUST(vm::MultiClientSync());
+  CHECK_OR_RETURN(new_scope);
+  return new_scope;
+}
+
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the EagerTensor
@@ -70,12 +110,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
-  const auto& scope = JUST(GetCurrentScope());
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct InputOpConf instead of FeedInputOpConf because FeedInputOpExpr JUST for getting
@@ -109,7 +148,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
 
   CHECK_OR_RETURN(!outputs->at(0).get());
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ true,
+                                                 /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   return Maybe<void>::Ok();
 }
@@ -122,12 +162,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
-  const auto& scope = JUST(GetCurrentScope());
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
@@ -139,7 +178,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
-  // TODO(chengcheng): GenerateParallelDistributionString by tensor.
+  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   // TODO(chengcheng, xuxiaoyu): Set L1/L2 RegularizerConf by nn.Graph Optimizer
 
@@ -163,7 +202,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
 
   CHECK_OR_RETURN(!outputs->at(0).get());
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ true,
+                                                 /* is_local */ input_tensor->is_local()));
   // NOTE(chengcheng): Record variable op output LazyTenosr
   TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
@@ -178,17 +218,14 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_lazy());
-  // NOTE(chengcheng): Lazy always consistent.
-  CHECK_OR_RETURN(input_tensor->is_consistent());
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
-  const auto& scope = JUST(GetCurrentScope());
-  int64_t scope_symbol_id = JUST(scope->symbol_id());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
   OperatorConf op_conf;
-  op_conf.set_name(op_expr.op_name());           // construct by python nn.Graph
-  op_conf.set_scope_symbol_id(scope_symbol_id);  // TODO(chengcheng): NewScope by cur scope.
+  op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
   // NOTE(chengcheng):
   //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
@@ -223,7 +260,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 
   CHECK_OR_RETURN(!outputs->at(0).get());
   // TODO(chengcheng): Build EagerLocalTensor if parllel attr is this rank.
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/false));
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ false,
+                                                 /* is_local= */ input_tensor->is_local()));
   return Maybe<void>::Ok();
 }
 
@@ -233,25 +271,36 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   // TODO(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
-  //     2. [Change Placement/ParallelDesc UserOp] : to/to_consistent/parallel_cast
+  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_consistent/parallel_cast
   //     3. [Multi-Inputs & Different ParallelDesc for each input UserOp] : like there are 2 inputs,
   //             one from CPU and the other from GPU.
   //     ..., etc.
-
-  const auto& scope = JUST(GetCurrentScope());
-  int64_t old_scope_symbol_id = JUST(scope->symbol_id());
-  // TODO(chengcheng): New parallel desc scope from all inputs tensors.
-  op_conf->set_scope_symbol_id(old_scope_symbol_id);
+  //
+  //     Need add if for each special UserOp for infer:
+  //     1. op_conf: device_tag,
+  //     2. output tensor: is_local,
+  //     3. op_parallel_conf for build new scope with parallel_desc
+  //     4. output blob (different with tensor) -> parallel_conf
+  //     5. need add to JobBuildAndInferCtx (like copy will NOT need)
 
   // NOTE(chengcheng):
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
   //   if inputs size == 0, need handle in SourceUserOp impl.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(inputs.at(0)));
+  op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
+  const bool is_local = inputs.at(0)->is_local();
+  const std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(GetParallelDescOfTensor(inputs.at(0)));
+
   op_conf->set_device_tag(device_tag);
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor));
+    CHECK_OR_RETURN(
+        parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
+    CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     const std::string& lbn = TensorNameScope::Global()->Lookup(inputs[i]);
     if (lbn.empty()) {
@@ -260,7 +309,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       // TODO(chengcheng):
       //     this is free EagerTensor which NOT captured by nn.Graph (inputs/params).
       //     Need Create a VariableOpConf for this inputs tensor, and Record name for itself.
-      UNIMPLEMENTED();
+      OF_UNIMPLEMENTED()
+          << " Sorry! nn.Graph does NOT support free eager tensor which NOT captured"
+          << " by nn.Graph. Please using nn.Graph.build() args or nn.Module.__init__() to handle "
+          << "all eager tensor.";
     }
     CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
@@ -300,10 +352,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
     const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
     if (!(outputs->at(i).get())) {
-      (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+      (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr,
+                                                     /* is_lazy= */ true, is_local));
     } else {
       // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
-      UNIMPLEMENTED();
+      OF_UNIMPLEMENTED() << " Op: " << op_conf->DebugString()
+                         << " outputs tensor CANNOT use inplace in nn.Graph.";
     }
     TensorNameScope::Global()->Record(outputs->at(i), GenLogicalBlobName(new_op_name, obn));
   }
