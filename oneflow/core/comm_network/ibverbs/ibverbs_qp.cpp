@@ -217,7 +217,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
     send_msg_buf_.push(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
-  PostPenddingSendWR();
+  PostPendingSendWR();
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
