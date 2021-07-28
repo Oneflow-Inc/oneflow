@@ -81,8 +81,8 @@ class MlirJitKernel final : public user_op::OpKernel {
     CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
     module->dump();
-    auto jit = mlir::ExecutionEngine::create(*module);
-    CHECK(jit) << "failed to create JIT exe engine";
+    auto jit_or_error = mlir::ExecutionEngine::create(*module);
+    CHECK(!!jit_or_error) << "failed to create JIT exe engine";
     user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
     // TODO: extract a function
     mlir::OwningMemRef<int64_t, 2> A(
@@ -93,7 +93,8 @@ class MlirJitKernel final : public user_op::OpKernel {
     mlir::OwningMemRef<float, 2> C(
         {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
     LOG(ERROR) << "Start JIT: " << ctx->op_name();
-    auto error = jit.get()->invoke(ctx->op_name(), &*A, &*B, &*C).success();
+    auto jit = std::move(jit_or_error.get());
+    auto error = jit->invoke(ctx->op_name(), &*A, &*B, &*C).success();
     CHECK(!!error);
     CHECK(!error) << "fail to invoke jit engine, error:" << llvm::toString(std::move(error));
   }
