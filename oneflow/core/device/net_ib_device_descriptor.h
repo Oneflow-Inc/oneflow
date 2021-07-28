@@ -33,6 +33,7 @@ constexpr char kNetIBDeviceDescriptorClassName[] = "net_ib";
 enum NetIBDeviceDescriptorLinkLayer {
   kNetIBDeviceDescriptorLinkLayerInvalid = 0,
   kNetIBDeviceDescriptorLinkLayerInfiniBand = 1,
+  kNetIBDeviceDescriptorLinkLayerEthernet = 2,
 };
 
 class NetIBDeviceDescriptor : public DeviceDescriptor {
