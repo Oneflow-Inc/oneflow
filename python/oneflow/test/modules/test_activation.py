@@ -823,6 +823,10 @@ class TestMishModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_mish_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Mish", device=device, n=2)
+
 
 def _np_silu_grad(x):
     _sig = 1 / (1 + np.exp(-x))
@@ -856,6 +860,10 @@ class TestSiluModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_silu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.SiLU", device=device, n=2)
 
 
 def _np_selu(x):
@@ -897,6 +905,17 @@ class TestSeluModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_selu_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.SELU", device=device, n=2)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestSoftsignModule(flow.unittest.TestCase):
+    def test_softsign_module_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(test_case, "nn.Softsign", device=device, n=2)
 
 
 if __name__ == "__main__":
