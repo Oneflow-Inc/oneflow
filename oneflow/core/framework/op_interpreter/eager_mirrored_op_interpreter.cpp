@@ -126,7 +126,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     if (need_event_record) {
       for (const auto& input_tensor : inputs) {
-        const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
+        const auto& tensor = JUST(input_tensor->AsMirroredTensor());
         CHECK_OR_RETURN(static_cast<bool>(tensor));
         // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
         // stream

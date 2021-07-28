@@ -117,8 +117,8 @@ class _BatchNorm(_NormBase):
                 running_var = (
                     self.momentum * self.running_var + (1 - self.momentum) * variance
                 )
-                self.__setattr__("running_mean", flow.Tensor(running_mean))
-                self.__setattr__("running_var", flow.Tensor(running_var))
+                self.__setattr__("running_mean", running_mean)
+                self.__setattr__("running_var", running_var)
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
