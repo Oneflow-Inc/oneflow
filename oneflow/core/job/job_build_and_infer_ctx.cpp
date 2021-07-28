@@ -325,7 +325,7 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       CHECK_LE_OR_RETURN(axis, num_axes)
           << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
           << ", shape: " << logical_blob_desc.shape();
-      if (logical_blob_desc.shape().NumAxes()>0){
+      if (logical_blob_desc.shape().NumAxes() > 0) {
         CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
             << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
             << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
