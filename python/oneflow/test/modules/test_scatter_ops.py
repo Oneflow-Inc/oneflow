@@ -88,5 +88,6 @@ class TestClampModule(flow.unittest.TestCase):
         y = torch.scatter_add(input, 1, index, src)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -69,7 +69,7 @@ def scatter(input, dim, index, src):
     """
     assert type(src) in [
         flow.Tensor,
-        float
+        float,
     ], f"type of src must be oneflow.Tensor or float, but %s givien" % type(src)
 
     if isinstance(src, flow.Tensor):
