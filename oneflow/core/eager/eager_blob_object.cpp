@@ -53,12 +53,10 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if(!blob_desc_.shape().is_initialized()){
-    blob_desc_.set_shape(Shape(DimVector{}));
-  }
+  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   char* header_buffer =
       reinterpret_cast<char*>(const_cast<int64_t*>(blob_desc_.shape().dim_vec().data()));
-      blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));
   return Maybe<void>::Ok();
 }
 
