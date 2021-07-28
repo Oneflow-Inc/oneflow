@@ -34,21 +34,21 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("bytes",
                              [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
-  m.attr("char") = DType::Char().get();
-  m.attr("float16") = DType::Float16().get();
-  m.attr("float") = DType::Float().get();
+  m.attr("char") = [](const Symbol<DType>& d) { return d->Char().get(); };
+  m.attr("float16") = [](const Symbol<DType>& d) { return d->Float16().get(); };
+  m.attr("float") = [](const Symbol<DType>& d) { return d->Float().get(); };
 
-  m.attr("float32") = DType::Float().get();
-  m.attr("double") = DType::Double().get();
-  m.attr("float64") = DType::Double().get();
+  m.attr("float32") = [](const Symbol<DType>& d) { return d->Float().get(); };
+  m.attr("double") = [](const Symbol<DType>& d) { return d->Double().get(); };
+  m.attr("float64") = [](const Symbol<DType>& d) { return d->Double().get(); };
 
-  m.attr("int8") = DType::Int8().get();
-  m.attr("int32") = DType::Int32().get();
-  m.attr("int64") = DType::Int64().get();
+  m.attr("int8") = [](const Symbol<DType>& d) { return d->Int8().get(); };
+  m.attr("int32") = [](const Symbol<DType>& d) { return d->Int32().get(); };
+  m.attr("int64") = [](const Symbol<DType>& d) { return d->Int64().get(); };
 
-  m.attr("uint8") = *DType::UInt8().get();
-  m.attr("record") = *DType::OFRecord().get();
-  m.attr("tensor_buffer") = *DType::TensorBuffer().get();
+  m.attr("uint8") = [](const Symbol<DType>& d) { return d->UInt8().get(); };
+  m.attr("record") = [](const Symbol<DType>& d) { return d->OFRecord().get(); };
+  m.attr("tensor_buffer") = [](const Symbol<DType>& d) { return d->TensorBuffer().get(); };
 }
 
 }  // namespace oneflow
