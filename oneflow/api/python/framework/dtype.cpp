@@ -23,16 +23,16 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<DType, std::shared_ptr<DType>>(m, "dtype")
-      .def_property_readonly("is_signed", &DType::is_signed)
-      .def_property_readonly("is_complex", &DType::is_complex)
-      .def_property_readonly("is_floating_point", &DType::is_floating_point)
-      .def("__str__", &DType::name)
-      .def("__repr__", &DType::name)
+  py::class_<Symbol<DType>, std::shared_ptr<Symbol<DType>>>(m, "dtype")
+      .def_property_readonly("is_signed", [](const Symbol<DType>& d) { return d->is_signed(); })
+      .def_property_readonly("is_complex", [](const Symbol<DType>& d) { return d->is_complex(); })
+      .def_property_readonly("is_floating_point", [](const Symbol<DType>& d) { return d->is_floating_point(); })
+      .def("__str__", [](const Symbol<DType>& d) { return d->ToString(); })
+      .def("__repr__", [](const Symbol<DType>& d) { return d->ToRepr(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def_property_readonly("bytes",
-                             [](const DType& dtype) { return dtype.bytes().GetOrThrow(); });
+                             [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
   m.attr("char") = DType::Char().get();
   m.attr("float16") = DType::Float16().get();
