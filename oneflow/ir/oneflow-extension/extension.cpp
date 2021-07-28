@@ -78,6 +78,7 @@ class MlirJitKernel final : public user_op::OpKernel {
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
     CHECK(!!module);
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
     CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
     module->dump();
