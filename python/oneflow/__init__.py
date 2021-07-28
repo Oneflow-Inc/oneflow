@@ -206,7 +206,7 @@ from oneflow.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import construct_tensor as tensor
+from oneflow.framework.tensor import tensor as tensor
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -367,4 +367,4 @@ from oneflow.ops.user_op_builder import (
     api_user_op_module_builder as user_op_module_builder,
 )
 
-from . import autograd, distributed, linalg, optim, saved_model
+from . import autograd, distributed, linalg, optim, saved_model, sbp
