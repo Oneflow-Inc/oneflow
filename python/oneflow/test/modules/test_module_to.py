@@ -79,6 +79,7 @@ def _test_dummy_module_to(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModuleTo(flow.unittest.TestCase):
     def test_module_to(test_case):
         arg_dict = OrderedDict()
