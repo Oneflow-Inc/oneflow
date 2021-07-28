@@ -940,6 +940,14 @@ class TestMinimum(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest()
+    def test_flow_elementwise_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.minimum(x, y)
+
 
 def _test_elementwise_maximum(test_case, device):
     arg_dict = OrderedDict()
@@ -999,6 +1007,14 @@ class TestMaximum(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_elementwise_mximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.maximum(x, y)
 
 
 if __name__ == "__main__":
