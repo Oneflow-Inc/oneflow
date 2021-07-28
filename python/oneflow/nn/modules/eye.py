@@ -28,23 +28,21 @@ class Eye(Module):
     def forward(self, n):
         m = self.m
         if m == None or m == n:
-           return flow.F.diag(flow.F.ones(n))
+           return flow.diag(flow.ones(n))
         elif m < n:
             tmp = flow.ones(m)
             input1 = flow.zeros([n-m, m])
-            input2 = flow.F.diag(tmp)
+            input2 = flow.diag(tmp)
             res = flow.cat([input1, input2], dim = 0)
             return res
         else:
             tmp = flow.ones(n)
             input1 = flow.zeros([n, m-n])
-            input2 = flow.F.diag(tmp)
+            input2 = flow.diag(tmp)
             res = flow.cat([input1, input2], dim = 1)
             return res
 
 
-@oneflow_export("eye")
-@experimental_api
 def eye_op(n, m=None):
     r"""
     This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
