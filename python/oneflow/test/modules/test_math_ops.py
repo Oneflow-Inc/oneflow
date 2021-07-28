@@ -698,6 +698,24 @@ class TestAtanh(flow.unittest.TestCase):
         y = torch.atanh(x)
         return y
 
+@flow.unittest.skip_unless_1n1d()
+class TestAcos(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_acos_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-0.5, high=0.49).to(device)
+        y = torch.acos(x)
+        return y
+
+@flow.unittest.skip_unless_1n1d()
+class TestAcosh(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_acos_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2.0, high=3.0).to(device)
+        y = torch.acosh(x)
+        return y
+
 def arccosh_input_tensor(shape):
     def generator(_):
         low = 1
