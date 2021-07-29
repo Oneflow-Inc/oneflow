@@ -32,6 +32,9 @@ from oneflow.nn.modules.activation import (
     Softmax,
     Softplus,
     Tanh,
+    SELU,
+    SiLU,
+    Softsign,
 )
 from oneflow.nn.modules.adaptive_pool import (
     AdaptiveAvgPool1d,
