@@ -35,6 +35,7 @@ def _run_functional_doctest(
     import doctest
 
     parser = doctest.DocTestParser()
+    # equivalent to doctest.testmod(raise_on_error=True)
     runner = doctest.DebugRunner(verbose=True, optionflags=optionflags)
     r = inspect.getmembers(flow.F, _is_oneflow_functional)
     for (name, fun) in r:
