@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
-
 import oneflow as flow
-from oneflow.nn import init
-from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _pair, _single, _triple
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.utils import _single, _pair, _triple
+from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from oneflow.python.nn import init
 
 
 def slice(x, begin, size):
@@ -28,21 +28,26 @@ def slice(x, begin, size):
         raise ValueError(
             "begin must be a list/tuple with the same length as input tensor's number of dimensions"
         )
-    if not all((isinstance(b, int) or b is None for b in begin)):
+
+    if not all(isinstance(b, int) or b is None for b in begin):
         raise ValueError("element of begin must be a int or None")
+
     if not isinstance(size, (list, tuple)) or len(size) != ndim:
         raise ValueError(
             "size must be a list/tuple with the same length as input tensor's number of dimensions."
         )
-    if not all((isinstance(s, int) or s is None for s in size)):
+
+    if not all(isinstance(s, int) or s is None for s in size):
         raise ValueError("element of size must be a int or None")
+
     slice_tup_list = []
-    for (b, s, dim_size) in zip(begin, size, x.shape):
-        (start, stop, step) = (None, None, 1)
+    for b, s, dim_size in zip(begin, size, x.shape):
+        start, stop, step = (None, None, 1)
         if b is not None:
             if b < -dim_size or b >= dim_size:
                 raise ValueError("element of begin is out of range")
             start = b
+
         if s is not None:
             if s == -1:
                 stop = dim_size
@@ -51,8 +56,9 @@ def slice(x, begin, size):
                     raise ValueError("element of size is invalid")
                 if b + s < dim_size:
                     stop = b + s
+
         slice_tup_list.append((start, stop, step))
-    return flow.slice(x, slice_tup_list)
+    return flow.experimental.slice(x, slice_tup_list)
 
 
 class ConvUtil(object):
@@ -70,23 +76,25 @@ class ConvUtil(object):
         return result_list
 
 
+@oneflow_export("nn.Conv1d")
+@experimental_api
 class Conv1d(Module):
-    """The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
     
     Applies a 1D convolution over an input signal composed of several input
     planes.
 
     In the simplest case, the output value of the layer with input size
-    :math:`(N, C_{\\text{in}}, L)` and output :math:`(N, C_{\\text{out}}, L_{\\text{out}})` can be
+    :math:`(N, C_{\text{in}}, L)` and output :math:`(N, C_{\text{out}}, L_{\text{out}})` can be
     precisely described as:
 
     .. math::
-        \\text{out}(N_i, C_{\\text{out}_j}) = \\text{bias}(C_{\\text{out}_j}) +
-        \\sum_{k = 0}^{C_{in} - 1} \\text{weight}(C_{\\text{out}_j}, k)
-        \\star \\text{input}(N_i, k)
+        \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+        \sum_{k = 0}^{C_{in} - 1} \text{weight}(C_{\text{out}_j}, k)
+        \star \text{input}(N_i, k)
 
-    where :math:`\\star` is the valid `cross-correlation`_ operator,
+    where :math:`\star` is the valid `cross-correlation`_ operator,
     :math:`N` is a batch size, :math:`C` denotes a number of channels,
     :math:`L` is a length of signal sequence.
 
@@ -127,29 +135,30 @@ class Conv1d(Module):
         - Output: :math:`(N, C_{out}, L_{out})` where
 
           .. math::
-              L_{out} = \\left\\lfloor\\frac{L_{in} + 2 \\times \\text{padding} - \\text{dilation}
-                        \\times (\\text{kernel\\_size} - 1) - 1}{\\text{stride}} + 1\\right\\rfloor
+              L_{out} = \left\lfloor\frac{L_{in} + 2 \times \text{padding} - \text{dilation}
+                        \times (\text{kernel\_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
 
     Attributes:
         weight (Tensor): the learnable weights of the module of shape
-            :math:`(\\text{out\\_channels},
-            \\frac{\\text{in\\_channels}}{\\text{groups}}, \\text{kernel\\_size})`.
+            :math:`(\text{out\_channels},
+            \frac{\text{in\_channels}}{\text{groups}}, \text{kernel\_size})`.
             The values of these weights are sampled from
-            :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
-            :math:`k = \\frac{groups}{C_\\text{in} * \\text{kernel\\_size}}`
+            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
         bias (Tensor):   the learnable bias of the module of shape
             (out_channels). If :attr:`bias` is ``True``, then the values of these weights are
-            sampled from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
-            :math:`k = \\frac{groups}{C_\\text{in} * \\text{kernel\\_size}}`
+            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
 
     For example: 
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow as flow
-        >>> import oneflow.nn as nn
-        
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv1d(16, 33, 3, stride=2)
@@ -172,9 +181,10 @@ class Conv1d(Module):
         dilation: _size_1_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = "zeros",
+        padding_mode: str = "zeros",  # TODO: refine this type
     ):
         super().__init__()
+
         assert padding_mode == "zeros"
         self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
@@ -198,7 +208,7 @@ class Conv1d(Module):
     def reset_parameters(self) -> None:
         init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
-            (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
@@ -235,7 +245,7 @@ class Conv1d(Module):
                         groups=1,
                     )
                 )
-            res = flow.cat(out_list, dim=in_channel_axis)
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv1d(
                 x,
@@ -249,7 +259,10 @@ class Conv1d(Module):
         return res
 
     def extra_repr(self):
-        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
         if self.padding != (0,) * len(self.padding):
             s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
@@ -263,23 +276,25 @@ class Conv1d(Module):
         return s.format(**self.__dict__)
 
 
+@oneflow_export("nn.Conv2d")
+@experimental_api
 class Conv2d(Module):
-    """The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
     
     Applies a 2D convolution over an input signal composed of several input
     planes.
 
     In the simplest case, the output value of the layer with input size
-    :math:`(N, C_{\\text{in}}, H, W)` and output :math:`(N, C_{\\text{out}}, H_{\\text{out}}, W_{\\text{out}})`
+    :math:`(N, C_{\text{in}}, H, W)` and output :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})`
     can be precisely described as:
 
     .. math::
-        \\text{out}(N_i, C_{\\text{out}_j}) = \\text{bias}(C_{\\text{out}_j}) +
-        \\sum_{k = 0}^{C_{\\text{in}} - 1} \\text{weight}(C_{\\text{out}_j}, k) \\star \\text{input}(N_i, k)
+        \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+        \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
 
 
-    where :math:`\\star` is the valid 2D `cross-correlation`_ operator,
+    where :math:`\star` is the valid 2D `cross-correlation`_ operator,
     :math:`N` is a batch size, :math:`C` denotes a number of channels,
     :math:`H` is a height of input planes in pixels, and :math:`W` is
     width in pixels.
@@ -303,7 +318,7 @@ class Conv2d(Module):
           concatenated.
         * At groups= :attr:`in_channels`, each input channel is convolved with
           its own set of filters (of size
-          :math:`\\frac{\\text{out_channels}}{\\text{in_channels}}`).,
+          :math:`\frac{\text{out_channels}}{\text{in_channels}}`).,
 
     The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
 
@@ -317,7 +332,7 @@ class Conv2d(Module):
 
         In other words, for an input of size :math:`(N, C_{in}, L_{in})`,
         a depthwise convolution with a depthwise multiplier `K` can be performed with the arguments
-        :math:`(C_\\text{in}=C_\\text{in}, C_\\text{out}=C_\\text{in} \\times \\text{K}, ..., \\text{groups}=C_\\text{in})`.
+        :math:`(C_\text{in}=C_\text{in}, C_\text{out}=C_\text{in} \times \text{K}, ..., \text{groups}=C_\text{in})`.
 
 
     Args:
@@ -340,35 +355,36 @@ class Conv2d(Module):
         - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
 
           .. math::
-              H_{out} = \\left\\lfloor\\frac{H_{in}  + 2 \\times \\text{padding}[0] - \\text{dilation}[0]
-                        \\times (\\text{kernel_size}[0] - 1) - 1}{\\text{stride}[0]} + 1\\right\\rfloor
+              H_{out} = \left\lfloor\frac{H_{in}  + 2 \times \text{padding}[0] - \text{dilation}[0]
+                        \times (\text{kernel_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
 
           .. math::
-              W_{out} = \\left\\lfloor\\frac{W_{in}  + 2 \\times \\text{padding}[1] - \\text{dilation}[1]
-                        \\times (\\text{kernel_size}[1] - 1) - 1}{\\text{stride}[1]} + 1\\right\\rfloor
+              W_{out} = \left\lfloor\frac{W_{in}  + 2 \times \text{padding}[1] - \text{dilation}[1]
+                        \times (\text{kernel_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
 
     Attr:
         - weight (Tensor): the learnable weights of the module of shape
-            :math:`(\\text{out_channels}, \\frac{\\text{in_channels}}{\\text{groups}},`
-            :math:`\\text{kernel_size[0]}, \\text{kernel_size[1]})`.
+            :math:`(\text{out_channels}, \frac{\text{in_channels}}{\text{groups}},`
+            :math:`\text{kernel_size[0]}, \text{kernel_size[1]})`.
             The values of these weights are sampled from
-            :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
-            :math:`k = \\frac{groups}{C_\\text{in} * \\prod_{i=0}^{1}\\text{kernel_size}[i]}`
+            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
 
         - bias (Tensor):   the learnable bias of the module of shape
             (out_channels). If :attr:`bias` is ``True``,
             then the values of these weights are
-            sampled from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
-            :math:`k = \\frac{groups}{C_\\text{in} * \\prod_{i=0}^{1}\\text{kernel_size}[i]}`
+            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
 
     For example: 
 
     .. code-block:: python
 
         >>> import numpy as np
-        >>> import oneflow as flow
-        >>> import oneflow.nn as nn
-        
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
@@ -391,9 +407,10 @@ class Conv2d(Module):
         dilation: _size_2_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: str = "zeros",
+        padding_mode: str = "zeros",  # TODO: refine this type
     ):
         super().__init__()
+
         assert padding_mode == "zeros"
         self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
@@ -417,7 +434,7 @@ class Conv2d(Module):
     def reset_parameters(self) -> None:
         init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         if self.bias is not None:
-            (fan_in, _) = init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
@@ -455,7 +472,7 @@ class Conv2d(Module):
                         groups=1,
                     )
                 )
-            res = flow.cat(out_list, dim=in_channel_axis)
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv2d(
                 x,
@@ -469,7 +486,10 @@ class Conv2d(Module):
         return res
 
     def extra_repr(self):
-        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
+        s = (
+            "{in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", stride={stride}"
+        )
         if self.padding != (0,) * len(self.padding):
             s += ", padding={padding}"
         if self.dilation != (1,) * len(self.dilation):
