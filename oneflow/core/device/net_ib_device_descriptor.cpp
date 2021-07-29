@@ -31,6 +31,7 @@ constexpr char kJsonKeyGUID[] = "guid";
 constexpr char kJsonKeyPort[] = "port";
 constexpr char kJsonKeyLankLayer[] = "link_layer";
 constexpr char kJsonValueLinkLayerInfiniBand[] = "InfiniBand";
+constexpr char kJsonValueLinkLayerEthernet[] = "Ethernet";
 constexpr char kJsonKeyPCIBusID[] = "pci_bus_id";
 
 void GetPCIBusID(const std::string& name, std::string* pci_bus_id) {
@@ -82,6 +83,8 @@ void NetIBDeviceDescriptor::Serialize(std::string* serialized) const {
   json_object[kJsonKeyPort] = impl_->port;
   if (impl_->link_layer == kNetIBDeviceDescriptorLinkLayerInfiniBand) {
     json_object[kJsonKeyLankLayer] = kJsonValueLinkLayerInfiniBand;
+  } else if (impl_->link_layer == kNetIBDeviceDescriptorLinkLayerEthernet) {
+    json_object[kJsonKeyLankLayer] = kJsonValueLinkLayerEthernet;
   } else {
     UNIMPLEMENTED();
   }
@@ -107,8 +110,8 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Query(int32_
     LOG(INFO) << "Inactivate port: device " << context->device->name << " port " << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
-  // TODO(liujuncheng): Add IBV_LINK_LAYER_ETHERNET support
-  if (port_attr.link_layer != IBV_LINK_LAYER_INFINIBAND) {
+  if (port_attr.link_layer != IBV_LINK_LAYER_INFINIBAND
+      && port_attr.link_layer != IBV_LINK_LAYER_ETHERNET) {
     LOG(INFO) << "Link layer is not supported: device " << context->device->name << " port "
               << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
@@ -120,6 +123,8 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Query(int32_
   desc->impl_->port = port;
   if (port_attr.link_layer == IBV_LINK_LAYER_INFINIBAND) {
     desc->impl_->link_layer = kNetIBDeviceDescriptorLinkLayerInfiniBand;
+  } else if (port_attr.link_layer == IBV_LINK_LAYER_ETHERNET) {
+    desc->impl_->link_layer = kNetIBDeviceDescriptorLinkLayerEthernet;
   } else {
     UNIMPLEMENTED();
   }
@@ -138,6 +143,8 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Deserialize(
   const std::string link_layer_value = json_object[kJsonKeyLankLayer];
   if (link_layer_value == kJsonValueLinkLayerInfiniBand) {
     desc->impl_->link_layer = kNetIBDeviceDescriptorLinkLayerInfiniBand;
+  } else if (link_layer_value == kJsonValueLinkLayerEthernet) {
+    desc->impl_->link_layer = kNetIBDeviceDescriptorLinkLayerEthernet;
   } else {
     UNIMPLEMENTED();
   }
