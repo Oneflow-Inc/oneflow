@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 import oneflow as flow
-from oneflow.distributed.ddp import ddp
+from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
 
 import numpy as np

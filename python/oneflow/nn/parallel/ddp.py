@@ -16,9 +16,7 @@ limitations under the License.
 from collections import OrderedDict
 
 import oneflow as flow
-import oneflow.nn as nn
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.nn.module import Module
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
@@ -42,9 +40,9 @@ def allreducefn(reversed_param_list, param, allreduce_module):
     return allreduce
 
 
-def ddp(module: Module):
+def DistributedDataParallel(module: "flow.nn.Module"):
     world_size = flow.framework.distribute.get_world_size()
-    allreduce_module = nn.AllReduce(list(range(world_size)))
+    allreduce_module = flow.nn.AllReduce(list(range(world_size)))
     reversed_param_list = OrderedDict(
         reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
     )
@@ -63,3 +61,4 @@ def ddp(module: Module):
 
     module.register_forward_hook(hook)
     return module
+

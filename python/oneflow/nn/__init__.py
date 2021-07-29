@@ -110,3 +110,5 @@ from oneflow.ops.loss_ops import ctc_greedy_decoder
 from oneflow.nn import utils
 
 from . import functional
+
+from . import parallel
