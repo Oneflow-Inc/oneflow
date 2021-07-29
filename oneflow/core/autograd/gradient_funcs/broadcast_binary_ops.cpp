@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -223,6 +224,82 @@ class BroadcastDiv : public BroadcastBinaryGrad {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
+
+class BroadcastMinMax : public BroadcastBinaryGrad {
+ public:
+  virtual Maybe<void> Init(const OpExpr& op) {
+    JUST(BroadcastBinaryGrad::Init(op));
+    x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
+    y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    const auto& out = ctx->SavedTensors().at(2);
+    const auto& out_shape = *(out->shape());
+    in_grads->resize(2);
+    if (x->requires_grad() || y->requires_grad()) {
+      const auto& x_shape = *(x->shape());
+      const auto& y_shape = *(y->shape());
+      auto broad_x_ = x;
+      auto broad_y_ = y;
+      if (x_shape != out_shape) {
+        const Shape& left_extended_x_shape =
+            CreateLeftExtendedShape(ShapeView(x_shape), out_shape.NumAxes());
+        const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
+        const std::vector<int32_t> x_axis =
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+        broad_x_ = JUST(functional::BroadcastLike(x, out, x_axis));
+      }
+      if (y_shape != out_shape) {
+        const Shape& left_extended_y_shape =
+            CreateLeftExtendedShape(ShapeView(y_shape), out_shape.NumAxes());
+        const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
+        const std::vector<int32_t> y_axis =
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+        broad_y_ = JUST(functional::BroadcastLike(y, out, y_axis));
+      }
+      const auto& broad_grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *elementwise_grad_op_, {out_grads.at(0), broad_x_, broad_y_}));
+      if (x->requires_grad()) {
+        in_grads->at(0) = JUST(x_grad_op_->forward(broad_grads->at(0), x));
+      }
+      if (y->requires_grad()) {
+        in_grads->at(1) = JUST(y_grad_op_->forward(broad_grads->at(1), y));
+      }
+    }
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
+  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
+  std::shared_ptr<OpExpr> elementwise_grad_op_;
+};
+
+class BroadcastMinimum : public BroadcastMinMax {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    JUST(BroadcastMinMax::Init(op));
+    elementwise_grad_op_ = JUST(op_expr_helper::ElementwiseMinimumGradOp("elementwise_minimum"));
+    return Maybe<void>::Ok();
+  }
+};
+
+class BroadcastMaximum : public BroadcastMinMax {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    JUST(BroadcastMinMax::Init(op));
+    elementwise_grad_op_ = JUST(op_expr_helper::ElementwiseMaximumGradOp("elementwise_maximum"));
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_minimum", BroadcastMinimum);
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_maximum", BroadcastMaximum);
 
 }  // namespace one
 }  // namespace oneflow
