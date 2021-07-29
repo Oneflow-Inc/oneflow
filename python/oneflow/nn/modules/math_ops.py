@@ -177,7 +177,7 @@ class BroadcastSub(Module):
         return flow.F.broadcast_sub(x, y)
 
 
-def scalar_add_inplace(x, alpha, inplace: bool = False):
+def scalar_add_inplaceable(x, alpha, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
     return flow.F.add_scalar(x, alpha, inplace)
@@ -334,13 +334,13 @@ def _reciprocal(x):
     return Reciprocal()(x)
 
 
-def scalar_add_by_tensor_inplace(x, y, inplace: bool = False):
+def scalar_add_by_tensor_inplaceable(x, y, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
     return flow.F.add_scalar_by_tensor(x, y, inplace)
 
 
-def elementwise_add_inplace(x, y, inplace: bool = False):
+def elementwise_add_inplaceable(x, y, inplace: bool = False):
     if inplace:
         _check_inplace_valid(x)
     return flow.F.add(x, y, inplace)
@@ -403,18 +403,18 @@ def _add_inplace(x, y):
     In-place version of :func:`oneflow.Tensor.add`.
     """
     if isinstance(y, (int, float)):
-        return scalar_add_inplace(x, y, inplace=True)
+        return scalar_add_inplaceable(x, y, inplace=True)
     elif x.shape == y.shape:
-        return elementwise_add_inplace(x, y, inplace=True)
+        return elementwise_add_inplaceable(x, y, inplace=True)
     elif x.shape == (1,):
         raise RuntimeError(
             f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
         )
     elif y.shape == (1,):
-        return scalar_add_by_tensor_inplace(x, y, inplace=True)
+        return scalar_add_by_tensor_inplaceable(x, y, inplace=True)
     else:
         y = flow.broadcast_like(y, x)
-        return elementwise_add_inplace(x, y, inplace=True)
+        return elementwise_add_inplaceable(x, y, inplace=True)
 
 
 class Asin(Module):
