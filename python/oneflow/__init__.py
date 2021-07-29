@@ -293,13 +293,13 @@ from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
 from oneflow.nn.modules.random_ops import bernoulli
+from oneflow.nn.modules.randperm import randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
 from oneflow.nn.modules.reduce_ops import _sum as sum
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
-from oneflow.nn.modules.reshape import randperm_op as randperm
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.round import round_op as round
 from oneflow.nn.modules.scatter_nd import _scatter_nd_op as scatter_nd
