@@ -125,6 +125,7 @@ class Block(object):
         return result
 
     def __iter__(self) -> Iterator["Block"]:
+        assert self._type == BlockType.MODULE
         return iter(self._modules.values())
 
     def forward(self, *args):
