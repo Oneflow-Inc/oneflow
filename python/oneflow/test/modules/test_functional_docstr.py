@@ -60,7 +60,7 @@ class TestFunctionalDocstrModule(flow.unittest.TestCase):
         arg_dict["module"] = [flow.F]
         for arg in GenArgList(arg_dict):
             _run_functional_doctest(
-                test_case, raise_on_error=True, verbose=None, module=arg[0]
+                test_case, raise_on_error=True, verbose=True, module=arg[0]
             )
 
 
