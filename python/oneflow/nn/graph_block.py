@@ -124,6 +124,9 @@ class Block(object):
         result = self._origin.__class__.__call__(self, *args)
         return result
 
+    def __iter__(self) -> Iterator["Block"]:
+        return iter(self._modules.values())
+
     def forward(self, *args):
         assert self._type == BlockType.MODULE
         self._is_executing_forward = True
