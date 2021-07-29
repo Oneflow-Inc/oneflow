@@ -34,7 +34,7 @@ class Eye(Module):
 
     def forward(self, n):
         m = self.m
-        if m == None or m == n:
+        if m == n:
            res = flow.diag(flow.ones(n))
         elif m < n:
             tmp = flow.ones(m)
@@ -62,12 +62,19 @@ def eye_op(
     device: Union[str, flow.device] = "cpu",
     requires_grad: bool = False,
 ):
-    r"""
+    """
     This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
+    .. math::
+
     Args:
-        n (int): the number of rows
+        n (int): the number of rows.
         m (Optional[int], optional): the number of colums with default being n. Defaults to None.
+    
+    Keyword args:
+        device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+
     
     Returns:
         oneflow.Tensor: The result Blob with ones on the diagonal and zeros elsewhere.
@@ -77,13 +84,14 @@ def eye_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> flow.enable_eager_execution()
 
         >>> out = flow.eye(3, 3)
+        >>> out
         tensor([[1., 0., 0.],[0., 1., 0.],[0., 0., 1.]], dtype=oneflow.float32)
     
     """
+    if m is None:
+        m = n
     return Eye(m, device, requires_grad)(n)
 
 
