@@ -70,6 +70,16 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(auto_backward=False)
+    def test_relu_module_with_0shape_data(test_case):
+        m = torch.nn.ReLU()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
 
 def _test_relu6_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
@@ -108,6 +118,16 @@ class TestReLU6Module(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_relu6_module_with_0shape_data(test_case):
+        m = torch.nn.ReLU6()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
 
@@ -163,11 +183,29 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(auto_backward=False)
+    def test_tanh_module_with_0shapedata(test_case):
+        m = torch.nn.Tanh()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
     @autotest()
     def test_flow_tanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.tanh(x)
+        return y
+
+    @unittest.skip("reshape has bug or auto test has bug")
+    @autotest(auto_backward=False)
+    def test_flow_tanh_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
+        y = flow.tanh(x)
         return y
 
 
@@ -206,6 +244,16 @@ class TestELUModule(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False)
+    def test_elu_module_with_0shape_data(test_case):
+        m = torch.nn.ELU(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
 

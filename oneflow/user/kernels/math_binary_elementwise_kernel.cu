@@ -52,9 +52,12 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_z->mut_dptr<T>());
+    if (n > 0) {
+      MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->device_ctx()->cuda_stream()>>>(n, tensor_x->dptr<T>(), tensor_y->dptr<T>(),
+                                                 tensor_z->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

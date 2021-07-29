@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_atan2_forward(test_case, shape, scalar, device):
@@ -131,6 +132,13 @@ class TestAtan2(flow.unittest.TestCase):
                 },
                 device=device,
             )
+
+    @autotest(auto_backward=False)
+    def test_atan2_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.atan2(x)
+        return y
 
 
 if __name__ == "__main__":

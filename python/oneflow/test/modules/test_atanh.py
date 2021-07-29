@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_atanh_impl(test_case, shape, device):
@@ -69,6 +70,13 @@ class TestAtanh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_atanh_impl(test_case, *arg)
             _test_arctanh_impl(test_case, *arg)
+
+    @autotest(auto_backward=False)
+    def test_atanh_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.atanh(x)
+        return y
 
 
 if __name__ == "__main__":
