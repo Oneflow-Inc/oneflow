@@ -128,6 +128,9 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   for (const auto& pair : job_sig.inputs()) {
     const auto& input_name = pair.first;
     const auto& input_def = pair.second;
+    if (inferface_lbi2scope_sym_id.find(input_def.lbi()) == inferface_lbi2scope_sym_id.end()) {
+      continue;
+    }
     const auto* op_node = op_graph.OpNode4OpName(input_def.lbi().op_name());
 
     CHECK_OR_RETURN(io_op_name2op_conf.emplace(input_name, OperatorConf()).second);
