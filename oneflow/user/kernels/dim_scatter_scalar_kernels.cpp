@@ -91,12 +91,10 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
 
 REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
 REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
-REGISTER_SCATTER_SCALAR_CPU_KERNELS("dim_scatter_mul_scalar", MulScalarFunctor);
 
 #ifdef WITH_CUDA
 REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_update_scalar", UpdateScalarFunctor);
 REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_add_scalar", AddScalarFunctor);
-REGISTER_SCATTER_SCALAR_GPU_KERNELS("dim_scatter_mul_scalar", MulScalarFunctor);
 #endif  // WITH_CUDA
 
 }  // namespace user_op

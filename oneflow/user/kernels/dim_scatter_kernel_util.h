@@ -59,11 +59,6 @@ struct BinOpUpdateFunctor {
   OF_DEVICE_FUNC static void apply(const T* x, T* y) { *y = *x; }
 };
 
-template<typename T>
-struct BinOpMulFunctor {
-  OF_DEVICE_FUNC static void apply(const T* x, T* y) { *y *= *x; }
-};
-
 template<DeviceType device_type, typename IN_T, typename IDX_T, template<typename T> class Opt>
 struct DimScatterFunctor final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,

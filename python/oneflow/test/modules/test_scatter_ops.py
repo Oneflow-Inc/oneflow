@@ -21,7 +21,7 @@ from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestClampModule(flow.unittest.TestCase):
+class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest()
     def test_scatter_random_data_at_dim_0(test_case):
         device = random_device()

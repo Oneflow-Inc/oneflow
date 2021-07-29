@@ -31,16 +31,7 @@ struct DimScatterScalarFunctor<DeviceType::kCPU, IN_T, IDX_T, Opt> final {
 };
 
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, UpdateScalarFunctor);
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, UpdateScalarFunctor>;
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, UpdateScalarFunctor>;
-
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, AddScalarFunctor);
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, AddScalarFunctor>;
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, AddScalarFunctor>;
-
-INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCPU, MulScalarFunctor);
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int32_t, MulScalarFunctor>;
-template struct DimScatterScalarFunctor<DeviceType::kCPU, float16, int64_t, MulScalarFunctor>;
 
 }  // namespace user_op
 }  // namespace oneflow

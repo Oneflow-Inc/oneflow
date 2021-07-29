@@ -27,6 +27,8 @@ oneflow
             reshape, 
             save, 
             saved_model, 
+            scatter,
+            scatter_add,
             scatter_nd, 
             slice, 
             slice_update, 

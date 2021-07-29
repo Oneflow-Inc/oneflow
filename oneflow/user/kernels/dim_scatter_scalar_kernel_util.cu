@@ -44,7 +44,6 @@ struct DimScatterScalarFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
 
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, UpdateScalarFunctor);
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, AddScalarFunctor);
-INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kGPU, MulScalarFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow

@@ -46,11 +46,6 @@ struct UpdateScalarFunctor {
   OF_DEVICE_FUNC static void apply(const T x, T* y) { *y = x; }
 };
 
-template<typename T>
-struct MulScalarFunctor {
-  OF_DEVICE_FUNC static void apply(const T x, T* y) { *y *= x; }
-};
-
 #define INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(device_type, opt)             \
   template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, float, int32_t, opt>;   \

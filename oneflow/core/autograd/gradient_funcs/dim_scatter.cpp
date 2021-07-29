@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -43,8 +44,6 @@ class DimScatter : public OpExprGradFunction<DimScatterInterpState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> dim_gather_op_;
-  std::shared_ptr<OpExpr> dim_scatter_scalar_op_;
 };
 
 template<SCATTER_TYPE T>
@@ -52,10 +51,6 @@ Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  dim_gather_op_ = JUST(op_expr_helper::DimGatherOp(0, GradientOpName(op_name) + "0"));
-  dim_scatter_scalar_op_ =
-      JUST(op_expr_helper::DimScatterUpdateScalarOp(0, 0.0f, GradientOpName(op_name) + "1"));
   return Maybe<void>::Ok();
 }
 
@@ -84,10 +79,7 @@ Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterInterpState* ctx,
   in_grads->resize(3);
 
   if (ctx->src_requires_grad) {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
-    in_grads->at(2) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*dim_gather_op_, {out_grads.at(0), index}, attrs));
+    in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), index, ctx->dim));
   }
   return Maybe<void>::Ok();
 }
@@ -102,11 +94,8 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterInte
 
   if (ctx->input_requires_grad) {
     const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
-    JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
-    in_grads->at(0) = JUST(
-        OpInterpUtil::Dispatch<Tensor>(*dim_scatter_scalar_op_, {out_grads.at(0), index}, attrs));
+    in_grads->at(0) =
+        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim));
   }
   return Maybe<void>::Ok();
 }
@@ -135,16 +124,13 @@ class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterInterpState> 
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> dim_scatter_scalar_op_;
 };
 
 Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  dim_scatter_scalar_op_ =
-      JUST(op_expr_helper::DimScatterUpdateScalarOp(0, 0.0f, GradientOpName(op_name)));
+
   return Maybe<void>::Ok();
 }
 
@@ -176,8 +162,8 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterInterpState* ctx,
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
   JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
-  in_grads->at(0) = JUST(
-      OpInterpUtil::Dispatch<Tensor>(*dim_scatter_scalar_op_, {out_grads.at(0), index}, attrs));
+  in_grads->at(0) =
+      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim););
 
   return Maybe<void>::Ok();
 }
