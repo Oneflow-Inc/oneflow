@@ -175,6 +175,38 @@ def _test_expand_backward(test_case, device):
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
 
+def _test_expand_input_list(test_case, device):
+    input_shape = (1, 6, 5, 3)
+    expand_dim = [4, -1, 5, 3]
+    (input, gout, out_np, gin_np) = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
+    of_out = of_input.expand(expand_dim)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
+
+
+def _test_expand_input_flow_size(test_case, device):
+    input_shape = (1, 4, 1, 2)
+    expand_dim = [2, 1, 2, 4, 2, 2]
+    input = np.array(
+        [
+            [
+                [[0.8981702327728271, 0.5372866988182068]],
+                [[0.45116370916366577, 0.8656941056251526]],
+                [[0.8811476230621338, 0.5552017688751221]],
+                [[0.6291894316673279, 0.5786571502685547]],
+            ]
+        ]
+    )
+    of_input = flow.Tensor(
+        input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    x = flow.Tensor(np.random.randn(2, 1, 2, 4, 2, 2))
+    of_out = of_input.expand(x.shape)
+    y = of_out.sum().backward()
+    np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
+    test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_expand(test_case):
@@ -187,6 +219,8 @@ class TestModule(flow.unittest.TestCase):
             _test_expand_same_int8,
             _test_expand_backward,
             _test_expand_backward_same_dim,
+            _test_expand_input_list,
+            _test_expand_input_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
