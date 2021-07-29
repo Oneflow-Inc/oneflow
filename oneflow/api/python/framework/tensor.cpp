@@ -299,9 +299,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     }
   }
 
-  if(!desired_dtype){
-    return Error::ValueError("Dtype is Null, please check!");
-  }
+  if (!desired_dtype) { return Error::ValueError("Dtype is Null, please check!"); }
 
   std::shared_ptr<MirroredTensor> tensor = JUST(
       MirroredTensor::MakeTensor(std::make_shared<Shape>(dim_vector), desired_dtype->data_type(),
