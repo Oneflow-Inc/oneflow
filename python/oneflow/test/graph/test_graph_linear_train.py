@@ -79,6 +79,7 @@ def _test_linear_train_graph(test_case, device):
             device=device,
             requires_grad=False,
         )
+
         class LinearTrainGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -96,21 +97,24 @@ def _test_linear_train_graph(test_case, device):
         def one_iter():
             of_graph_out = linear_t_g(x)
             return of_graph_out.numpy(), linear_t_g.linear.weight.origin.numpy()
-        
+
         check_list = []
         for i in range(iter_num):
             check_list.append(one_iter())
         return check_list
-    
+
     iter_num = 3
     module_check_list = train_with_module()
     graph_check_list = train_with_graph()
     for i in range(iter_num):
         # check equal on loss
-        test_case.assertTrue(np.array_equal(module_check_list[i][0], graph_check_list[i][0]))
+        test_case.assertTrue(
+            np.array_equal(module_check_list[i][0], graph_check_list[i][0])
+        )
         # check equal on weight
-        test_case.assertTrue(np.array_equal(module_check_list[i][1], graph_check_list[i][1]))
-
+        test_case.assertTrue(
+            np.array_equal(module_check_list[i][1], graph_check_list[i][1])
+        )
 
 
 class TestLinearTrainGraph(oneflow.unittest.TestCase):

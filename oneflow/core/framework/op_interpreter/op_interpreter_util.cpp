@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include <memory>
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
@@ -77,6 +79,29 @@ template<>
                                                           const TensorTuple& inputs,
                                                           const OpExprInterpContext& ctx) {
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
+}
+
+template<>
+/* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
+    const OpExpr& op_expr, const TensorTuple& inputs, std::shared_ptr<TensorTuple> outputs,
+    const OpExprInterpContext& ctx) {
+  if (LazyMode::is_enabled()) {
+    auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
+    JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, lazy_outputs.get(), ctx));
+    return lazy_outputs;
+  } else {
+    CHECK_OR_RETURN(outputs->size() == op_expr.output_size());
+    JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), ctx));
+    return outputs;
+  }
+}
+
+template<>
+/* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
+                                                          const TensorTuple& inputs,
+                                                          std::shared_ptr<TensorTuple> outputs,
+                                                          const OpExprInterpContext& ctx) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, outputs, ctx))->at(0);
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(

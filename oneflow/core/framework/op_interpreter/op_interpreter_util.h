@@ -47,6 +47,22 @@ class OpInterpUtil {
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                            const OpExprInterpContext& ctx);
 
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           std::shared_ptr<TensorTuple> outputs, const AttrMap& attrs) {
+    return Dispatch<T>(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+  }
+
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           std::shared_ptr<TensorTuple> outputs) {
+    return Dispatch<T>(op_expr, inputs, outputs, OpExprInterpContext{AttrMap{}, nullptr});
+  }
+
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           std::shared_ptr<TensorTuple> outputs, const OpExprInterpContext& ctx);
+
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
