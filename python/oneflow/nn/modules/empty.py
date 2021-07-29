@@ -18,9 +18,7 @@ from typing import Optional, Union
 
 import oneflow as flow
 
-from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
-from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
 
@@ -32,13 +30,14 @@ def empty_op(
 ):
     """
     Returns a tensor filled with uninitialized data.
-    The shape of the tensor is defined by the variable argument `size`.
+    The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \\
-         a variable number of arguments or a collection like a list or tuple.
-        dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        size (an integer or tuple of integer values) – Defining the shape of the output tensor. Can be
+          a variable number of arguments or a collection like a list or tuple.
+        dtype (flow.dtype, optional) - The desired data type of returned tensor. Default: ``flow.float32``.
+        device (torch.device, optional) – The desired device of returned tensor. Default: if None, uses the
+          current device for the default tensor type
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -47,7 +46,7 @@ def empty_op(
 
         >>> import oneflow as flow
         >>> y = flow.empty(5)
-        >>> y.shape()
+        >>> y.shape
         flow.Size([5])
 
     """
@@ -66,3 +65,9 @@ def empty_op(
     tensor = tensor.to(device=device)
     tensor.requires_grad_(requires_grad)
     return tensor
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
