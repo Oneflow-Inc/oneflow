@@ -13,37 +13,55 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.nn.module import Module
-from oneflow.python.framework.tensor import register_tensor_op
+from oneflow.nn.module import Module
+from oneflow.framework.tensor import register_tensor_op
 
 
 class Eye(Module):
-    def __init__(self, m=None):
+    def __init__(
+        self,
+        m: int = None,
+        device: Union[str, flow.device] = "cpu",
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
         self.m = m
+        self.device = device
+        self.requires_grad = requires_grad
 
     def forward(self, n):
         m = self.m
         if m == None or m == n:
-           return flow.diag(flow.ones(n))
+           res = flow.diag(flow.ones(n))
         elif m < n:
             tmp = flow.ones(m)
-            input1 = flow.zeros([n-m, m])
+            input1 = flow.zeros((n-m, m))
             input2 = flow.diag(tmp)
-            res = flow.cat([input1, input2], dim = 0)
-            return res
+            res = flow.cat([input2, input1], dim = 0)
         else:
             tmp = flow.ones(n)
-            input1 = flow.zeros([n, m-n])
+            input1 = flow.zeros((n, m-n))
             input2 = flow.diag(tmp)
-            res = flow.cat([input1, input2], dim = 1)
-            return res
+            res = flow.cat([input2, input1], dim = 1)
+
+        res.requires_grad = self.requires_grad
+        if isinstance(self.device, str):
+            device = flow.device(self.device)
+        else:
+            device = self.device
+        re = res.to(device)       
+        return re
 
 
-def eye_op(n, m=None):
+def eye_op(
+    n,
+    m = None,
+    device: Union[str, flow.device] = "cpu",
+    requires_grad: bool = False,
+):
     r"""
     This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
@@ -58,16 +76,15 @@ def eye_op(n, m=None):
 
     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
+        >>> import oneflow as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
         >>> out = flow.eye(3, 3)
-
-        [[1, 0, 0],[0, 1, 0],[0, 0, 1]]
+        tensor([[1., 0., 0.],[0., 1., 0.],[0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    return Eye(m)(n)
+    return Eye(m, device, requires_grad)(n)
 
 
 if __name__ == "__main__":
