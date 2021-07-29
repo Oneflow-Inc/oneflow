@@ -76,7 +76,8 @@ tvm::relay::Expr ConvertReturnParamsToTVMExpr(
   return tvm::relay::Tuple(fields);
 }
 
-std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Function graph_func, const XrtDevice& device) {
+std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Function graph_func,
+                                                               const XrtDevice& device) {
   auto pfb = tvm::runtime::Registry::Get("relay.build_module._BuildModule");
   tvm::runtime::Module build_mod = (*pfb)();
   auto build_f = build_mod.GetFunction("build", false);
@@ -92,6 +93,7 @@ std::tuple<tvm::runtime::Module, std::string> BuildGraphModule(tvm::relay::Funct
     LOG(FATAL) << "Unsupported XrtDevice: " << device;
   }
 
+  // use IRModule instead of function since no parameters are specified
   auto relay_mod = tvm::IRModule::FromExpr(graph_func);
   build_f(relay_mod, targets, tvm::Target("llvm"));
 
@@ -154,11 +156,10 @@ std::shared_ptr<Executable> TVMGraphCompiler::Compile(
   std::string graph_json;
 
   std::tie(built_mod, graph_json) = BuildGraphModule(graph_func, this->device_);
-  VLOG(3) << "Got TVM graph_json:\n" << graph_json;
+  // VLOG(3) << "Got TVM graph_json:\n" << graph_json;
 
   return std::make_shared<TVMExecutable>(this->name_, entry_params.size(), return_params,
-                                         graph_json, built_mod,
-                                         this->device_);  // only support GPU_CUDA now
+                                         graph_json, built_mod, this->device_);
 }
 
 REGISTER_GRAPH_COMPILER(XrtEngine::TVM, TVMGraphCompiler);

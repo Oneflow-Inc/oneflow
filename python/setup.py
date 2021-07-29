@@ -114,9 +114,7 @@ class Develop(develop):
         TVM_INSTALL_LIB_DIR = os.path.join(
             BIULD_DIR, "third_party_install", "tvm", "lib"
         )
-        TVM_SRC_DIR = os.path.join(
-            BIULD_DIR, "third_party", "tvm", "src", "tvm"
-        )
+        TVM_SRC_DIR = os.path.join(BIULD_DIR, "third_party", "tvm", "src", "tvm")
         TVM_SRC_BUILD_DIR = os.path.join(TVM_SRC_DIR, "build")
 
         rm_src_build_dir = ["rm", "-rf", TVM_SRC_BUILD_DIR]
@@ -140,11 +138,7 @@ class Develop(develop):
 
         # must pass 'develop' other than 'install' to setup.py, cuz 'install' will copy tvm lib to
         # site-packages directory to invalidate the symbol-link
-        with cd(
-            os.path.join(
-                TVM_SRC_DIR, "python"
-            )
-        ):
+        with cd(os.path.join(TVM_SRC_DIR, "python")):
             subprocess.check_call(
                 "{} setup.py develop {}".format(sys.executable, " ".join(remain_args)),
                 shell=True,

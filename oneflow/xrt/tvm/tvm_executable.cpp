@@ -23,6 +23,8 @@ namespace of_tvm {
 
 namespace {
 
+static std::mutex exec_lock;
+
 bool IsAligned(void* data_ptr, std::uintptr_t alignment) {
   auto mask = alignment - 1;
   CHECK((alignment & mask) == 0) << "Wrong alignment: " << alignment;
@@ -102,6 +104,8 @@ TVMExecutable::TVMExecutable(const std::string& name, const int num_inputs,
 
 bool TVMExecutable::Run(const std::vector<Parameter>& inputs,
                         const ExecutableRunOptions& run_options, bool block_until_done) {
+  std::lock_guard<std::mutex> lock(exec_lock);
+
   if (!is_inited_) {
     ctx_.device_type = XrtDev2DLDev(device_);
     ctx_.device_id = run_options.device_ordinal;
