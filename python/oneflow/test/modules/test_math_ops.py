@@ -309,43 +309,15 @@ class TestSquare(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
-def _test_pow(test_case, shape, device):
-    input = flow.Tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = flow.pow(input, 2.1)
-    np_out = np.power(input.numpy(), 2.1)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_pow_backward(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
-    )
-    y = flow.pow(x, 2.34)
-    z = y.sum()
-    z.backward()
-    np_grad = 2.34 * x.numpy() ** (2.34 - 1)
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    def test_pow(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_pow, _test_pow_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_flow_pow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random().to(float)
+        z = torch.pow(x, y)
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -600,7 +572,7 @@ class TestArccosh(flow.unittest.TestCase):
     @autotest()
     def test_arccosh_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(low=1, high=2).to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = torch.arccosh(x)
         return y
 

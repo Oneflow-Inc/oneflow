@@ -407,14 +407,14 @@ class TestTensor(flow.unittest.TestCase):
     @autotest()
     def test_arccosh_tensor_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(low=1, high=2).to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = x.arccosh()
         return y
 
     @autotest()
     def test_acosh_tensor_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(low=1, high=2).to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = x.acosh()
         return y
 
@@ -821,13 +821,13 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out_2.numpy(), np_out_2, 1e-05, 1e-05))
         test_case.assertTrue(np.allclose(of_out_3.numpy(), np_out_3, 1e-05, 1e-05))
 
-    def test_pow_tensor_function(test_case):
-        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = input.pow(2.1)
-        np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-        of_out_magic = input ** 2.1
-        test_case.assertTrue(np.allclose(of_out_magic.numpy(), np_out, 1e-05, 1e-05))
+    @autotest()
+    def test_pow_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random().to(float)
+        z = x.pow(y)
+        return z
 
     @autotest()
     def test_atanh_tensor_with_random_data(test_case):
