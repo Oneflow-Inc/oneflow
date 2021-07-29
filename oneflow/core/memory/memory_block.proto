@@ -14,6 +14,9 @@ message MemBlockProto {
   required int64 mem_size = 8;
   // NOTE(chengcheng): thrd id hint is used by packed separated block group order.
   optional int64 thrd_id_hint = 9 [default = -1];
+  // NOTE(chengcheng): mark this block memory is shared with EagerParameter.
+  optional string variable_op_name = 10 [default = ""];
+  optional bool is_separated_header = 11 [default = false];
 }
 
 message ChunkProto {
