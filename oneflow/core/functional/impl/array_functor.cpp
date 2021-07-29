@@ -53,6 +53,20 @@ class ConstantFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmptyFunctor {
+ public:
+  EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ZerosLikeFunctor : public UnaryFunctor {
  public:
   ZerosLikeFunctor() {
@@ -954,6 +968,7 @@ class TensorSetItemFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");

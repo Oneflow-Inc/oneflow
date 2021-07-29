@@ -267,6 +267,10 @@
   signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
   bind_python: True
 
+- name: "empty"
+  signature: "Tensor Empty(*, Shape shape, DataType dtype)"
+  bind_python: True
+
 - name: "zeros_like"
   signature: "Tensor ZerosLike(Tensor x)"
   bind_python: True

@@ -22,7 +22,6 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.framework.tensor import register_tensor_op
 
 
 def _test_ones(test_case, device, shape):
