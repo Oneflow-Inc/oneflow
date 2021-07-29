@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,5 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "oneflow/core/job/runtime_job_descs.h"
-
-namespace oneflow {
-
-RuntimeJobDescs::RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto) {
-  for (const auto& pair : proto) {
-    auto job_desc = std::make_unique<JobDesc>(pair.second, pair.first);
-    CHECK(job_id2job_desc_.emplace(pair.first, std::move(job_desc)).second);
-  }
-}
-
-const JobDesc& RuntimeJobDescs::job_desc(int64_t job_id) const {
-  auto it = job_id2job_desc_.find(job_id);
-  CHECK(it != job_id2job_desc_.end());
-  return *(it->second);
-}
-
-}  // namespace oneflow
+"""
+from oneflow.nn.utils.clip_grad import clip_grad_norm_

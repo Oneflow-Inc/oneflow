@@ -118,6 +118,17 @@ bool StringToBool(const std::string& str) {
          || CaseInsensitiveStringEquals(str, "y");
 }
 
+bool StringToInteger(const std::string& str, int64_t* value) {
+  char* end;
+  int64_t v = std::strtoll(str.data(), &end, 10);
+  if (end == str.data()) {
+    return false;
+  } else {
+    *value = v;
+    return true;
+  }
+}
+
 }  // namespace
 
 bool ParseBooleanFromEnv(const std::string& env_var, bool default_value) {
@@ -126,6 +137,26 @@ bool ParseBooleanFromEnv(const std::string& env_var, bool default_value) {
     return default_value;
   } else {
     return StringToBool(env_p);
+  }
+}
+
+int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value) {
+  const char* env_p = std::getenv(env_var.c_str());
+  if (env_p == nullptr) { return default_value; }
+  int64_t value;
+  if (StringToInteger(env_p, &value)) {
+    return value;
+  } else {
+    return default_value;
+  }
+}
+
+std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value) {
+  const char* env_p = std::getenv(env_var.c_str());
+  if (env_p == nullptr) {
+    return default_value;
+  } else {
+    return env_p;
   }
 }
 
