@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -85,5 +87,48 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+class EagerNcclReduceKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclReduceKernel() = default;
+  ~EagerNcclReduceKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->data_type(), out->data_type());
+    std::set<std::pair<int64_t, int64_t>> device_set;
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    int64_t root = ctx->Attr<int64_t>("root");
+    ParallelConf parallel_conf{};
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    const ParallelDesc parallel_desc(parallel_conf);
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+    ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    OF_NCCL_CHECK(ncclReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                             GetNcclDataType(in->data_type()), ncclSum, root, comm,
+                             ctx->device_ctx()->cuda_stream()));
+    int64_t cur_machine_id = -1;
+    int64_t cur_device_id = -1;
+    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&cur_machine_id, &cur_machine_id);
+    int64_t cur_parallel_id =
+        CHECK_JUST(parallel_desc.ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
+    if (cur_parallel_id != root) {
+      Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
+                               out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+    }
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_reduce")
+    .SetCreateFn<EagerNcclReduceKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 }  // namespace oneflow

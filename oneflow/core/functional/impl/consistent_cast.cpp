@@ -45,6 +45,7 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
       return tensor;
     } else if (sbp_parallel->has_broadcast_parallel()) {
       if (parallel_desc->device_tag() == "gpu") {
+        LOG(ERROR) << "tensor: " << (tensor->requires_grad() ? "True" : "False");
         TensorTuple input_list;
         input_list.emplace_back(tensor);
         int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));

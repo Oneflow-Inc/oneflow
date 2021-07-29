@@ -286,6 +286,10 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
                                           const std::string& name);
 
+Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root);
+Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root,
+                                       const std::string& name);
+
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp();
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name);
 

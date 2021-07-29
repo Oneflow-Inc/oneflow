@@ -886,6 +886,19 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
+Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root) {
+  return EagerNcclReduce(parallel_desc_str, root, UniqueOpName("eager_nccl_reduce"));
+}
+Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root,
+                                       const std::string& name) {
+  return one::OpBuilder("eager_nccl_reduce", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", parallel_desc_str)
+      .Attr<int64_t>("root", root)
+      .Build();
+}
+
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp() {
   return CastToConsistentOp(UniqueOpName("cast_to_consistent"));
 }
