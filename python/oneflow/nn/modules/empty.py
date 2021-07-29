@@ -33,12 +33,12 @@ def empty_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (an integer or tuple of integer values) – Defining the shape of the output tensor. Can be
-          a variable number of arguments or a collection like a list or tuple.
-        dtype (flow.dtype, optional) - The desired data type of returned tensor. Default: ``flow.float32``.
-        device (torch.device, optional) – The desired device of returned tensor. Default: if None, uses the
+        size (an integer or tuple of integer values or flow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
+        device (torch.device, optional): The desired device of returned tensor. Default: if None, uses the
           current device for the default tensor type
-        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
