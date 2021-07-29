@@ -950,6 +950,21 @@ class TensorSetItemFunctor {
   }
 };
 
+class CastLikeFunctor {
+ public:
+  CastLikeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("cast_like").Input("in").Input("dtype_like").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -998,6 +1013,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::CastLikeFunctor>("CastLike");
 };
 
 }  // namespace functional
