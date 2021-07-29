@@ -796,7 +796,7 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor().to(device)
         y = input.expm1()
         return y
-    
+
     @autotest()
     def test_floor_tensor_with_random_data(test_case):
         device = random_device()
@@ -835,14 +835,14 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(low=-0.5, high=0.49).to(device)
         y = x.atanh()
         return y
-    
+
     @autotest()
     def test_acos_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.49).to(device)
         y = x.acos()
         return y
-    
+
     @autotest()
     def test_acosh_tensor_with_random_data(test_case):
         device = random_device()
@@ -856,14 +856,14 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.atan()
         return y
-    
+
     @autotest()
     def test_arctan_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.arctan()
         return y
-    
+
     @autotest()
     def test_tan_tensor_with_random_data(test_case):
         device = random_device()
@@ -878,7 +878,7 @@ class TestTensor(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim1=3).to(device)
         z = x.atan2(y)
         return z
-    
+
     @autotest()
     def test_arctanh_tensor_with_random_data(test_case):
         device = random_device()

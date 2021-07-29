@@ -72,6 +72,7 @@ class TestVariance(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 @flow.unittest.skip_unless_1n1d()
 class Testsinh(flow.unittest.TestCase):
     @autotest()
@@ -80,8 +81,10 @@ class Testsinh(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.sinh(x)
         return y
+
+
 @flow.unittest.skip_unless_1n1d()
-class TestSin(flow.unittest.TestCase):    
+class TestSin(flow.unittest.TestCase):
     @autotest()
     def test_flow_sin_with_random_data(test_case):
         device = random_device()
@@ -309,6 +312,7 @@ class TestSquare(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
     @autotest()
@@ -336,6 +340,7 @@ class TestAsin(flow.unittest.TestCase):
         y = torch.arcsin(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestAsinh(flow.unittest.TestCase):
     @autotest()
@@ -352,6 +357,7 @@ class TestAsinh(flow.unittest.TestCase):
         y = torch.arcsinh(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestTan(flow.unittest.TestCase):
     @autotest()
@@ -360,6 +366,8 @@ class TestTan(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.tan(x)
         return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
     @autotest()
@@ -368,14 +376,14 @@ class TestAtan(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = torch.atan(x)
         return y
-    
+
     @autotest()
     def test_flow_arctan_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.arctan(x)
         return y
-    
+
     @autotest()
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
@@ -383,20 +391,21 @@ class TestAtan(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim1=3).to(device)
         z = torch.atan2(x, y)
         return z
-    
+
     @autotest()
     def test_flow_atanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.atanh(x)
         return y
-    
+
     @autotest()
     def test_flow_arctanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.arctanh(x)
         return y
+
 
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
     in_dims = input.shape
@@ -563,6 +572,8 @@ class TestTopk(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -576,6 +587,7 @@ class TestArccosh(flow.unittest.TestCase):
         y = torch.arccosh(x)
         return y
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -588,6 +600,7 @@ class TestAcosh(flow.unittest.TestCase):
         x = random_pytorch_tensor(2.0, 3.0).to(device)
         y = torch.acosh(x)
         return y
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
