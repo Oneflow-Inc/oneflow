@@ -34,7 +34,7 @@ class TestConv3DModule(flow.unittest.TestCase):
             dilation=random(1, 3) | nothing(),
             groups=random(1, 3) | nothing(),
             bias=random() | nothing(),
-            padding_mode=constant("zeros") | nothing(), 
+            padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
         m.to(device)
@@ -43,8 +43,6 @@ class TestConv3DModule(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
         return y
-
-    
 
 
 if __name__ == "__main__":
