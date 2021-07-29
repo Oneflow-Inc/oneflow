@@ -22,8 +22,8 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/device/hip_util.hip.h"
-#include "oneflow/core/rocm/elementwise_rocm.h"
-#include "oneflow/core/kernel/util/rocm_half_util.h"
+#include "oneflow/core/hip/elementwise.hip.h"
+#include "oneflow/core/kernel/util/hip_half_util.hip.h"
 
 
 namespace oneflow {
@@ -291,12 +291,12 @@ struct UnaryByScalarPtrFunctorFactory {
 template<template<typename> typename Op, typename T>
 void LaunchUnaryByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
   OF_HIP_CHECK(
-      (rocm::elementwise::Unary(UnaryByScalarFunctor<Op, T>(y), n, z, x, ctx->hip_stream())));
+      (hip::elementwise::Unary(UnaryByScalarFunctor<Op, T>(y), n, z, x, ctx->hip_stream())));
 }
 
 template<template<typename> typename Op, typename T>
 void LaunchUnaryByScalarPtr(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  OF_HIP_CHECK((rocm::elementwise::UnaryWithFactory(UnaryByScalarPtrFunctorFactory<Op, T>(y), n, z,
+  OF_HIP_CHECK((hip::elementwise::UnaryWithFactory(UnaryByScalarPtrFunctorFactory<Op, T>(y), n, z,
                                                      x, ctx->hip_stream())));
 }
 

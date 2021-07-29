@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/util/rocm_half_util.h"
-#include "oneflow/core/rocm/elementwise_rocm.h"
+#include "oneflow/core/kernel/util/hip_half_util.hip.h"
+#include "oneflow/core/hip/elementwise.hip.h"
 namespace oneflow {
 
 template<typename T>
@@ -147,7 +147,7 @@ class GpuGeluKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_HIP_CHECK((rocm::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
+    OF_HIP_CHECK((hip::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
                                             x->dptr<T>(), ctx->device_ctx()->hip_stream())));
   };
 
@@ -176,7 +176,7 @@ class GpuGeluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
     OF_HIP_CHECK(
-        (rocm::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(),
+        (hip::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), x->dptr<T>(),
                                    dy->dptr<T>(), ctx->device_ctx()->hip_stream())));
   };
 

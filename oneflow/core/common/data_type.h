@@ -32,7 +32,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// #if defined(WITH_CUDA)
 #if defined(WITH_CUDA) || defined(WITH_HIP)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 #ifdef WITH_HIP
-#include "oneflow/core/rocm/atomic_rocm.h"
+#include "oneflow/core/hip/atomic.hip.h"
 #endif
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -77,7 +77,7 @@ struct DeviceAdd {
 #ifdef __CUDA_ARCH__
     cuda::atomic::Add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
 #elif __HIP_DEVICE_COMPILE__
-    rocm::atomic::Add(y, *x);
+    hip::atomic::Add(y, *x);
 #else
     *y += *x;
 #endif

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/device/hip_util.hip.h"
-#include "oneflow/core/device/miopen_util.h"
+#include "oneflow/core/device/miopen_util.hip.h"
 
 namespace oneflow {
 

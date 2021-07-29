@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/batch_gather_kernel_util.h"
-#include "oneflow/core/rocm/atomic_rocm.h"
+#include "oneflow/core/hip/atomic.hip.h"
 #include <assert.h>
 namespace oneflow {
 
@@ -165,7 +165,7 @@ __global__ void BatchGatherBackwardGpu(const int64_t elem_cnt, const T* out_diff
                                        const int64_t indices_num, const int64_t instance_size,
                                        const int64_t gather_dim_size, T* in_diff) {
   HIP_1D_KERNEL_LOOP(i, elem_cnt) {
-    rocm::atomic::Add(
+    hip::atomic::Add(
         in_diff + GetInOffset<K>(i, indices, indices_num, instance_size, gather_dim_size),
         out_diff[i]);
   }

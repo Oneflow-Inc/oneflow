@@ -13,16 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_ROCM_HALF_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_ROCM_HALF_UTIL_H_
+#ifdef WITH_HIP
+
+#ifndef ONEFLOW_CORE_KERNEL_UTIL_HIP_HALF_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_UTIL_HIP_HALF_UTIL_H_
 
 #include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
-
-#define HALF_CHECK_FAILED                                             \
-  printf("half operations are only supported when CUDA_ARCH >= 530"); \
-  assert(false)
 
 __inline__ __device__ half hone() { return __float2half(1.0); }
 __inline__ __device__ half hzero() { return __float2half(0.0); }
@@ -40,4 +38,6 @@ __inline__ float16 half2float16(half x) {
 }
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_ROCM_HALF_UTIL_H_
+#endif  // ONEFLOW_CORE_KERNEL_UTIL_HIP_HALF_UTIL_H_
+
+#endif

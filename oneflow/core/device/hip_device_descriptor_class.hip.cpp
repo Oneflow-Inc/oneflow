@@ -61,10 +61,10 @@ class HipDeviceDescriptorClass : public DeviceDescriptorClass {
     std::vector<std::string> serialized_devices;
     serialized_devices.reserve(list->DeviceCount());
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
-      auto rocm_device = std::dynamic_pointer_cast<const HipDeviceDescriptor>(list->GetDevice(i));
-      CHECK(rocm_device);
+      auto hip_device = std::dynamic_pointer_cast<const HipDeviceDescriptor>(list->GetDevice(i));
+      CHECK(hip_device);
       std::string serialized_device;
-      rocm_device->Serialize(&serialized_device);
+      hip_device->Serialize(&serialized_device);
       serialized_devices.push_back(std::move(serialized_device));
     }
     nlohmann::json json_object;
@@ -86,11 +86,11 @@ class HipDeviceDescriptorClass : public DeviceDescriptorClass {
   void DumpDeviceDescriptorListSummary(const std::shared_ptr<const DeviceDescriptorList>& list,
                                        const std::string& path) const override {
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
-      auto rocm_device = std::dynamic_pointer_cast<const HipDeviceDescriptor>(list->GetDevice(i));
-      CHECK(rocm_device);
+      auto hip_device = std::dynamic_pointer_cast<const HipDeviceDescriptor>(list->GetDevice(i));
+      CHECK(hip_device);
       auto stream = TeePersistentLogStream::Create(JoinPath(path, std::to_string(i) + ".json"));
       std::string serialized;
-      rocm_device->Serialize(&serialized);
+      hip_device->Serialize(&serialized);
       stream << serialized;
     }
   }

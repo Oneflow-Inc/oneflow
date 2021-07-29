@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
 #include "oneflow/core/job/parallel_distribution_util.h"
-#include "oneflow/core/rocm/softmax_rocm.h"
+#include "oneflow/core/hip/softmax.hip.h"
 
 namespace oneflow {
 namespace user_op {
@@ -236,19 +236,19 @@ namespace {
 
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
-  using ComputeType = typename rocm::softmax::DefaultComputeType<T>::type;
-  rocm::softmax::DirectLoad<T, ComputeType> load(in, col);
-  rocm::softmax::DirectStore<ComputeType, T> store(prob, col);
-  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+  using ComputeType = typename hip::softmax::DefaultComputeType<T>::type;
+  hip::softmax::DirectLoad<T, ComputeType> load(in, col);
+  hip::softmax::DirectStore<ComputeType, T> store(prob, col);
+  hip::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
       ctx->hip_stream(), load, store, row, col);
 }
 
 template<>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
                  float16* prob) {
-  rocm::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
-  rocm::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
-  rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->hip_stream(), load,
+  hip::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
+  hip::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
+  hip::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->hip_stream(), load,
                                                                          store, row, col);
 }
 

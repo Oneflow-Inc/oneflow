@@ -65,18 +65,18 @@ AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
   }
 #endif
 #ifdef WITH_HIP
-  const auto rocm_device_list =
+  const auto hip_device_list =
       node_desc->GetDeviceDescriptorList(device::kHipDeviceDescriptorClassName);
-  CHECK(rocm_device_list);
+  CHECK(hip_device_list);
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-    if (i >= rocm_device_list->DeviceCount()) {
-      LOG(WARNING) << "Invalid ROCM device ordinal: rank " << rank << " ordinal " << i;
+    if (i >= hip_device_list->DeviceCount()) {
+      LOG(WARNING) << "Invalid HIP device ordinal: rank " << rank << " ordinal " << i;
       machine_mem_desc.add_zone_size(0);
     } else {
-      const auto rocm_device = std::dynamic_pointer_cast<const device::HipDeviceDescriptor>(
-          rocm_device_list->GetDevice(i));
-      CHECK(rocm_device);
-      machine_mem_desc.add_zone_size(rocm_device->GlobalMemorySizeBytes());
+      const auto hip_device = std::dynamic_pointer_cast<const device::HipDeviceDescriptor>(
+          hip_device_list->GetDevice(i));
+      CHECK(hip_device);
+      machine_mem_desc.add_zone_size(hip_device->GlobalMemorySizeBytes());
     }
   }
 #endif

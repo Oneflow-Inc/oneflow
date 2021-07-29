@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/fixed_vector.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/rocm/elementwise_rocm.h"
+#include "oneflow/core/hip/elementwise.hip.h"
 
 #if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
@@ -62,11 +62,11 @@ INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)
 
 namespace {
 
-constexpr int kBlockSize = rocm::elementwise::kBlockSize;
+constexpr int kBlockSize = hip::elementwise::kBlockSize;
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;
-  OF_HIP_CHECK(rocm::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
+  OF_HIP_CHECK(hip::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
   return num_blocks;
 }
 

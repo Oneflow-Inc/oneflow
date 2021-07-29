@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ROCM_ELEMENTWISE_H_
-#define ONEFLOW_CORE_ROCM_ELEMENTWISE_H_
-
 #ifdef WITH_HIP
+
+#ifndef ONEFLOW_CORE_HIP_ELEMENTWISE_H_
+#define ONEFLOW_CORE_HIP_ELEMENTWISE_H_
 
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
@@ -26,7 +26,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace rocm {
+namespace hip {
 
 namespace elementwise {
 
@@ -185,10 +185,10 @@ inline hipError_t Ternary(FunctorT functor, int64_t n, R* r, const A* a, const B
 
 }  // namespace elementwise
 
-}  // namespace rocm
+}  // namespace hip
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_HIP_ELEMENTWISE_H_
 
-#endif  // ONEFLOW_CORE_ROCM_ELEMENTWISE_H_
+#endif

@@ -14,16 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_ROCM_SOFTMAX_H_
-#define ONEFLOW_CORE_ROCM_SOFTMAX_H_
-
 #if defined(WITH_HIP)
+
+#ifndef ONEFLOW_CORE_HIP_SOFTMAX_H_
+#define ONEFLOW_CORE_HIP_SOFTMAX_H_
 
 #include <hipcub/hipcub.hpp>
 
 namespace oneflow {
 
-namespace rocm {
+namespace hip {
 
 namespace softmax {
 
@@ -42,7 +42,6 @@ struct MaxOp {
 template<template<typename> typename ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    // val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
     val = ReductionOp<T>()(val, __shfl_xor(val, mask));
   }
   return val;
@@ -1029,10 +1028,10 @@ inline void DispatchSoftmaxGrad(hipStream_t stream, LOAD_Y load_y, LOAD_DY load_
 
 }  // namespace softmax
 
-}  // namespace rocm
+}  // namespace hip
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_HIP_SOFTMAX_H_
 
-#endif  // ONEFLOW_CORE_ROCM_SOFTMAX_H_
+#endif

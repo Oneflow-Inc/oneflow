@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/square_sum_kernel_util.h"
-#include "oneflow/core/rocm/atomic_rocm.h"
+#include "oneflow/core/hip/atomic.hip.h"
 
 #if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
@@ -60,7 +60,7 @@ __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
     if (ONE_BLOCK) {
       *y = b_sum;
     } else {
-      rocm::atomic::Add(y, b_sum);
+      hip::atomic::Add(y, b_sum);
     }
   }
 }
@@ -83,7 +83,7 @@ __global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
   typedef hipcub::BlockReduce<T, kHipThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { rocm::atomic::Add(y, b_sum); }
+  if (threadIdx.x == 0) { hip::atomic::Add(y, b_sum); }
 }
 
 }  // namespace

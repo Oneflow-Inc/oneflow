@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ROCM_ATOMIC_H_
-#define ONEFLOW_CORE_ROCM_ATOMIC_H_
-
 #if defined(WITH_HIP)
+
+#ifndef ONEFLOW_CORE_HIP_ATOMIC_H_
+#define ONEFLOW_CORE_HIP_ATOMIC_H_
 
 #include <hip/hip_runtime.h>
 
 namespace oneflow {
 
-namespace rocm {
+namespace hip {
 
 namespace atomic {
 
@@ -80,10 +80,10 @@ __device__ __forceinline__ double Max(double* address, const double val) {
 
 }  // namespace atomic
 
-}  // namespace rocm
+}  // namespace hip
 
 }  // namespace oneflow
 
-#endif  // defined(WITH_HIP)
+#endif  // ONEFLOW_CORE_HIP_ATOMIC_H_
 
-#endif  // ONEFLOW_CORE_ROCM_ATOMIC_H_
+#endif  // defined(WITH_HIP)

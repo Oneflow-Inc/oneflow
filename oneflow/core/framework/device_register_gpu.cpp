@@ -91,7 +91,7 @@ REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDe
 #include <rccl.h>
 
 namespace {
-std::string GetRocmVersionString(int version) {
+std::string GetHipVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
 }  // namespace
@@ -99,10 +99,10 @@ std::string GetRocmVersionString(int version) {
 namespace oneflow {
 void GpuDumpVersionInfo() {
   {
-    int rocm_runtime_version;
-    hipError_t err = hipRuntimeGetVersion(&rocm_runtime_version);
+    int hip_runtime_version;
+    hipError_t err = hipRuntimeGetVersion(&hip_runtime_version);
     if (err == hipSuccess) {
-      LOG(INFO) << "ROCM runtime version: " << GetRocmVersionString(rocm_runtime_version);
+      LOG(INFO) << "HIP runtime version: " << GetHipVersionString(hip_runtime_version);
     } else {
       LOG(ERROR) << "Failed to get cuda runtime version: " << hipGetErrorString(err);
     }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/where_kernel_util.h"
-#include "oneflow/core/rocm/elementwise_rocm.h"
+#include "oneflow/core/hip/elementwise.hip.h"
 
 namespace oneflow {
 
@@ -46,7 +46,7 @@ template<typename T, typename CondT>
 struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
   static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out) {
-    rocm::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
+    hip::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
                                ctx->hip_stream());
   }
 };

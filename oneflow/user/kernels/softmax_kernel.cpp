@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
-#include "oneflow/core/rocm/softmax_rocm.h"
+#include "oneflow/core/hip/softmax.hip.h"
 
 namespace oneflow {
 
@@ -127,10 +127,10 @@ class SoftmaxGpuKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
-    using ComputeType = typename rocm::softmax::DefaultComputeType<T>::type;
-    rocm::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), cols);
-    rocm::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
-    rocm::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+    using ComputeType = typename hip::softmax::DefaultComputeType<T>::type;
+    hip::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), cols);
+    hip::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
+    hip::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->device_ctx()->hip_stream(), load, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -159,11 +159,11 @@ class SoftmaxGpuGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t cols = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t rows = y->shape().elem_cnt() / cols;
-    using ComputeType = typename rocm::softmax::DefaultComputeType<T>::type;
-    rocm::softmax::DirectLoad<T, ComputeType> load_y(y->dptr<T>(), cols);
-    rocm::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
-    rocm::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
-    rocm::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
+    using ComputeType = typename hip::softmax::DefaultComputeType<T>::type;
+    hip::softmax::DirectLoad<T, ComputeType> load_y(y->dptr<T>(), cols);
+    hip::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
+    hip::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
+    hip::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
                                        ComputeType>(ctx->device_ctx()->hip_stream(), load_y,
                                                     load_dy, store, rows, cols);
   }

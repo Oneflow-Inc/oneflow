@@ -15,9 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 
-#include "oneflow/core/device/miopen_util.h"
+#include "oneflow/core/device/miopen_util.hip.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/rocm/atomic_rocm.h"
+#include "oneflow/core/hip/atomic.hip.h"
 
 #if defined(WITH_HIP)
 #include <hipcub/hipcub.hpp>
@@ -390,15 +390,15 @@ __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T
     const I elem_id = i % instance_size;
     T dy_val = dy[i];
     T normalized_val = normalized[i];
-    rocm::atomic::Add(&gamma_diff_sum_buf[elem_id], dy_val * normalized_val);
-    rocm::atomic::Add(&beta_diff_sum_buf[elem_id], dy_val);
+    hip::atomic::Add(&gamma_diff_sum_buf[elem_id], dy_val * normalized_val);
+    hip::atomic::Add(&beta_diff_sum_buf[elem_id], dy_val);
     T gamma_val = gamma[elem_id];
     normalized_diff[i] = gamma_val * dy_val;
   }
   __syncthreads();
   for (I elem_id = tid; elem_id < instance_size; elem_id += blockDim.x) {
-    rocm::atomic::Add(gamma_diff + elem_id, gamma_diff_sum_buf[elem_id]);
-    rocm::atomic::Add(beta_diff + elem_id, beta_diff_sum_buf[elem_id]);
+    hip::atomic::Add(gamma_diff + elem_id, gamma_diff_sum_buf[elem_id]);
+    hip::atomic::Add(beta_diff + elem_id, beta_diff_sum_buf[elem_id]);
   }
 }
 
@@ -420,9 +420,9 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
     const I elem_id = i % instance_size;
     half dy_val = dy[i];
     half normalized_val = normalized[i];
-    rocm::atomic::Add(&gamma_diff_sum_buf[elem_id],
+    hip::atomic::Add(&gamma_diff_sum_buf[elem_id],
                       __half2float(dy_val) * __half2float(normalized_val));
-    rocm::atomic::Add(&beta_diff_sum_buf[elem_id], __half2float(dy_val));
+    hip::atomic::Add(&beta_diff_sum_buf[elem_id], __half2float(dy_val));
     half gamma_val = gamma[elem_id];
     normalized_diff[i] = __hmul(gamma_val, dy_val);
   }

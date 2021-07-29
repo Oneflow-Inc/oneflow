@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/hip_util.hip.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/kernel/util/rocm_half_util.h"
+#include "oneflow/core/kernel/util/hip_half_util.hip.h"
 
 namespace oneflow {
 
