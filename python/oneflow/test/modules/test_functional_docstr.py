@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import inspect
 import unittest
 from collections import OrderedDict
@@ -30,20 +30,12 @@ def _is_oneflow_functional(object):
 
 
 def _run_functional_doctest(
-    test_case,
-    globs=None,
-    verbose=None,
-    optionflags=0,
-    raise_on_error=True,
-    module=flow.F,
+    test_case, globs=None, optionflags=0, module=flow.F,
 ):
     import doctest
 
     parser = doctest.DocTestParser()
-    if raise_on_error:
-        runner = doctest.DebugRunner(verbose=verbose, optionflags=optionflags)
-    else:
-        runner = doctest.DocTestRunner(verbose=verbose, optionflags=optionflags)
+    runner = doctest.DebugRunner(verbose=True, optionflags=optionflags)
     r = inspect.getmembers(flow.F, _is_oneflow_functional)
     for (name, fun) in r:
         if fun.__doc__ is not None:
@@ -52,15 +44,14 @@ def _run_functional_doctest(
             runner.run(test)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()
         arg_dict["module"] = [flow.F]
         for arg in GenArgList(arg_dict):
-            _run_functional_doctest(
-                test_case, raise_on_error=True, verbose=None, module=arg[0]
-            )
+            _run_functional_doctest(test_case, module=arg[0])
 
 
 if __name__ == "__main__":
