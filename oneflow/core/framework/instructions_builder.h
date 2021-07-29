@@ -259,6 +259,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                 const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
                                 const std::string& instr_type_name);
 
+    // Maybe<void> DTRLocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    //                             const one::DTREagerBlobObjectListPtr& input_eager_blob_objects,
+    //                             const one::DTREagerBlobObjectListPtr& output_eager_blob_objects,
+    //                             const one::OpExprInterpContext& ctx,
+    //                             const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    //                             const std::string& instr_type_name);
+
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
                                    const std::function<void()>& callback);

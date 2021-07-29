@@ -38,7 +38,7 @@ class TensorBuffer {
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
 };
 
-class EagerBlobObject final : public BlobObject {
+class EagerBlobObject : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -76,13 +76,30 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
- private:
+ protected:
   std::unique_ptr<Blob> blob_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
   Maybe<VmLocalDepObject> compute_local_dep_object_;
+};
+
+class DTREagerBlobObject final : public EagerBlobObject {
+ public:
+  DTREagerBlobObject(const DTREagerBlobObject&) = delete;
+  DTREagerBlobObject(DTREagerBlobObject&&) = delete;
+  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
+      : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
+  DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                  const std::shared_ptr<const ParallelDesc>& parallel_desc) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, parallel_desc) {}
+  ~DTREagerBlobObject() override {
+    non_pod_initer_.reset();
+    tensor_buffer_.reset();
+    blob_.reset();
+  }
 };
 
 }  // namespace vm

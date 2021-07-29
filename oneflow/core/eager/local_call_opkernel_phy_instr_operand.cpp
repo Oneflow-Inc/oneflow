@@ -19,53 +19,53 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
+// void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
+//     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+//     const {
+//   const auto& input_list = inputs();
+//   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
+//     const auto& input = input_list->at(index);
+//     DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
+//                         ->mut_local_dep_object()
+//                         ->mut_mirrored_object());
+//   }
+// }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
-  // same device.
-  auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+// void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
+//     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+//     const {
+//   // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
+//   // same device.
+//   auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
+//   DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
 
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
+//   const auto& input_list = inputs();
+//   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
+//     const auto& input = input_list->at(index);
+//     DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
+//                         ->mut_local_dep_object()
+//                         ->mut_mirrored_object());
+//   }
+//   const auto& output_list = outputs();
+//   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
+//     const auto& output = output_list->at(index);
+//     DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
+//                         ->mut_local_dep_object()
+//                         ->mut_mirrored_object());
+//   }
+// }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
+// void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
+//     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+//     const {
+//   const auto& output_list = outputs();
+//   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
+//     const auto& output = output_list->at(index);
+//     DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
+//                         ->mut_local_dep_object()
+//                         ->mut_mirrored_object());
+//   }
+// }
 
 }  // namespace vm
 }  // namespace oneflow

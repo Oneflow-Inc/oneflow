@@ -672,13 +672,30 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
-  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
+  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand<one::EagerBlobObjectListPtr>>(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
+
+// Maybe<void> InstructionsBuilder::DTRLocalCallOpKernel(
+//     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+//     const one::DTREagerBlobObjectListPtr& input_eager_blob_objects,
+//     const one::DTREagerBlobObjectListPtr& output_eager_blob_objects,
+//     const one::OpExprInterpContext& ctx,
+//     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+//     const std::string& instr_type_name) {
+//   ObjectMsgPtr<vm::InstructionMsg> instruction =
+//       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
+//   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand<one::DTREagerBlobObjectListPtr>>(
+//       opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
+//   *instruction->mut_parallel_desc() = parallel_desc_sym;
+//   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
+//   instruction_list_->EmplaceBack(std::move(instruction));
+//   return Maybe<void>::Ok();
+// }
 
 Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
