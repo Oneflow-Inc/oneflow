@@ -47,7 +47,7 @@ namespace one {
 namespace {
 
 const Symbol<DType> GetTensorDType(const Tensor& tensor) {
-  return SymbolOf(*(DType::Get(tensor.dtype()).GetOrThrow()));
+  return DType::DType4DataType(tensor.dtype());
 }
 
 std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shape,
@@ -187,8 +187,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
           .GetPtrOrThrow();
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
-    desired_dtype = SymbolOf(*DType::Float());
-    // desired_dtype = SymbolOf(*(DType::Get(DataType::kFloat).GetOrThrow()));
+    desired_dtype = DType::DType4DataType(DataType::kFloat);
   }
   if (!desired_dtype) {
     autograd::NoGradGuard no_grad;
@@ -228,7 +227,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(SymbolOf(*DType::Get(tensor_buffer->data_type()).GetOrThrow()));
+    dtypes.push_back(DType::DType4DataType(DataType::kTensorBuffer));
   }
   return std::make_tuple(shapes, dtypes);
 }
@@ -308,7 +307,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  return NewTensor(args, kwargs, SymbolOf(*DType::Float()), true).GetPtrOrThrow();
+  return NewTensor(args, kwargs, DType::DType4DataType(DataType::kFloat), true).GetPtrOrThrow();
 }
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
@@ -330,7 +329,7 @@ using namespace pybind11::literals;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("tensor", [](py::args args, py::kwargs kwargs) -> std::shared_ptr<Tensor> {
-    return NewTensor(args, kwargs, SymbolOf(*DType::Float()), false).GetPtrOrThrow();
+    return NewTensor(args, kwargs, DType::DType4DataType(DataType::kFloat), false).GetPtrOrThrow();
   });
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))

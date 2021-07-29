@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -51,6 +52,7 @@ class DType final {
   Maybe<size_t> bytes() const;
 
   static Maybe<const std::shared_ptr<const DType>&> Get(DataType);
+  static Symbol<DType> DType4DataType(DataType data_type); 
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
   static const std::shared_ptr<const DType>& data_type();

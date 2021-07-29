@@ -17,7 +17,6 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/common/symbol.h"
 namespace py = pybind11;
 
 namespace oneflow {
