@@ -112,8 +112,7 @@ def _compare_bceloss_with_np(
         np_out_bceloss_dict["np_bce_loss_mean"],
     )
     assert np.allclose(
-        of_out_bceloss_dict["of_bce_loss_sum"],
-        np_out_bceloss_dict["np_bce_loss_sum"],
+        of_out_bceloss_dict["of_bce_loss_sum"], np_out_bceloss_dict["np_bce_loss_sum"],
     )
 
 
