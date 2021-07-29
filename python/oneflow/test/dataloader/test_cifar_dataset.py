@@ -59,7 +59,10 @@ class Net(nn.Module):
 
 
 def test(test_case):
-    device = flow.device("cuda")
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+        device = flow.device("cpu")
+    else:
+        device = flow.device("cuda")
     net = Net()
     net.to(device)
 
@@ -73,7 +76,7 @@ def test(test_case):
 
     train_epoch = 1
     batch_size = 4
-    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/cifar10"
+    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR", ".") + "/data-test/cifar10"
 
     trainset = datasets.CIFAR10(
         root=data_dir,
