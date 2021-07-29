@@ -948,6 +948,15 @@ class TestMinimum(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
         return torch.minimum(x, y)
 
+    @autotest()
+    def test_flow_broadcast_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        return torch.minimum(x, y)
+
 
 def _test_elementwise_maximum(test_case, device):
     arg_dict = OrderedDict()
@@ -1014,6 +1023,15 @@ class TestMaximum(flow.unittest.TestCase):
         k2 = random(2, 6)
         x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
         y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.maximum(x, y)
+
+    @autotest()
+    def test_flow_broadcast_maximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
 
 
