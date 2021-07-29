@@ -51,13 +51,18 @@ class DType final {
   const std::string& name() const;
   Maybe<size_t> bytes() const;
 
-  static Maybe<const std::shared_ptr<const DType>&> Get(DataType);
+  static Maybe<const Symbol<DType>&> Get(DataType);
   static Symbol<DType> DType4DataType(DataType data_type); 
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
-  static const Symbol<DType>& data_type();
+  static const Symbol<DType> data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DECLARE_GET_DATA_TYPE_FUNCTION
+
+// #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
+//   static const std::shared_ptr<const DType>& data_type();
+//   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
+// #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
  private:
   explicit DType(DataType data_type) : data_type_(data_type) {}

@@ -77,8 +77,8 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
 
 }  // namespace
 
-Maybe<const std::shared_ptr<const DType>&> DType::Get(DataType data_type) {
-  static HashMap<DataType, std::shared_ptr<const DType>> data_type2dtype{
+Maybe<const Symbol<DType>&> DType::Get(DataType data_type) {
+  static HashMap<DataType, const Symbol<DType>> data_type2dtype{
 #define MAKE_ENTRY(data_type) {OF_PP_CAT(DataType::k, data_type), data_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DTYPE_SEQ)
 #undef MAKE_ENTRY
@@ -114,11 +114,11 @@ Symbol<DType> DType::DType4DataType(DataType data_type) {
   return iter->second;
 }
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)  
-  const Symbol<DType> DType::data_type() {
-    return DType4DataType(OF_PP_CAT(DataType::k, data_type))                                        \
-  }
-OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)           \
+  const Symbol<DType> DType::data_type() {                       \
+    return DType::DType4DataType(OF_PP_CAT(DataType::k, data_type));     \
+  } \
+OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ) 
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
 }  // namespace oneflow

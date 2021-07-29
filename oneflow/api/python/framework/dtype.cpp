@@ -49,6 +49,23 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("uint8") = DType::UInt8();
   m.attr("record") = DType::OFRecord();
   m.attr("tensor_buffer") = DType::TensorBuffer();
+
+  // m.attr("char") = SymbolOf(*DType::Char());
+  // m.attr("float16") = SymbolOf(*DType::Float16());
+  // m.attr("float") = SymbolOf(*DType::Float());
+
+  // m.attr("float32") = SymbolOf(*DType::Float());
+  // m.attr("double") = SymbolOf(*DType::Double());
+  // m.attr("float64") = SymbolOf(*DType::Double());
+
+  // m.attr("int8") = SymbolOf(*DType::Int8());
+  // m.attr("int32") = SymbolOf(*DType::Int32());
+  // m.attr("int64") = SymbolOf(*DType::Int64());
+
+  // m.attr("uint8") = SymbolOf(*DType::UInt8());
+  // m.attr("record") = SymbolOf(*DType::OFRecord());
+  // m.attr("tensor_buffer") = SymbolOf(*DType::TensorBuffer());
+
 }
 
 }  // namespace oneflow
