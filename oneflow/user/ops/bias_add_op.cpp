@@ -23,13 +23,13 @@ REGISTER_USER_OP("bias_add")
     .Output("out")
     .Attr<int32_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
-      const auto* b_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+      const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
       const auto bias_add_axis = ctx->Attr<int32_t>("axis");
-      CHECK_EQ_OR_RETURN(b_tensor_desc->shape().NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
       CHECK_GE_OR_RETURN(bias_add_axis, 0);
-      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
-      CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
+      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
       *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
       return Maybe<void>::Ok();
@@ -58,7 +58,8 @@ REGISTER_USER_OP("bias_add")
     });
 
 REGISTER_USER_OP_GRAD("bias_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "a", 0);
       }
@@ -79,6 +80,7 @@ REGISTER_USER_OP_GRAD("bias_add")
         AddOp(grad_op);
         op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

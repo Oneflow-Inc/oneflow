@@ -23,29 +23,30 @@ REGISTER_USER_OP("gather")
     .Output("out")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
       const int64_t axis = ctx->Attr<int64_t>("axis");
-      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
+      const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
+      CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
       DimVector dim_vec;
-      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
-                     in->shape().dim_vec().cbegin() + axis);
-      dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
-                     indices->shape().dim_vec().cend());
-      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
-                     in->shape().dim_vec().end());
+      dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(),
+                     in.shape().dim_vec().cbegin() + axis);
+      dim_vec.insert(dim_vec.end(), indices.shape().dim_vec().cbegin(),
+                     indices.shape().dim_vec().cend());
+      dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + axis + 1,
+                     in.shape().dim_vec().end());
       *out->mut_shape() = Shape(dim_vec);
-      out->set_is_dynamic(indices->is_dynamic() || in->is_dynamic());
+      out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t in_num_axes =
@@ -80,16 +81,16 @@ REGISTER_USER_OP("gather")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
-      *out->mut_data_type() = in->data_type();
+      CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
+      *out->mut_data_type() = in.data_type();
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
+                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
   bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
   if (need_grad_in) {
     user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
@@ -104,6 +105,7 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
     AddOp(in_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow
