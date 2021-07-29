@@ -62,8 +62,7 @@ def eye_op(
     device: Union[str, flow.device] = "cpu",
     requires_grad: bool = False,
 ):
-    """
-    This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
+    """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
     .. math::
 
@@ -74,7 +73,6 @@ def eye_op(
     Keyword args:
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
-
     
     Returns:
         oneflow.Tensor: The result Blob with ones on the diagonal and zeros elsewhere.
@@ -84,10 +82,11 @@ def eye_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-
         >>> out = flow.eye(3, 3)
         >>> out
-        tensor([[1., 0., 0.],[0., 1., 0.],[0., 0., 1.]], dtype=oneflow.float32)
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], dtype=oneflow.float32)
     
     """
     if m is None:
