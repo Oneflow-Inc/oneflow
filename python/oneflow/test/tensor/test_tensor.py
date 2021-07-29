@@ -880,13 +880,6 @@ class TestTensor(flow.unittest.TestCase):
         return z
     
     @autotest()
-    def test_atanh_tensor_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
-        y = x.atanh()
-        return y
-    
-    @autotest()
     def test_arctanh_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
