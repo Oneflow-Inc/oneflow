@@ -109,5 +109,6 @@ from oneflow.ops.domain_ops import (
     api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,
 )
 from oneflow.ops.loss_ops import ctc_greedy_decoder
+from oneflow.nn import utils
 
 from . import functional
