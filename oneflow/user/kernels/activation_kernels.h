@@ -173,7 +173,7 @@ struct SeluGradFunctor {
 template<typename T>
 struct SoftSignFunctor {
   OF_DEVICE_FUNC explicit SoftSignFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const { return x / (1 + abs(x)); }
+  OF_DEVICE_FUNC T operator()(T x) const { return x / (static_cast<T>(1) + abs(x)); }
 };
 
 template<typename T>
