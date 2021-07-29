@@ -64,8 +64,6 @@ def eye_op(
 ):
     """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
-    .. math::
-
     Args:
         n (int): the number of rows.
         m (Optional[int], optional): the number of colums with default being n. Defaults to None.
