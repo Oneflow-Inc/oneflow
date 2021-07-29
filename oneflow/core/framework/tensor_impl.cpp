@@ -148,11 +148,13 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
   CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
-        this, [&synced, &shape_ptr](uint64_t of_blob_ptr) {
+        this,
+        [&synced, &shape_ptr](uint64_t of_blob_ptr) {
           const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
           synced = true;
-        }, "const"));
+        },
+        "const"));
     return Maybe<void>::Ok();
   }));
 

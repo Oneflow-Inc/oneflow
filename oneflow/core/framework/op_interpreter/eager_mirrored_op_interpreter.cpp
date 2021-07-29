@@ -58,10 +58,10 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
   struct_vec.resize(size);
   ptr_vec.resize(size);
   if (size == 1) {
-    ptr_vec.at(0) = &struct_vec.at(0); // unfold loop
+    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
   } else if (size == 2) {
-    ptr_vec.at(0) = &struct_vec.at(0); // unfold loop
-    ptr_vec.at(1) = &struct_vec.at(1); // unfold loop
+    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
+    ptr_vec.at(1) = &struct_vec.at(1);  // unfold loop
   } else {
     for (int i = 0; i < size; ++i) { ptr_vec.at(i) = &struct_vec.at(i); }
   }
@@ -88,7 +88,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl = 
+      const auto& tensor_impl =
           std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
       outputs->at(i) = tensor_impl;
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
