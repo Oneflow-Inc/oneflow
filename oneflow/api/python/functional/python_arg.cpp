@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/dtype.h"
@@ -119,7 +120,6 @@ template<>
 Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
   const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
   return std::make_shared<AttrMap>(*attrs);
-  ;
 }
 
 template<>
@@ -169,34 +169,110 @@ Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
 }
 
 template<>
+Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<ParallelDesc>>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(Borrow()));
+}
+
+template<>
+Maybe<std::vector<Symbol<cfg::SbpParallel>>>
+PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  const auto& v =
+      JUST(detail::cast<std::vector<std::shared_ptr<Symbol<cfg::SbpParallel>>>>(Borrow()));
+  auto sbp_list = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(v->size());
+  for (int i = 0; i < v->size(); ++i) { sbp_list->at(i) = *(v->at(i)); }
+  return sbp_list;
+}
+
+template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   auto tensor_index = std::make_shared<TensorIndex>();
-  if (object_ == Py_Ellipsis) {
-    detail::IndexItem index(detail::EllipsisIndex{});
-    tensor_index->emplace_back(index);
-  } else if (PySlice_Check(object_)) {
-    Py_ssize_t start, end, step;
-    JUST(detail::PySliceUnpack(object_, &start, &end, &step));
-    detail::IndexItem index(start, end, step);
-    tensor_index->emplace_back(index);
-  } else if (PyLong_Check(object_) && object_ != Py_False && object_ != Py_True) {
-    detail::IndexItem index(static_cast<int64_t>(PyLong_AsLongLong(object_)));
-    tensor_index->emplace_back(index);
-  } else if (object_ == Py_False || object_ == Py_True) {
-    detail::IndexItem index(object_ == Py_True);
-    tensor_index->emplace_back(index);
-  } else if (object_ == Py_None) {
-    detail::IndexItem index(detail::NoneIndex{});
-    tensor_index->emplace_back(index);
+  // Obvious single-entry cases.
+  if (PySlice_Check(object_)         // NOLINT
+      || PyLong_Check(object_)       // NOLINT
+      || object_ == Py_Ellipsis      // NOLINT
+      || object_ == Py_None          // NOLINT
+      || PyTensorCheck(object_)      // NOLINT
+      || !PySequence_Check(object_)  // NOLINT
+      || PyUnicode_Check(object_)) {
+    tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
+    return tensor_index;
+  }
+  PyObject* tup = NULL;
+  Py_ssize_t n = 0;
+  if (PyTuple_Check(object_)) {
+    tup = PySequence_Tuple(object_);
+    n = PySequence_Size(tup);
   } else {
-    PyObject* tuple = PySequence_Tuple(object_);
-    size_t size = PyTuple_GET_SIZE(tuple);
-    tensor_index->resize(size);
-    for (size_t i = 0; i < size; ++i) {
-      PyObject* obj = PyTuple_GET_ITEM(tuple, i);
-      tensor_index->at(i) = *JUST(detail::UnpackIndexItem(obj));
+    // The follow comments are from numpy:
+    // https://github.com/numpy/numpy/blob/main/numpy/core/src/multiarray/mapping.c#L266
+    /*
+     * At this point, we're left with a non-tuple, non-array, sequence:
+     * typically, a list. We use some somewhat-arbitrary heuristics from here
+     * onwards to decided whether to treat that list as a single index, or a
+     * list of indices.
+     */
+    n = PySequence_Size(object_);
+    // Negative size indicates a Python error in the PySequence_Size call.
+    if (n < 0) {
+      PyErr_Clear();
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
+      return tensor_index;
+    }
+    // The follow comments are from numpy:
+    // https://github.com/numpy/numpy/blob/main/numpy/core/src/multiarray/mapping.c#L280
+    /*
+     * Backwards compatibility only takes effect for short sequences - otherwise
+     * we treat it like any other scalar.
+     *
+     * Sequences < NPY_MAXDIMS with any slice objects
+     * or newaxis, Ellipsis or other arrays or sequences
+     * embedded, are considered equivalent to an indexing
+     * tuple. (`a[[[1,2], [3,4]]] == a[[1,2], [3,4]]`)
+     */
+    if (n >= /*NPY_MAXDIMS=*/32) {
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
+      return tensor_index;
+    }
+    // Check whether we should unpack the index like a tuple.
+    bool commit_to_unpack = false;
+    for (Py_ssize_t i = 0; i < n; ++i) {
+      PyObject* item = PySequence_GetItem(object_, i);
+      if (commit_to_unpack) {
+        CHECK_OR_RETURN(item) << "Sequence index is required.";
+      } else {
+        if (!item) {
+          PyErr_Clear();
+          break;
+        }
+        if (PySequence_Check(item)  // NOLINT
+            || PySlice_Check(item)  // NOLINT
+            || PyTensorCheck(item)  // NOLINT
+            || item == Py_Ellipsis || item == Py_None) {
+          commit_to_unpack = true;
+        }
+      }
+      Py_DECREF(item);
+    }
+    if (commit_to_unpack) {
+      tup = PySequence_Tuple(object_);
+    } else {
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(object_)));
+      return tensor_index;
     }
   }
+
+  tensor_index->resize(n);
+  for (Py_ssize_t i = 0; i < n; ++i) {
+    PyObject* item = PySequence_GetItem(tup, i);
+    tensor_index->at(i) = *JUST(detail::UnpackIndexItem(item));
+    Py_DECREF(item);
+  }
+  Py_DECREF(tup);
   return tensor_index;
 }
 

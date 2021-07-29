@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/functional/tensor_index.h"
 
 namespace py = pybind11;
 
@@ -35,6 +34,15 @@ namespace one {
 namespace functional {
 
 namespace detail {
+
+struct PyObjectPtrDeleter {
+  inline void operator()(PyObject* obj) {
+    if (obj) { Py_DECREF(obj); }
+    obj = NULL;
+  }
+};
+
+using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
 #define ARITHMETIC_TYPE_SEQ      \
   OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
@@ -132,12 +140,10 @@ template<typename T>
   return values;
 }
 
-Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
-const char* PyStringAsString(PyObject* object);
-
-Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object);
-
 }  // namespace detail
+
+bool PyTensorCheck(PyObject* object);
+const char* PyStringAsString(PyObject* object);
 
 }  // namespace functional
 }  // namespace one
