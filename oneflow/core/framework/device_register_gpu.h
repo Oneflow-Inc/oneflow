@@ -24,31 +24,25 @@ limitations under the License.
 #include <hip/hip_fp16.h>
 #endif
 
-namespace oneflow {
 #ifdef WITH_CUDA
 #include <cuda_fp16.h>
-
-void GpuDumpVersionInfo();
-
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<half> : std::true_type {};
-
-#endif  // WITH_CUDA
-
-#ifdef WITH_HIP
-void GpuDumpVersionInfo();
-
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<half> : std::true_type {};
-
 #endif
 
 
+#ifdef WITH_HIP
+
+namespace oneflow {
+
+void GpuDumpVersionInfo();
+
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
 }  // namespace oneflow
+
+#endif
+
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_

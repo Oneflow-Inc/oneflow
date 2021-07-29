@@ -122,6 +122,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
+    // TODO(Liang Depeng): will raise error in runtime
     // void* dptr = blob->mut_dptr();
     // CHECK_NOTNULL(dptr);
     // size_t size = blob->AlignedByteSizeOfBlobBody();
@@ -152,6 +153,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
+    // TODO(Liang Depeng): will raise error in runtime
     // CHECK_NOTNULL(dptr);
     // hipError_t cuda_error = hipHostUnregister(dptr);
     // if (cuda_error == hipErrorHostMemoryNotRegistered) {

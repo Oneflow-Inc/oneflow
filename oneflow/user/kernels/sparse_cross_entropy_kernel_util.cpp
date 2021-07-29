@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util_rocm.h"
+#include "oneflow/core/kernel/kernel_util.hip.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {

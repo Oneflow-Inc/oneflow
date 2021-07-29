@@ -67,7 +67,7 @@ Maybe<Generator> DefaultCPUGenerator() {
   return default_cpu_generator;
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 Maybe<Generator> DefaultCUDAGenerator(int device_index) {
   static std::vector<std::shared_ptr<Generator>> default_cuda_generator;
   static std::once_flag init_flags;
@@ -80,32 +80,16 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
           CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(i)));
     }
   });
+#if defined(WITH_CUDA)
   if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
-  CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
-      << "Invalid device index " << device_index;
-  return default_cuda_generator.at(device_index);
-}
-#endif  // WITH_CUDA
-
-#ifdef WITH_HIP
-Maybe<Generator> DefaultCUDAGenerator(int device_index) {
-  static std::vector<std::shared_ptr<Generator>> default_cuda_generator;
-  static std::once_flag init_flags;
-  static int device_count = 0;
-  std::call_once(init_flags, [&]() {
-    device_count = detail::GetCudaDeviceCount();
-    default_cuda_generator.resize(device_count);
-    for (int i = 0; i < device_count; ++i) {
-      default_cuda_generator[i] = std::make_shared<Generator>(
-          CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(i)));
-    }
-  });
+#elif defined(WITH_HIP)
   if (device_index == -1) { OF_HIP_CHECK(hipGetDevice(&device_index)); }
+#endif
   CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
       << "Invalid device index " << device_index;
   return default_cuda_generator.at(device_index);
 }
-#endif  // WITH_HIP
+#endif  // defined(WITH_CUDA) || defined(WITH_HIP)
 
 Maybe<Generator> MakeAutoGenerator() {
   return std::make_shared<Generator>(
@@ -117,25 +101,19 @@ Maybe<Generator> MakeCPUGenerator() {
       std::make_shared<CPUGeneratorImpl>(detail::GetNonDeterministicRandom()));
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 Maybe<Generator> MakeCUDAGenerator(int device_index) {
+#if defined(WITH_CUDA)
   if (device_index == -1) { OF_CUDA_CHECK(cudaGetDevice(&device_index)); }
-  CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
-      << "Invalid device index " << device_index;
-  return std::make_shared<Generator>(
-      std::make_shared<CUDAGeneratorImpl>(detail::GetNonDeterministicRandom(), device_index));
-}
-#endif  // WITH_CUDA
-
-#ifdef WITH_HIP
-Maybe<Generator> MakeCUDAGenerator(int device_index) {
+#elif defined(WITH_HIP)
   if (device_index == -1) { OF_HIP_CHECK(hipGetDevice(&device_index)); }
+#endif
   CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
       << "Invalid device index " << device_index;
   return std::make_shared<Generator>(
       std::make_shared<CUDAGeneratorImpl>(detail::GetNonDeterministicRandom(), device_index));
 }
-#endif  // WITH_HIP
+#endif  // defined(WITH_CUDA) || defined(WITH_HIP)
 
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {

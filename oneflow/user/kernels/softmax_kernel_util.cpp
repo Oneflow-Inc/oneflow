@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/softmax_kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/kernel/kernel_util_rocm.h"
+#include "oneflow/core/kernel/kernel_util.hip.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
 
 namespace oneflow {

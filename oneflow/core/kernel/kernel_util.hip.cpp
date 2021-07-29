@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util_rocm.h"
+#include "oneflow/core/kernel/kernel_util.hip.h"
 
 namespace oneflow {
 
@@ -490,10 +490,6 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                         const int m, const int n, const int k, const T alpha, const T* a,
                         const int lda, const T* b, const int ldb, const T beta, T* c,
                         const int ldc) {
-//   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-//   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-//   cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b, ldb,
-//                  a, lda, &beta, c, ldc);
     hipblasOperation_t hipblas_trans_a = CblasTrans2HipblasTrans(trans_a);
     hipblasOperation_t hipblas_trans_b = CblasTrans2HipblasTrans(trans_b);
     hipblasSgemm(ctx->hipblas_pmh_handle(), hipblas_trans_b, hipblas_trans_a, n, m, k, &alpha, b, ldb,
@@ -523,8 +519,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
   const int ldc = n;
-//   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-//   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
   hipblasOperation_t hipblas_trans_a = CblasTrans2HipblasTrans(trans_a);
   hipblasOperation_t hipblas_trans_b = CblasTrans2HipblasTrans(trans_b);
   T** dev_a_ptrs = buf;
@@ -533,7 +527,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
-// #if CUDA_VERSION >= 9010
   hipblasDatatype_t data_type = HipDataType<T>::value;
   hipblasGemmBatchedEx(ctx->hipblas_pmh_handle(), hipblas_trans_b, hipblas_trans_a, n, m, k,
                       reinterpret_cast<const void*>(&alpha),
@@ -542,11 +535,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                       data_type, lda, reinterpret_cast<const void*>(&beta),
                       reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
                       HIPBLAS_GEMM_DEFAULT);
-// #else
-//   cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
-//                         const_cast<const T**>(dev_b_ptrs), ldb, const_cast<const T**>(dev_a_ptrs),
-//                         lda, &beta, dev_c_ptrs, ldc, batch_size);
-// #endif
 }
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {

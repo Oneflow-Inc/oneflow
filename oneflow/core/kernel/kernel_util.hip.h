@@ -15,8 +15,8 @@ limitations under the License.
 */
 #if defined(WITH_HIP)
 
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_ROCM_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_ROCM_H_
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_HIP_H_
+#define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_HIP_H_
 
 #include "oneflow/core/common/data_type.h"
 
@@ -30,14 +30,9 @@ OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
 
 #if defined(__HIP_DEVICE_COMPILE__)
 __device__ __forceinline__ half MaxWithLogThreshold(half x) {
-// #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   half threshold = hexp2(__float2half(-14.0));
   if (__hgt(x, threshold)) { return x; }
   return threshold;
-// #else
-//   printf("use half need nvcc arch >= 530");
-//   assert(false);
-// #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 #endif
 
@@ -48,17 +43,12 @@ OF_DEVICE_FUNC T SafeLog(T x) {
 
 #if defined(__HIP_DEVICE_COMPILE__)
 __device__ __forceinline__ half SafeLog(half x) {
-// #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   return hlog(MaxWithLogThreshold(x));
-// #else
-//   printf("use half need nvcc arch >= 530");
-//   assert(false);
-// #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 #endif
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_ROCM_H_
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_HIP_H_
 
 #endif

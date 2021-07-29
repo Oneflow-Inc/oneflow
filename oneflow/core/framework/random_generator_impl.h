@@ -104,7 +104,7 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
   std::mt19937 engine_;
 };
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
@@ -113,52 +113,35 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_block_num() const { return max_block_num_; }
   int32_t max_thread_num() const { return max_thread_num_; }
 
+#if defined(WITH_CUDA)
   curandState* curand_states() const { return curand_states_; }
-
-  void set_current_seed(uint64_t seed) override;
-
- private:
-  int32_t max_block_num_;
-  int32_t max_thread_num_;
-  curandState* curand_states_;
-};
-
-namespace detail {
-
-int GetCudaDeviceCount();
-
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
-
-}  // namespace detail
-#endif  // WITH_CUDA
-
-#ifdef WITH_HIP
-class CUDAGeneratorImpl : public DeviceGeneratorImpl {
- public:
-  explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
-  virtual ~CUDAGeneratorImpl();
-
-  int32_t max_block_num() const { return max_block_num_; }
-  int32_t max_thread_num() const { return max_thread_num_; }
-
+#elif defined(WITH_HIP)
   hiprandState_t* curand_states() const { return curand_states_; }
-
+#endif
   void set_current_seed(uint64_t seed) override;
 
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
+#if defined(WITH_CUDA)
+  curandState* curand_states_;
+#elif defined(WITH_HIP)
   hiprandState_t* curand_states_;
+#endif
 };
 
 namespace detail {
 
 int GetCudaDeviceCount();
 
+#if defined(WITH_CUDA)
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+#elif defined(WITH_HIP)
 void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, hiprandState_t* states);
+#endif
 
 }  // namespace detail
-#endif  // WITH_HIP
+#endif  // defined(WITH_CUDA) || defined(WITH_HIP)
 
 class AutoGeneratorImpl : public GeneratorImpl {
  public:
