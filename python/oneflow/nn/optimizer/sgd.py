@@ -130,25 +130,30 @@ class SGD(Optimizer):
             self._state["step"] = self._state["step"] + 1
             return loss
 
-    def add_to_graph_train_config(self, train_conf, var2var_op_name_dict):
+    def generate_conf_for_graph(self, train_conf, vars_conf):
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
             lr = param_group["lr"]
             beta = param_group["momentum"]
             scale = param_group["scale"]
+            l2 = param_group["weight_decay"]
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             base_scale = train_conf.loss_scale_factor()
-            assert math.isclose(base_scale, 1, rel_tol=0.0001) or math.isclose(
-                scale, base_scale, rel_tol=0.0001
+            assert math.isclose(base_scale, 1, rel_tol=1e-4) or math.isclose(
+                scale, base_scale, rel_tol=1e-4
             ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
                 base_scale, scale
             )
+
             train_conf.set_loss_scale_factor(scale)
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
                 optimizer_conf.mutable_naive_conf()
             else:
                 optimizer_conf.mutable_momentum_conf().set_beta(beta)
+
             for param in param_group.parameters:
+                vars_conf[param].l2 = l2
                 if not param.requires_grad:
                     continue
-                optimizer_conf.add_variable_op_names(var2var_op_name_dict[param])
+                optimizer_conf.add_variable_op_names(vars_conf[param].name)

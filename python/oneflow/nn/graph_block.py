@@ -21,7 +21,7 @@ import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.utils import add_indent
+from oneflow.nn.util import add_indent
 
 
 class BlockType:

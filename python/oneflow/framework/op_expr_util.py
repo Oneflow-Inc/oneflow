@@ -19,13 +19,6 @@ from oneflow.framework.attr_util import convert_to_user_attr_value
 
 
 def user_op_expr_call(self, *args, **kwargs):
-    args = list(args)
-    for i in range(len(args)):
-        arg = args[i]
-        if isinstance(arg, flow.Tensor):
-            if not arg.is_determined:
-                arg.determine()
-            args[i] = arg._local_or_consistent_tensor
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
     for (attr_name, attr_value) in kwargs.items():
         assert isinstance(attr_name, str)
