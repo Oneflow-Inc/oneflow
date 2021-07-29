@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -86,27 +87,12 @@ class ReduceMaxOrMinOp : public OpExprGradFunction<ReduceMaxOrMinOpInterpState> 
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> bcast_like_op_;
-  std::shared_ptr<OpExpr> bcast_equal_op_;
-  std::shared_ptr<OpExpr> cast_like_op_;
-  std::shared_ptr<OpExpr> reduce_sum_op_;
-  std::shared_ptr<OpExpr> bcast_div_op_;
-  std::shared_ptr<OpExpr> multiply_op_;
 };
 
 Maybe<void> ReduceMaxOrMinOp::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  bcast_like_op_ =
-      JUST(op_expr_helper::BroadcastLikeOp(/*axis=*/{-1}, GradientOpName(op_name + "_bcast_like")));
-  bcast_equal_op_ = JUST(op_expr_helper::BroadcastEqualOp(GradientOpName(op_name + "_bcast_eq")));
-  cast_like_op_ = JUST(op_expr_helper::CastLikeOp(GradientOpName(op_name + "_cast_like")));
-  reduce_sum_op_ = JUST(op_expr_helper::ReduceSumOp(/*axis=*/{-1}, /*keepdims=*/false,
-                                                    GradientOpName(op_name + "_reduce_sum")));
-  bcast_div_op_ = JUST(op_expr_helper::BroadcastDivOp(GradientOpName(op_name + "_bcast_div")));
-  multiply_op_ = JUST(op_expr_helper::MultiplyOp(op_name + "_multiply"));
   return Maybe<void>::Ok();
 }
 
@@ -126,25 +112,15 @@ Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
   const auto& output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
 
-  MutableAttrMap bcast_attrs;
-  MutableAttrMap reduce_sum_attrs;
-  JUST(bcast_attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", ctx->axis));
-  JUST(reduce_sum_attrs.SetAttr<std::vector<int32_t>>("axis", ctx->axis));
-  JUST(reduce_sum_attrs.SetAttr<bool>("keepdims", ctx->keepdims));
-  const auto& bcast_like =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {output, input}, bcast_attrs));
-  const auto& bcast_eq =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_equal_op_, {input, bcast_like}));
-  const auto& cast_like = JUST(OpInterpUtil::Dispatch<Tensor>(*cast_like_op_, {bcast_eq, input}));
-  const auto& reduce_sum_ =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {cast_like}, reduce_sum_attrs));
-  const auto& bcast_div_ = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_div_op_, {dy, reduce_sum_}));
-  const auto& bcast_like_div =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {bcast_div_, input}, bcast_attrs));
+  const auto& bcast_like = JUST(functional::BroadcastLike(output, input, ctx->axis));
+  const auto& bcast_eq = JUST(functional::BroadcastEqual(input, bcast_like));
+  const auto& cast_like = JUST(functional::CastLike(bcast_eq, input));
+  const auto& reduce_sum_ = JUST(functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims));
+  const auto& bcast_div_ = JUST(functional::BroadcastDiv(dy, reduce_sum_));
+  const auto& bcast_like_div = JUST(functional::BroadcastLike(bcast_div_, input, ctx->axis));
 
   in_grads->resize(1);
-  in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*multiply_op_, {bcast_like_div, cast_like}));
+  in_grads->at(0) = JUST(functional::Multiply(bcast_like_div, cast_like));
   return Maybe<void>::Ok();
 }
 
