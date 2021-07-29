@@ -224,3 +224,69 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.F.sqrt,
+    r"""
+    sqrt(Tensor x) -> Tensor
+    
+    Returns a new tensor with the square-root of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sqrt{\text{input}_{i}}
+
+    Args:
+        input (Tensor): the input tensor.
+
+     For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.array([1.0, 2.0, 3.0])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.sqrt(input)
+        >>> output
+        tensor([1.    , 1.4142, 1.7321], dtype=oneflow.float32)
+        
+    """,
+)
+
+add_docstr(
+    oneflow.F.pow,
+    r"""
+    pow(Tensor x, Tensor exponent) -> Tensor
+
+    Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
+    When exponent is a scalar value, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ \text{exponent}
+
+    When exponent is a tensor, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ {\text{exponent}_i}
+
+    Args:
+        - input (Tensor): the input tensor.
+        - exponent (int, float, Tensor): the exponent.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> out = flow.pow(x, y)
+        >>> out
+        tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
+ 
+    """,
+)
