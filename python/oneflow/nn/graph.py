@@ -147,7 +147,6 @@ class Graph(object):
                         state_config,
                     )
                 )
-
             self._variables = convert_to_tensor_tuple(state_tensors)
 
             # Deal with module in self.build(*args)

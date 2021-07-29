@@ -132,7 +132,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
+  // std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -189,7 +189,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
+  // std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -246,7 +246,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
+  // std::cout << "cclog: Lazy nn.Graph AddOp: " << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -339,7 +339,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   }
 
   // temp debug log
-  std::cout << "cclog: Lazy nn.Graph add UserOp: " << op_conf->DebugString() << std::endl;
+  // std::cout << "cclog: Lazy nn.Graph add UserOp: " << op_conf->DebugString() << std::endl;
 
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 

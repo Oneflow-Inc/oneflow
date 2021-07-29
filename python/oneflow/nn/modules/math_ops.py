@@ -356,7 +356,9 @@ class ScalarAddByTensor(Module):
 class ElementwiseAdd(Module):
     def __init__(self, inplace: bool = False) -> None:
         super().__init__()
-        self.inplace = inplace
+        # rm this after lazy mode ctrol inplace ready 
+        # self.inplace = inplace
+        self.inplace = False
 
     def forward(self, x, y):
         if self.inplace:
