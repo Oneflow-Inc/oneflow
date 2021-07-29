@@ -26,7 +26,7 @@ REGISTER_USER_OP("add_n")
       CHECK_NOTNULL_OR_RETURN(out);
       for (const auto& pair : ctx->inputs()) {
         const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
-        if(in_0.shape().NumAxes()>0 && cur_in.shape().NumAxes()>0){
+        if (in_0.shape().NumAxes() > 0 && cur_in.shape().NumAxes() > 0) {
           CHECK_EQ_OR_RETURN(in_0.shape(), cur_in.shape());
         }
       }
