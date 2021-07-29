@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 
@@ -26,36 +27,31 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {
-
-struct DeviceExportUtil final {
-  static Symbol<Device> MakeDevice(const std::string& type_and_id) {
-    std::string type;
-    int device_id = -1;
-    ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-    if (device_id == -1) {
-      if (type == "cpu") {
-        device_id =
-            GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
-      } else {
-        device_id =
-            GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-      }
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type_and_id) {
+  std::string type;
+  int device_id = -1;
+  ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
+  if (device_id == -1) {
+    if (type == "cpu") {
+      device_id =
+          GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+    } else {
+      device_id =
+          GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
     }
-    return MakeDevice(type, device_id);
   }
+  return MakeDevice(type, device_id);
+}
 
-  static Symbol<Device> MakeDevice(const std::string& type, int64_t device_id) {
-    if (Device::type_supported.find(type) == Device::type_supported.end()) {
-      std::string error_msg =
-          "Expected one of cpu, cuda device type at start of device string " + type;
-      throw std::runtime_error(error_msg);
-    }
-    return Device::New(type, device_id).GetOrThrow();
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type,
+                                                         int64_t device_id) {
+  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+    std::string error_msg =
+        "Expected one of cpu, cuda device type at start of device string " + type;
+    throw std::runtime_error(error_msg);
   }
-};
-
-}  // namespace
+  return Device::New(type, device_id).GetOrThrow();
+}
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
