@@ -115,7 +115,7 @@ def test_train_and_eval(test_case):
 
     batch_size = 256
     data_dir = os.path.join(
-        os.getenv("ONEFLOW_TEST_CACHE_DIR", "."), "/data-test/fashion-mnist"
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "."), "/data-test/fashion-mnist-lenet"
     )
     source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
 
