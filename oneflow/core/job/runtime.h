@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -28,10 +29,13 @@ class Runtime final {
   Runtime() = delete;
   ~Runtime();
 
-  Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
+  // TODO(chengcheng): refactor Runtime interface about variable_op_name2eager_blob
+  Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+          const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
 
  private:
-  void NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
+  void NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+                    const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
   void DeleteAllGlobal();
 };
 
