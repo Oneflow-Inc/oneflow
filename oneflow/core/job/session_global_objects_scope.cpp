@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/memory/chunk_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -118,6 +119,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<LazyJobBuildAndInferCtxMgr>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
+    Global<ChunkMgr>::New();
   }
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
@@ -139,6 +141,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    Global<ChunkMgr>::Delete();
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
