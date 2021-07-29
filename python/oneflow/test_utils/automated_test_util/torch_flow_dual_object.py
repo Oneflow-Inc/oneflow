@@ -27,6 +27,8 @@ from .generators import Nothing, generator, random_tensor
 
 postulate = [".rand", ".Tensor"]
 
+testing = False
+
 
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
@@ -175,9 +177,11 @@ class DualObject:
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict)
-            dual_modules_to_test.append(self)
+            if testing:
+                dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
-            dual_objects_to_test.append(self)
+            if testing:
+                dual_objects_to_test.append(self)
 
     def __repr__(self):
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
@@ -223,10 +227,13 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     if torch_tensor.grad is not None:
         assert (
             flow_tensor.grad is not None
-        ), "OneFlow tensor doesn't have grad while PyTorch tensor has one"
+        ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
+        torch_grad = torch_tensor.grad.detach().cpu().numpy()
+        flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
-            torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()
+            torch_grad, flow_grad, rtol=rtol, atol=atol
         ):
+            print("Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}")
             return False
     return np.allclose(
         torch_tensor.detach().cpu().numpy(),
@@ -248,7 +255,10 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 try:
+                    global testing
+                    testing = True
                     res = f(test_case)
+                    testing = False
                 except PyTorchDoesNotSupportError as e:
                     if verbose:
                         print(e)
@@ -271,7 +281,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                 for x in dual_objects_to_test:
-                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol))
+                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
                 n -= 1
