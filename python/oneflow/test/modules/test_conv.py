@@ -1773,8 +1773,8 @@ class TestConv2d(flow.unittest.TestCase):
     @autotest()
     def test_conv_with_random_data(test_case):
         channels = random(1, 6)
-        m = torch.nn.Conv2d(in_channels=channels, out_channels=random(1, 129), kernel_size=random(1, 4),
-            padding=random(1, 5), dilation=random(1, 5), groups=random(1, 5), padding_mode=constant("zeros"))
+        m = torch.nn.Conv2d(in_channels=channels, out_channels=random(1, 129), kernel_size=random(1, 4), stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(), dilation=random(1, 5) | nothing(), groups=random(1, 5) | nothing(), padding_mode=constant("zeros") | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
