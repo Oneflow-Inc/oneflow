@@ -63,8 +63,9 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
-  NewAllGlobal(plan, total_piece_num, is_experiment_phase);
+Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+                 const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+  NewAllGlobal(plan, total_piece_num, is_experiment_phase, variable_op_name2eager_blob);
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -95,7 +96,8 @@ Runtime::~Runtime() {
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+                           const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
   if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
@@ -126,7 +128,8 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New(plan);
+  Global<RegstMgr>::New();
+  Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New();
   Global<ThreadMgr>::Get()->AddPlan(plan);
