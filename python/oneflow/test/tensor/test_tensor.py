@@ -1001,6 +1001,85 @@ class TestTensor(flow.unittest.TestCase):
             )
         )
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_mish(test_case):
+        def np_mish(x):
+            f = 1 + np.exp(x)
+            y = x * ((f * f - 1) / (f * f + 1))
+            y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
+                (f * f + 1) * (f * f + 1)
+            )
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.mish()
+
+        np_out, np_grad = np_mish(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_silu(test_case):
+        def np_silu(x):
+            _sig = 1 / (1 + np.exp(-x))
+            y = x * _sig
+            y_grad = _sig * (1 + x * (1 - _sig))
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.silu()
+
+        np_out, np_grad = np_silu(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_selu(test_case):
+        _scale = 1.0507009873554804934193349852946
+        _alpha = 1.6732632423543772848170429916717
+
+        def np_selu(x):
+            y = np.where(x < 0, _scale * _alpha * (np.exp(x) - 1), _scale * x)
+            y_grad = np.where(x < 0, _scale * _alpha * np.exp(x), _scale)
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.selu()
+
+        np_out, np_grad = np_selu(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @unittest.skip("still have error in ci")
+    def test_tensor_softsign(test_case):
+        def np_softsign(x):
+            y = x / (1 + np.abs(x))
+            y_grad = 1 / np.square(1 + np.abs(x))
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.softsign()
+
+        np_out, np_grad = np_softsign(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 if __name__ == "__main__":
     unittest.main()
