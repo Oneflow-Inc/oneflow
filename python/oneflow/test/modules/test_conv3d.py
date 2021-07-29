@@ -22,29 +22,24 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestConv3DModule(flow.unittest.TestCase):
     @autotest(n=2)
-    def test_against_pytorch(test_case):
+    def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)
-        device = random_device()
         m = torch.nn.Conv3d(
-            channels,
-            random(1, 6),
-            random(1, 6),
-            stride=random(1, 3) | nothing(),
-            padding=random(1, 3) | nothing(),
-            dilation=random(1, 3) | nothing(),
-            groups=random(1, 3) | nothing(),
-            bias=random() | nothing(),
-            padding_mode=constant("zeros") | nothing(), 
+            in_channels=channels,
+            out_channels=random(1, 6),
+            kernel_size=random(1, 3),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
+        device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
-            ndim=5, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)
-        ).to(device)
+        x = random_pytorch_tensor(ndim=5, dim0=2, dim1=channels).to(device)
         y = m(x)
         return y
-
-    
 
 
 if __name__ == "__main__":
