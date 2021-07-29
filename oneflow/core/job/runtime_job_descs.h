@@ -24,7 +24,7 @@ namespace oneflow {
 class RuntimeJobDescs final {
  public:
   explicit RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto);
-  const JobDesc& job_desc(int64_t job_id) const { return *job_id2job_desc_.at(job_id); }
+  const JobDesc& job_desc(int64_t job_id) const;
 
  private:
   HashMap<int64_t, std::unique_ptr<JobDesc>> job_id2job_desc_;
