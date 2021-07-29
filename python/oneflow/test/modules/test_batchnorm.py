@@ -220,9 +220,14 @@ def _test_batchnorm2d_track_running_stats(test_case, device):
     m = flow.nn.BatchNorm2d(
         num_features=2, eps=1e-05, momentum=0.1, track_running_stats=False
     ).to(device=flow.device(device))
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
+    z = y.sum()
+    z.backward()
     test_case.assertTrue(np.allclose(y.numpy(), output, 0.0001, 0.0001))
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np.zeros(input_arr.shape), 0.0001, 0.0001)
+    )
 
 
 def _test_batchnorm2d_4d_input(test_case, device):
@@ -515,6 +520,25 @@ class TestBatchNorm(flow.unittest.TestCase):
                     training=training,
                     n=10,
                 )
+
+    @autotest(n=5, rtol=0.001, atol=0.001, auto_backward=False)
+    def test_with_random_data(test_case):
+        channel = random(1, 6).to(int)
+        m = torch.nn.BatchNorm2d(
+            num_features=channel,
+            eps=1e-5,
+            momentum=0.1,
+            affine=True,
+            track_running_stats=False,
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=channel, dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        y = m(x)
+        return y
 
     @autotest(n=1, auto_backward=False)
     def test_batchnorm3d_module_with_random_data(test_case):

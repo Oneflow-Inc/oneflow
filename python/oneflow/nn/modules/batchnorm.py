@@ -43,17 +43,22 @@ class _NormBase(Module):
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer("running_mean", flow.Tensor(num_features))
-            self.register_buffer("running_var", flow.Tensor(num_features))
+            self.register_buffer("running_mean", flow.zeros(num_features))
+            self.register_buffer("running_var", flow.ones(num_features))
+            self.register_buffer(
+                "num_batches_tracked", flow.tensor(0, dtype=flow.int64)
+            )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
+            self.register_buffer("num_batches_tracked", None)
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
         if self.track_running_stats:
-            self.running_mean.fill_(0)
+            self.running_mean.zeros_()
             self.running_var.fill_(1)
+            self.num_batches_tracked.zeros_()
 
     def reset_parameters(self) -> None:
         self.reset_running_stats()
@@ -63,6 +68,12 @@ class _NormBase(Module):
 
     def _check_input_dim(self, input):
         raise NotImplementedError
+
+    def extra_repr(self):
+        return (
+            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "track_running_stats={track_running_stats}".format(**self.__dict__)
+        )
 
     def _load_from_state_dict(
         self,
@@ -74,6 +85,17 @@ class _NormBase(Module):
         unexpected_keys,
         error_msgs,
     ):
+        version = local_metadata.get("version", None)
+
+        if (version is None or version < 2) and self.track_running_stats:
+            # at version 2: added num_batches_tracked buffer
+            #               this should have a default value of 0
+            num_batches_tracked_key = prefix + "num_batches_tracked"
+            if num_batches_tracked_key not in state_dict:
+                state_dict[num_batches_tracked_key] = flow.tensor(
+                    0, dtype=flow.int64
+                ).numpy()
+
         super(_NormBase, self)._load_from_state_dict(
             state_dict,
             prefix,
@@ -82,11 +104,6 @@ class _NormBase(Module):
             missing_keys,
             unexpected_keys,
             error_msgs,
-        )
-
-    def extra_repr(self):
-        return "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
-            **self.__dict__
         )
 
 
@@ -103,6 +120,23 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
+        # exponential_average_factor is set to self.momentum
+        # (when it is available) only so that it gets updated
+        # in ONNX graph when this node is exported to ONNX.
+        if self.momentum is None:
+            exponential_average_factor = 0.0
+        else:
+            exponential_average_factor = self.momentum
+
+        if self.training and self.track_running_stats:
+            # TODO: if statement only here to tell the jit to skip emitting this when it is None
+            if self.num_batches_tracked is not None:  # type: ignore[has-type]
+                self.num_batches_tracked = self.num_batches_tracked + 1  # type: ignore[has-type]
+                if self.momentum is None:  # use cumulative moving average
+                    exponential_average_factor = 1.0 / float(self.num_batches_tracked)
+                else:  # use exponential moving average
+                    exponential_average_factor = self.momentum
+
         if x.device == flow.device("cpu"):
             reduce_axis = []
             for dim in range(len(x.shape)):
@@ -166,10 +200,21 @@ class _BatchNorm(_NormBase):
             for dim in range(len(x.shape)):
                 if dim != 1:
                     reduce_axis.append(dim)
+
+            mean = flow.Tensor(
+                x.mean(dim=reduce_axis, keepdim=False).numpy(),
+                requires_grad=x.requires_grad,
+                device=x.device,
+            )
+            var = flow.Tensor(
+                x.var(dim=reduce_axis, keepdim=False).numpy(),
+                requires_grad=x.requires_grad,
+                device=x.device,
+            )
             return flow.F.normalization(
                 x,
-                x.mean(dim=reduce_axis, keepdim=False),
-                x.var(dim=reduce_axis, keepdim=False),
+                mean,
+                var,
                 self.weight,
                 self.bias,
                 axis=1,
