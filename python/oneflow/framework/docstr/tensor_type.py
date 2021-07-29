@@ -17,18 +17,16 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.exp,
+    oneflow.F.cast,
     r"""
-    exp(x: Tensor) -> Tensor
+    cast(x: Tensor, *, dtype: DataType) -> Tensor
 
-    Returns a new tensor with the exponential of the elements of :attr:`input`.
-    
-    .. math::
-        y_{i} = e^{x_{i}}
+    Returns a tensor with the specified dtype.
     
     Args:
         x (Tensor): the input tensor.
-    
+        dtype (DataType): the target data type.
+
     For example:
     
     .. code-block:: python
@@ -36,9 +34,9 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = flow.F.exp(x)
+        >>> y = flow.F.cast(x, dtype=flow.int32)
         >>> y
-        tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
+        tensor([1, 2, 3], dtype=oneflow.int32)
 
 """,
 )

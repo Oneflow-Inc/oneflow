@@ -15,5 +15,5 @@ limitations under the License.
 """
 from .math_ops import *
 from .random import *
-from .exp import *
-
+from .tensor_type import *
+from .array_ops import *
