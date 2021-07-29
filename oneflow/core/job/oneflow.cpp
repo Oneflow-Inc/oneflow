@@ -210,6 +210,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     Compiler().Compile(job, plan, need_job_complete);
+    PlanUtil::GenMemBlockAndChunk4Plan(plan);
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
@@ -1024,7 +1025,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     LOG(ERROR) << "this is dry run, exiting";
     exit(0);
   }
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false, variable_op_name2eager_blob));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
