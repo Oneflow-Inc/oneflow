@@ -34,21 +34,21 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly(
           "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
-  m.attr("char") = SymbolOf(*DType::Char());
-  m.attr("float16") = SymbolOf(*DType::Float16());
-  m.attr("float") = SymbolOf(*DType::Float());
+  m.attr("char") = DType::Char();
+  m.attr("float16") = DType::Float16();
+  m.attr("float") = DType::Float();
 
-  m.attr("float32") = SymbolOf(*DType::Float());
-  m.attr("double") = SymbolOf(*DType::Double());
-  m.attr("float64") = SymbolOf(*DType::Double());
+  m.attr("float32") = DType::Float();
+  m.attr("double") = DType::Double();
+  m.attr("float64") = DType::Double();
 
-  m.attr("int8") = SymbolOf(*DType::Int8());
-  m.attr("int32") = SymbolOf(*DType::Int32());
-  m.attr("int64") = SymbolOf(*DType::Int64());
+  m.attr("int8") = DType::Int8();
+  m.attr("int32") = DType::Int32();
+  m.attr("int64") = DType::Int64();
 
-  m.attr("uint8") = SymbolOf(*DType::UInt8());
-  m.attr("record") = SymbolOf(*DType::OFRecord());
-  m.attr("tensor_buffer") = SymbolOf(*DType::TensorBuffer());
+  m.attr("uint8") = DType::UInt8();
+  m.attr("record") = DType::OFRecord();
+  m.attr("tensor_buffer") = DType::TensorBuffer();
 }
 
 }  // namespace oneflow
