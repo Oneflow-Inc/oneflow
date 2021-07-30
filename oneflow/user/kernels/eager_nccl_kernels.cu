@@ -35,7 +35,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     const auto& ranks = ctx->Attr<std::vector<int64_t>>("sorted_ranks");
     ncclComm_t comm;
     if (!ranks.empty()) {
-      comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForPrimaryDevice(ranks);
+      comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForOnlyPrimaryDevice(ranks);
     } else {
       const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
       ParallelConf parallel_conf{};

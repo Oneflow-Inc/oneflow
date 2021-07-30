@@ -73,7 +73,7 @@ void CreateNcclComm(ncclComm_t* comm, const std::string& key, int group_size, in
   OF_NCCL_CHECK(ncclCommInitRank(comm, group_size, nccl_unique_id, rank_in_group));
 }
 
-void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
+void CreateNcclComm(ncclComm_t* comm, const std::string& key,
                     const std::vector<int64_t>& sorted_process_ranks) {
   auto it = std::find(sorted_process_ranks.cbegin(), sorted_process_ranks.cend(),
                       GlobalProcessCtx::Rank());
@@ -107,11 +107,8 @@ EagerNcclCommMgr::~EagerNcclCommMgr() {
   }
 }
 
-ncclComm_t EagerNcclCommMgr::GetCommForPrimaryDevice(
+ncclComm_t EagerNcclCommMgr::GetCommForOnlyPrimaryDevice(
     const std::vector<int64_t>& sorted_process_ranks) {
-  int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
-
   {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = sorted_process_ranks2comm_.find(sorted_process_ranks);
@@ -120,7 +117,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForPrimaryDevice(
 
   ncclComm_t comm;
   std::string nccl_unique_id_rpc_key = GetNcclUniqueIdRpcKey(sorted_process_ranks);
-  CreateNcclComm(&comm, dev, nccl_unique_id_rpc_key, sorted_process_ranks);
+  CreateNcclComm(&comm, nccl_unique_id_rpc_key, sorted_process_ranks);
 
   {
     std::lock_guard<std::mutex> lock(mutex_);

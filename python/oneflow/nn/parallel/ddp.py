@@ -24,7 +24,7 @@ def allreducefn(reversed_param_list, param, allreduce_module):
     def allreduce(grad):
         reversed_param_list[param][0] = True
         ret = None
-        for cur_param, (ready, deleted, _) in reversed_param_list.items():
+        for cur_param, (ready, deleted) in reversed_param_list.items():
             if deleted:
                 continue
             if ready:
@@ -44,10 +44,11 @@ def DistributedDataParallel(module: "flow.nn.Module"):
     world_size = flow.framework.distribute.get_world_size()
     allreduce_module = flow.nn.AllReduce(list(range(world_size)))
     reversed_param_list = OrderedDict(
-        reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
+        reversed([(x, [False, False]) for x in module.parameters()])
     )
     module._reversed_param_list = reversed_param_list
-    for _, param in module.named_parameters():
+    for param in module.parameters():
+        param.register_hook(lambda grad: grad / world_size)
         param.register_hook(allreducefn(reversed_param_list, param, allreduce_module))
 
     def hook(module, input, output):

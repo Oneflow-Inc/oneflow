@@ -23,6 +23,7 @@ import numpy as np
 
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
+    @unittest.skip("")
     def test_ddp_basic(test_case):
         class Mul(flow.nn.Module):
             def __init__(self):
@@ -46,8 +47,9 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
-        test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([3])))
+        test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([1.5])))
 
+    @unittest.skip("")
     def test_ddp_with_unused_param(test_case):
         class Model(flow.nn.Module):
             def __init__(self):
@@ -76,9 +78,9 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
-        test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([4])))
+        test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([2])))
         test_case.assertTrue(
-            np.allclose(m.used_only_in_rank0.grad.numpy(), np.array([1]))
+            np.allclose(m.used_only_in_rank0.grad.numpy(), np.array([0.5]))
         )
         test_case.assertTrue(
             np.allclose(m.unused_in_all_ranks.grad.numpy(), np.array([0]))
@@ -117,9 +119,9 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
-        test_case.assertTrue(np.allclose(m.w1.grad.numpy(), np.array([18])))
-        test_case.assertTrue(np.allclose(m.w2.grad.numpy(), np.array([9])))
-        test_case.assertTrue(np.allclose(m.w3.grad.numpy(), np.array([6])))
+        test_case.assertTrue(np.allclose(m.w1.grad.numpy(), np.array([9])))
+        test_case.assertTrue(np.allclose(m.w2.grad.numpy(), np.array([4.5])))
+        test_case.assertTrue(np.allclose(m.w3.grad.numpy(), np.array([3])))
 
 
 if __name__ == "__main__":
