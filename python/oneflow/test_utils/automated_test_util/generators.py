@@ -307,8 +307,14 @@ class random_tensor(generator):
             shape[3] = dim3
         if ndim == 5:
             shape[4] = dim4
-        np_arr = rng.random(shape)
-        return torch.Tensor(np_arr)
+        if dtype == float:
+            np_arr = rng.uniform(low=low, high=high, size=shape)
+            return torch.Tensor(np_arr)
+        elif dtype == int:
+            np_arr = rng.integers(low=low, high=high, size=shape)
+            return torch.tensor(np_arr, dtype=torch.int64)
+        else:
+            raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
 
 @data_generator(bool)

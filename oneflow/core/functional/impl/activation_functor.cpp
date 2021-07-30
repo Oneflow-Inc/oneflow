@@ -210,6 +210,56 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SiluFunctor : public UnaryFunctor {
+ public:
+  SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
+};
+
+class SiluGradFunctor : public BinaryFunctor {
+ public:
+  SiluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class MishFunctor : public UnaryFunctor {
+ public:
+  MishFunctor() { op_ = CHECK_JUST(one::OpBuilder("mish").Input("in").Output("out").Build()); }
+};
+
+class MishGradFunctor : public BinaryFunctor {
+ public:
+  MishGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class SeluFunctor : public UnaryFunctor {
+ public:
+  SeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("selu").Input("in").Output("out").Build()); }
+};
+
+class SeluGradFunctor : public BinaryFunctor {
+ public:
+  SeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class SoftSignFunctor : public UnaryFunctor {
+ public:
+  SoftSignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign").Input("in").Output("out").Build());
+  }
+};
+
+class SoftSignGradFunctor : public BinaryFunctor {
+ public:
+  SoftSignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -229,6 +279,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::SiluFunctor>("Silu");
+  m.add_functor<impl::SiluGradFunctor>("SiluGrad");
+  m.add_functor<impl::MishFunctor>("Mish");
+  m.add_functor<impl::MishGradFunctor>("MishGrad");
+  m.add_functor<impl::SeluFunctor>("Selu");
+  m.add_functor<impl::SeluGradFunctor>("SeluGrad");
+  m.add_functor<impl::SoftSignFunctor>("SoftSign");
+  m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
 };
 
 }  // namespace functional
