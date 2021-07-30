@@ -26,40 +26,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_relu_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    m = flow.nn.ReLU()
-    of_out = m(of_input)
-    np_out = np.maximum(0, np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-05, 1e-05))
-    inplace_m = flow.nn.ReLU(inplace=True)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_input_inplace = of_input + 1
-    inplace_m(of_input_inplace)
-    np_out = np.maximum(0, np_input + 1)
-    test_case.assertTrue(np.allclose(of_input_inplace.numpy(), np_out, 1e-05, 1e-05))
-    of_out_inplace = of_input_inplace.sum()
-    of_out_inplace.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestReLUModule(flow.unittest.TestCase):
-    def test_relu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_relu_impl(test_case, *arg)
-
     @autotest()
     def test_relu_module_with_random_data(test_case):
         m = torch.nn.ReLU()
@@ -71,36 +39,8 @@ class TestReLUModule(flow.unittest.TestCase):
         return y
 
 
-def _test_relu6_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    m = flow.nn.ReLU6()
-    of_out = m(of_input)
-    np_out = np.minimum(np.maximum(0, np_input), 6.0)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(
-            of_input.grad.numpy(),
-            np.where(np_input > 6, 0, np.where(np_input < 0, 0, 1)),
-            1e-05,
-            1e-05,
-        )
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestReLU6Module(flow.unittest.TestCase):
-    def test_relu6(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_relu6_impl(test_case, *arg)
-
     @autotest()
     def test_relu6_module_with_random_data(test_case):
         m = torch.nn.ReLU6()
@@ -112,47 +52,8 @@ class TestReLU6Module(flow.unittest.TestCase):
         return y
 
 
-def _test_tanh_nn_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    tanh = flow.nn.Tanh()
-    of_out = tanh(of_input)
-    np_out = np.tanh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-05, 1e-05)
-    )
-
-
-def _test_tanh_function_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.tanh(of_input)
-    np_out = np.tanh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-05, 1e-05)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestTanh(flow.unittest.TestCase):
-    def test_tanh(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_tanh_nn_impl(test_case, *arg)
-            _test_tanh_function_impl(test_case, *arg)
-
     @autotest()
     def test_tanh_module_with_random_data(test_case):
         m = torch.nn.Tanh()
@@ -171,34 +72,8 @@ class TestTanh(flow.unittest.TestCase):
         return y
 
 
-def _test_elu_function_impl(test_case, shape, device):
-    m = flow.nn.ELU()
-    arr = np.random.randn(*shape)
-    np_out = np.where(arr > 0, arr, 1.0 * (np.exp(arr) - 1))
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05, atol=1e-05))
-    m = flow.nn.ELU(alpha=1.2)
-    arr = np.random.randn(*shape)
-    np_out = np.where(arr > 0, arr, 1.2 * (np.exp(arr) - 1))
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05, atol=1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.where(arr > 0, 1, 1.2 * np.exp(arr))
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestELUModule(flow.unittest.TestCase):
-    def test_elu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_elu_function_impl(test_case, *arg)
-
     @autotest()
     def test_elu_module_with_random_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
@@ -210,33 +85,8 @@ class TestELUModule(flow.unittest.TestCase):
         return y
 
 
-def _np_gelu(x):
-    return 0.5 * x * (1 + special.erf(x / np.sqrt(2)))
-
-
-def _test_gelu_impl(test_case, device):
-    np_input = np.array([1.0, -1.0, 2.3]).astype(np.float32)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    gelu = flow.nn.GELU()
-    of_out = gelu(of_input)
-    np_out = _np_gelu(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = [1.0833154916763306, -0.08331547677516937, 1.0544281005859375]
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):
-    def test_gelu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_gelu_impl(test_case, *arg)
-
     @autotest()
     def test_gelu_module_with_random_data(test_case):
         m = torch.nn.GELU()
@@ -246,16 +96,6 @@ class TestGelu(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
-
-
-def numpy_sigmoid(x):
-    return 1.0 / (1 + np.exp(-x))
-
-
-def numpy_sigmoid_grad(inputs, grads):
-    x = np.exp(-inputs)
-    delta = x / (1 + x) ** 2
-    return delta * grads
 
 
 def numpy_softmax(x, axis):
@@ -283,38 +123,8 @@ def numpy_mish_grad(x):
     return y_grad
 
 
-def _test_sigmoid(test_case, device):
-    m = flow.nn.Sigmoid()
-    input_arr = np.random.randn(2, 3, 4, 5)
-    x = flow.Tensor(input_arr, device=flow.device(device))
-    y = m(x)
-    y2 = flow.sigmoid(x)
-    y3 = x.sigmoid()
-    output = numpy_sigmoid(input_arr)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y2.numpy(), output, 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y3.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_sigmoid_backward(test_case, device):
-    input_arr = np.random.randn(2, 3, 4, 5)
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
-    x_grad = numpy_sigmoid_grad(input_arr, np.ones(input_arr.shape))
-    m = flow.nn.Sigmoid()
-    y = m(x).sum()
-    y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoid(flow.unittest.TestCase):
-    def test_sigmoid(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["fun"] = [_test_sigmoid, _test_sigmoid_backward]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest()
     def test_sigmoid_module_with_random_data(test_case):
         m = torch.nn.Sigmoid()
@@ -432,33 +242,8 @@ class TestSoftmax(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _np_hardsigmoid_grad(x):
-    return np.where(x > 0, np.where(x >= 1, 0, 1.0 / 6), 0)
-
-
-def _test_hardsigmoid_impl(test_case, shape, device):
-    m = flow.nn.Hardsigmoid()
-    arr = np.random.randn(*shape)
-    np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), _np_hardsigmoid_grad(np_out), 1e-05, 1e-05)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
-    def test_hardsigmoid(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_hardsigmoid_impl(test_case, *arg)
-
     @autotest()
     def test_hardsigmoid_module_with_random_data(test_case):
         m = torch.nn.Hardsigmoid()
@@ -468,6 +253,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
 
 def _test_logsoftmax(test_case, device):
     dim = 1
@@ -613,34 +399,8 @@ class TestLogSoftmax(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_logsigmoid(test_case, device):
-    m = flow.nn.LogSigmoid()
-    arr = np.array([1.0, 2.0, 3.0, 10.2, 7.6])
-    np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = [
-        0.2689414213699951,
-        0.11920292202211764,
-        0.04742587317756669,
-        3.716893710287265e-05,
-        0.0005002011070795276,
-    ]
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestLogSigmoidModule(flow.unittest.TestCase):
-    def test_logsigmoid(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["fun"] = [_test_logsigmoid]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest()
     def test_logsigmoid_module_with_random_data(test_case):
         m = torch.nn.LogSigmoid()
@@ -650,6 +410,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
@@ -718,31 +479,8 @@ class TestSoftplusModule(flow.unittest.TestCase):
         return y
 
 
-def _test_hardswish_impl(test_case, shape, device):
-    m = flow.nn.Hardswish()
-    arr = np.random.randn(*shape)
-    f = arr + 3
-    relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
-    relu6_grad = np.where(f > 6, 0, np.where(f < 0, 0, 1))
-    np_out = arr * relu6 / 6
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = relu6 / 6 + arr * relu6_grad / 6
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestHardswishModule(flow.unittest.TestCase):
-    def test_hardswish(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_hardswish_impl(test_case, *arg)
-
     @autotest()
     def test_hardswish_module_with_random_data(test_case):
         m = torch.nn.Hardswish()
@@ -788,29 +526,8 @@ class TestHardtanhModule(flow.unittest.TestCase):
             _test_hardtanh_impl(test_case, *arg)
 
 
-def _test_leakyrelu_impl(test_case, shape, device):
-    negative_slope = 0.2
-    m = flow.nn.LeakyReLU(negative_slope=negative_slope)
-    arr = np.random.randn(*shape)
-    np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    np_grad = np.where(arr < 0, 1.0 * negative_slope, 1.0)
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
-    def test_leaky_relu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_leakyrelu_impl(test_case, *arg)
-
     @autotest()
     def test_leakyrelu_module_with_random_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
@@ -822,36 +539,8 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         return y
 
 
-def _test_mish(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
-    m = flow.nn.Mish()
-    of_out = m(of_input)
-    np_out = np_input * np.tanh(numpy_softplus(np_input, 1.0, 20))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_mish_backward(test_case, shape, device):
-    m = flow.nn.Mish()
-    arr = np.random.randn(*shape)
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = numpy_mish_grad(arr)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMishModule(flow.unittest.TestCase):
-    def test_mish(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_mish, _test_mish_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest(n=5)
     def test_mish_module_with_random_data(test_case):
         m = torch.nn.Mish()
@@ -863,39 +552,8 @@ class TestMishModule(flow.unittest.TestCase):
         return y
 
 
-def _np_silu_grad(x):
-    _sig = 1 / (1 + np.exp(-x))
-    return _sig * (1 + x * (1 - _sig))
-
-
-def _test_silu_impl(test_case, shape, device):
-    m = flow.nn.SiLU()
-    np_input = np.random.randn(*shape)
-    np_out = np_input / (1 + np.exp(-np_input))
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = m(of_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), _np_silu_grad(np_input), 1e-5, 1e-5)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSiluModule(flow.unittest.TestCase):
-    def test_silu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_silu_impl]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest(n=5)
     def test_silu_module_with_random_data(test_case):
         m = torch.nn.SiLU()
@@ -907,46 +565,8 @@ class TestSiluModule(flow.unittest.TestCase):
         return y
 
 
-def _np_selu(x):
-    scale = 1.0507009873554804934193349852946
-    alpha = 1.6732632423543772848170429916717
-    return np.where(x < 0, scale * alpha * (np.exp(x) - 1), scale * x)
-
-
-def _np_selu_grad(x):
-    scale = 1.0507009873554804934193349852946
-    alpha = 1.6732632423543772848170429916717
-    return np.where(x < 0, scale * alpha * np.exp(x), scale)
-
-
-def _test_selu_impl(test_case, shape, device):
-    m = flow.nn.SELU()
-    np_input = np.random.randn(*shape)
-    np_out = _np_selu(np_input)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = m(of_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), _np_selu_grad(np_input), 1e-5, 1e-5)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSeluModule(flow.unittest.TestCase):
-    def test_selu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_selu_impl]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest(n=5)
     def test_selu_module_with_random_data(test_case):
         m = torch.nn.SELU()
