@@ -277,7 +277,6 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 except PyTorchDoesNotSupportError as e:
                     if verbose:
                         print(e)
-                    n -= 1
                     loop += 1
                     continue
                 if res is not None:
