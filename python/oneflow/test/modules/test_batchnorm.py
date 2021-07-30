@@ -495,7 +495,7 @@ class TestBatchNorm(flow.unittest.TestCase):
             num_features=channel, track_running_stats=False
         )
         m.train(random())
-        device = random_device()
+        device = "cpu"
         m.to(device)
         x = random_pytorch_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
         y = m(x)
