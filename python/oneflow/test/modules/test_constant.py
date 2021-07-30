@@ -18,11 +18,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
-
 import oneflow as flow
+
 import oneflow.unittest
-from oneflow.framework.tensor import register_tensor_op
+from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_ones(test_case, device, shape):
@@ -117,7 +117,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_new_ones,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
