@@ -84,12 +84,13 @@ class TestModule(flow.unittest.TestCase):
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @unittest.skip("reshape has bug")
     @autotest(auto_backward=False)
     def test_reshape_with_0shape_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        y = torch.reshape(x, shape=[0])
+        x = random_pytorch_tensor(4, 2, 0, 3).to(device)
+        y = torch.reshape(
+            x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
+        )
         return y
 
 
