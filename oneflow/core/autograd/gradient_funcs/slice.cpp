@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
@@ -92,11 +93,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    const std::string& op_name = fw_op_expr->op_name();
     std::vector<int64_t> start, stop, step;
-    grad_op_slice_ = JUST(op_expr_helper::SliceOp(start, stop, step, GradientOpName(op_name)));
-    grad_op_zero_like_ = JUST(op_expr_helper::ZeroLikeOp());
-    grad_op_slice_update_ = JUST(op_expr_helper::SliceUpdateOp(start, stop, step, GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -121,21 +118,16 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
 
   Maybe<void> Apply(const SliceUpdateOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", ctx->start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", ctx->stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", ctx->step));
-    
+    MutableAttrMap attrs;    
     in_grads->resize(2);
+
     if(ctx->requires_grad_x){
       const auto& update = ctx->SavedTensors().at(0);
-      const auto& temp = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_zero_like_, {update}));
-      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_slice_update_, {out_grads.at(0), temp}, attrs));
+      const auto& temp = JUST(functional::ZerosLike(update));
+      in_grads->at(0) = JUST(functional::SliceUpdate(out_grads.at(0), temp, ctx->start, ctx->stop, ctx->step));
     }
-
     if(ctx->requires_grad_update){
-      in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_slice_, {out_grads.at(0)}, attrs));
+      in_grads->at(1) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step));
     }
     return Maybe<void>::Ok();
   }
