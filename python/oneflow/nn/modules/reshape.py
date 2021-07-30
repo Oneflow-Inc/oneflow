@@ -18,7 +18,18 @@ from typing import Sequence
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
 
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
+
+
+def _input_args_is_tuple_int(args):
+    return all((_input_args_is_int(x) for x in args))
+
+
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 class Reshape(Module):
     def __init__(self, shape: Sequence[int]) -> None:
@@ -61,7 +72,7 @@ def reshape_op(x, shape: Sequence[int] = None):
 
 
 @register_tensor_op("view")
-def view_op(x, shape: Sequence[int] = None):
+def view_op(x, *shape):
     """
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
@@ -88,7 +99,7 @@ def view_op(x, shape: Sequence[int] = None):
 
     Args:
         x: A Tensor.
-        shape: Shape of the output tensor.
+        shape: flow.Size or int...
     Returns:
         A Tensor has the same type as `x`.
 
@@ -104,12 +115,18 @@ def view_op(x, shape: Sequence[int] = None):
         ... ).astype(np.float32)
         >>> input = flow.Tensor(x)
 
-        >>> y = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
+        >>> y = input.view(2, 2, 2, -1).numpy().shape
         >>> y
         (2, 2, 2, 2)
 
     """
-    return Reshape(shape=shape)(x)
+    if _input_args_is_tuple_int(shape):
+        new_shape = _single(*shape)
+    elif _input_args_is_flow_size(shape):
+        new_shape = _single(*shape)[0]
+    else:
+        raise ValueError("the input shape parameter of view is not illegal!")
+    return Reshape(shape=new_shape)(x)
 
 
 if __name__ == "__main__":
