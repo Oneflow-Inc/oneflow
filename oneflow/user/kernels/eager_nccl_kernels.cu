@@ -22,25 +22,50 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+class EagerNcclOpKernelState final : public user_op::OpKernelState {
+ public:
+  EagerNcclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
+  ~EagerNcclOpKernelState() override = default;
+
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+
+ private:
+  void Init(user_op::KernelInitContext* ctx) {
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    ParallelConf parallel_conf;
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    parallel_desc_ = SymbolOf(ParallelDesc(parallel_conf));
+  }
+
+  Symbol<ParallelDesc> parallel_desc_;
+};
+
+}  // namespace
+
 class EagerNcclAllReduceKernel final : public user_op::OpKernel {
  public:
   EagerNcclAllReduceKernel() = default;
   ~EagerNcclAllReduceKernel() override = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     std::set<std::pair<int64_t, int64_t>> device_set;
-    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
-    ParallelConf parallel_conf{};
-    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
-    const ParallelDesc parallel_desc(parallel_conf);
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
-      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc->parallel_num()) {
+      int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
@@ -60,21 +85,24 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   EagerNcclBroadcastKernel() = default;
   ~EagerNcclBroadcastKernel() override = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     std::set<std::pair<int64_t, int64_t>> device_set;
-    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     int64_t root = ctx->Attr<int64_t>("root");
-    ParallelConf parallel_conf{};
-    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
-    const ParallelDesc parallel_desc(parallel_conf);
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
-      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc->parallel_num()) {
+      int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
@@ -94,21 +122,24 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   EagerNcclReduceKernel() = default;
   ~EagerNcclReduceKernel() override = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     std::set<std::pair<int64_t, int64_t>> device_set;
-    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     int64_t root = ctx->Attr<int64_t>("root");
-    ParallelConf parallel_conf{};
-    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
-    const ParallelDesc parallel_desc(parallel_conf);
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
-      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc->parallel_num()) {
+      int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
@@ -119,7 +150,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
     int64_t cur_device_id = -1;
     GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&cur_machine_id, &cur_machine_id);
     int64_t cur_parallel_id =
-        CHECK_JUST(parallel_desc.ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
+        CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
     if (cur_parallel_id != root) {
       Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
                                out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
