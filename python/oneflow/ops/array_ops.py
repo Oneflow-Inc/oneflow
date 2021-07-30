@@ -37,7 +37,7 @@ def check_slice_tup_list(slice_tup_list, shape):
         if not all((isinstance(idx, int) or idx is None for idx in slice_tup)):
             raise ValueError("element of slice tuple must int or None")
         (start, stop, step) = slice_tup
-        if step is None or start == stop:
+        if step is None:
             step = 1
         if step == 0:
             raise ValueError("slice step can't be 0")
