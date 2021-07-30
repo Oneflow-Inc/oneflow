@@ -79,9 +79,7 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  int64_t device_id = -1;
-  device_id = GlobalProcessCtx::LocalRank();
-  return New(type, device_id);
+  return New(type, GlobalProcessCtx::LocalRank());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
