@@ -330,7 +330,7 @@ class random_tensor(generator):
         if ndim == 5:
             shape[4] = dim4
         if dtype == float:
-            np_arr = rng.random(shape)
+            np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
