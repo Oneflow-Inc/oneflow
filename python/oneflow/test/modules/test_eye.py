@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 
+
 def _test_eye_forward(test_case, device, n, m):
     output = flow.eye(n, m, device=device)
     np_out = np.eye(n, m)
@@ -38,7 +39,6 @@ def _test_eye_backward(test_case, device, n, m):
 
 @flow.unittest.skip_unless_1n1d()
 class TestEye(flow.unittest.TestCase):
-
     def test_eye(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -47,7 +47,7 @@ class TestEye(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["n"] = [4, 3, 2]
-        arg_dict["m"] = [4, 3, 2]      
+        arg_dict["m"] = [4, 3, 2]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
