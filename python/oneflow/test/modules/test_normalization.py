@@ -144,7 +144,8 @@ class TestLayerNorm(flow.unittest.TestCase):
         width = random(1, 6).to(int)
         m = torch.nn.LayerNorm(
             normalized_shape=random(1, 6).to(int),
-            eps=1e-05, elementwise_affine=random().to(bool)
+            eps=random().to(float)|nothing(), 
+            elementwise_affine=random().to(bool)
         )
         m.train(random())
         device = random_device()

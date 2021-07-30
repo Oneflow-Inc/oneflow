@@ -109,8 +109,8 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         h = random(1, 6).to(int)
         w = random(1, 6).to(int)
         # random padding test has some bug 
-        # padding=(random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int))
-        padding=[4, 5, 6, 7]
+        padding=(random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int))
+        # padding=[4, 5, 6, 7]
         m = torch.nn.ReplicationPad2d(
             padding=padding
         )

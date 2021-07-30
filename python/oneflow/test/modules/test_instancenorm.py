@@ -424,8 +424,11 @@ class TestInstanceNorm(flow.unittest.TestCase):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
         m = torch.nn.InstanceNorm1d(
-            num_features=height, eps=1e-05, momentum=0.1,
-            affine=random().to(bool), track_running_stats=rondom().to(bool)
+            num_features=height, 
+            eps=random().to(float)|nothing(), 
+            momentum=random().to(float)|nothing(),
+            affine=random().to(bool), 
+            track_running_stats=random().to(bool)
         )
         m.train(random())
         device = random_device()
@@ -440,8 +443,11 @@ class TestInstanceNorm(flow.unittest.TestCase):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
         m = torch.nn.InstanceNorm2d(
-            num_features=channel, eps=1e-05, momentum=0.1,
-            affine=random().to(bool), track_running_stats=rondom().to(bool)
+            num_features=channel, 
+            eps=random().to(float)|nothing(), 
+            momentum=random().to(float)|nothing(),
+            affine=random().to(bool), 
+            track_running_stats=random().to(bool)
         )
         m.train(random())
         device = random_device()
@@ -459,8 +465,11 @@ class TestInstanceNorm(flow.unittest.TestCase):
         # Set auto_backward=True will raise AssertionError: False is not true
         # Set track_running_stats=True will raise error: Unexpected key(s) in state_dict: "num_batches_tracked".
         m = torch.nn.InstanceNorm3d(
-            num_features=channel, eps=1e-05, momentum=0.1,
-            affine=random().to(bool), track_running_stats=False
+            num_features=channel, 
+            eps=random().to(float)|nothing(), 
+            momentum=random().to(float)|nothing(),
+            affine=random().to(bool), 
+            track_running_stats=False
         )
         m.train(random())
         device = random_device()
