@@ -115,7 +115,7 @@ template<>
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
-  bool inplace_output= false;
+  bool inplace_output = false;
   if (outputs->size() > 0 && (outputs->at(0).get())) {
     inplace_output = true;
     CHECK_OR_RETURN(outputs->size() == op_expr.output_size());
@@ -124,9 +124,7 @@ template<>
     // lazy mode will ignore inplace
     auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
     JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, lazy_outputs.get(), ctx);
-    FOR_RANGE(size_t, i, 0, op_expr.output_size()) {
-      outputs->at(i) = lazy_outputs->at(i);
-    }
+    FOR_RANGE(size_t, i, 0, op_expr.output_size()) { outputs->at(i) = lazy_outputs->at(i); }
     return Maybe<void>::Ok();
   } else {
     return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);

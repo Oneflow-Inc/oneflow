@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import argparse
 import numpy as np
 import os
@@ -9,7 +24,6 @@ import oneflow.unittest
 
 from oneflow.test.graph.alexnet.alexnet_model import alexnet
 from oneflow.test.graph.alexnet.ofrecord_data_utils import OFRecordDataLoader
-
 
 
 def _parse_args():
@@ -24,9 +38,14 @@ def _parse_args():
         "--load_checkpoint", type=str, default="", help="load checkpoint"
     )
     parser.add_argument(
-        "--ofrecord_path", type=str, default="/dataset/imagenette/ofrecord", help="dataset path"
+        "--ofrecord_path",
+        type=str,
+        default="/dataset/imagenette/ofrecord",
+        help="dataset path",
     )
-    parser.add_argument("--train_dataset_size", type=int, default=40, help="train_dataset size")
+    parser.add_argument(
+        "--train_dataset_size", type=int, default=40, help="train_dataset size"
+    )
     # training hyper-parameters
     parser.add_argument(
         "--learning_rate", type=float, default=0.001, help="learning rate"
@@ -37,9 +56,7 @@ def _parse_args():
         "--train_batch_size", type=int, default=4, help="train batch size"
     )
     parser.add_argument("--val_batch_size", type=int, default=4, help="val batch size")
-    parser.add_argument(
-        "--device", type=str, default="cuda", help="device"
-    )
+    parser.add_argument("--device", type=str, default="cuda", help="device")
 
     return parser.parse_args()
 
@@ -76,7 +93,7 @@ def _test_alexnet_graph(test_case, args):
             self.alexnet = alexnet_module
             self.cross_entropy = of_cross_entropy
             self.add_optimizer("sgd", of_sgd)
-        
+
         def build(self, image, label):
             logits = self.alexnet(image)
             loss = self.cross_entropy(logits, label)
@@ -111,12 +128,20 @@ def _test_alexnet_graph(test_case, args):
                     )
                 )
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestAlexnetGraph(oneflow.unittest.TestCase):
     def test_alexnet_graph_gpu(test_case):
         args = _parse_args()
+        args.device = "cuda"
         _test_alexnet_graph(test_case, args)
+
+    def test_alexnet_graph_cpu(test_case):
+        args = _parse_args()
+        args.device = "cpu"
+        _test_alexnet_graph(test_case, args)
+
 
 if __name__ == "__main__":
     unittest.main()
