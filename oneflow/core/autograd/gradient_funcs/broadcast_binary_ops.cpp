@@ -28,8 +28,8 @@ class ReduceSumLikeModule {
   ReduceSumLikeModule() = default;
   ~ReduceSumLikeModule() = default;
 
-  Maybe<Tensor> forward(const std::shared_ptr<Tensor>& input,
-                        const std::shared_ptr<Tensor>& like) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const std::shared_ptr<Tensor>& like) const {
     const auto& in_shape = *(input->shape());
     const auto& like_shape = *(like->shape());
     if (in_shape != like_shape) {
@@ -70,68 +70,39 @@ class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
 
 class BroadcastAdd : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
-    if (y->requires_grad()) { in_grads->at(1) = JUST(y_grad_op_->forward(out_grads.at(0), y)); }
+    if (x->requires_grad()) { in_grads->at(0) = JUST(ReduceSumLikeModule()(out_grads.at(0), x)); }
+    if (y->requires_grad()) { in_grads->at(1) = JUST(ReduceSumLikeModule()(out_grads.at(0), y)); }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_add", BroadcastAdd);
 
 class BroadcastSub : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
+    if (x->requires_grad()) { in_grads->at(0) = JUST(ReduceSumLikeModule()(out_grads.at(0), x)); }
     if (y->requires_grad()) {
       const auto& grad = JUST(functional::ScalarMul(out_grads.at(0), functional::Scalar(-1.f)));
-      in_grads->at(1) = JUST(y_grad_op_->forward(grad, y));
+      in_grads->at(1) = JUST(ReduceSumLikeModule()(grad, y));
     }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_sub", BroadcastSub);
 
 class BroadcastMul : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
@@ -139,30 +110,20 @@ class BroadcastMul : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad = JUST(functional::BroadcastMul(out_grads.at(0), y));
-      in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
+      in_grads->at(0) = JUST(ReduceSumLikeModule()(x_grad, x));
     }
     if (y->requires_grad()) {
       const auto& y_grad = JUST(functional::BroadcastMul(out_grads.at(0), x));
-      in_grads->at(1) = JUST(y_grad_op_->forward(y_grad, y));
+      in_grads->at(1) = JUST(ReduceSumLikeModule()(y_grad, y));
     }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
 
 class BroadcastDiv : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
@@ -171,29 +132,19 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad = JUST(functional::BroadcastDiv(out_grads.at(0), y));
-      in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
+      in_grads->at(0) = JUST(ReduceSumLikeModule()(x_grad, x));
     }
     if (y->requires_grad()) {
       in_grads->at(1) = JUST(functional::BroadcastDivGrad(out_grads.at(0), z, y));
     }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
 
 class BroadcastMinMax : public BroadcastBinaryGrad {
  public:
-  virtual Maybe<void> Init(const OpExpr& op) {
-    JUST(BroadcastBinaryGrad::Init(op));
-    x_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    y_grad_op_ = std::make_shared<ReduceSumLikeModule>();
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
@@ -225,18 +176,16 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
       const auto& broad_grads =
           JUST(elementwise_grad_functor_(out_grads.at(0), broad_x_, broad_y_));
       if (x->requires_grad()) {
-        in_grads->at(0) = JUST(x_grad_op_->forward(broad_grads->at(0), x));
+        in_grads->at(0) = JUST(ReduceSumLikeModule()(broad_grads->at(0), x));
       }
       if (y->requires_grad()) {
-        in_grads->at(1) = JUST(y_grad_op_->forward(broad_grads->at(1), y));
+        in_grads->at(1) = JUST(ReduceSumLikeModule()(broad_grads->at(1), y));
       }
     }
     return Maybe<void>::Ok();
   }
 
  protected:
-  std::shared_ptr<ReduceSumLikeModule> x_grad_op_;
-  std::shared_ptr<ReduceSumLikeModule> y_grad_op_;
   std::function<Maybe<TensorTuple>(const std::shared_ptr<Tensor>&, const std::shared_ptr<Tensor>&,
                                    const std::shared_ptr<Tensor>&)>
       elementwise_grad_functor_;
