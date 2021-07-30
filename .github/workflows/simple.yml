@@ -71,6 +71,9 @@ jobs:
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
+    env:
+      CFLAGS: "-w"
+      CXXFLAGS: "-w"
     strategy:
       fail-fast: true
       max-parallel: 3
