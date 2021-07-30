@@ -104,14 +104,16 @@ class ScalarMulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<int64_t>("int_operand", 0));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<double>("float_operand", 0.0));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
