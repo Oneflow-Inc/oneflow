@@ -54,7 +54,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def("GetProtoDtype4OfDtype", [](const Symbol<DType>& x) { return static_cast<int>(x->data_type()); });
 
-  m.def("GetDTypeByDataType", [](int data_type) {
+  m.def("GetSymbolDTypeByDataType", [](int data_type) {
     return DType::Get(static_cast<DataType>(data_type)).GetOrThrow();
   });
 }
