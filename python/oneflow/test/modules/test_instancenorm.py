@@ -418,17 +418,17 @@ class TestInstanceNorm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(n=5, auto_backward=True, rtol=1e-4, atol=1e-4)
     def test_instancenorm_with_random_data(test_case):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
         m = torch.nn.InstanceNorm1d(
-            num_features=height, 
-            eps=random().to(float)|nothing(), 
-            momentum=random().to(float)|nothing(),
-            affine=random().to(bool), 
-            track_running_stats=random().to(bool)
+            num_features=height,
+            eps=random().to(float) | nothing(),
+            momentum=random().to(float) | nothing(),
+            affine=random().to(bool),
+            track_running_stats=random().to(bool),
         )
         m.train(random())
         device = random_device()
@@ -436,26 +436,28 @@ class TestInstanceNorm(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim1=height, dim2=width).to(device)
         y = m(x)
         return y
-    
+
     @autotest(n=5, auto_backward=True, rtol=1e-4, atol=1e-4)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
         m = torch.nn.InstanceNorm2d(
-            num_features=channel, 
-            eps=random().to(float)|nothing(), 
-            momentum=random().to(float)|nothing(),
-            affine=random().to(bool), 
-            track_running_stats=random().to(bool)
+            num_features=channel,
+            eps=random().to(float) | nothing(),
+            momentum=random().to(float) | nothing(),
+            affine=random().to(bool),
+            track_running_stats=random().to(bool),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
         y = m(x)
         return y
-    
+
     @autotest(n=5, auto_backward=False, rtol=1e-4, atol=1e-4)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
@@ -465,16 +467,18 @@ class TestInstanceNorm(flow.unittest.TestCase):
         # Set auto_backward=True will raise AssertionError: False is not true
         # Set track_running_stats=True will raise error: Unexpected key(s) in state_dict: "num_batches_tracked".
         m = torch.nn.InstanceNorm3d(
-            num_features=channel, 
-            eps=random().to(float)|nothing(), 
-            momentum=random().to(float)|nothing(),
-            affine=random().to(bool), 
-            track_running_stats=False
+            num_features=channel,
+            eps=random().to(float) | nothing(),
+            momentum=random().to(float) | nothing(),
+            affine=random().to(bool),
+            track_running_stats=False,
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width).to(device)
+        x = random_pytorch_tensor(
+            ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width
+        ).to(device)
         y = m(x)
         return y
 

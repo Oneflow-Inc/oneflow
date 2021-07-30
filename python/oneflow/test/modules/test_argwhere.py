@@ -43,7 +43,7 @@ class TestArgwhere(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @unittest.skip("pytorch do not have argwhere fn/module yet!")
     @autotest(n=5, rtol=1e-5, atol=1e-5)
     def test_argwhere_with_random_data(test_case):

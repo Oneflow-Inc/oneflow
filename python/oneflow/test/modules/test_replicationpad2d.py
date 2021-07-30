@@ -102,22 +102,25 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_ReplicationPad2d(test_case, *arg)
-    
+
     @autotest(n=5)
     def test_replication_pad2d_with_random_data(test_case):
         c = random(1, 6).to(int)
         h = random(1, 6).to(int)
         w = random(1, 6).to(int)
-        # random padding test has some bug 
-        padding=(random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int), random(1, 6).to(int))
-        # padding=[4, 5, 6, 7]
-        m = torch.nn.ReplicationPad2d(
-            padding=padding
+        # random padding test has some bug
+        padding = (
+            random(1, 6).to(int),
+            random(1, 6).to(int),
+            random(1, 6).to(int),
+            random(1, 6).to(int),
         )
+        # padding=[4, 5, 6, 7]
+        m = torch.nn.ReplicationPad2d(padding=padding)
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim = 4, dim1=c, dim2 = h, dim3 = w).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
         y = m(x)
         return y
 
