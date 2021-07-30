@@ -22,18 +22,18 @@ from test_util import GenArgList
 
 import oneflow as flow
 
-def _test_eye_forward(test_case, device, m):
-    output = flow.eye(3, m, device=device)
-    np_out = np.eye(3, m)
+def _test_eye_forward(test_case, device, n, m):
+    output = flow.eye(n, m, device=device)
+    np_out = np.eye(n, m)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
-def _test_eye_backward(test_case, device, m):
-    x = flow.eye(3, m, device=device)
+def _test_eye_backward(test_case, device, n, m):
+    x = flow.eye(n, m, device=device)
     x.requires_grad = True
     y = x.sum()
     y.backward()
-    test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones([3, m])))
+    test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones([n, m])))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -46,16 +46,20 @@ class TestEye(flow.unittest.TestCase):
             _test_eye_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["m"] = [4, 3, 2]
+        arg_dict["n"] = [4, 3, 2]
+        arg_dict["m"] = [4, 3, 2]      
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    """
-    def test_flow_eye_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            test_flow_against_pytorch(
-                test_case, "eye", device=device,
-            )
-    """
+
+    @autotest()
+    def test_eye_with_random_data(test_case):
+        n = random().to(int)
+        m = random().to(int)
+        x = torch.eye(n=n, m=m)
+        device = random_device()
+        x.to(device)
+        x = random_pytorch_tensor().to(device)
+        return x
 
 
 if __name__ == "__main__":

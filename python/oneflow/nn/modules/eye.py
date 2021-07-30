@@ -34,6 +34,9 @@ class Eye(Module):
 
     def forward(self, n):
         m = self.m
+        if m is None:
+            m = n
+            
         if m == n:
            res = flow.diag(flow.ones(n))
         elif m < n:
@@ -87,8 +90,6 @@ def eye_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    if m is None:
-        m = n
     return Eye(m, device, requires_grad)(n)
 
 
