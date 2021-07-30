@@ -108,9 +108,7 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         c = random(1, 6).to(int)
         h = random(1, 6).to(int)
         w = random(1, 6).to(int)
-        m = torch.nn.ReplicationPad2d(
-            padding=random(low=0, high=7)
-        )
+        m = torch.nn.ReplicationPad2d(padding=random(low=0, high=7))
         m.train(random())
         device = random_device()
         m.to(device)
