@@ -114,6 +114,7 @@ Symbol<DType> DType::DType4DataType(DataType data_type) {
   return iter->second;
 }
 
+// todo: 121 macro \ error
 #define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)           \
   const Symbol<DType> DType::data_type() {                       \
     return DType::DType4DataType(OF_PP_CAT(DataType::k, data_type));     \
