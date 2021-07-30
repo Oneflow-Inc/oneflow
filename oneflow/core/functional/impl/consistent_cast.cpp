@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
@@ -109,10 +109,6 @@ class ToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
-    cfg::ParallelDistribution parallel_distribution;
-    for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
-      *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
-    }
     if (x->is_consistent()) {
       UNIMPLEMENTED_THEN_RETURN();
     } else {
@@ -128,7 +124,7 @@ class ToConsistentFunctor {
           JUST(SyncData(mirrored_tensor, parallel_desc, sbp_parallels));
       const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
           *op_, {synced_tensor},
-          OpExprInterpContext(AttrMap{}, parallel_desc, SymbolOf(parallel_distribution))));
+          OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
       return output;
     }
   }
