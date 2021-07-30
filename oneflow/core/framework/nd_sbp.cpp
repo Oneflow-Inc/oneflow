@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
 namespace {
+
+std::mutex* GlobalNdSbpMutex() {
+  static std::mutex global_nd_sbp_mutex;
+  return &global_nd_sbp_mutex;
+}
 
 Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
@@ -40,6 +46,7 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+  std::unique_lock<std::mutex> lock(*GlobalNdSbpMutex());
   return FindFOrCreateNdSbp(sbp_list);
 }
 
