@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import numpy as np
 
@@ -57,6 +58,7 @@ def _test_linear_graph(test_case, device):
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLinearGraph(oneflow.unittest.TestCase):
     def test_linear_graph_gpu(test_case):
         _test_linear_graph(test_case, flow.device("cuda"))
