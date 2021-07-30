@@ -284,6 +284,8 @@ from oneflow.nn.modules.math_ops import erfc_op as erfc
 from oneflow.nn.modules.math_ops import expm1_op as expm1
 from oneflow.nn.modules.math_ops import fmod_op as fmod
 from oneflow.nn.modules.math_ops import log_op as log
+from oneflow.nn.modules.math_ops import minimum as minimum
+from oneflow.nn.modules.math_ops import maximum as maximum
 from oneflow.nn.modules.math_ops import pow_op as pow
 from oneflow.nn.modules.math_ops import rsqrt_op as rsqrt
 from oneflow.nn.modules.math_ops import sin_op as sin
