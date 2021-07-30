@@ -29,6 +29,8 @@ struct NormalizationGradInterpState : public OpExprInterpState {
   int32_t axis;
   float epsilon;
   bool is_training;
+  bool gamma_requires_grad;
+  bool beta_requires_grad;
 };
 
 // training:
@@ -69,6 +71,8 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
 
   Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->gamma_requires_grad = inputs.at(3)->requires_grad();
+    ctx->beta_requires_grad = inputs.at(4)->requires_grad();
     ctx->axis = JUST(op_trait_->GetAttr<int32_t>("axis", attrs));
     ctx->epsilon = JUST(op_trait_->GetAttr<float>("epsilon", attrs));
     ctx->is_training = JUST(op_trait_->GetAttr<bool>("training", attrs));
@@ -113,8 +117,12 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     CHECK_EQ_OR_RETURN(results->size(), 3);
     // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and beta.
     in_grads->resize(5);
-    in_grads->at(3) = results->at(1);  // gamma_diff;
-    in_grads->at(4) = results->at(2);  // beta_diff
+    if (ctx->gamma_requires_grad) {
+      in_grads->at(3) = results->at(1);  // gamma_diff;
+    }
+    if (ctx->beta_requires_grad) {
+      in_grads->at(4) = results->at(2);  // beta_diff
+    }
     if (ctx->is_training) {
       in_grads->at(0) = results->at(0);
       return Maybe<void>::Ok();
@@ -129,7 +137,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
       }
     }
     MutableAttrMap shape_attr;
-    shape_attr.SetAttr<Shape>("shape", Shape(dim_vec));
+    JUST(shape_attr.SetAttr<Shape>("shape", Shape(dim_vec)));
     const auto& reshaped_gamma =
         JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_gamma_op_, {gamma}, shape_attr));
     const auto& reshaped_inv_variance =

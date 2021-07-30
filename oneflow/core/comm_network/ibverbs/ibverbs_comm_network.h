@@ -28,14 +28,19 @@ limitations under the License.
 
 namespace oneflow {
 
+struct IBVerbsCommNetRMADesc {
+  uint64_t mem_ptr;
+  uint64_t mem_size;
+  uint32_t mr_rkey;
+};
+
 class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet();
 
-  void RegisterMemoryDone() override;
-
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
+  void RecvActorMsg(const ActorMsg& msg);
 
  private:
   friend class Global<IBVerbsCommNet>;
@@ -50,13 +55,15 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
 
   static const int32_t max_poll_wc_num_;
 
-  std::vector<HashMap<void*, IBVerbsMemDescProto>> token2mem_desc_;
   ibv_context* context_;
   ibv_pd* pd_;
   ibv_cq* cq_;
   std::vector<IBVerbsQP*> qp_vec_;
   std::atomic_flag poll_exit_flag_;
   std::thread poll_thread_;
+  HashMap<std::pair<int64_t, uint64_t>, std::shared_ptr<IBVerbsCommNetRMADesc>>
+      remote_regst2rma_desc_;
+  std::mutex remote_regst2rma_desc_mutex_;
 };
 
 }  // namespace oneflow

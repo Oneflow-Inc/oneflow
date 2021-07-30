@@ -46,6 +46,7 @@ def build_img(
     use_tuna,
     use_system_proxy,
     img_tag,
+    dry,
 ):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
@@ -67,7 +68,8 @@ def build_img(
     proxy_build_arg = get_proxy_build_args() if use_system_proxy else ""
     cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
     print(cmd)
-    subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
+    if dry == False:
+        subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
 
 
 def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
@@ -86,6 +88,7 @@ def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
+    return ""
     build_dir_real = os.path.join(cache_dir, "build")
     build_dir_mount = os.path.join(oneflow_src_dir, "build")
     return f"-v {build_dir_real}:{build_dir_mount}"
@@ -136,6 +139,7 @@ def get_common_docker_args(
     current_dir=None,
     house_dir=None,
     use_system_proxy=True,
+    inplace=False,
 ):
     root = Path(cache_dir)
     child = Path(current_dir)
@@ -148,7 +152,10 @@ def get_common_docker_args(
         house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
     proxy_env_arg = get_proxy_env_args() if use_system_proxy else ""
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
+    inplace_attr = ""
+    if inplace == False:
+        inplace_attr = ":ro"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
 def build_third_party(
@@ -218,9 +225,24 @@ def build_oneflow(
     dry,
     use_system_proxy,
     enter_bash,
+    skip_audit,
+    inplace,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
+    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+    inplace_arg = ""
+    oneflow_python_dir_cmd = ""
+    if inplace == False:
+        oneflow_python_dir = "/tmp/oneflow_python"
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -232,6 +254,7 @@ def build_oneflow(
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
     common_docker_args = get_common_docker_args(
@@ -240,6 +263,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
@@ -251,6 +275,8 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
@@ -264,10 +290,16 @@ cmake --build . -j `nproc`
         pass
     else:
         bash_cmd += f"""
-rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
-cd {oneflow_src_dir}
-rm -rf build/*
-{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+cd {oneflow_python_dir}
+{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
+cd -
+"""
+    if skip_audit:
+        bash_cmd += f"""
+cp /tmp/tmp_wheel/*.whl {house_dir}
+"""
+    else:
+        bash_cmd += f"""
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
     return create_tmp_bash_and_run(
@@ -302,9 +334,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
     )
-    parser.add_argument(
-        "--python_version", type=str, required=False, default="3.6, 3.7, 3.8",
-    )
+    parser.add_argument("--python_version", type=str, required=True)
     parser.add_argument(
         "--cuda_version", type=str, required=False, default="10.2",
     )
@@ -330,6 +360,12 @@ if __name__ == "__main__":
         "--skip_img", default=False, action="store_true", required=False
     )
     parser.add_argument(
+        "--skip_audit", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
+        "--build_img", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
         "--use_tuna", default=False, action="store_true", required=False
     )
     parser.add_argument("--dry", default=False, action="store_true", required=False)
@@ -344,8 +380,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
+    parser.add_argument("--inplace", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
+    if args.skip_img:
+        "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
@@ -372,7 +411,6 @@ if __name__ == "__main__":
 
         def build():
             img_tag = None
-            skip_img = args.skip_img
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
@@ -390,25 +428,30 @@ if __name__ == "__main__":
                 enforced_oneflow_cmake_args += (
                     ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
                 )
-            user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
                     f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
                 )
-            if args.custom_img_tag:
-                img_tag = args.custom_img_tag
-                skip_img = True
-            elif skip_img:
-                assert is_img_existing(
-                    versioned_img_tag
-                ), f"img not found: {versioned_img_tag}"
-                img_tag = versioned_img_tag
-            else:
+            user_img_tag = f"{img_prefix}:{user}"
+            inc_img_tag = f"oneflowinc/{versioned_img_tag}"
+            img_tag = inc_img_tag
+            if args.build_img:
                 img_tag = user_img_tag
+            elif args.custom_img_tag:
+                img_tag = args.custom_img_tag
+            else:
+                if is_img_existing(versioned_img_tag):
+                    img_tag = versioned_img_tag
+                elif is_img_existing(inc_img_tag):
+                    img_tag = inc_img_tag
+                else:
+                    raise ValueError(
+                        f"img not found, please run 'docker pull {inc_img_tag}'"
+                    )
             assert img_tag is not None
             print("using", img_tag)
-            if skip_img == False:
+            if args.build_img:
                 build_img(
                     cuda_version,
                     args.oneflow_src_dir,
@@ -416,6 +459,7 @@ if __name__ == "__main__":
                     args.use_tuna,
                     args.use_system_proxy,
                     img_tag,
+                    args.dry,
                 )
             bash_args = ""
             if args.xla:
@@ -450,6 +494,8 @@ gcc --version
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
+            if args.build_img:
+                return
             if args.skip_third_party == False:
                 build_third_party(
                     img_tag,
@@ -484,6 +530,8 @@ gcc --version
                     args.dry,
                     args.use_system_proxy,
                     args.bash,
+                    args.skip_audit,
+                    args.inplace,
                 )
 
         try:

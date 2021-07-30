@@ -63,8 +63,9 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
-  NewAllGlobal(plan, total_piece_num, is_experiment_phase);
+Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+                 const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+  NewAllGlobal(plan, total_piece_num, is_experiment_phase, variable_op_name2eager_blob);
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -85,8 +86,6 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   LOG(INFO) << "Actors on this machine constructed";
   OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
-  if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  OF_SESSION_BARRIER();
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
@@ -97,7 +96,8 @@ Runtime::~Runtime() {
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+                           const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
   if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
@@ -128,9 +128,11 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New(plan);
+  Global<RegstMgr>::New();
+  Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
   Global<ActorMsgBus>::New();
-  Global<ThreadMgr>::New(plan);
+  Global<ThreadMgr>::New();
+  Global<ThreadMgr>::Get()->AddPlan(plan);
   Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
   Global<summary::EventsWriter>::New();

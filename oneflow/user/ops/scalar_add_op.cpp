@@ -42,10 +42,12 @@ REGISTER_USER_OP("scalar_add")
     });
 
 REGISTER_USER_OP_GRAD("scalar_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

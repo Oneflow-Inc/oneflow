@@ -42,13 +42,11 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 struct MemoryCaseUtil {
   static bool GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b, MemoryCase* common);
 
-  static MemoryCase GetHostPinnedMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
+  static MemoryCase GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
 
   static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
 
   static int64_t GenMemZoneId(const MemoryCase& mem_case);
-
-  static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
 
   static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
                                                  const int64_t device_id);

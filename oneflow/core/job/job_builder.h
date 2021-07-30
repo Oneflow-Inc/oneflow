@@ -50,8 +50,8 @@ class JobBuilder final {
     return job_->mutable_job_parallel_view_conf();
   }
 
-  const OperatorConf& OpConf4OpName(const std::string& op_name) const;
-  OperatorConf* MutableOpConf4OpName(const std::string& op_name);
+  Maybe<const OperatorConf&> OpConf4OpName(const std::string& op_name) const;
+  Maybe<OperatorConf*> MutableOpConf4OpName(const std::string& op_name);
 
   Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
@@ -70,7 +70,7 @@ class JobBuilder final {
   void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
   void SetParallelDistribution4Oba(const OpBlobArg& oba,
                                    const cfg::ParallelDistribution& parallel_distribution);
-  void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
+  Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;

@@ -31,7 +31,7 @@ namespace functional {
 
 namespace impl {
 
-class AddFunctor : public BinaryFunctor {
+class AddFunctor : public InplaceableBinaryFunctor {
  public:
   AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
 };
@@ -78,10 +78,25 @@ class BroadcastDivFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastFModFunctor : public BinaryFunctor {
+ public:
+  BroadcastFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_fmod").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastEqualFunctor : public BinaryFunctor {
  public:
   BroadcastEqualFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastNotEqualFunctor : public BinaryFunctor {
+ public:
+  BroadcastNotEqualFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_not_equal").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -92,6 +107,14 @@ class BroadcastGreaterFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastGreaterEqualFunctor : public BinaryFunctor {
+ public:
+  BroadcastGreaterEqualFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_greater_equal").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastLessFunctor : public BinaryFunctor {
  public:
   BroadcastLessFunctor() {
@@ -99,7 +122,15 @@ class BroadcastLessFunctor : public BinaryFunctor {
   }
 };
 
-class ScalarAddByTensorFunctor : public BinaryFunctor {
+class BroadcastLessEqualFunctor : public BinaryFunctor {
+ public:
+  BroadcastLessEqualFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_less_equal").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
     op_ = CHECK_JUST(
@@ -142,12 +173,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
   m.add_functor<impl::BroadcastDivFunctor>("BroadcastDiv");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
+  m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
+  m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
+  m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
+  m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
 };
 
 }  // namespace functional

@@ -21,10 +21,10 @@ namespace test {
 
 TEST(AttrMap, basic) {
   MutableCfgAttrMap mut_attr_map{};
-  mut_attr_map.SetAttr<int32_t>("zero", 0);
-  mut_attr_map.SetAttr<int64_t>("one", 1);
-  mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
-  mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1});
+  CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
+  CHECK_JUST(mut_attr_map.SetAttr<int64_t>("one", 1));
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0}));
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1}));
   AttrMap attr_map(mut_attr_map);
   {
     const auto& val = CHECK_JUST(attr_map.GetAttr<int32_t>("zero"));
@@ -55,10 +55,10 @@ TEST(AttrMap, basic) {
 TEST(AttrMap, hash_value) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
   MutableCfgAttrMap mut_attr_map{};
-  mut_attr_map.SetAttr<int32_t>("zero", 0);
-  mut_attr_map.SetAttr<int64_t>("one", 1);
-  mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
-  mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1});
+  CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
+  CHECK_JUST(mut_attr_map.SetAttr<int64_t>("one", 1));
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0}));
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1}));
   ASSERT_EQ(AttrMap(mut_attr_map).hash_value(), AttrMap(mut_attr_map).hash_value());
   ASSERT_TRUE(AttrMap(mut_attr_map) == AttrMap(mut_attr_map));
 }
@@ -68,16 +68,16 @@ TEST(AttrMap, hash_map) {
   MutableCfgAttrMap mut_attr_map{};
   attr_map2int_value[AttrMap(mut_attr_map)] = 0;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 0);
-  mut_attr_map.SetAttr<int32_t>("zero", 0);
+  CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
   attr_map2int_value[AttrMap(mut_attr_map)] = 1;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 1);
-  mut_attr_map.SetAttr<int64_t>("one", 1);
+  CHECK_JUST(mut_attr_map.SetAttr<int64_t>("one", 1));
   attr_map2int_value[AttrMap(mut_attr_map)] = 2;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 2);
-  mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0}));
   attr_map2int_value[AttrMap(mut_attr_map)] = 3;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 3);
-  mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1});
+  CHECK_JUST(mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1}));
   attr_map2int_value[AttrMap(mut_attr_map)] = 4;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 4);
 }

@@ -64,7 +64,9 @@ header_fmt = (
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {{
 namespace one {{
@@ -147,6 +149,11 @@ types_allowed = {
     "BoolList",
     "DataType",
     "Shape",
+    "Generator",
+    "TensorIndex",
+    "ParallelDesc",
+    "SbpParallel",
+    "SbpParallelList",
 }
 
 generic_type_aliases = {
@@ -173,6 +180,11 @@ argument_type_aliases = {
     "BoolList": "const std::vector<bool>&",
     "DataType": "const DataType&",
     "Shape": "const Shape&",
+    "Generator": "const std::shared_ptr<one::Generator>&",
+    "TensorIndex": "const TensorIndex&",
+    "ParallelDesc": "const Symbol<ParallelDesc>&",
+    "SbpParallel": "const Symbol<cfg::SbpParallel>&",
+    "SbpParallelList": "const std::vector<Symbol<cfg::SbpParallel>>&",
     **generic_type_aliases,
 }
 
@@ -191,6 +203,11 @@ optional_argument_type_aliases = {
     "BoolList": "const Optional<std::vector<bool>>&",
     "DataType": "const Optional<DataType>&",
     "Shape": "const Optional<Shape>&",
+    "Generator": "const Optional<one::Generator>&",
+    "TensorIndex": "const Optional<TensorIndex>&",
+    "ParallelDesc": "const Optional<Symbol<ParallelDesc>>&",
+    "SbpParallel": "const Optional<Symbol<SbpParallel>>&",
+    "SbpParallelList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -452,6 +469,18 @@ class FunctionalGenerator:
             schema_fmt += "  static std::vector<ArgumentDef> argument_def;\n"
             schema_fmt += "};\n"
             schema_fmt += "\n"
+            schema_fmt += "constexpr size_t {0}Schema::max_args;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr size_t {0}Schema::max_positionals;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr size_t {0}Schema::max_keywords;\n".format(
+                signature._name
+            )
+            schema_fmt += "constexpr char const* {0}Schema::signature;\n".format(
+                signature._name
+            )
             schema_fmt += "ReturnDef {0}Schema::return_def = ReturnDef(ValueTypeOf<{1}>());\n".format(
                 signature._name, return_type,
             )

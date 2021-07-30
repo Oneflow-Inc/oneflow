@@ -41,11 +41,11 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
-  if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
-  rptr->Init(op_conf);
+  DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf->device_tag()));
+  if (IsCpuOnly(*op_conf)) { CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU); }
+  JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
 }
 
@@ -53,17 +53,18 @@ std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf
 
 Operator::Operator() : device_type_(DeviceType::kInvalidDevice) {}
 
-void Operator::Init(const OperatorConf& op_conf) {
-  Init(std::make_shared<const OperatorConf>(op_conf));
+Maybe<void> Operator::Init(const OperatorConf& op_conf) {
+  return Init(std::make_shared<const OperatorConf>(op_conf));
 }
 
-void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
+Maybe<void> Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
   op_conf_ = std::move(op_conf);
-  device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
-  InitFromOpConf();
+  device_type_ = JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
+  JUST(InitFromOpConf());
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
+  return Maybe<void>::Ok();
 }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -1073,6 +1074,12 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
   return GetFieldNameAndIndex4StrVal(bn);
 }
 
+bool IsCpuOnly(const std::string& user_op_type_name) {
+  auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_type_name);
+  CHECK_NOTNULL(registration_val);
+  return registration_val->cpu_only_supported;
+}
+
 bool IsCpuOnly(const OperatorConf& op_conf) {
   OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
   using CpuOnly = OnlyCpuSupportPredicator;
@@ -1080,21 +1087,18 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }
-  auto* registration_val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
-  CHECK_NOTNULL(registration_val);
-  return registration_val->cpu_only_supported;
+  return IsCpuOnly(op_conf.user_conf().op_type_name());
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
   std::shared_ptr<OperatorConf> dev_op_conf = std::make_shared<OperatorConf>(op_conf);
   dev_op_conf->set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  auto op = CheckAndConstructOp(dev_op_conf);
+  auto op = JUST(CheckAndConstructOp(dev_op_conf));
   return op;
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
-  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
+Maybe<Operator> ConstructOp(const OperatorConf& op_conf) {
+  if (IsCpuOnly(op_conf)) { return JUST(ConstructOp(op_conf, DeviceType::kCPU)); }
   return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
 
@@ -1205,17 +1209,17 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           const auto parallel_conf =
               std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
-          const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
+          const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
             int64_t symbol_id;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
               return Maybe<void>::Ok();
             };
-            LogicalRun(BuildInstruction);
+            JUST(LogicalRun(BuildInstruction));
             return symbol_id;
           };
-          (*symbol_map)[pair.first] = MakeParallelDescSymbol();
+          (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }
@@ -1386,7 +1390,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
-  const auto& op = ConstructOp(op_conf);
+  const auto& op = JUST(ConstructOp(op_conf));
   JUST(CheckOpInputSignature(*op, upstream_signature));
   JUST(op->FillOpParallelDesc(parallel_desc));
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
@@ -1399,11 +1403,12 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
   // infer is_mirrored
-  JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
+  JUST(InferMirroredSignature(op.get(), cfg::OpNodeSignature(upstream_signature), is_mirrored,
+                              parallel_desc));
   cfg::SbpSignature sbp_sig_conf;
   // iner sbp
-  JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
-                             parallel_desc));
+  JUST(InferOpOutSbpParallel(op.get(), cfg::OpNodeSignature(upstream_signature), ConstBlobDesc4Ibn,
+                             sbp_sig_conf, parallel_desc));
   // infer logical blob_desc
   JUST(op->InferLogicalOutBlobDescsIf());
   return op;

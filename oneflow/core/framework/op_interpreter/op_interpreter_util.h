@@ -34,22 +34,28 @@ class OpInterpUtil {
   static Maybe<AutogradInterpreter> GetInterpreter();
 
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs);
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs) {
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext{attrs, nullptr});
+  }
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, AttrMap{});
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext{AttrMap{}, nullptr});
   }
 
-  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const OpExprInterpContext& ctx);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
+
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-      const bool is_lazy);
+      const bool is_lazy, const bool is_local);
 };
 
 }  // namespace one

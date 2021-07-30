@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -199,7 +199,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
             kernel_conf.op_attribute().parallel_distribution_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
+      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
@@ -228,6 +228,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != arg2logical_tensor_desc_.end())
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name,
+                                                                                    index);
   }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);

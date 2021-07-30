@@ -631,6 +631,7 @@ Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& wi
                                       const std::string& interpolation, const std::string& name) {
   return one::OpBuilder("upsample_grad", name)
       .Input("dy")
+      .Input("x")
       .Output("dx")
       .Attr<float>("height_scale", height_scale)
       .Attr<float>("width_scale", width_scale)
@@ -848,17 +849,6 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Attr<std::vector<int32_t>>("pool_size", pool_size)
       .Attr<std::vector<int32_t>>("strides", strides)
       .Attr<bool>("ceil_mode", ceil_mode)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> AdaptivePoolGradOp() {
-  return AdaptivePoolGradOp(UniqueOpName("adaptive_pool_grad"));
-}
-Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name) {
-  return one::OpBuilder("adaptive_avg_pool2d_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Output("dx")
       .Build();
 }
 

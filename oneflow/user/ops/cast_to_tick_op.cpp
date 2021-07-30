@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("cast_to_tick")
+REGISTER_NO_GRAD_USER_OP("cast_to_tick")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -37,7 +37,7 @@ REGISTER_USER_OP("cast_to_tick")
           const cfg::ParallelDistribution& in_dis_hint =
               ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
           const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
 
           cfg::ParallelDistribution* in_distribution =
               ctx->ParallelDistribution4ArgNameAndIndex("in", 0);

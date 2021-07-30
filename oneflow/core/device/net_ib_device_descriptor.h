@@ -33,6 +33,7 @@ constexpr char kNetIBDeviceDescriptorClassName[] = "net_ib";
 enum NetIBDeviceDescriptorLinkLayer {
   kNetIBDeviceDescriptorLinkLayerInvalid = 0,
   kNetIBDeviceDescriptorLinkLayerInfiniBand = 1,
+  kNetIBDeviceDescriptorLinkLayerEthernet = 2,
 };
 
 class NetIBDeviceDescriptor : public DeviceDescriptor {
@@ -44,6 +45,7 @@ class NetIBDeviceDescriptor : public DeviceDescriptor {
   uint64_t GUID() const;
   uint8_t Port() const;
   NetIBDeviceDescriptorLinkLayer LinkLayer() const;
+  const std::string& PCIBusID() const;
   void Serialize(std::string* serialized) const;
   static std::shared_ptr<const NetIBDeviceDescriptor> Query(int32_t ordinal, ibv_context* context,
                                                             uint8_t port);

@@ -100,17 +100,17 @@ async def launch_remote_container(
     container_name=None,
     img_tag=None,
     oneflow_wheel_path=None,
-    oneflow_build_path=None,
+    oneflow_python_path=None,
 ):
     print("launching remote container at", remote_host)
     assert img_tag
     pythonpath_args = None
     if oneflow_wheel_path:
         pythonpath_args = ""
-    elif oneflow_build_path:
-        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/python_scripts"
+    elif oneflow_python_path:
+        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/oneflow_python"
     else:
-        raise ValueError("must have oneflow_wheel_path or oneflow_build_path")
+        raise ValueError("must have oneflow_wheel_path or oneflow_python_path")
     docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
 """
     await spawn_shell_and_check(f"ssh {remote_host} {docker_cmd}")
@@ -161,7 +161,7 @@ def wait_for_env_proto_and_launch_workers(
                 shell=True,
             )
             run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
-            run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
+            run_docker_cmd += f" python3 -m oneflow.compatible.single_client --start_worker --env_proto={workspace_dir}/env.prototxt"
             print("[docker agent]", run_docker_cmd)
             remote_docker_proc[remote_host] = subprocess.Popen(
                 run_docker_cmd, shell=True
@@ -183,7 +183,7 @@ class DockerAgent:
         workspace_dir=None,
         img_tag=None,
         oneflow_wheel_path=None,
-        oneflow_build_path=None,
+        oneflow_python_path=None,
         oneflow_test_tmp_dir=None,
     ) -> None:
         # info
@@ -195,7 +195,7 @@ class DockerAgent:
         self.workspace_dir = workspace_dir
         self.img_tag = img_tag
         self.oneflow_wheel_path = oneflow_wheel_path
-        self.oneflow_build_path = oneflow_build_path
+        self.oneflow_python_path = oneflow_python_path
         self.oneflow_test_tmp_dir = oneflow_test_tmp_dir
         # impl
         self.env_proto_txt = None
@@ -224,8 +224,8 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
 """
         if self.oneflow_wheel_path:
             exports += f"python3 -m pip install {self.oneflow_wheel_path}"
-        if self.oneflow_build_path:
-            exports += f"export PYTHONPATH={self.oneflow_build_path}/python_scripts:$PYTHONPATH\n"
+        if self.oneflow_python_path:
+            exports += f"export PYTHONPATH={self.oneflow_python_path}:$PYTHONPATH\n"
         bash_cmd = None
         if bash_script:
             assert os.path.exists(bash_script)
@@ -319,7 +319,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     await asyncio.gather(
         *[
             spawn_shell_and_check(
-                f"ssh {remote_host} 'mkdir -p {workspace_dir}/python_scripts/oneflow/libs'",
+                f"ssh {remote_host} 'mkdir -p {workspace_dir}/oneflow_python/oneflow/libs'",
             )
             for remote_host in remote_hosts
         ]
@@ -328,7 +328,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     async def copy_file(path=None, remote_host=None):
         relpath = os.path.relpath(path, tmp_dir.name)
         await spawn_shell_and_check(
-            f"scp {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
+            f"scp {path} {remote_host}:{workspace_dir}/oneflow_python/oneflow/{relpath}",
         )
 
     files = [
@@ -387,7 +387,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--remote_host", action="append", default=[])
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
-    parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
+    parser.add_argument(
+        "--oneflow_wheel_python_version", type=str, required=False, default=None
+    )
+    parser.add_argument("--oneflow_python_path", type=str, required=False, default=None)
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
     parser.add_argument("--cmd", type=str, required=False, default=None)
     parser.add_argument(
@@ -396,20 +399,38 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", type=int, required=False, default=1 * 60 * 60)
     args = parser.parse_args()
 
-    assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
+    assert bool(args.oneflow_wheel_path) != bool(args.oneflow_python_path)
     assert bool(args.bash_script) != bool(args.cmd)
     if args.skip_libs:
         assert args.debug, "--skip_libs only works with --debug"
         assert (
-            args.oneflow_build_path
-        ), "--skip_libs only works with --oneflow_build_path"
+            args.oneflow_python_path
+        ), "--skip_libs only works with --oneflow_python_path"
     oneflow_wheel_path = args.oneflow_wheel_path
     if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
         whl_paths = [
             name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
         ]
-        assert len(whl_paths) == 1
-        oneflow_wheel_path = whl_paths[0]
+        if len(whl_paths) == 1:
+            oneflow_wheel_path = whl_paths[0]
+        else:
+            assert args.oneflow_wheel_python_version
+            assert args.oneflow_wheel_python_version in [
+                "3.6",
+                "3.7",
+                "3.8",
+                "3.9",
+                "3.10",
+                "3.11",
+            ]
+            ver_cat = args.oneflow_wheel_python_version.replace(".", "")
+            found = False
+            for whl_path in whl_paths:
+                if f"cp{ver_cat}" in whl_path:
+                    oneflow_wheel_path = whl_path
+                    found = True
+            assert found, whl_paths
+
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
 
@@ -442,28 +463,27 @@ if __name__ == "__main__":
             ),
         ),
     )
-    if args.oneflow_build_path:
+    if args.oneflow_python_path:
         so_paths = [
             name
             for name in glob.glob(
                 os.path.join(
-                    args.oneflow_build_path,
-                    f"python_scripts/oneflow/_oneflow_internal.*.so",
+                    args.oneflow_python_path, f"oneflow/_oneflow_internal.*.so",
                 )
             )
         ]
         assert len(so_paths) == 1, so_paths
         oneflow_internal_path = so_paths[0]
         oneflow_internal_path = os.path.join(
-            args.oneflow_build_path, oneflow_internal_path
+            args.oneflow_python_path, oneflow_internal_path
         )
         tmp_dir = None
-        print("copying python_scripts dir")
+        print("copying oneflow python dir")
         loop.run_until_complete(
             asyncio.gather(
                 *[
                     spawn_shell_and_check(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}"
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='oneflow/include' --include='*/' --exclude='*' {args.oneflow_python_path} {remote_host}:{workspace_dir}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -489,7 +509,7 @@ if __name__ == "__main__":
             )
         )
     default_docker_image = "oneflow-test:$USER"
-    ci_user_docker_image = "oneflow-test:0.1"
+    ci_user_docker_image = "oneflow-test:0.2"
     img_tag = None
     if args.custom_img_tag == None:
         if is_img_existing(default_docker_image):
@@ -519,10 +539,10 @@ if __name__ == "__main__":
         print(
             "---------start cleanup, you should ignore errors below and check the errors above---------"
         )
-        if args.oneflow_build_path:
-            print("fixing permission of", args.oneflow_build_path)
+        if args.oneflow_python_path:
+            print("fixing permission of", args.oneflow_python_path)
             subprocess.call(
-                f"docker run --rm -v {args.oneflow_build_path}:/p -w /p busybox chmod -R o+w .",
+                f"docker run --rm -v {args.oneflow_python_path}:/p -w /p busybox chmod -R o+w .",
                 shell=True,
             )
         loop.run_until_complete(
@@ -540,7 +560,7 @@ if __name__ == "__main__":
             asyncio.gather(
                 *[
                     spawn_shell(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='python_scripts' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='oneflow_python' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -574,7 +594,7 @@ if __name__ == "__main__":
                     workspace_dir=workspace_dir,
                     container_name=container_name,
                     oneflow_wheel_path=oneflow_wheel_path,
-                    oneflow_build_path=args.oneflow_build_path,
+                    oneflow_python_path=args.oneflow_python_path,
                     img_tag=img_tag,
                 )
                 for remote_host in remote_hosts
@@ -590,7 +610,7 @@ if __name__ == "__main__":
         container_name=container_name,
         workspace_dir=workspace_dir,
         oneflow_wheel_path=oneflow_wheel_path,
-        oneflow_build_path=args.oneflow_build_path,
+        oneflow_python_path=args.oneflow_python_path,
         img_tag=img_tag,
         oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
     ) as agent:

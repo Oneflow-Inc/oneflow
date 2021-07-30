@@ -23,7 +23,7 @@ class AssignOp final : public Operator {
   AssignOp() = default;
   ~AssignOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
@@ -37,10 +37,11 @@ class AssignOp final : public Operator {
       cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-void AssignOp::InitFromOpConf() {
+Maybe<void> AssignOp::InitFromOpConf() {
   CHECK(op_conf().has_assign_conf());
   EnrollInputBn("ref")->set_is_mutable(true);
   EnrollInputBn("value");
+  return Maybe<void>::Ok();
 }
 
 std::string DebugString(const BlobDesc& blob_desc) {

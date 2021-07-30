@@ -31,21 +31,19 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
     if (b.host_mem().has_cuda_pinned_mem()) {
       *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
     }
-    if (b.host_mem().has_used_by_network()) {
-      common->mutable_host_mem()->set_used_by_network(true);
-    }
     return true;
   } else {
     return false;
   }
 }
 
-MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
-    const MemoryCase& mem_case) {
-  CHECK(mem_case.has_device_cuda_mem());
+MemoryCase MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case) {
   MemoryCase ret;
-  ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-      mem_case.device_cuda_mem().device_id());
+  ret.mutable_host_mem();
+  if (mem_case.has_device_cuda_mem()) {
+    ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        mem_case.device_cuda_mem().device_id());
+  }
   return ret;
 }
 
@@ -69,11 +67,6 @@ int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
 
 int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
-}
-
-bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
-  return mem_case.has_host_mem() && !mem_case.host_mem().has_cuda_pinned_mem()
-         && !mem_case.host_mem().used_by_network();
 }
 
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
