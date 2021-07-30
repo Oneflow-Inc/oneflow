@@ -16,16 +16,15 @@ limitations under the License.
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow import Tensor
-
-
+from typing import Union
 class Randperm(Module):
     def __init__(
         self,
-        N: int,
+        N:flow.int32,
         generator=None,
         dtype=flow.int32,
         layout=None,
-        device=None,
+        device: flow.device = flow.device("cpu"),
         requires_grad=False,
         pin_memory=False,
     ) -> None:
@@ -49,11 +48,10 @@ class Randperm(Module):
             device = flow.device(device)
         else:
             device = device if device is not None else flow.device("cpu")
-
         assert isinstance(device, flow.device)
         assert isinstance(dtype, flow.dtype)
-        # assert isinstance(requires_grad, bool)
-        # assert isinstance(pin_memory, bool)
+        assert isinstance(requires_grad, bool)
+        assert isinstance(pin_memory, bool)
         assert N > 0
 
         self.device = device
@@ -71,14 +69,14 @@ class Randperm(Module):
 
 
 def randperm(
-    n,
+    N: flow.int32,
     generator=None,
-    out=None,
+    out:flow.Tensor=None,
     dtype=flow.int64,
     layout=None,
-    device=None,
-    requires_grad=False,
-    pin_memory=False,
+    device: flow.device = flow.device("cpu"),
+    requires_grad:bool=False,
+    pin_memory:bool=False,
 ) -> Tensor:
     r"""
     Returns a random permutation of integers from ``0`` to ``n - 1``.
@@ -104,7 +102,7 @@ def randperm(
         >>> flow.randperm(5, generator=generator)
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
     """
-    return Randperm(n, generator, dtype, layout, device, requires_grad, pin_memory)(out)
+    return Randperm(N, generator, dtype, layout, device, requires_grad, pin_memory)(out)
 
 
 if __name__ == "__main__":

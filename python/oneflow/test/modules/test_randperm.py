@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow.unittest
 from collections import OrderedDict
+from automated_test_util import *
 from test_util import GenArgList
 import numpy as np
-from oneflow.nn.module import Module
-import oneflow.nn as nn
 
 
 def _test_randperm_with_generator(test_case, N, device):
@@ -41,6 +39,7 @@ def _test_randperm_backward(test_case, N, device):
 
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
+    
     def test_randperm(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [
@@ -48,7 +47,13 @@ class Testrandperm(flow.unittest.TestCase):
             _test_randperm_backward,
         ]
         arg_dict["N"] = [i for i in range(2, 2, 10)]
-        arg_dict["device"] = ["cpu", "gpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         # @TODO:GPU version test needs context support from backend
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_ones_auto(test_case):
+        y=torch.randperm(random().to(int))
+        return y
+   

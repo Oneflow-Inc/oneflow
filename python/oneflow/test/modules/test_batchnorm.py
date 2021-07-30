@@ -472,50 +472,7 @@ def _test_batchnorm2d_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchNorm(flow.unittest.TestCase):
-    def test_batchnorm(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_batchnorm2d,
-            _test_batchnorm1d_2d_input,
-            _test_batchnorm1d_3d_input,
-            _test_batchnorm2d_4d_input,
-            _test_batchnorm2d_track_running_stats,
-            test_batchnorm2d_infer,
-            test_batchnorm2d_infer_4d_input,
-            _test_batchnorm2d_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    @unittest.skip("batchnorm module has a bug")
-    def test_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            for training in [True, False]:
-                test_module_against_pytorch(
-                    test_case,
-                    "nn.BatchNorm2d",
-                    extra_annotations={
-                        "num_features": int,
-                        "eps": float,
-                        "momentum": float,
-                        "affine": bool,
-                        "track_running_stats": bool,
-                        "dtype": str,
-                        "device": flow.device,
-                    },
-                    extra_generators={
-                        "input": random_tensor(ndim=4, dim1=8),
-                        "num_features": constant(8),
-                        "eps": random(1e-06, 1),
-                        "momentum": random(0, 1),
-                        "track_running_stats": constant(True),
-                    },
-                    device=device,
-                    training=training,
-                    n=10,
-                )
-
+    
     @autotest(n=1, auto_backward=False)
     def test_batchnorm3d_module_with_random_data(test_case):
         channel = random().to(int)
