@@ -13,19 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#if defined(WITH_HIP)
+
 #include "oneflow/user/kernels/where_kernel_util.h"
+#include "oneflow/core/hip/elementwise.hip.h"
 
 namespace oneflow {
 
+namespace {
+
 template<typename T, typename CondT>
-struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
-  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                    const T* rhs, T* out) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : rhs[i]; }
+struct WhereFunctor {
+  OF_DEVICE_FUNC T operator()(CondT cond, T lhs, T rhs) const {
+    return static_cast<bool>(cond) ? lhs : rhs;
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+}  // namespace
+
+template<typename T, typename CondT>
+struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
+  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                    const T* rhs, T* out) {
+    hip::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
+                               ctx->hip_stream());
+  }
+};
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kGPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
+
+#endif
