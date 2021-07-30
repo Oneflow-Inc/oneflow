@@ -39,34 +39,31 @@ class Eye(Module):
         m = self.m
         if m is None:
             m = n
-            
+
         if m == n:
-           res = flow.diag(flow.ones(n))
+            res = flow.diag(flow.ones(n))
         elif m < n:
             tmp = flow.ones(m)
-            input1 = flow.zeros((n-m, m))
+            input1 = flow.zeros((n - m, m))
             input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim = 0)
+            res = flow.cat([input2, input1], dim=0)
         else:
             tmp = flow.ones(n)
-            input1 = flow.zeros((n, m-n))
+            input1 = flow.zeros((n, m - n))
             input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim = 1)
+            res = flow.cat([input2, input1], dim=1)
 
         res.requires_grad = self.requires_grad
         if isinstance(self.device, str):
             device = flow.device(self.device)
         else:
             device = self.device
-        re = res.to(device)       
+        re = res.to(device)
         return re
 
 
 def eye_op(
-    n,
-    m = None,
-    device: Union[str, flow.device] = "cpu",
-    requires_grad: bool = False,
+    n, m=None, device: Union[str, flow.device] = "cpu", requires_grad: bool = False,
 ):
     """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
