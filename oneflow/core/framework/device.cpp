@@ -18,9 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
@@ -82,11 +80,7 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   int64_t device_id = -1;
-  if (type == "cpu") {
-    device_id = GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
-  } else {
-    device_id = GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-  }
+  device_id = GlobalProcessCtx::LocalRank();
   return New(type, device_id);
 }
 
