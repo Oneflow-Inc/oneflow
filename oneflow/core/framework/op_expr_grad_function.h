@@ -74,7 +74,10 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
   }
 
   virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                              const AttrMap& attrs) const = 0;
+                              const AttrMap& attrs) const {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+
   virtual Maybe<void> Apply(const StateT* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
 
