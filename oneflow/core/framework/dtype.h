@@ -56,7 +56,7 @@ class DType final {
   static Symbol<DType> DType4DataType(DataType data_type); 
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
-  static const Symbol<DType> data_type();
+  static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
