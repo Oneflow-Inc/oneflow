@@ -89,18 +89,7 @@ class ReplicationPad2d(Module):
         self.padding = boundary
 
     def forward(self, x):
-        (_, _, h, w) = x.shape
-        if (
-            self.padding[2] < h
-            and self.padding[3] < h
-            and (self.padding[0] < w)
-            and (self.padding[1] < w)
-        ):
-            return flow.F.pad(x, pad=self.padding, mode="replicate")
-        else:
-            raise AssertionError(
-                "Padding size should be less than the corresponding input dimension. Please check."
-            )
+        return flow.F.pad(x, pad=self.padding, mode="replicate")
 
     def extra_repr(self) -> str:
         return "{}".format(self.padding)
