@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_without_batchnorm(test_case):
         batch_size = 32

@@ -251,6 +251,19 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
 
+Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
+  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
+  }
+  return tuple;
+}
+
+py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
+  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
+}
+
 Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
                         bool treat_single_int_as_size) {
   Symbol<Device> device;
@@ -400,7 +413,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
-      .def_property_readonly("placement", &TensorGetParallelDesc);
+      .def_property_readonly("placement", &TensorGetParallelDesc)
+      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
 
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
