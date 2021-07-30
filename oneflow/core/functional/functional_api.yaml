@@ -768,12 +768,12 @@
 
 - name: "identity"
   signature: "Tensor Identity(Tensor in)"
-  bind_python: False
+  bind_python: True
 
 - name: "reshape_like"
   signature: "Tensor ReshapeLike(Tensor in, Tensor like)"
-  bind_python: False
+  bind_python: True
 
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
-  bind_python: False
+  bind_python: True
