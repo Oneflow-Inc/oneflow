@@ -761,7 +761,6 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
-
   if (val_->parallel_distribution_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
           || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
