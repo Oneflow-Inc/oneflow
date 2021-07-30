@@ -35,6 +35,19 @@ namespace impl {
 
 namespace {
 
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc) {
+  thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
+      parallel_desc2eager_nccl_broadcast;
+  auto iter = parallel_desc2eager_nccl_broadcast.find(parallel_desc);
+  if (iter == parallel_desc2eager_nccl_broadcast.end()) {
+    int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
+    std::shared_ptr<UserOpExpr> op_expr =
+        JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
+    iter = parallel_desc2eager_nccl_broadcast.emplace(parallel_desc, op_expr).first;
+  }
+  return iter->second;
+}
+
 Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
                                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                   Symbol<ParallelDesc> parallel_desc) {
@@ -45,12 +58,8 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
       return tensor;
     } else if (sbp_parallel->has_broadcast_parallel()) {
       if (parallel_desc->device_tag() == "gpu") {
-        LOG(ERROR) << "tensor: " << (tensor->requires_grad() ? "True" : "False");
-        TensorTuple input_list;
-        input_list.emplace_back(tensor);
-        int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
         std::shared_ptr<UserOpExpr> op_expr =
-            JUST(op_expr_helper::EagerNcclBroadcast(parallel_desc, root));
+            JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
         return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
       } else {
         OF_UNIMPLEMENTED();

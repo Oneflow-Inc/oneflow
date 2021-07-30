@@ -21,7 +21,26 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
+
 namespace one {
+
+namespace {
+
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(const std::string& parallel_desc_str,
+                                                        int64_t root) {
+  thread_local HashMap<std::pair<std::string, int64_t>, std::shared_ptr<one::UserOpExpr>>
+      parallel_desc_and_root_device2eager_nccl_reduce;
+  const auto& key = std::make_pair(parallel_desc_str, root);
+  auto iter = parallel_desc_and_root_device2eager_nccl_reduce.find(key);
+  if (iter == parallel_desc_and_root_device2eager_nccl_reduce.end()) {
+    std::shared_ptr<UserOpExpr> op_expr =
+        JUST(op_expr_helper::EagerNcclReduce(parallel_desc_str, root));
+    iter = parallel_desc_and_root_device2eager_nccl_reduce.emplace(key, op_expr).first;
+  }
+  return iter->second;
+}
+
+}  // namespace
 
 struct EagerNcclBroadcastOpExprInterpState : public OpExprInterpState {};
 
@@ -30,11 +49,10 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastOpExprInt
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    const std::string& op_name = fw_op_expr->op_name();
     const auto& attr_map = fw_op_expr->base_attrs();
-    grad_op_ = JUST(op_expr_helper::EagerNcclReduce(
-        JUST(attr_map.GetAttr<std::string>("parallel_conf")),
-        JUST(attr_map.GetAttr<int64_t>("root")), GradientOpName(op_name)));
+    grad_op_ =
+        JUST(FindOrCreatEagerNcclReduceOpExpr(JUST(attr_map.GetAttr<std::string>("parallel_conf")),
+                                              JUST(attr_map.GetAttr<int64_t>("root"))));
     return Maybe<void>::Ok();
   }
 
