@@ -37,3 +37,4 @@ unittest-log-*
 /benchmarks
 /oneflow/python/version.py
 /data-test
+/tmp
