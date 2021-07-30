@@ -85,7 +85,6 @@ class TestNegativeModule(flow.unittest.TestCase):
         y1 = torch.negative(x)
         y2 = torch.neg(x)
         y3 = -x
-
         return (y1, y2, y3)
 
 

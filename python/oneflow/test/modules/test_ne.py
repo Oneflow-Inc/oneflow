@@ -108,7 +108,6 @@ class TestNe(flow.unittest.TestCase):
         y1 = torch.ne(x1, x2)
         y2 = torch.ne(x1, 2)
         y3 = torch.ne(x1, 2.0)
-
         return (y1, y2, y3)
 
 
