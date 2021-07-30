@@ -582,7 +582,7 @@ class TestAcosh(flow.unittest.TestCase):
     @autotest()
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(2.0, 3.0).to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = torch.acosh(x)
         return y
 
