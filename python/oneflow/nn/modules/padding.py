@@ -17,6 +17,8 @@ from typing import Union
 
 import oneflow as flow
 from oneflow.nn.module import Module
+from oneflow.nn.common_types import _size_4_t
+from oneflow.nn.modules.utils import _quadruple
 
 
 class ReplicationPad2d(Module):
@@ -77,13 +79,13 @@ class ReplicationPad2d(Module):
 
     """
 
-    def __init__(self, padding: Union[int, tuple, list]):
+    def __init__(self, padding: _size_4_t):
         super().__init__()
         if isinstance(padding, (tuple, list)):
             assert len(padding) == 4, ValueError("Length of padding must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+            boundary = [*padding]
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = _quadruple(padding)
         else:
             raise ValueError("padding must be int or list or tuple!")
         self.padding = boundary
@@ -141,13 +143,13 @@ class ReflectionPad2d(Module):
 
     """
 
-    def __init__(self, padding: Union[int, tuple]) -> None:
+    def __init__(self, padding: _size_4_t) -> None:
         super().__init__()
         if isinstance(padding, tuple):
             assert len(padding) == 4, ValueError("Padding length must be 4")
-            boundary = [padding[0], padding[1], padding[2], padding[3]]
+            boundary = [*padding]
         elif isinstance(padding, int):
-            boundary = [padding, padding, padding, padding]
+            boundary = _quadruple(padding)
         else:
             raise ValueError("padding must be in or list or tuple!")
         self.padding = boundary
