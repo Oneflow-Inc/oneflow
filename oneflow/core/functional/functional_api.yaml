@@ -471,6 +471,10 @@
   signature: "Tensor PRelu(Tensor x, Tensor alpha)"
   bind_python: True
 
+- name: "prelu_grad"
+  signature: "TensorTuple PReluGrad(Tensor dy, Tensor x, Tensor alpha)"
+  bind_python: False
+
 - name: "reshape"
   signature: "Tensor Reshape(Tensor x, *, Shape shape)"
   bind_python: True
