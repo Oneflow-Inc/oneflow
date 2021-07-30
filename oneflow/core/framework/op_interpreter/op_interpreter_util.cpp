@@ -116,14 +116,11 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   bool inplace_output= false;
-  if (outputs->size() > 0 && !(outputs->at(0).get())) {
-    std::cout << "op " << op_expr.op_type_name() << " is inplace. \n";
+  if (outputs->size() > 0 && (outputs->at(0).get())) {
     inplace_output = true;
     CHECK_OR_RETURN(outputs->size() == op_expr.output_size());
   }
-  std::cout << "op " << op_expr.op_type_name() << " is inplace: " << inplace_output << " \n";
   if (inplace_output && LazyMode::is_enabled()) {
-    std::cout << "op " << op_expr.op_type_name() << " is inplace and lazy. \n";
     // lazy mode will ignore inplace
     auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
     JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, lazy_outputs.get(), ctx);
@@ -132,7 +129,6 @@ template<>
     }
     return Maybe<void>::Ok();
   } else {
-    std::cout << "op " << op_expr.op_type_name() << " is eager. \n";
     return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
   }
 }
