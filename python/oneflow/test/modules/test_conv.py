@@ -1770,48 +1770,23 @@ class TestConv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip("need a more relaxed tolerance")
-    def test_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            channels = random(1, 6)
-            test_module_against_pytorch(
-                test_case,
-                "nn.Conv2d",
-                extra_generators={
-                    "input": random_tensor(ndim=4, dim1=channels),
-                    "in_channels": channels,
-                    "out_channels": random(1, 129),
-                    "kernel_size": random(1, 4),
-                    "stride": random(1, 4),
-                    "padding": random(1, 5),
-                    "dilation": random(1, 5),
-                    "groups": random(1, 5),
-                    "padding_mode": constant("zeros"),
-                },
-                device=device,
-            )
-
-    @unittest.skip("need a more relaxed tolerance")
     @autotest()
-    def test_against_pytorch(test_case):
+    def test_conv_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
-            channels,
-            random(1, 6),
-            random(1, 6),
-            stride=random(1, 3) | nothing(),
-            padding=random(1, 3) | nothing(),
-            dilation=random(1, 3) | nothing(),
-            groups=random(1, 3) | nothing(),
-            bias=random() | nothing(),
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
-            ndim=4, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)
-        ).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
 

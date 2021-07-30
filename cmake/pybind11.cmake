@@ -1,7 +1,7 @@
 include(FetchContent)
-set(PYBIND11_TAR_URL https://github.com/pybind/pybind11/archive/v2.6.0.zip)
+set(PYBIND11_TAR_URL https://github.com/pybind/pybind11/archive/v2.7.0.zip)
 use_mirror(VARIABLE PYBIND11_TAR_URL URL ${PYBIND11_TAR_URL})
-set(PYBIND11_URL_HASH 7d7d926f8b00fb181dd8aeea0451dbc3)
+set(PYBIND11_URL_HASH 267807f790ef598ef912a79aceefdc10)
 
 FetchContent_Declare(
     pybind11

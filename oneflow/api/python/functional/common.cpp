@@ -20,57 +20,14 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-namespace detail {
-
-Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step) {
-  PySliceObject* obj = (PySliceObject*)object;
-  if (obj->step == Py_None) {
-    *step = 1;
-  } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->step, step))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
-    CHECK_NE_OR_RETURN(*step, 0) << "slice step cannot be zero.";
-    if (*step < -PY_SSIZE_T_MAX) *step = -PY_SSIZE_T_MAX;
-  }
-
-  if (obj->start == Py_None) {
-    *start = *step < 0 ? PY_SSIZE_T_MAX : 0;
-  } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->start, start))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
-  }
-
-  if (obj->stop == Py_None) {
-    *stop = *step < 0 ? PY_SSIZE_T_MIN : PY_SSIZE_T_MAX;
-  } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
-  }
-  return Maybe<void>::Ok();
+bool PyTensorCheck(PyObject* object) {
+  auto obj = py::reinterpret_borrow<py::object>(object);
+  return detail::isinstance<std::shared_ptr<one::Tensor>>(obj);
 }
 
 const char* PyStringAsString(PyObject* object) {
   return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
 }
-
-Maybe<detail::IndexItem> UnpackIndexItem(PyObject* object) {
-  if (object == Py_Ellipsis) {
-    return std::make_shared<detail::IndexItem>(detail::EllipsisIndex{});
-  } else if (PySlice_Check(object)) {
-    Py_ssize_t start, end, step;
-    JUST(PySliceUnpack(object, &start, &end, &step));
-    return std::make_shared<detail::IndexItem>(start, end, step);
-  } else if (PyLong_Check(object) && object != Py_False && object != Py_True) {
-    return std::make_shared<detail::IndexItem>(static_cast<int64_t>(PyLong_AsLongLong(object)));
-  } else if (object == Py_False || object == Py_True) {
-    return std::make_shared<detail::IndexItem>(object == Py_True);
-  } else if (object == Py_None) {
-    return std::make_shared<detail::IndexItem>(detail::NoneIndex{});
-  }
-  UNIMPLEMENTED_THEN_RETURN() << "Invalid index " << PyStringAsString(PyObject_Repr(object));
-}
-
-}  // namespace detail
 
 }  // namespace functional
 }  // namespace one

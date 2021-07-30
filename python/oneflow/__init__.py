@@ -206,7 +206,7 @@ from oneflow.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import construct_tensor as tensor
+from oneflow.framework.tensor import tensor as tensor
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -216,6 +216,12 @@ from oneflow.nn.modules.activation import mish_op as mish
 from oneflow.nn.modules.activation import sigmoid_op as sigmoid
 from oneflow.nn.modules.activation import softmax_op as softmax
 from oneflow.nn.modules.activation import tanh_op as tanh
+from oneflow.nn.modules.activation import silu_op as silu
+from oneflow.nn.modules.activation import selu_op as selu
+from oneflow.nn.modules.activation import softsign_op as softsign
+from oneflow.nn.modules.activation import mish_op as mish
+
+
 from oneflow.nn.modules.adaptive_pool import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -361,4 +367,4 @@ from oneflow.ops.user_op_builder import (
     api_user_op_module_builder as user_op_module_builder,
 )
 
-from . import autograd, distributed, linalg, optim, saved_model
+from . import autograd, distributed, linalg, optim, saved_model, sbp
