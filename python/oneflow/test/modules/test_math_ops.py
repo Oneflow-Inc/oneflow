@@ -229,40 +229,8 @@ class TestStd(flow.unittest.TestCase):
         return z
 
 
-def _test_sqrt(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    np_out = np.sqrt(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.sqrt(input=x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_sqrt_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.sqrt(input=x)
-    z = y.sum()
-    z.backward()
-    np_grad = 0.5 * 1 / np.sqrt(x.numpy())
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    def test_sqrt(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_sqrt, _test_sqrt_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest()
     def test_sqrt_flow_with_random_data(test_case):
         device = random_device()
@@ -313,39 +281,8 @@ class TestRsqrt(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_square(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.square(x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_square_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.square(x)
-    z = y.sum()
-    z.backward()
-    np_grad = 2 * np_arr
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
-    def test_square(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_square, _test_square_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest()
     def test_square_flow_with_random_data(test_case):
         device = random_device()
