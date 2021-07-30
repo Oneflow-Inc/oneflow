@@ -46,35 +46,40 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc) {
-  thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  thread_local HashMap<std::pair<Symbol<ParallelDesc>, int64_t>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc2eager_nccl_broadcast;
-  auto iter = parallel_desc2eager_nccl_broadcast.find(parallel_desc);
+  const auto& key = std::make_pair(parallel_desc, root);
+  auto iter = parallel_desc2eager_nccl_broadcast.find(key);
   if (iter == parallel_desc2eager_nccl_broadcast.end()) {
-    int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
     std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclBroadcast(parallel_desc, root));
-    iter = parallel_desc2eager_nccl_broadcast.emplace(parallel_desc, op_expr).first;
+    iter = parallel_desc2eager_nccl_broadcast.emplace(key, op_expr).first;
   }
   return iter->second;
 }
 
 Maybe<Tensor> SyncData(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
-                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+                       Symbol<cfg::ParallelDistribution> parallel_distribution) {
   // TODO(hanbinbin): Sync meta info when sync_consistent_meta_info branch merged in master
-  if (sbp_parallels.size() == 1) {
-    const auto& sbp_parallel = sbp_parallels.at(0);
-    if (sbp_parallel->has_split_parallel()) {
+  if (parallel_distribution->sbp_parallel_size() == 1) {
+    const auto& sbp_parallel = parallel_distribution->sbp_parallel(0);
+    if (sbp_parallel.has_split_parallel()) {
       return tensor;
-    } else if (sbp_parallel->has_broadcast_parallel()) {
+    } else if (sbp_parallel.has_broadcast_parallel()) {
       if (parallel_desc->device_tag() == "gpu") {
+        MutableAttrMap mutable_attr_map;
+        int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
+        mutable_attr_map.SetAttr("root", root);
         std::shared_ptr<UserOpExpr> op_expr =
-            JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
+            JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc, root));
         return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-            *op_expr, {tensor}, MakeAttrMapFromUserOpConf(op_expr->proto())));
+            *op_expr, {tensor},
+            one::OpExprInterpContext(mutable_attr_map, parallel_desc,
+                                     parallel_distribution)));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
-    } else if (sbp_parallel->has_partial_sum_parallel()) {
+    } else if (sbp_parallel.has_partial_sum_parallel()) {
       if (GlobalProcessCtx::Rank() == 0) {
         return tensor;
       } else {
@@ -120,11 +125,12 @@ class ToConsistentFunctor {
                            GlobalProcessCtx::LocalRank())
             << "tensor must be on default device of rank!";
       }
+      Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
       std::shared_ptr<Tensor> synced_tensor =
-          JUST(SyncData(mirrored_tensor, parallel_desc, sbp_parallels));
+          JUST(SyncData(mirrored_tensor, parallel_desc, parallel_distribution));
       const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
           *op_, {synced_tensor},
-          OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
+          OpExprInterpContext(AttrMap{}, parallel_desc, parallel_distribution)));
       return output;
     }
   }

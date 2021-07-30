@@ -66,12 +66,10 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastOpExprInt
   }
 
   Maybe<void> Capture(EagerNcclBroadcastOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->root = JUST(attrs.GetAttr<int64_t>("root"));
-    std::string parallel_desc_str = JUST(attrs.GetAttr<std::string>("parallel_conf"));
-    ParallelConf parallel_conf;
-    CHECK(TxtString2PbMessage(parallel_desc_str, &parallel_conf));
-    ctx->parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+                      const TensorTuple& outputs,
+                      const OpExprInterpContext& interp_ctx) const override {
+    ctx->root = JUST(interp_ctx.attrs.GetAttr<int64_t>("root"));
+    ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
     return Maybe<void>::Ok();
   }
 
