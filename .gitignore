@@ -35,3 +35,6 @@ unittest-log-*
 /oneflow/python
 /oneflow/compatible_single_client_python
 /benchmarks
+/oneflow/python/version.py
+/data-test
+/tmp

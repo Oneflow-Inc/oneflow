@@ -46,6 +46,7 @@ class Actor {
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
   int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
+  int64_t job_id() const { return job_id_; }
 
  protected:
   struct BlobInfo {
@@ -148,9 +149,6 @@ class Actor {
 
  protected:
   int64_t GetGlobalWorkStreamId() const;
-  virtual bool NeedCollectActEvent() const {
-    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
-  }
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
     return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
@@ -220,6 +218,7 @@ class Actor {
   const JobDesc* job_desc_;
   int64_t actor_id_;
   int64_t act_id_;
+  int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;

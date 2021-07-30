@@ -1147,7 +1147,9 @@ test_conv2d_dilation_output = np.array(
 )
 
 
-def _test_conv2d(test_case, conv, data, weight, output, bias=None, device="cuda"):
+def _test_conv2d(
+    test_case, conv, data, weight, output, bias=None, device="cuda",
+):
     to_device = flow.device(device)
     x = flow.Tensor(data, device=to_device)
     conv.weight = flow.nn.Parameter(flow.Tensor(weight))
@@ -1155,11 +1157,11 @@ def _test_conv2d(test_case, conv, data, weight, output, bias=None, device="cuda"
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
     conv.to(to_device)
     of_out = conv(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=0.001, atol=1e-07))
+    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-4, atol=1e-8))
 
 
 def _test_conv2d_backward(
-    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda"
+    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
 ):
     to_device = flow.device(device)
     x = flow.Tensor(data, device=to_device, requires_grad=True)
@@ -1169,11 +1171,9 @@ def _test_conv2d_backward(
     conv.to(to_device)
     of_out = conv(x)
     of_out.sum().backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8))
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), data_grad, rtol=0.0001, atol=1e-08)
-    )
-    test_case.assertTrue(
-        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=0.0001, atol=1e-08)
+        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
     )
 
 
@@ -1335,7 +1335,7 @@ def _test_conv2d_large_in_channel(test_case, device):
             ],
         ]
     ]
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-6, 1e-6))
     output = output.sum()
     output.backward()
     np_grad = [
@@ -1446,7 +1446,7 @@ def _test_conv2d_large_in_channel(test_case, device):
             ],
         ]
     ]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
 def _test_conv2d_large_out_channel(test_case, device):
@@ -1454,18 +1454,18 @@ def _test_conv2d_large_out_channel(test_case, device):
         [
             [
                 [
-                    [0.56573248, -0.1968932, -0.67875558, 0.34328273, 0.31964567],
+                    [0.56573248, -0.19689320, -0.67875558, 0.34328273, 0.31964567],
                     [-1.33715475, 0.33422229, -1.27643383, 0.37904647, 0.35891593],
-                    [0.84579802, 2.12729621, -0.51423287, 0.6129756, -1.31156564],
-                    [-0.71047139, 1.02679253, -0.76686019, -0.72969633, 0.7342515],
-                    [-0.13592879, -1.03207183, -0.22554775, 0.74148071, 0.9660151],
+                    [0.84579802, 2.12729621, -0.51423287, 0.61297560, -1.31156564],
+                    [-0.71047139, 1.02679253, -0.76686019, -0.72969633, 0.73425150],
+                    [-0.13592879, -1.03207183, -0.22554775, 0.74148071, 0.96601510],
                 ],
                 [
                     [0.51595992, 0.49624804, 0.91145641, 0.49247262, 0.41002217],
-                    [-1.08001196, 1.55497086, -0.8196314, -0.45511565, -0.60269165],
+                    [-1.08001196, 1.55497086, -0.81963140, -0.45511565, -0.60269165],
                     [0.05563145, -0.94318372, -1.17058158, -0.73568577, 0.57810956],
-                    [-0.40260276, -0.10309298, 1.123788, -0.23510537, -0.73893374],
-                    [-0.52712536, -0.00717016, -1.85051966, -1.5079056, 1.38335907],
+                    [-0.40260276, -0.10309298, 1.12378800, -0.23510537, -0.73893374],
+                    [-0.52712536, -0.00717016, -1.85051966, -1.50790560, 1.38335907],
                 ],
             ]
         ]
@@ -1484,15 +1484,15 @@ def _test_conv2d_large_out_channel(test_case, device):
             ],
             [
                 [
-                    [0.29926914, 0.00931164, 0.2619766],
+                    [0.29926914, 0.00931164, 0.26197660],
                     [0.27611443, -0.15439281, -0.19027126],
-                    [-0.2890912, 0.30367029, -0.05168664],
+                    [-0.28909120, 0.30367029, -0.05168664],
                 ]
             ],
             [
                 [
                     [-0.03155736, 0.17610769, 0.22111714],
-                    [0.2279067, -0.32897446, -0.03260243],
+                    [0.22790670, -0.32897446, -0.03260243],
                     [-0.10274851, -0.06903386, -0.19438276],
                 ]
             ],
@@ -1515,27 +1515,27 @@ def _test_conv2d_large_out_channel(test_case, device):
                 [
                     [-0.21170563, 0.03652292, 0.25926736],
                     [-0.19168918, 0.49044561, 0.25099146],
-                    [-1.0248934, 0.25361472, -0.51828313],
+                    [-1.02489340, 0.25361472, -0.51828313],
                 ],
                 [
                     [0.23977707, -0.56090075, -0.19285655],
-                    [-0.17167747, 0.24558367, -0.3093586],
+                    [-0.17167747, 0.24558367, -0.30935860],
                     [-0.33303234, 1.52472734, -0.49013454],
                 ],
                 [
                     [-0.17137986, 1.21333742, 0.18988736],
-                    [0.31785482, -0.1212157, -0.18676008],
+                    [0.31785482, -0.12121570, -0.18676008],
                     [-0.10680684, -0.30298883, 0.41809759],
                 ],
                 [
                     [-0.87821335, -0.51665992, -0.44061098],
-                    [0.7480458, 0.5310725, 0.50418228],
-                    [-0.00512899, -0.3645584, -0.23643512],
+                    [0.74804580, 0.53107250, 0.50418228],
+                    [-0.00512899, -0.36455840, -0.23643512],
                 ],
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-05, 1e-06))
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-6, 1e-6))
     output = output.sum()
     output.backward()
     np_grad = np.array(
@@ -1543,42 +1543,48 @@ def _test_conv2d_large_out_channel(test_case, device):
             [
                 [
                     [0.10437235, -0.21008658, 0.26925275, 0.16488039, 0.47933933],
-                    [0.42143974, -0.2629388, -0.12013602, -0.54157579, 0.14280275],
+                    [0.42143974, -0.26293880, -0.12013602, -0.54157579, 0.14280275],
                     [-0.06124666, -0.44938356, -0.55658901, -0.49534237, -0.10720548],
                     [-0.16561902, -0.23929697, -0.82584178, -0.66022277, -0.58654481],
-                    [-0.4826864, -0.18644476, -0.43645298, 0.04623342, -0.25000823],
+                    [-0.48268640, -0.18644476, -0.43645298, 0.04623342, -0.25000823],
                 ],
                 [
                     [-0.27729425, -0.16841865, -0.16093449, 0.11635975, 0.00748415],
                     [-0.07074942, -0.54079264, -0.75282294, -0.68207347, -0.21203026],
-                    [-0.05160286, -0.29598606, -0.66841042, -0.61680746, -0.3724243],
+                    [-0.05160286, -0.29598606, -0.66841042, -0.61680746, -0.37242430],
                     [0.22569139, -0.12756741, -0.50747585, -0.73316729, -0.37990844],
                     [0.01914656, 0.24480659, 0.08441254, 0.06526598, -0.16039404],
                 ],
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-06, 1e-06))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_default_init(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True).to(flow.device(device))
             test_case.assertTrue(
                 not np.allclose(
-                    conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-09, atol=1e-10
+                    conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
                 )
             )
             test_case.assertTrue(
                 not np.allclose(
-                    conv.bias.numpy(), np.zeros((1,)), rtol=1e-09, atol=1e-10
+                    conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
                 )
             )
 
     def test_conv2d(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
             _test_conv2d(
                 test_case,
@@ -1590,7 +1596,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
             _test_conv2d_backward(
                 test_case,
@@ -1602,8 +1611,12 @@ class TestConv2d(flow.unittest.TestCase):
                 device=device,
             )
 
+    # bias grad not yet supported
     def test_conv2d_with_bias(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=True).to(flow.device(device))
             _test_conv2d(
                 test_case,
@@ -1616,7 +1629,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_group(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
                 flow.device(device)
             )
@@ -1630,7 +1646,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_group_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
                 flow.device(device)
             )
@@ -1645,7 +1664,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_padding(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False).to(
                 flow.device(device)
             )
@@ -1659,7 +1681,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_padding_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False).to(
                 flow.device(device)
             )
@@ -1674,7 +1699,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_stride(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(
                 1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False
             ).to(flow.device(device))
@@ -1688,7 +1716,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_stride_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(
                 1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False
             ).to(flow.device(device))
@@ -1702,8 +1733,12 @@ class TestConv2d(flow.unittest.TestCase):
                 device=device,
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_kernel(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False).to(flow.device(device))
             conv.to(flow.device("cuda"))
             _test_conv2d(
@@ -1712,10 +1747,15 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_kernel_data,
                 test_conv2d_kernel_weight,
                 test_conv2d_kernel_output,
+                device=device,
             )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_kernel_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False).to(flow.device(device))
             conv.to(flow.device("cuda"))
             _test_conv2d_backward(
@@ -1725,10 +1765,14 @@ class TestConv2d(flow.unittest.TestCase):
                 test_conv2d_kernel_weight,
                 test_conv2d_kernel_data_grad,
                 test_conv2d_kernel_weight_grad,
+                device=device,
             )
 
     def test_conv2d_dilation(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False).to(
                 flow.device(device)
             )
@@ -1742,7 +1786,10 @@ class TestConv2d(flow.unittest.TestCase):
             )
 
     def test_conv2d_dilation_backward(test_case):
-        for device in ["cuda", "cpu"]:
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cuda", "cpu"]
+        for arg in GenArgList(arg_dict):
+            device = arg[0]
             conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False).to(
                 flow.device(device)
             )
@@ -1758,60 +1805,39 @@ class TestConv2d(flow.unittest.TestCase):
 
     def test_large_in_channel_group_conv(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_conv2d_large_in_channel]
+        arg_dict["test_fun"] = [
+            _test_conv2d_large_in_channel,
+        ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
     def test_large_out_channel_group_conv(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_conv2d_large_out_channel]
+        arg_dict["test_fun"] = [
+            _test_conv2d_large_out_channel,
+        ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip("need a more relaxed tolerance")
-    def test_with_random_data(test_case):
-        for device in ["cpu", "cuda"]:
-            channels = random(1, 6)
-            test_module_against_pytorch(
-                test_case,
-                "nn.Conv2d",
-                extra_generators={
-                    "input": random_tensor(ndim=4, dim1=channels),
-                    "in_channels": channels,
-                    "out_channels": random(1, 129),
-                    "kernel_size": random(1, 4),
-                    "stride": random(1, 4),
-                    "padding": random(1, 5),
-                    "dilation": random(1, 5),
-                    "groups": random(1, 5),
-                    "padding_mode": constant("zeros"),
-                },
-                device=device,
-            )
-
-    @unittest.skip("need a more relaxed tolerance")
     @autotest()
-    def test_against_pytorch(test_case):
+    def test_conv_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
-            channels,
-            random(1, 6),
-            random(1, 6),
-            stride=random(1, 3) | nothing(),
-            padding=random(1, 3) | nothing(),
-            dilation=random(1, 3) | nothing(),
-            groups=random(1, 3) | nothing(),
-            bias=random() | nothing(),
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
             padding_mode=constant("zeros") | nothing(),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
-            ndim=4, dim1=channels, dim2=random(1, 8), dim3=random(1, 8)
-        ).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
 

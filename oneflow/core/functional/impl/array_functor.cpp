@@ -25,6 +25,11 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -32,10 +37,14 @@ namespace functional {
 
 namespace impl {
 
-class ConstantFunctor {
+class ConsistentConstantFunctor {
  public:
-  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype) const {
+  ConsistentConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -46,7 +55,60 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+  }
+
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
+    auto iter = map.find(sbp_tuple);
+    if (iter == map.end()) {
+      cfg::ParallelDistribution parallel_distribution;
+      for (const auto& sbp_parallel : sbp_tuple) {
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+      }
+      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+    }
+    return iter->second;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConstantFunctor {
+ public:
+  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (IsIntegralDataType(dtype)) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    }
+    {
+      ParallelDistribution parallel_distribution;
+      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
+    }
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
   }
 
  private:
@@ -1046,6 +1108,7 @@ class ReduceSumLikeFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
