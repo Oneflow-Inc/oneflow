@@ -36,10 +36,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple&
   CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
       << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(op, inputs, outputs.get(), attrs));
-  return outputs;
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(op, inputs, attrs));
 }
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,

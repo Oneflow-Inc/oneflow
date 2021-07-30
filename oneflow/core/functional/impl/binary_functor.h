@@ -48,7 +48,9 @@ class InplaceableBinaryFunctor {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y}, outputs);
+      std::cout << "binary functor x ptr: " << x.get() << std::endl;
+      JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));
+      return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
     }

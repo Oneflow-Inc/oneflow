@@ -30,7 +30,8 @@ void SourceTickComputeActor::Act() {
 }
 
 bool SourceTickComputeActor::IsCustomizedReadReady() const {
-  return piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
+  // NOTE(chengcheng): SourceTickActor CANNOT be used and need delete in the future
+  return true;
 }
 
 int SourceTickComputeActor::HandlerWaitToStart(const ActorMsg& msg) {

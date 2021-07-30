@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include <cstddef>
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -47,30 +48,60 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
-}  // namespace
-
-/* static */ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
+Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
+                                          const OpExprInterpContext& ctx) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (!LazyMode::is_enabled()) {
-    const auto& session = JUST(GetDefaultSession());
-    bool is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
-                                        || JUST(session->IsMirroredStrategyEnabled());
-    if (is_mirrored_strategy_enabled) {
-      return g_eager_mirrored_interpreter;
+    if (inputs.empty()) {
+      if (ctx.parallel_desc.has_value()) {
+        JUST(ctx.parallel_distribution.value());
+        CHECK_OR_RETURN(!ctx.device.has_value());
+        return g_eager_consistent_interpreter;
+      } else {
+        CHECK_OR_RETURN(!ctx.parallel_distribution.has_value());
+        return g_eager_mirrored_interpreter;
+      }
     } else {
-      return g_eager_consistent_interpreter;
+      if (inputs.at(0)->is_consistent()) {
+        if (inputs.size() == 1) {
+          // do nothing
+        } else if (inputs.size() == 2) {
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
+        } else if (inputs.size() == 3) {
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_consistent());  // unroll loop for efficiency
+        } else {
+          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_consistent()); }
+        }
+        return g_eager_consistent_interpreter;
+      } else {
+        if (inputs.size() == 1) {
+          // do nothing
+        } else if (inputs.size() == 2) {
+          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
+        } else if (inputs.size() == 3) {
+          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_local());  // unroll loop for efficiency
+        } else {
+          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_local()); }
+        }
+        return g_eager_mirrored_interpreter;
+      }
     }
+    UNIMPLEMENTED_THEN_RETURN();
   }
   return g_lazy_interpreter;
 }
+
+}  // namespace
 
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), ctx));
+  JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
 }
 
@@ -81,27 +112,29 @@ template<>
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
-template<>
-/* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
-    const OpExpr& op_expr, const TensorTuple& inputs, std::shared_ptr<TensorTuple> outputs,
-    const OpExprInterpContext& ctx) {
-  if (LazyMode::is_enabled()) {
-    auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-    JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, lazy_outputs.get(), ctx));
-    return lazy_outputs;
-  } else {
+/* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                                                TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) {
+  bool inplace_output= false;
+  if (outputs->size() > 0 && !(outputs->at(0).get())) {
+    std::cout << "op " << op_expr.op_type_name() << " is inplace. \n";
+    inplace_output = true;
     CHECK_OR_RETURN(outputs->size() == op_expr.output_size());
-    JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), ctx));
-    return outputs;
   }
-}
-
-template<>
-/* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
-                                                          const TensorTuple& inputs,
-                                                          std::shared_ptr<TensorTuple> outputs,
-                                                          const OpExprInterpContext& ctx) {
-  return JUST(Dispatch<TensorTuple>(op_expr, inputs, outputs, ctx))->at(0);
+  std::cout << "op " << op_expr.op_type_name() << " is inplace: " << inplace_output << " \n";
+  if (inplace_output && LazyMode::is_enabled()) {
+    std::cout << "op " << op_expr.op_type_name() << " is inplace and lazy. \n";
+    // lazy mode will ignore inplace
+    auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
+    JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, lazy_outputs.get(), ctx);
+    FOR_RANGE(size_t, i, 0, op_expr.output_size()) {
+      outputs->at(i) = lazy_outputs->at(i);
+    }
+    return Maybe<void>::Ok();
+  } else {
+    std::cout << "op " << op_expr.op_type_name() << " is eager. \n";
+    return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
+  }
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
