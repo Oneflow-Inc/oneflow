@@ -81,6 +81,17 @@ inline void SetJobConfForCurJobBuildAndInferCtx(const std::string& job_conf_prot
   oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);
   oneflow::cfg::JobConfigProto job_conf_cfg;
   job_conf_cfg.InitFromProto(job_conf);
+
+  // if (batch_size > 0) {
+  //   oneflow::cfg::JobSignatureDef* signature = job_conf_cfg.mutable_signature();
+  //   if (signature != nullptr) {
+  //     for (auto iter = signature->mutable_inputs()->begin(); iter != signature->mutable_inputs()->end(); iter++) {
+  //       iter->second.mutable_blob_conf()->mutable_shape()->set_dim(0, batch_size);
+  //     } 
+  //   }
+  // }
+  // std::cout << job_conf_cfg.DebugString() << std::endl;
+
   oneflow::CurJobBuildAndInferCtx_SetJobConf(job_conf_cfg).GetOrThrow();
 }
 
