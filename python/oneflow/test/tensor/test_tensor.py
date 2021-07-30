@@ -363,6 +363,14 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.argwhere(np_input)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, precision, precision))
         test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
+    
+    @autotest(n=5, auto_backward=False)
+    def test_tensor_argmax_with_random_data(test_case):
+        device = random_device()
+        ndim = random(1, 6).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device)
+        y = x.argmax(dim=random(0, ndim).to(int), keepdim=random().to(bool))
+        return y
 
     @autotest()
     def test_tensor_tanh_with_random_data(test_case):
