@@ -75,21 +75,7 @@ REGISTER_USER_OP("eager_nccl_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), 0)
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();

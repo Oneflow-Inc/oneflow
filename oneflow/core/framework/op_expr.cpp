@@ -20,11 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace one {

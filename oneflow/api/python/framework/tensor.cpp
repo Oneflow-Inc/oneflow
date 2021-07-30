@@ -17,14 +17,13 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
-#include "oneflow/api/python/common.h"
+
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/framework/device.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_method.h"
@@ -33,8 +32,6 @@ limitations under the License.
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
