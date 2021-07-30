@@ -192,6 +192,14 @@ class ElementwiseMaximumFunctor : public BinaryFunctor {
   }
 };
 
+class ReshapeLikeFunctor : public BinaryFunctor {
+ public:
+  ReshapeLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -217,6 +225,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ElementwiseMinimumFunctor>("ElementwiseMin");
   m.add_functor<impl::ElementwiseMaximumFunctor>("ElementwiseMax");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
+  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
 };
 
 }  // namespace functional
