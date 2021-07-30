@@ -228,15 +228,17 @@ user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string
 }
 
 Maybe<user_op::UserOpConfWrapper> MinMaxObserver(const std::string& name, const std::string& input,
-                                          const QatConfig& qat_config,
-                                          const int64_t scope_symbol_id, OpConfMap* inserted_ops) {
+                                                 const QatConfig& qat_config,
+                                                 const int64_t scope_symbol_id,
+                                                 OpConfMap* inserted_ops) {
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("min_max_observer")
           .Input("in", input)
           .Output("scale")
           .Output("zero_point")
-          .Attr<std::string>("quantization_formula", *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
+          .Attr<std::string>("quantization_formula",
+                             *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
           .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Attr("per_layer_quantization", PerLayerQuantizationAttr4Config(qat_config))
           .ScopeSymbolId(scope_symbol_id)
@@ -245,11 +247,9 @@ Maybe<user_op::UserOpConfWrapper> MinMaxObserver(const std::string& name, const 
   return op_wrapper;
 }
 
-Maybe<user_op::UserOpConfWrapper> MovingMinMaxObserver(const std::string& name, const std::string& input,
-                                                const std::string& train_step_lbn,
-                                                const QatConfig& qat_config,
-                                                const int64_t scope_symbol_id,
-                                                OpConfMap* inserted_ops) {
+Maybe<user_op::UserOpConfWrapper> MovingMinMaxObserver(
+    const std::string& name, const std::string& input, const std::string& train_step_lbn,
+    const QatConfig& qat_config, const int64_t scope_symbol_id, OpConfMap* inserted_ops) {
   const std::string moving_max_name = name + MOVING_MAX_SUFFIX;
   const std::string moving_min_name = name + MOVING_MIN_SUFFIX;
   const auto moving_max_var =
@@ -277,7 +277,8 @@ Maybe<user_op::UserOpConfWrapper> MovingMinMaxObserver(const std::string& name, 
           .Output("zero_point")
           .Attr("training", GlobalJobDesc().IsTrain())
           .Attr("stop_update_after_iters", qat_config.moving_min_max_stop_update_after_iters())
-          .Attr<std::string>("quantization_formula", *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
+          .Attr<std::string>("quantization_formula",
+                             *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
           .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Attr("momentum", qat_config.moving_min_max_momentum())
           .ScopeSymbolId(scope_symbol_id)
@@ -287,16 +288,19 @@ Maybe<user_op::UserOpConfWrapper> MovingMinMaxObserver(const std::string& name, 
 }
 
 Maybe<user_op::UserOpConfWrapper> FakeQuantOp(const std::string& name, const std::string& input,
-                                       const std::string& scale, const std::string& zero_point,
-                                       const QatConfig& qat_config, const int64_t scope_symbol_id,
-                                       OpConfMap* inserted_ops) {
+                                              const std::string& scale,
+                                              const std::string& zero_point,
+                                              const QatConfig& qat_config,
+                                              const int64_t scope_symbol_id,
+                                              OpConfMap* inserted_ops) {
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("fake_quantization")
           .Input("in", input)
           .Input("scale", scale)
           .Input("zero_point", zero_point)
-          .Attr<std::string>("quantization_formula", *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
+          .Attr<std::string>("quantization_formula",
+                             *JUST(QuantizationFormulaAttr4QatConfig(qat_config)))
           .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Output("out")
           .ScopeSymbolId(scope_symbol_id)
@@ -335,8 +339,8 @@ Maybe<void> GetScaleAndZeroPointLbn4Edge(OpEdge* edge, const std::string train_s
       *zero_point = observer_op->output("zero_point", 0);
     } else {
       CHECK_OR_RETURN(qat_config.has_moving_min_max_stop_update_after_iters());
-      const auto observer_op = JUST(MovingMinMaxObserver(observer_op_name, lbn, train_step_lbn,
-                                                    qat_config, scope_symbol_id, inserted_ops));
+      const auto observer_op = JUST(MovingMinMaxObserver(
+          observer_op_name, lbn, train_step_lbn, qat_config, scope_symbol_id, inserted_ops));
       *scale = observer_op->output("scale", 0);
       *zero_point = observer_op->output("zero_point", 0);
     }
@@ -536,8 +540,8 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
       JUST(GetScaleAndZeroPointLbn4Edge(edge, job->job_conf().train_conf().train_step_lbn(), &scale,
                                         &zero_point, qat_config, scope_symbol_id, &inserted_ops));
       const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + FAKE_QUANT_SUFFIX;
-      const auto fake_quant_op = JUST(FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, qat_config,
-                                             scope_symbol_id, &inserted_ops));
+      const auto fake_quant_op = JUST(FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point,
+                                                  qat_config, scope_symbol_id, &inserted_ops));
 
       const std::string fake_quant_op_output_name = fake_quant_op->output("out", 0);
 
