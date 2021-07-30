@@ -17,12 +17,19 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow import Tensor
 
-class Randperm(Module):
-    def __init__(self,N:int, generator=None, dtype=flow.int32, layout=None, device=None, requires_grad=False,
-                 pin_memory=False) -> None:
-        super().__init__()
 
-        
+class Randperm(Module):
+    def __init__(
+        self,
+        N: int,
+        generator=None,
+        dtype=flow.int32,
+        layout=None,
+        device=None,
+        requires_grad=False,
+        pin_memory=False,
+    ) -> None:
+        super().__init__()
 
         if generator is None:
             generator = flow.Generator()
@@ -30,56 +37,75 @@ class Randperm(Module):
             print(
                 "WARNING:",
                 "oneflow.randperm.layout",
-                "will not be used. Layout is not currently supported."
+                "will not be used. Layout is not currently supported.",
             )
-        if pin_memory is not None:
+        if pin_memory:
             print(
                 "WARNING:",
                 "pin_memory",
-                "will not be used. pin_memory is not currently supported."
+                "will not be used. pin_memory is not currently supported.",
             ),
         if isinstance(device, str):
             device = flow.device(device)
         else:
             device = device if device is not None else flow.device("cpu")
-        
+
         assert isinstance(device, flow.device)
         assert isinstance(dtype, flow.dtype)
         # assert isinstance(requires_grad, bool)
         # assert isinstance(pin_memory, bool)
-        assert N>0
+        assert N > 0
 
         self.device = device
         self.dtype = dtype
         self.requires_grad = requires_grad
         self.pin_memory = pin_memory
         self.generator = generator
-        self.N=N
+        self.N = N
+
     def forward(self, out=None):
-        return flow.F.randperm(self.N,self.dtype,self.generator)
+        res = flow.F.randperm(self.N, self.generator)
+        res = res.to(self.device, self.dtype)
+        res.requires_grad = self.requires_grad
+        return res
 
 
-def randperm(n, generator=None, out=None, dtype=flow.int64, layout=None, device=None, requires_grad=False,
-             pin_memory=False) -> Tensor:
+def randperm(
+    n,
+    generator=None,
+    out=None,
+    dtype=flow.int64,
+    layout=None,
+    device=None,
+    requires_grad=False,
+    pin_memory=False,
+) -> Tensor:
     r"""
     Returns a random permutation of integers from ``0`` to ``n - 1``.
+
     Args:
         n (int): the upper bound (exclusive)
+    
     Keyword args:
-        {generator}: custom generator is not currently supported.
-        out (Tensor): output Tensor.
+        {generator(:class:`oneflow.Generator`, optional)}:  a pseudorandom number generator for sampling
+        out (Tensor): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: ``oneflow.int64``.
-        {layout}: layout is not currently supported.
-        {device}
-        {requires_grad}
-        {pin_memory}
+        {layout}: layout is not supported yet.
+        {device}: the desired device of returned tensor. Default: cpu.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
+        pin_memory(bool, optional):pin_memory is not supported yet.
     Example::
     .. code-block:: python
-        >>> torch.randperm(4)
-        tensor([2, 1, 0, 3])
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> flow.randperm(5, generator=generator)
+        tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
     """
-    return Randperm(generator, dtype, layout, device, requires_grad, pin_memory)(out)
+    return Randperm(n, generator, dtype, layout, device, requires_grad, pin_memory)(out)
+
 
 if __name__ == "__main__":
     import doctest
