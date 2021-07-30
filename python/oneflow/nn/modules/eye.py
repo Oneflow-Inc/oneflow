@@ -23,16 +23,19 @@ from oneflow.framework.tensor import register_tensor_op
 class Eye(Module):
     def __init__(
         self,
+        n: int,
         m: int = None,
         device: Union[str, flow.device] = "cpu",
         requires_grad: bool = False,
     ) -> None:
         super().__init__()
+        self.n = n
         self.m = m
         self.device = device
         self.requires_grad = requires_grad
 
-    def forward(self, n):
+    def forward(self):
+        n = self.n
         m = self.m
         if m is None:
             m = n
@@ -90,7 +93,7 @@ def eye_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    return Eye(m, device, requires_grad)(n)
+    return Eye(n, m, device, requires_grad)()
 
 
 if __name__ == "__main__":
