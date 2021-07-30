@@ -28,11 +28,12 @@ def _test_view(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device))
-    of_shape = input.view(2, 2, 2, -1).numpy().shape
+    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    of_out = input.view(2, 2, 2, -1)
+    of_shape = of_out.numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
-    of_out = input.view(shape=[2, 2, 2, -1]).sum()
+    of_out = of_out.sum()
     of_out.backward()
     np_grad = np.array(
         [
@@ -49,12 +50,12 @@ def _test_view_flow_size(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device))
+    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
     shape = flow.Size([2, 2, 2, -1])
-    of_shape = input.view(shape).numpy().shape
+    of_out = input.view(shape)
     np_shape = (2, 2, 2, 2)
-    test_case.assertTrue(np.array_equal(of_shape, np_shape))
-    of_out = input.view(shape=[2, 2, 2, -1]).sum()
+    test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_shape))
+    of_out = of_out.sum()
     of_out.backward()
     np_grad = np.array(
         [
