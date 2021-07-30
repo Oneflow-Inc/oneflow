@@ -121,7 +121,7 @@ def test(test_case):
     batch_size = 256
     num_epochs = 1
     data_dir = os.path.join(
-        os.getenv("ONEFLOW_TEST_CACHE_DIR", "."), "/data-test/fashion-mnist"
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "/data-test"), "fashion-mnist"
     )
     source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
     train_iter, test_iter = load_data_fashion_mnist(

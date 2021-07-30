@@ -77,7 +77,7 @@ def test(test_case):
     train_epoch = 1
     batch_size = 4
     data_dir = os.path.join(
-        os.getenv("ONEFLOW_TEST_CACHE_DIR", "."), "/data-test/cifar10"
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "/data-test"), "cifar10"
     )
 
     trainset = datasets.CIFAR10(
