@@ -114,12 +114,12 @@ Symbol<DType> DType::DType4DataType(DataType data_type) {
   return iter->second;
 }
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)           \
-  const Symbol<DType>& DType::data_type() {                       \
-    static const auto& dtype = SymbolOf(DType(OF_PP_CAT(DataType::k, data_type)));     \
-    return dtype; \
-  } 
-OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ) 
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                   \
+  const Symbol<DType>& DType::data_type() {                                        \
+    static const auto& dtype = SymbolOf(DType(OF_PP_CAT(DataType::k, data_type))); \
+    return dtype;                                                                  \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
 }  // namespace oneflow
