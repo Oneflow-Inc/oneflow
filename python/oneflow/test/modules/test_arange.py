@@ -65,20 +65,15 @@ class TestArange(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
-    @autotest(n=5, rtol=1e-5, atol=1e-5)
+
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
     def test_arange_with_random_data(test_case):
         start = random().to(int)
-        end = start+random().to(int)
-        step=random(0, end-start).to(int)
-        x = torch.arange(
-            start=start,
-            end=end,
-            step=step
-        )
+        end = start + random().to(int)
+        step = random(0, end - start).to(int)
+        x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)
-        x = random_pytorch_tensor().to(device)
         return x
 
 
