@@ -491,9 +491,7 @@ class TestBatchNorm(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=True)
     def test_batchnorm3d_module_with_random_data(test_case):
         channel = random().to(int)
-        m = torch.nn.BatchNorm3d(
-            num_features=channel, track_running_stats=False
-        )
+        m = torch.nn.BatchNorm3d(num_features=channel, track_running_stats=False)
         m.train(random())
         device = "cpu"
         m.to(device)

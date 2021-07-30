@@ -235,10 +235,10 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
         torch_grad = torch_tensor.grad.detach().cpu().numpy()
         flow_grad = flow_tensor.grad.numpy()
-        if not np.allclose(
-            torch_grad, flow_grad, rtol=rtol, atol=atol
-        ):
-            print("Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}")
+        if not np.allclose(torch_grad, flow_grad, rtol=rtol, atol=atol):
+            print(
+                "Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+            )
             return False
     return np.allclose(
         torch_tensor.detach().cpu().numpy(),
