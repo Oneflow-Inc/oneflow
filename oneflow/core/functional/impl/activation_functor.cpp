@@ -70,13 +70,19 @@ class PReluFunctor : public BinaryFunctor {
 class PReluGradFunctor {
  public:
   PReluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("prelu_grad").Input("dy").Input("x").Input("alpha").Output("dx").Output("alpha_diff").Build());
+    op_ = CHECK_JUST(one::OpBuilder("prelu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("alpha")
+                         .Output("dx")
+                         .Output("alpha_diff")
+                         .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, 
-                                const std::shared_ptr<Tensor>& x, 
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
   }
+
  private:
   std::shared_ptr<OpExpr> op_;
 };
