@@ -40,6 +40,7 @@ class DType final {
  public:
   DType(const DType&) = default;
   DType(DType&&) = delete;
+  explicit DType(DataType data_type) : data_type_(data_type) {}
   ~DType() = default;
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
@@ -59,14 +60,8 @@ class DType final {
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
-// #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
-//   static const std::shared_ptr<const DType>& data_type();
-//   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
-// #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
  private:
-  explicit DType(DataType data_type) : data_type_(data_type) {}
-
   DataType data_type_;
 };
 

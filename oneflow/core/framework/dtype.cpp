@@ -106,19 +106,18 @@ bool DType::is_floating_point() const {
 const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
 Symbol<DType> DType::DType4DataType(DataType data_type) {
-  static thread_local HashMap<int, Symbol<DType>> map;
+  static thread_local HashMap<int, const Symbol<DType>&> map;
   auto iter = map.find(static_cast<int>(data_type));
   if (iter == map.end()) {
-    iter = map.emplace(static_cast<int>(data_type), SymbolOf(*(DType::Get(data_type).GetOrThrow()))).first;
+    iter = map.emplace(static_cast<int>(data_type), DType::Get(data_type).GetOrThrow()).first;
   }
   return iter->second;
 }
 
-// todo: 121 macro \ error
 #define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)           \
   const Symbol<DType> DType::data_type() {                       \
-    return DType::DType4DataType(OF_PP_CAT(DataType::k, data_type));     \
-  } \
+    return SymbolOf(DType(OF_PP_CAT(DataType::k, data_type)));     \
+  } 
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ) 
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
