@@ -74,7 +74,7 @@ class TestVariance(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testsinh(flow.unittest.TestCase):
+class TestSinh(flow.unittest.TestCase):
     @autotest()
     def test_flow_sinh_with_random_data(test_case):
         device = random_device()
@@ -208,40 +208,42 @@ class TestStd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_flow_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = torch.std(x, dim=dim)
+        return z
 
-def _test_sqrt(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    np_out = np.sqrt(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.sqrt(input=x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_sqrt_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.sqrt(input=x)
-    z = y.sum()
-    z.backward()
-    np_grad = 0.5 * 1 / np.sqrt(x.numpy())
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_tensor_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = x.std(dim=dim)
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    def test_sqrt(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_sqrt, _test_sqrt_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_sqrt_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.sqrt(x)
+        return z
+
+    @autotest()
+    def test_sqrt_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.sqrt()
+        return z
 
 
 def _test_rsqrt(test_case, shape, device):
@@ -279,38 +281,21 @@ class TestRsqrt(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_square(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.square(x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_square_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.square(x)
-    z = y.sum()
-    z.backward()
-    np_grad = 2 * np_arr
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
-    def test_square(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_square, _test_square_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_square_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.square(x)
+        return z
+
+    @autotest()
+    def test_square_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.square()
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -597,7 +582,7 @@ class TestAcosh(flow.unittest.TestCase):
     @autotest()
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(2.0, 3.0).to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = torch.acosh(x)
         return y
 
