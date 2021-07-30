@@ -20,15 +20,15 @@ from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreducefn(reversed_param_list, param, allreduce_module):
+def allreducefn(ddp_state_for_reversed_params, param, allreduce_module):
     def allreduce(grad):
-        reversed_param_list[param][0] = True
+        ddp_state_for_reversed_params[param][0] = True
         ret = None
-        for cur_param, (ready, deleted) in reversed_param_list.items():
+        for cur_param, (ready, deleted) in ddp_state_for_reversed_params.items():
             if deleted:
                 continue
             if ready:
-                reversed_param_list[cur_param][1] = True
+                ddp_state_for_reversed_params[cur_param][1] = True
                 if cur_param == param:
                     ret = allreduce_module(grad)[0]
                 else:
@@ -43,20 +43,20 @@ def allreducefn(reversed_param_list, param, allreduce_module):
 def DistributedDataParallel(module: "flow.nn.Module"):
     world_size = flow.framework.distribute.get_world_size()
     allreduce_module = flow.nn.AllReduce(list(range(world_size)))
-    reversed_param_list = OrderedDict(
+    ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters()])
     )
-    module._reversed_param_list = reversed_param_list
+    module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
         param.register_hook(lambda grad: grad / world_size)
-        param.register_hook(allreducefn(reversed_param_list, param, allreduce_module))
+        param.register_hook(allreducefn(ddp_state_for_reversed_params, param, allreduce_module))
 
     def hook(module, input, output):
-        reversed_param_list = module._reversed_param_list
-        for item in reversed_param_list.values():
-            item[0], item[1] = False, False
+        ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
+        for state in ddp_state_for_reversed_params.values():
+            state[0], state[1] = False, False
         output = flow.F.return_first_input(
-            convert_to_tensor_tuple([output, *reversed_param_list.keys()])
+            convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
         )
         return output
 
