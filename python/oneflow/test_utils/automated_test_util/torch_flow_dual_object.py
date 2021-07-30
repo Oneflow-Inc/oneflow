@@ -254,7 +254,11 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
         @functools.wraps(f)
         def new_f(test_case):
             nonlocal n
+            loop_limit = n * 20
+            loop = 0
             while n > 0:
+                if loop > loop_limit:
+                    raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 try:
@@ -262,6 +266,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 except PyTorchDoesNotSupportError as e:
                     if verbose:
                         print(e)
+                    loop += 1
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
@@ -285,6 +290,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                 if verbose:
                     print("test passed")
                 n -= 1
+                loop += 1
 
         return new_f
 
