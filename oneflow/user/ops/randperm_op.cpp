@@ -22,7 +22,6 @@ REGISTER_NO_GRAD_USER_OP("randperm")
     .Attr<int32_t>("N")
     .Attr<int64_t>("seed", -1)
     .Attr<bool>("has_seed", false)
-    .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       int32_t N = ctx->Attr<int32_t>("N");
@@ -34,7 +33,7 @@ REGISTER_NO_GRAD_USER_OP("randperm")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 

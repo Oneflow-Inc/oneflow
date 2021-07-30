@@ -18,8 +18,15 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 namespace oneflow {
+__global__ void GeneKeysAndValues(const int32_t N, int32_t* values, int32_t* keys,
+                                  curandState* state) {
+  XPU_1D_KERNEL_LOOP(i, N) {
+    curandState localState = state[i];
+    keys[i] = curand(&localState);
+    values[i] = i;
+  }
+}
 
-template<typename T>
 class GpuRandPermKernel final : public user_op::OpKernel {
  public:
   GpuRandPermKernel() = default;
@@ -31,84 +38,76 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     return std::make_shared<RandpermKernelState>(generator);
   }
 
-  __global__ void GeneKeysAndValues(const int32_t N, T* values,int_32t * keys,curandState* state){
-    curandState localState = state[id];
-    XPU_1D_KERNEL_LOOP(i, N){ 
-      key[i]=curand(&localState);
-      value[i]=i;
-    }
-  }
-
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* output = out->mut_dptr<T>();
+    int32_t* output = out->mut_dptr<int32_t>();
     const int32_t N = ctx->Attr<int32_t>("N");
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    
     auto* randperm_kernel_state = dynamic_cast<RandpermKernelState*>(state);
     CHECK_NOTNULL(randperm_kernel_state);
     const auto& generator = randperm_kernel_state->generator();
-    const auto& gpu_generator = CHECK_JUST(generator->Get<one::GPUGeneratorImpl>());
+    const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
     CHECK_NOTNULL(generator);
 
-    
     int32_t block_num = gpu_generator->max_block_num();
     int32_t thread_num = gpu_generator->max_thread_num();
     curandState* curand_states = gpu_generator->curand_states();
 
-    
     // layout for tmp |...key(in and out,2xN)..|....value....|.... space for sort function....|
     // values are the desired indexes ,and keys are generated randomly.
     void* tmp = tmp_buffer->mut_dptr<void>();
-    T* key_base = reinterpret_cast<T*>(tmp);
+    int32_t* key_base = reinterpret_cast<int32_t*>(tmp);
 
-    const int32_t key_aligned_bytes = GetCudaAlignedSize(N * sizeof(T)); 
-    int32_t* value_base =  reinterpret_cast<int32_t*>(reinterpret_cast<char*>(key_base)
-                                              + 2*key_aligned_bytes);
+    const int32_t key_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));
+    int32_t* value_base =
+        reinterpret_cast<int32_t*>(reinterpret_cast<char*>(key_base) + 2 * key_aligned_bytes);
 
-    const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));                                           
-    void* tmp_base = reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
-    const int32_t temp_storage_bytes=InferTempStorageForSortPairsDescending<T, int32_t>(1, N); 
+    const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));
+    void* tmp_base =
+        reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
+    size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, N);
 
-    GeneKeys<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(N,value_base,key_base,curand_states);
+    GeneKeysAndValues<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock, 0,
+                        ctx->device_ctx()->cuda_stream()>>>(N, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
-       /* d_temp_storage */ tmp_base,
-      /* temp_storage_bytes */ temp_storage_bytes,
-      /* d_keys_in */ key_base,
-      /* d_keys_out */ key_base+N,
-      /* d_values_in */ value_base,
-      /* d_values_out */ output,
-      /* num_items */ N,
-      /* begin_bit */ 0,
-      /* end_bit */ sizeof(int32_t) * 8,
-      /* stream */ ctx->device_ctx()->cuda_stream()
-      );
+        /* d_temp_storage */ tmp_base,
+        /* temp_storage_bytes */ temp_storage_bytes,
+        /* d_keys_in */ key_base,
+        /* d_keys_out */ key_base + N,
+        /* d_values_in */ value_base,
+        /* d_values_out */ output,
+        /* num_items */ N,
+        /* begin_bit */ 0,
+        /* end_bit */ sizeof(int32_t) * 8,
+        /* stream */ ctx->device_ctx()->cuda_stream());
+    OF_CUDA_CHECK(err);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_GPU_RANDPERM_KERNEL(dtype)               \
-  REGISTER_USER_KERNEL("randperm")                        \
-      .SetCreateFn<GpuRandPermKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))            \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
-        const int32_t N = ctx->Attr<int32_t>("N");                                                 \
-        /* Sorted In */                                                                            \
-        const int32_t sorted_in_aligned_bytes = 2*GetCudaAlignedSize(N * sizeof(int32_t));             \
-        /* Indices */                                                                              \
-        const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(dtype));             \  
-        /* CUB Temp Storage */                                                                     \
-        const int32_t temp_storage_bytes=InferTempStorageForSortPairsDescending<dtype, int32_t>(1, N);        \                                                                  
-        return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;               \                         
+#define REGISTER_GPU_RANDPERM_KERNEL                                                         \
+  REGISTER_USER_KERNEL("randperm")                                                           \
+      .SetCreateFn<GpuRandPermKernel>()                                                      \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")                                     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
+        const int32_t N = ctx->Attr<int32_t>("N");                                           \
+        /* Sorted In */                                                                      \
+        const int32_t sorted_in_aligned_bytes = 2 * GetCudaAlignedSize(N * sizeof(int32_t)); \
+        /* Indices */                                                                        \
+        const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));       \
+        \  
+        /* CUB Temp Storage */                                                               \
+            const int32_t temp_storage_bytes =                                               \
+                InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, N);              \
+        \                                                                  
+        return sorted_in_aligned_bytes                                                       \
+            + indices_aligned_bytes + temp_storage_bytes;                                    \
+        \                         
+                                                                 \
       });
 
-REGISTER_GPU_RANDPERM_KERNEL(float)
-REGISTER_GPU_RANDPERM_KERNEL(double)
-REGISTER_GPU_RANDPERM_KERNEL(int32_t)
-REGISTER_GPU_RANDPERM_KERNEL(int64_t)
+REGISTER_GPU_RANDPERM_KERNEL
 
 }  // namespace oneflow

@@ -64,18 +64,12 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
-
-
 class RandPermFunctor {
  public:
-  RandPermFunctor() {
-    randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const int32_t N,const DataType& dtype,
-                           const Optional<one::Generator>& generator) const {
+  RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int32_t N, const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    JUST(attrs.SetAttr<int32_t>("N",N));
+    JUST(attrs.SetAttr<int32_t>("N", N));
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
@@ -88,21 +82,18 @@ class RandPermFunctor {
     const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
 
     return OpInterpUtil::Dispatch<Tensor>(
-        *randperm_op_, {},
-        OpExprInterpContext{.attrs = attrs, .state = randperm_kernel_state});
+        *randperm_op_, {}, OpExprInterpContext{.attrs = attrs, .state = randperm_kernel_state});
   }
 
  private:
   std::shared_ptr<OpExpr> randperm_op_;
 };
 
-
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-   m.add_functor<impl::BernoulliFunctor>("Bernoulli"); 
-   m.add_functor<impl::BernoulliFunctor>("Randperm"); 
+  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
+  m.add_functor<impl::RandPermFunctor>("Randperm");
 };
 
 }  // namespace functional

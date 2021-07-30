@@ -117,7 +117,7 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         const int32_t instance_num = elem_cnt / instance_size;                                     \
                                                                                                    \
         /* Sorted In */                                                                            \
-        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(dtype));      \
+        const int32_t sorted_in_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));    \
         /* Indices */                                                                              \
         const int32_t indices_aligned_bytes = GetCudaAlignedSize(elem_cnt * sizeof(int32_t));      \
         /* CUB Temp Storage */                                                                     \

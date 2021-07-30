@@ -17,7 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
 class CpuRandPermKernel final : public user_op::OpKernel {
  public:
   CpuRandPermKernel() = default;
@@ -32,27 +31,23 @@ class CpuRandPermKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* output = out->mut_dptr<T>();
+    int32_t* output = out->mut_dptr<int32_t>();
     const int32_t N = ctx->Attr<int32_t>("N");
     auto* randperm_kernel_state = dynamic_cast<RandpermKernelState*>(state);
     CHECK_NOTNULL(randperm_kernel_state);
     const auto& generator = randperm_kernel_state->generator();
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
     CHECK_NOTNULL(generator);
-    user_op::RangeFunctor<DeviceType::kCPU, T>()(ctx->device_ctx(), 0, 1, N, output);
+    user_op::RangeFunctor<DeviceType::kCPU, int32_t>()(ctx->device_ctx(), 0, 1, N, output);
     std::shuffle(output, output + N, cpu_generator->engine());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_CPU_RANDPERM_KERNEL(dtype)               \
-  REGISTER_USER_KERNEL("randperm")                        \
-      .SetCreateFn<CpuRandPermKernel<dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_RANDPERM_KERNEL    \
+  REGISTER_USER_KERNEL("randperm")      \
+      .SetCreateFn<CpuRandPermKernel>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
 
-REGISTER_CPU_RANDPERM_KERNEL(float)
-REGISTER_CPU_RANDPERM_KERNEL(double)
-REGISTER_CPU_RANDPERM_KERNEL(int32_t)
-REGISTER_CPU_RANDPERM_KERNEL(int64_t)
+REGISTER_CPU_RANDPERM_KERNEL
 
 }  // namespace oneflow
