@@ -51,10 +51,10 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     start = RegulateSliceStart(start, dim_size);
     stop = RegulateSliceStop(stop, dim_size);
     if (step > 0) {
-      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than when step > 0"
+      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
                                          ", otherwise empty result will be outputted.";
     } else {
-      CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than when step < 0"
+      CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
                                          ", otherwise empty result will be outputted.";
     }
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
