@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/random_mask_generator.h"
 
-
 namespace oneflow {
 
 void RandomMaskGenerator<DeviceType::kCPU>::Generate(DeviceCtx* device_ctx, const int64_t n,

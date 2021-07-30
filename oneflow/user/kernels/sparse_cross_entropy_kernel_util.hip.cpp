@@ -16,7 +16,7 @@ limitations under the License.
 #if defined(WITH_HIP)
 
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/kernel/kernel_util.hip.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {

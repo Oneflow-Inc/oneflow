@@ -16,8 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/common/data_type.h"
+
 namespace oneflow {
 
 namespace {
