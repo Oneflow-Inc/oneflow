@@ -56,14 +56,9 @@ bool CompareDeviceSetPair(const std::pair<int64_t, int64_t>& a,
   }
 }
 
-void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
-                    const std::vector<int64_t>& sorted_process_ranks) {
+void CreateNcclComm(ncclComm_t* comm, const std::string& key, int group_size, int rank_in_group) {
   ncclUniqueId nccl_unique_id{};
-  auto it = std::find(sorted_process_ranks.cbegin(), sorted_process_ranks.cend(),
-                      GlobalProcessCtx::Rank());
-  CHECK(it != sorted_process_ranks.end());
-  int rank_in_comm = std::distance(sorted_process_ranks.cbegin(), it);
-  if (rank_in_comm == 0) {
+  if (rank_in_group == 0) {
     OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
     Global<CtrlClient>::Get()->PushKV(key,
                                       std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
@@ -72,34 +67,29 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
       memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
     });
   }
-  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = "
-            << sorted_process_ranks.size()
+  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank group_size = " << group_size
             << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id)
-            << ", rank = " << rank_in_comm << ", key = {" << key << "}\n";
-  OF_NCCL_CHECK(ncclCommInitRank(comm, sorted_process_ranks.size(), nccl_unique_id, rank_in_comm));
+            << ", rank_in_group = " << rank_in_group << ", key = {" << key << "}\n";
+  OF_NCCL_CHECK(ncclCommInitRank(comm, group_size, nccl_unique_id, rank_in_group));
+}
+
+void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
+                    const std::vector<int64_t>& sorted_process_ranks) {
+  auto it = std::find(sorted_process_ranks.cbegin(), sorted_process_ranks.cend(),
+                      GlobalProcessCtx::Rank());
+  CHECK(it != sorted_process_ranks.end());
+  int rank_in_comm = std::distance(sorted_process_ranks.cbegin(), it);
+  return CreateNcclComm(comm, key, sorted_process_ranks.size(), rank_in_comm);
 }
 
 void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
                     const std::vector<std::pair<int64_t, int64_t>>& device_vec) {
-  ncclUniqueId nccl_unique_id{};
   int64_t machine = GlobalProcessCtx::Rank();
   std::pair<int64_t, int64_t> this_device(machine, dev);
   auto it = std::find(device_vec.cbegin(), device_vec.cend(), this_device);
   CHECK(it != device_vec.end());
   int rank = std::distance(device_vec.cbegin(), it);
-  if (rank == 0) {
-    OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
-    Global<CtrlClient>::Get()->PushKV(key,
-                                      std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
-  } else {
-    Global<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
-      memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
-    });
-  }
-  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
-            << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
-            << ", key = {" << key << "}\n";
-  OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
+  return CreateNcclComm(comm, key, device_vec.size(), rank);
 }
 
 }  // namespace
