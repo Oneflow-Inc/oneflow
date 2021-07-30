@@ -32,7 +32,7 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, sbp, placement):
+def to_consistent_op(input, placement, sbp):
     """Cast a local tensor to consistent tensor or (TODO)cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -50,11 +50,11 @@ def to_consistent_op(input, sbp, placement):
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> output_tensor = input.to_consistent([flow.sbp.split(0)], placement)
+        >>> output_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
         >>> output_tensor.is_consistent
         True
     """
-    return ToConsistent()(input, sbp, placement)
+    return ToConsistent()(input, placement, sbp)
 
 
 class ToLocal(Module):
@@ -82,7 +82,7 @@ def to_local_op(input):
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> consistent_tensor = input.to_consistent([flow.sbp.split(0)], placement)
+        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
         >>> consistent_tensor.to_local()
         tensor([0.5, 0.6, 0.7], dtype=oneflow.float32)
     """

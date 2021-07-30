@@ -776,7 +776,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, SbpList sbp, Placement placement)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp)"
   bind_python: True
 
 - name: "to_local"

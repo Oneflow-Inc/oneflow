@@ -872,49 +872,5 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
-
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return EagerNcclBroadcast(parallel_desc, root, UniqueOpName("eager_nccl_broadcast"));
-}
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          const std::string& name) {
-  return one::OpBuilder("eager_nccl_broadcast", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<int64_t>("root", root)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root) {
-  return EagerNcclReduce(parallel_desc_str, root, UniqueOpName("eager_nccl_reduce"));
-}
-Maybe<one::UserOpExpr> EagerNcclReduce(const std::string& parallel_desc_str, int64_t root,
-                                       const std::string& name) {
-  return one::OpBuilder("eager_nccl_reduce", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", parallel_desc_str)
-      .Attr<int64_t>("root", root)
-      .Build();
-}
-
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp() {
-  return CastToConsistentOp(UniqueOpName("cast_to_consistent"));
-}
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name) {
-  std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
-      JUST(one::CastToConsistentOpExpr::New(name));
-  return cast_to_consistent_op_expr;
-}
-
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp() {
-  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"));
-}
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name) {
-  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
-      JUST(one::CastFromConsistentOpExpr::New(name));
-  return cast_from_consistent_op_expr;
-}
 }  // namespace op_expr_helper
 }  // namespace oneflow

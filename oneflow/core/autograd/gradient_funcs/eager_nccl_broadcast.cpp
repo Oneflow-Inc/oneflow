@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -26,15 +28,23 @@ namespace one {
 
 namespace {
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(const std::string& parallel_desc_str,
+Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  return one::OpBuilder("eager_nccl_reduce", *CHECK_JUST(UniqueStr("eager_nccl_reduce")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<int64_t>("root", root)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(Symbol<ParallelDesc> parallel_desc,
                                                         int64_t root) {
-  thread_local HashMap<std::pair<std::string, int64_t>, std::shared_ptr<one::UserOpExpr>>
+  thread_local HashMap<std::pair<Symbol<ParallelDesc>, int64_t>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc_and_root_device2eager_nccl_reduce;
-  const auto& key = std::make_pair(parallel_desc_str, root);
+  const auto& key = std::make_pair(parallel_desc, root);
   auto iter = parallel_desc_and_root_device2eager_nccl_reduce.find(key);
   if (iter == parallel_desc_and_root_device2eager_nccl_reduce.end()) {
-    std::shared_ptr<UserOpExpr> op_expr =
-        JUST(op_expr_helper::EagerNcclReduce(parallel_desc_str, root));
+    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclReduce(parallel_desc, root));
     iter = parallel_desc_and_root_device2eager_nccl_reduce.emplace(key, op_expr).first;
   }
   return iter->second;
@@ -42,35 +52,36 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(const std::string& paral
 
 }  // namespace
 
-struct EagerNcclBroadcastOpExprInterpState : public OpExprInterpState {};
+struct EagerNcclBroadcastOpExprInterpState : public OpExprInterpState {
+  Symbol<ParallelDesc> parallel_desc;
+  int64_t root;
+};
 
 class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    const auto& attr_map = fw_op_expr->base_attrs();
-    grad_op_ =
-        JUST(FindOrCreatEagerNcclReduceOpExpr(JUST(attr_map.GetAttr<std::string>("parallel_conf")),
-                                              JUST(attr_map.GetAttr<int64_t>("root"))));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(EagerNcclBroadcastOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // do nothing
+    ctx->root = JUST(attrs.GetAttr<int64_t>("root"));
+    std::string parallel_desc_str = JUST(attrs.GetAttr<std::string>("parallel_conf"));
+    ParallelConf parallel_conf;
+    CHECK(TxtString2PbMessage(parallel_desc_str, &parallel_conf));
+    ctx->parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const EagerNcclBroadcastOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(ctx->parallel_desc, ctx->root));
     in_grads->resize(1);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("eager_nccl_broadcast", EagerNcclBroadcast);
