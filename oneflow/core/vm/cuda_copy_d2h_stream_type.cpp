@@ -46,37 +46,28 @@ bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
+// Launches a cuda kernel
+void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
+  auto* stream = instruction->mut_stream();
 #if defined(WITH_CUDA)
-// Launches a cuda kernel
-void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
-  auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-    instr_type_id.instruction_type().Compute(instruction);
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
-  stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
-  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
-}
 #elif defined(WITH_HIP)
-// Launches a cuda kernel
-void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
-  auto* stream = instruction->mut_stream();
   hipSetDevice(stream->device_id());
+#endif
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
+#if defined(WITH_CUDA)
+    OF_CUDA_CHECK(cudaGetLastError());
+#elif defined(WITH_HIP)
     OF_HIP_CHECK(hipGetLastError());
+#endif
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
-#endif
 
 // Specifies copy_d2h stream description of the virtual machine to be used.
 ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,

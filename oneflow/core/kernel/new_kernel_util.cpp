@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
@@ -30,21 +29,6 @@ template<>
 void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
   memset(dst, value, sz);
 }
-
-#if defined(WITH_HIP)
-
-template<>
-void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
-  if (dst == src) { return; }
-  OF_HIP_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->hip_stream()));
-}
-
-template<>
-void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  OF_HIP_CHECK(hipMemsetAsync(dst, value, sz, ctx->hip_stream()));
-}
-
-#endif
 
 void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
                                          std::function<void(Blob*)> Callback) {

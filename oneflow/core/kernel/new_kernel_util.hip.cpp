@@ -13,16 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
+#if defined(WITH_HIP)
+
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/device/hip_util.hip.h"
 
 namespace oneflow {
 
 template<>
-void BatchMemcpyKernelUtil<DeviceType::kCPU>::Copy(DeviceCtx* ctx,
-                                                   const std::vector<MemcpyParam>& params) {
-  for (const MemcpyParam& param : params) {
-    Memcpy<DeviceType::kCPU>(ctx, param.dst, param.src, param.count);
-  }
+void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
+  if (dst == src) { return; }
+  OF_HIP_CHECK(hipMemcpyAsync(dst, src, sz, hipMemcpyDefault, ctx->hip_stream()));
+}
+
+template<>
+void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
+  OF_HIP_CHECK(hipMemsetAsync(dst, value, sz, ctx->hip_stream()));
 }
 
 }  // namespace oneflow
+
+#endif
