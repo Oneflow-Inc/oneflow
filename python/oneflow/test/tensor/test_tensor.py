@@ -26,6 +26,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
     def test_numpy_and_default_dtype(test_case):
         shape = (2, 3, 4, 5)
