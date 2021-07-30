@@ -239,7 +239,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
-      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
+      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String)
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
 }
 
