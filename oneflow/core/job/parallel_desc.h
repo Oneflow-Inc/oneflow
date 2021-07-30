@@ -131,6 +131,9 @@ class ParallelDesc final {
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
 };
 
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                  int64_t* parallel_id);
+
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
 }
