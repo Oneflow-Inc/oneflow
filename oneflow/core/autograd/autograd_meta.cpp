@@ -31,15 +31,16 @@ TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(te
   }
 }
 
-Maybe<const std::vector<int64_t>&> GetSbpTuple(
+Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(
     Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::vector<int64_t>> map;
+  static thread_local HashMap<Symbol<cfg::ParallelDistribution>,
+                              std::vector<Symbol<cfg::SbpParallel>>>
+      map;
   auto iter = map.find(parallel_distribution);
   if (iter == map.end()) {
-    std::vector<int64_t> sbp_tuple;
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
     for (const auto& sbp_parallel : parallel_distribution->sbp_parallel()) {
-      const auto& sbp_symbol = SymbolOf(sbp_parallel);
-      sbp_tuple.push_back(*reinterpret_cast<const int64_t*>(&sbp_symbol));
+      sbp_tuple.push_back(SymbolOf(sbp_parallel));
     }
     iter = map.emplace(parallel_distribution, sbp_tuple).first;
   }
@@ -49,14 +50,12 @@ Maybe<const std::vector<int64_t>&> GetSbpTuple(
 Maybe<Tensor> TensorInfo::zeros() const {
   if (device_.has_value()) {
     const auto& device = JUST(device_.value());
-    return functional::Constant(*shape_.get(), 0, dtype_,
-                                *reinterpret_cast<const int64_t*>(&device));
+    return functional::Constant(*shape_.get(), 0, dtype_, device);
   } else {
     const auto& parallel_desc = JUST(parallel_desc_.value());
     const auto& parallel_distribution = JUST(parallel_distribution_.value());
     const auto& sbp_tuple = JUST(GetSbpTuple(parallel_distribution));
-    return functional::ConsistentConstant(
-        *shape_.get(), 0, dtype_, *reinterpret_cast<const int64_t*>(&parallel_desc), sbp_tuple);
+    return functional::ConsistentConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
   }
 }
 
