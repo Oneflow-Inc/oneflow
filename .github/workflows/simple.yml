@@ -144,7 +144,7 @@ jobs:
       - name: Set environment variables (conda)
         if: matrix.test_suite == 'conda'
         run: |
-          conda env config vars set CXXFLAGS="-fPIC"
+          conda env config vars set CXXFLAGS="-w -fPIC"
         shell: bash -l {0}
       - name: Set environment variables
         run: |
