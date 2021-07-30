@@ -65,6 +65,8 @@ class RtRegstDesc {
   std::unique_ptr<Shape> data_regst_time_shape_;
   std::vector<std::unique_ptr<const BlobDesc>> sorted_blob_desc_vec_;
   std::vector<LogicalBlobId> sorted_lbi_vec_;
+
+  bool has_separated_header_;
 };
 
 }  // namespace oneflow

@@ -101,33 +101,6 @@ class TestMulModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_mul_against_pytorch(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["op"] = ["mul"]
-        for arg in GenArgList(arg_dict):
-            arg[0](
-                test_case,
-                arg[2],
-                extra_annotations={"other": flow.Tensor},
-                extra_generators={
-                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
-                    "other": random_tensor(ndim=2, dim0=2, dim1=3),
-                },
-                device=arg[1],
-            )
-            arg[0](
-                test_case,
-                arg[2],
-                extra_annotations={"other": float},
-                extra_generators={
-                    "input": random_tensor(ndim=2, dim0=2, dim1=3),
-                    "other": random(0, 5),
-                },
-                device=arg[1],
-            )
-
 
 if __name__ == "__main__":
     unittest.main()
