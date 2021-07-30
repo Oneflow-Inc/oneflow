@@ -16,7 +16,8 @@
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
-#   "BoolList", "DataType", "Shape", "Generator", "TensorIndex"
+#   "BoolList", "DataType", "Shape", "Generator", "TensorIndex", "Device", "Placement",
+#   "Sbp", "SbpList"
 # }
 
 - name: "add_n"
@@ -264,7 +265,11 @@
   bind_python: True
 
 - name: "constant"
-  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype, Device device=None)"
+  bind_python: True
+
+- name: "consistent_constant"
+  signature: "Tensor ConsistentConstant(*, Shape shape, Scalar value, DataType dtype, Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
 - name: "zeros_like"
