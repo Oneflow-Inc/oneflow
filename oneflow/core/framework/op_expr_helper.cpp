@@ -799,6 +799,43 @@ Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name
       .Build();
 }
 
+Maybe<one::UserOpExpr> SliceOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step) {
+  return SliceOp(start, stop, step, UniqueOpName("slice"));
+}
+
+Maybe<one::UserOpExpr> SliceOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name) {
+  return one::OpBuilder("slice", name)
+      .Input("x")
+      .Attr<std::vector<int64_t>>("start", start)
+      .Attr<std::vector<int64_t>>("stop", stop)
+      .Attr<std::vector<int64_t>>("step", step)
+      .Output("y")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> SliceUpdateOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step) {
+  return SliceUpdateOp(start, stop, step, UniqueOpName("slice_update"));
+}
+
+Maybe<one::UserOpExpr> SliceUpdateOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name) {
+  return one::OpBuilder("slice_update", name)
+      .Input("x")
+      .Input("update")
+      .Attr<std::vector<int64_t>>("start", start)
+      .Attr<std::vector<int64_t>>("stop", stop)
+      .Attr<std::vector<int64_t>>("step", step)
+      .Output("y")
+      .Build();
+}
+
 Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
                                    const std::vector<int64_t>& stop,
                                    const std::vector<int64_t>& step) {

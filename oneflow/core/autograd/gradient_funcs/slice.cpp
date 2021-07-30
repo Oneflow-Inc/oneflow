@@ -65,7 +65,7 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", ctx->step));
 
     in_grads->resize(1);
-    in_grads->at(0) =
+    in_grads->at(0) = 
         JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
     return Maybe<void>::Ok();
   }
@@ -75,8 +75,80 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
   AttrMap base_attrs_;
 };
 
+
+struct SliceUpdateOpExprInterpState : public OpExprInterpState {
+  bool requires_grad_x;
+  bool requires_grad_update;
+  std::vector<int64_t> start;
+  std::vector<int64_t> stop;
+  std::vector<int64_t> step;
+  size_t x_index;
+  size_t update_index;
+};
+
+class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    const std::string& op_name = fw_op_expr->op_name();
+    std::vector<int64_t> start, stop, step;
+    grad_op_slice_ = JUST(op_expr_helper::SliceOp(start, stop, step, GradientOpName(op_name)));
+    grad_op_zero_like_ = JUST(op_expr_helper::ZeroLikeOp());
+    grad_op_slice_update_ = JUST(op_expr_helper::SliceUpdateOp(start, stop, step, GradientOpName(op_name)));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SliceUpdateOpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad_x = inputs.at(0)->requires_grad();
+    ctx->requires_grad_update = inputs.at(1)->requires_grad();
+    if (!ctx->requires_grad_x && !ctx->requires_grad_update) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+
+    if(ctx->requires_grad_update){
+      ctx->SaveTensorForBackward(inputs.at(1));
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SliceUpdateOpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", ctx->start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", ctx->stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", ctx->step));
+    
+    in_grads->resize(2);
+    if(ctx->requires_grad_x){
+      const auto& update = ctx->SavedTensors().at(0);
+      const auto& temp = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_zero_like_, {update}));
+      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_slice_update_, {out_grads.at(0), temp}, attrs));
+    }
+
+    if(ctx->requires_grad_update){
+      in_grads->at(1) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_slice_, {out_grads.at(0)}, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_slice_;
+  std::shared_ptr<OpExpr> grad_op_zero_like_;
+  std::shared_ptr<OpExpr> grad_op_slice_update_;
+  AttrMap base_attrs_;
+};
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("slice", Slice);
-REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", Slice);
+REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", SliceUpdate);
 
 }  // namespace one
 }  // namespace oneflow
