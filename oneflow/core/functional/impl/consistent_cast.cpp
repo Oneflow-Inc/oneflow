@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
@@ -66,13 +67,18 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
       }
     } else if (sbp_parallel->has_partial_sum_parallel()) {
       if (GlobalProcessCtx::Rank() == 0) {
-        const auto& out_tensor = JUST(tensor->detach());
-        bool requires_grad = autograd::GradMode::is_enabled() && tensor->requires_grad();
-        out_tensor->set_requires_grad(requires_grad);
-        out_tensor->set_is_leaf(!requires_grad);
-        return out_tensor;
+        return tensor;
       } else {
-        return functional::ZerosLike(tensor);
+        // use SliceUpdate because ZerosLike does not have backward
+        int64_t num_axes = tensor->shape()->NumAxes();
+        std::vector<int64_t> start(num_axes, 0);
+        std::vector<int64_t> stop(num_axes);
+        std::vector<int64_t> step(num_axes, 1);
+        {
+          for (int64_t i = 0; i < num_axes; ++i) { stop.at(i) = tensor->shape()->At(i); }
+        }
+        return functional::SliceUpdate(tensor, JUST(functional::ZerosLike(tensor)), start, stop,
+                                       step);
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN();

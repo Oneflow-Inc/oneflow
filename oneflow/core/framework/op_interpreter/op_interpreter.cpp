@@ -95,7 +95,6 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   bool requires_grad = false;
-  bool is_mirrored_strategy_enabled = internal_->is_mirrored();
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
         std::any_of(inputs.begin(), inputs.end(),
@@ -116,10 +115,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               const auto& session = JUST(GetDefaultSession());
-              session->PushMirroredStrategyEnabled(is_mirrored_strategy_enabled);
               autograd::AutoGradMode mode(create_graph);
               JUST(grad_closure->Apply(out_grads, in_grads));
-              session->PopMirroredStrategyEnabled();
               return Maybe<void>::Ok();
             });
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
