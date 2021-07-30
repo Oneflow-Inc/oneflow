@@ -132,14 +132,13 @@ template<typename T>
 struct ReluHelper final {
   static void ReluForward(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    if (n > 0) {
-      if (x == y) {
-        InplaceReluForwardGpu<T>
-            <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y);
-      } else {
-        ReluForwardGpu<T>
-            <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
-      }
+    if (n == 0) { return; }
+    if (x == y) {
+      InplaceReluForwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y);
+    } else {
+      ReluForwardGpu<T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
     }
   }
 

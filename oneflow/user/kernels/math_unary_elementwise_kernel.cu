@@ -46,11 +46,10 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    if (n > 0) {
-      MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(n, x, y);
-    }
+    if (n == 0) { return; }
+    MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+            n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
