@@ -39,8 +39,6 @@ class Oneflow final {
   std::unique_ptr<Runtime> runtime_;
 };
 
-int Main(const oneflow::JobSet& job_set);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_ONEFLOW_H_

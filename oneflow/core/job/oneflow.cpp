@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -1027,7 +1026,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   }
 
   HashMap<std::string, Blob*> variable_op_name2eager_blob;
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false, variable_op_name2eager_blob));
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
@@ -1035,10 +1034,6 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
 Oneflow::~Oneflow() {
   if (GlobalProcessCtx::IsThisProcessMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
-  if (Global<Profiler>::Get() != nullptr) {
-    Global<Profiler>::Get()->Profile(
-        plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-  }
 }
 
 }  // namespace oneflow
