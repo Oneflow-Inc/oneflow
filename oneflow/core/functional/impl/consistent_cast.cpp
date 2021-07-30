@@ -62,7 +62,7 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
             JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
         return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
       } else {
-        OF_UNIMPLEMENTED();
+        UNIMPLEMENTED_THEN_RETURN();
       }
     } else if (sbp_parallel->has_partial_sum_parallel()) {
       if (GlobalProcessCtx::Rank() == 0) {
@@ -75,10 +75,10 @@ Maybe<Tensor> SyncDataAndMetaInfo(const std::shared_ptr<Tensor>& tensor,
         return functional::ZerosLike(tensor);
       }
     } else {
-      OF_UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   } else {
-    OF_UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
 }
 
@@ -96,7 +96,7 @@ class ToConsistentFunctor {
       *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
     }
     if (x->is_consistent()) {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     } else {
       const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(x);
       CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";

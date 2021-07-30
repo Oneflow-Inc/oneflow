@@ -722,6 +722,38 @@
   signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
   bind_python: False
 
+- name: "silu"
+  signature: "Tensor Silu(Tensor x, *)"
+  bind_python: True
+
+- name: "silu_grad"
+  signature: "Tensor SiluGrad(Tensor x, Tensor dy, *)"
+  bind_python: False
+
+- name: "mish"
+  signature: "Tensor Mish(Tensor x, *)"
+  bind_python: True
+
+- name: "mish_grad"
+  signature: "Tensor MishGrad(Tensor x, Tensor dy, *)"
+  bind_python: False
+
+- name: "selu"
+  signature: "Tensor Selu(Tensor x, *)"
+  bind_python: True
+
+- name: "selu_grad"
+  signature: "Tensor SeluGrad(Tensor x, Tensor dy, *)"
+  bind_python: False
+
+- name: "softsign"
+  signature: "Tensor SoftSign(Tensor x, *)"
+  bind_python: True
+
+- name: "softsign_grad"
+  signature: "Tensor SoftSignGrad(Tensor x, Tensor dy, *)"
+  bind_python: False
+  
 - name: "diag"
   signature: "Tensor Diag(Tensor x, *, Int32 diagonal=0)"
   bind_python: True

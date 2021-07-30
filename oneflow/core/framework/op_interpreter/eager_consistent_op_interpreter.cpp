@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sstream>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -28,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace one {
@@ -38,6 +40,23 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
   return ctx.parallel_desc.value();
+}
+
+std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
+                                                    const StatefulLocalOpKernel& kernel) {
+  CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
+  std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
+  std::stringstream ss;
+  ss << "operator `" << user_op_expr.op_type_name() << "`"
+     << " does not support consistent mode because the shape" << plentysuffix << " of output tensor"
+     << plentysuffix << " ";
+  int i = 0;
+  for (const auto& out_index : kernel.output_tuple_indexes4mut2_obns()) {
+    if (i++ > 0) { ss << ", "; }
+    ss << out_index;
+  }
+  ss << " are not infered before op computation.";
+  return ss.str();
 }
 
 }  // namespace
@@ -70,6 +89,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (!device) { return Maybe<void>::Ok(); }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
+      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
