@@ -104,6 +104,7 @@ Runtime::~Runtime() {
 
 void Runtime::NewAllGlobal(const Plan& plan,
                            const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+  Global<RuntimeCtx>::New();
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New();
