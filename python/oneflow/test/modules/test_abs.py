@@ -62,7 +62,7 @@ def _test_abs_tensor_function_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAbs(flow.unittest.TestCase):
-    def test_cosh(test_case):
+    def test_abs(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_abs_forward,
