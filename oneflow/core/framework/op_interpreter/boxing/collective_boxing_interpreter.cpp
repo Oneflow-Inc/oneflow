@@ -88,8 +88,8 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclReduceScatterOpExpr(
 }
 }  // namespace
 
-Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
-    const one::TensorTuple& inputs, one::TensorTuple* outputs,
+Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
+    const std::shared_ptr<one::Tensor>& input,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
@@ -98,12 +98,11 @@ Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclNcclAllGatherOpExpr(in_parallel_desc));
-  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
-  return Maybe<void>::Ok();
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
-Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
-    const one::TensorTuple& inputs, one::TensorTuple* outputs,
+Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
+    const std::shared_ptr<one::Tensor>& input,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
@@ -112,12 +111,11 @@ Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclNcclAllReduceOpExpr(in_parallel_desc));
-  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
-  return Maybe<void>::Ok();
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
-Maybe<void> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
-    const one::TensorTuple& inputs, one::TensorTuple* outputs,
+Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
+    const std::shared_ptr<one::Tensor>& input,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
@@ -129,8 +127,7 @@ Maybe<void> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
-  outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
-  return Maybe<void>::Ok();
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 }  // namespace oneflow

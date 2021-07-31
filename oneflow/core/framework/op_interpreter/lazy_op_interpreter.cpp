@@ -33,7 +33,7 @@ namespace oneflow {
 
 namespace one {
 
-std::string GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
+std::string GetDeviceTagOfTensor(const std::shared_ptr<one::Tensor>& tensor) {
   if (tensor->is_cuda()) {
     return "gpu";
   } else {
@@ -41,7 +41,7 @@ std::string GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
   }
 }
 
-bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
+bool GetIsDynamicOfTensor(const std::shared_ptr<one::Tensor>& tensor) {
   if (tensor->is_consistent()) {
     return false;
   } else {
@@ -50,7 +50,7 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
 }
 
 Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
-                                            const std::shared_ptr<Tensor>& tensor) {
+                                            const std::shared_ptr<one::Tensor>& tensor) {
   parallel_distribution->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
@@ -64,7 +64,7 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distr
 }
 
 Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
-    VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
+    VariableOpConf* var_conf, const std::shared_ptr<one::Tensor>& tensor) {
   var_conf->clear_parallel_distribution();
   if (tensor->is_local()) {
     cfg::SbpParallel broadcast;
@@ -79,7 +79,7 @@ Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
   return Maybe<void>::Ok();
 }
 
-Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>& tensor) {
+Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<one::Tensor>& tensor) {
   if (tensor->is_local()) {
     return JUST(tensor->device())->parallel_desc_ptr();
   } else {
@@ -87,7 +87,7 @@ Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>&
   }
 }
 
-Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
+Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<one::Tensor>& tensor) {
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
   parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
   const auto& old_scope = JUST(GetCurrentScope());
@@ -107,7 +107,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   // NOTE(chengcheng): inputs[0] is the EagerTensor
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  const std::shared_ptr<one::Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
@@ -159,7 +159,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): inputs[0] is the EagerTensor
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  const std::shared_ptr<one::Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_eager());
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
@@ -219,7 +219,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   // NOTE(chengcheng): inputs[0] is the LazyTensor
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  const std::shared_ptr<one::Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_lazy());
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.

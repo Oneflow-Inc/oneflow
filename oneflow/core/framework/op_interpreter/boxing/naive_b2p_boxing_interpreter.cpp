@@ -21,8 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> NaiveB2PBoxingInterpreter::Interpret(
-    const one::TensorTuple& inputs, one::TensorTuple* outputs,
+Maybe<one::Tensor> NaiveB2PBoxingInterpreter::Interpret(
+    const std::shared_ptr<one::Tensor>& input,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
@@ -30,11 +30,19 @@ Maybe<void> NaiveB2PBoxingInterpreter::Interpret(
   int64_t root = JUST(in_parallel_desc->DeviceId4ParallelId(0));
   if (root == GlobalProcessCtx::LocalRank() % Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum()) {
     std::string device_type = in_parallel_desc->device_tag() == "gpu" ? "cuda" : "cpu";
-    outputs->at(0) = JUST(one::functional::Copy(inputs.at(0), device_type, root));
+    return JUST(one::functional::Copy(input, device_type, root));
   } else {
-    outputs->at(0) = JUST(one::functional::ZerosLike(inputs.at(0)));
+    // use SliceUpdate because ZerosLike does not have backward
+    int64_t num_axes = input->shape()->NumAxes();
+    std::vector<int64_t> start(num_axes, 0);
+    std::vector<int64_t> stop(num_axes);
+    std::vector<int64_t> step(num_axes, 1);
+    {
+      for (int64_t i = 0; i < num_axes; ++i) { stop.at(i) = input->shape()->At(i); }
+    }
+    return JUST(one::functional::SliceUpdate(input, JUST(one::functional::ZerosLike(input)), start,
+                                             stop, step));
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

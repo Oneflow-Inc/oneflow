@@ -101,14 +101,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
             JUST(inputs.at(i)->parallel_distribution()),
             result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
             JUST(inputs.at(i)->parallel_desc())));
-    TensorTuple boxing_input(1);
-    TensorTuple boxing_output(1);
-    boxing_input.at(0) = inputs.at(i);
-    JUST(boxing_interpreter->Interpret(
-        boxing_input, &boxing_output, JUST(inputs.at(i)->parallel_distribution()),
+    const auto& boxing_output = JUST(boxing_interpreter->Interpret(
+        inputs.at(i), JUST(inputs.at(i)->parallel_distribution()),
         result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
         JUST(inputs.at(i)->parallel_desc())));
-    const auto& local_tensor = JUST(boxing_output.at(0)->cur_rank_phy_tensor());
+    const auto& local_tensor = JUST(boxing_output->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
@@ -150,7 +147,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   CHECK_OR_RETURN(inputs.at(0)->is_consistent());
   const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
-  const std::shared_ptr<Tensor>& mirrored_tensor =
+  const std::shared_ptr<one::Tensor>& mirrored_tensor =
       JUST(JUST(input_consistent_tensor->cur_rank_phy_tensor())->detach());
   bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
   mirrored_tensor->set_requires_grad(requires_grad);

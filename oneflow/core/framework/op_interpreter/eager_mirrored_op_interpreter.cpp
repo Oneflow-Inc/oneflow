@@ -43,7 +43,7 @@ Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
   return Device::New("cpu", 0);
 }
 
-Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
+Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<one::Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
   return tensor->mut_eager_mirrored_tensor_impl();
 }

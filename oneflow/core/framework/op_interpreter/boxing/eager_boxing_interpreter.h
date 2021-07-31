@@ -30,11 +30,11 @@ class EagerBoxingInterpreter {
   EagerBoxingInterpreter() = default;
   virtual ~EagerBoxingInterpreter() = default;
 
-  virtual Maybe<void> Interpret(const one::TensorTuple& inputs, one::TensorTuple* outputs,
-                                Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                                Symbol<ParallelDesc> in_parallel_desc,
-                                Symbol<ParallelDesc> out_parallel_desc) const = 0;
+  virtual Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
+                                       Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                                       Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                       Symbol<ParallelDesc> in_parallel_desc,
+                                       Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
 
 }  // namespace oneflow
