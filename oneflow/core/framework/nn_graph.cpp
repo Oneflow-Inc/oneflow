@@ -114,7 +114,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
 
   NewRuntimeBuffers();
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false, variable_op_name2eager_blob_));
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
