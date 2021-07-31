@@ -37,10 +37,10 @@ class ReduceKernel final : public user_op::OpKernel {
 
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
-        AutoMemset(
-            ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
-            output_tensor->mem_case());
+          for(int32_t dim: axis) {
+              CHECK_EQ(output_tensor->shape().At(dim), 1);
+          }
+          KernelUtil<device_type, T>::Set(ctx->device_ctx(), UnitOfBinaryFunc<T, BinaryFunc>::Val(), output_tensor->mut_dptr<T>());
       }
       return;
     }
