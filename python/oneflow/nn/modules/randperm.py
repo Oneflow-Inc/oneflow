@@ -91,8 +91,8 @@ def randperm(
         out (Tensor): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: ``oneflow.int64``.
-        {layout}: layout is not supported yet.
-        {device}: the desired device of returned tensor. Default: cpu.
+        layout: layout is not supported yet.
+        device: the desired device of returned tensor. Default: cpu.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
     Example::
