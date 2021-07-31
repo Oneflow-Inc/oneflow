@@ -150,7 +150,7 @@ class UserOpExprInferContext : public user_op::InferContext {
         device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {}
-  ~UserOpExprInferContext() = default;
+  virtual ~UserOpExprInferContext() override = default;
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return user_op_expr_->indexed_input_pairs();
@@ -269,7 +269,7 @@ class UserOpExprInferContext : public user_op::InferContext {
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
  public:
   using UserOpExprInferContext::UserOpExprInferContext;
-  ~UserOpExprLogicalInferContext() = default;
+  ~UserOpExprLogicalInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {

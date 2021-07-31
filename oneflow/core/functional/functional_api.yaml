@@ -77,6 +77,10 @@
   signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_div_grad"
+  signature: "Tensor BroadcastDivGrad(Tensor y, Tensor z, Tensor dz)"
+  bind_python: False
+
 - name: "broadcast_equal"
   signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
   bind_python: True
@@ -775,6 +779,30 @@
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
 
+- name: "broadcast_min"
+  signature: "Tensor BroadcastMin(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_max"
+  signature: "Tensor BroadcastMax(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "elementwise_min"
+  signature: "Tensor ElementwiseMin(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "elementwise_max"
+  signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "elementwise_min_grad"
+  signature: "TensorTuple ElementwiseMinGrad(Tensor dz, Tensor x, Tensor y)"
+  bind_python: False
+
+- name: "elementwise_max_grad"
+  signature: "TensorTuple ElementwiseMaxGrad(Tensor dz, Tensor x, Tensor y)"
+  bind_python: False
+
 - name: "stack"
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True
@@ -785,4 +813,15 @@
 
 - name: "to_local"
   signature: "Tensor ToLocal(Tensor x)"
+
+- name: "identity"
+  signature: "Tensor Identity(Tensor in)"
+  bind_python: True
+
+- name: "reshape_like"
+  signature: "Tensor ReshapeLike(Tensor in, Tensor like)"
+  bind_python: True
+
+- name: "reduce_sum_like"
+  signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
