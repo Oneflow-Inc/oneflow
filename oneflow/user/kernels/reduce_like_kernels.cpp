@@ -42,10 +42,8 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     if (tensor_x->shape().elem_cnt() == 0) {
       if (tensor_y->shape().elem_cnt() != 0) {
-          for(int32_t dim: axis) {
-              CHECK_EQ(tensor_y->shape().At(dim), 1);
-          }
-          KernelUtil<device_type, T>::Set(ctx->device_ctx(), 0, tensor_y->mut_dptr<T>());
+        for (int32_t dim : axis) { CHECK_EQ(tensor_y->shape().At(dim), 1); }
+        KernelUtil<device_type, T>::Set(ctx->device_ctx(), 0, tensor_y->mut_dptr<T>());
       }
       return;
     }
