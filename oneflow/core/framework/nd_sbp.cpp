@@ -21,15 +21,9 @@ namespace oneflow {
 
 namespace {
 
-std::mutex* GlobalNdSbpMutex() {
-  static std::mutex global_nd_sbp_mutex;
-  return &global_nd_sbp_mutex;
-}
-
 Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
-  static HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>*
-      sbp_list2nd_sbp =
+  static thread_local auto* sbp_list2nd_sbp =
           new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>();
   auto iter = sbp_list2nd_sbp->find(sbp_list);
   if (iter == sbp_list2nd_sbp->end()) {
@@ -46,7 +40,6 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
-  std::unique_lock<std::mutex> lock(*GlobalNdSbpMutex());
   return FindFOrCreateNdSbp(sbp_list);
 }
 

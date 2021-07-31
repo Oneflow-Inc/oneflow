@@ -76,14 +76,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
-  int64_t parallel_id = -1;
+  Optional<int64_t> parallel_id;
   const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-  using TensorImpl = EagerConsistentTensorImpl;
-  TensorImpl::NewMethod New =
-      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
-        JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
+        JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device, parallel_id, false, false));
     const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));

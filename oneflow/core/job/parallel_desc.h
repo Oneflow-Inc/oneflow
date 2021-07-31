@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
@@ -94,8 +95,7 @@ class ParallelDesc final {
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
-  // return empty shared_ptr if no Device found for current ProcessCtx.
-  Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(int64_t* parallel_id) const;
+  Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;
@@ -134,8 +134,8 @@ class ParallelDesc final {
   bool containing_current_rank_;
 };
 
-Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
-                                                  int64_t* parallel_id);
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc, Optional<int64_t>* parallel_id);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
