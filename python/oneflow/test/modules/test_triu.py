@@ -55,7 +55,7 @@ class TestTriu(flow.unittest.TestCase):
     def test_triu_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        y = torch.triu(2)
+        y = torch.triu(x)
         return y
 
 
