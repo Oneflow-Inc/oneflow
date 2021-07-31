@@ -29,8 +29,8 @@ namespace oneflow {
 class AttrMap;
 
 namespace vm {
-struct LocalCallOpKernelUtil;
-// template <typename T> struct LocalCallOpKernelUtil;
+// struct LocalCallOpKernelUtil;
+template <typename T> struct LocalCallOpKernelUtil;
 }  // namespace vm
 
 namespace one {
@@ -357,8 +357,8 @@ class StatefulLocalOpKernel final {
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
  private:
-  friend struct vm::LocalCallOpKernelUtil;
-  // template <typename T> friend struct vm::LocalCallOpKernelUtil;
+  // friend struct vm::LocalCallOpKernelUtil;
+  template <typename T> friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
                                                       const EagerBlobObjectListPtr& outputs,
