@@ -234,26 +234,29 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   Optional<int64_t> parallel_id;
   const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
-  return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad, is_leaf);
+  return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad,
+                                        is_leaf);
 }
 
 namespace {
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
                               const cfg::ParallelDistribution& parallel_distribution,
-                              const ParallelDesc& parallel_desc, const Optional<int64_t>& parallel_id) {
+                              const ParallelDesc& parallel_desc,
+                              const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, parallel_distribution, parallel_desc, JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, parallel_distribution, parallel_desc,
+                            JUST(parallel_id.value()));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
 }
 
-}
+}  // namespace
 
 /* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, const Optional<int64_t>& parallel_id,
-    bool requires_grad, bool is_leaf) {
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
+    const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
   const auto& shape = consistent_tensor_meta->shape_ptr();
   const auto& dtype = consistent_tensor_meta->dtype();
   const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();

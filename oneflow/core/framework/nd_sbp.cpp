@@ -21,10 +21,10 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
+Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
   static thread_local auto* sbp_list2nd_sbp =
-          new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>();
+      new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>();
   auto iter = sbp_list2nd_sbp->find(sbp_list);
   if (iter == sbp_list2nd_sbp->end()) {
     cfg::ParallelDistribution parallel_distribution;
@@ -40,7 +40,7 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindFOrCreateNdSbp(
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
-  return FindFOrCreateNdSbp(sbp_list);
+  return FindOrCreateNdSbp(sbp_list);
 }
 
 }  // namespace oneflow
