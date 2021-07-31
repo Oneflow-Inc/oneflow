@@ -81,6 +81,8 @@ oneflow
             round,  
             save, 
             saved_model, 
+            scatter,
+            scatter_add,
             scatter_nd, 
             sin, 
             sinh, 
