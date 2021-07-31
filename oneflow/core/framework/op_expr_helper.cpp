@@ -19,8 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace op_expr_helper {
@@ -842,44 +840,6 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
-}
-
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return EagerNcclAllGather(parallel_desc, UniqueOpName("eager_nccl_all_gather"));
-}
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc,
-                                          const std::string& name) {
-  return one::OpBuilder("eager_nccl_all_gather", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return EagerNcclAllReduce(parallel_desc, UniqueOpName("eager_nccl_all_reduce"));
-}
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc,
-                                          const std::string& name) {
-  return one::OpBuilder("eager_nccl_all_reduce", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type) {
-  return EagerNcclReduceScatter(parallel_desc, op_type, UniqueOpName("eager_nccl_reduce_scatter"));
-}
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type, const std::string& name) {
-  return one::OpBuilder("eager_nccl_reduce_scatter", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<std::string>("op_type", op_type)
-      .Build();
 }
 }  // namespace op_expr_helper
 }  // namespace oneflow

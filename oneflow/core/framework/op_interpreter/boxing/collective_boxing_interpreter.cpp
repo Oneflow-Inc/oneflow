@@ -13,13 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/collective_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_builder.h"
 
 namespace oneflow {
+
+Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
+  return one::OpBuilder("eager_nccl_all_reduce", *CHECK_JUST(UniqueStr("eager_nccl_all_reduce")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
+  return one::OpBuilder("eager_nccl_all_gather", *CHECK_JUST(UniqueStr("eager_nccl_all_gather")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
+                                              const std::string& op_type) {
+  return one::OpBuilder("eager_nccl_reduce_scatter", *CHECK_JUST(UniqueStr("eager_nccl_reduce_scatter")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<std::string>("op_type", op_type)
+      .Build();
+}
 
 Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
     const one::TensorTuple& inputs, one::TensorTuple* outputs,
@@ -30,7 +57,7 @@ Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(op_expr_helper::EagerNcclAllGather(in_parallel_desc));
+      JUST(EagerNcclAllGather(in_parallel_desc));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
@@ -44,7 +71,7 @@ Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(op_expr_helper::EagerNcclAllReduce(in_parallel_desc));
+      JUST(EagerNcclAllReduce(in_parallel_desc));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
@@ -61,7 +88,7 @@ Maybe<void> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
                                                   out_parallel_distribution->sbp_parallel(0))));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(op_expr_helper::EagerNcclReduceScatter(in_parallel_desc, op_type_));
+      JUST(EagerNcclReduceScatter(in_parallel_desc, op_type_));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
