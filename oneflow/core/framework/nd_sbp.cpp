@@ -16,6 +16,7 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
@@ -36,11 +37,32 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
   return iter->second;
 }
 
+Maybe<std::vector<std::string>> FindOrCreateNdSbpString(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+  static thread_local auto* sbp_list2nd_sbp_str =
+      new HashMap<std::vector<Symbol<cfg::SbpParallel>>,
+                  std::shared_ptr<std::vector<std::string>>>();
+  auto iter = sbp_list2nd_sbp_str->find(sbp_list);
+  if (iter == sbp_list2nd_sbp_str->end()) {
+    std::shared_ptr<std::vector<std::string>> nd_sbp_str =
+        std::make_shared<std::vector<std::string>>(sbp_list.size());
+    for (int64_t i = 0; i < nd_sbp_str->size(); ++i) {
+      nd_sbp_str->at(i) = SbpParallelToString(*sbp_list.at(i));
+    }
+    iter = sbp_list2nd_sbp_str->emplace(sbp_list, nd_sbp_str).first;
+  }
+  return iter->second;
+}
 }  // namespace
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
   return FindOrCreateNdSbp(sbp_list);
+}
+
+Maybe<std::vector<std::string>> GetNdSbpString(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+  return FindOrCreateNdSbpString(sbp_list);
 }
 
 }  // namespace oneflow

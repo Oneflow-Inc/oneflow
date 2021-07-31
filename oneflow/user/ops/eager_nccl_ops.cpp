@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
+REGISTER_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
@@ -82,7 +82,7 @@ REGISTER_USER_OP("eager_nccl_reduce")
       return Maybe<void>::Ok();
     });
 
-REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
+REGISTER_USER_OP("eager_nccl_reduce_scatter")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
@@ -139,7 +139,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
       return Maybe<void>::Ok();
     });
 
-REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
+REGISTER_USER_OP("eager_nccl_all_gather")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")

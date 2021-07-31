@@ -58,6 +58,27 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   return iter->second;
 }
 
+Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
+      sbp_list2hierarchical_parallel_cast_op_expr;
+  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
+  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
+    const auto& op_expr =
+        JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+                 .Input("in")
+                 .Output("out")
+                 .Attr<std::vector<std::string>>("parallel_distribution",
+                                                 *JUST(GetNdSbpString(sbp_parallels)))
+                 .Attr<std::string>("grad_mode", "restore")
+                 .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                                 *JUST(GetNdSbpString(sbp_parallels)))
+                 .Build());
+    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
+  }
+  return iter->second;
+}
+
 Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor,
                               Symbol<ParallelDesc> parallel_desc,
                               Symbol<cfg::ParallelDistribution> parallel_distribution) {
@@ -106,20 +127,8 @@ Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  std::vector<std::string> sbp_parallel_str_list(sbp_parallels.size());
-  {
-    for (int64_t i = 0; i < sbp_parallel_str_list.size(); ++i) {
-      sbp_parallel_str_list.at(i) = SbpParallelToString(*sbp_parallels.at(i));
-    }
-  }
   const auto& parallel_distribution_cast_op_expr =
-      JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-               .Input("in")
-               .Output("out")
-               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallel_str_list)
-               .Attr<std::string>("grad_mode", "restore")
-               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
-               .Build());
+      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
   return JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
                                                   {consistent_tensor}));
 }
