@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -36,7 +35,6 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    const std::string& op_name = fw_op_expr->op_name();
     return Maybe<void>::Ok();
   }
 
