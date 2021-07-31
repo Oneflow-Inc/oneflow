@@ -88,11 +88,15 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!device) { return Maybe<void>::Ok(); }
-  // Eager boxing
-  std::shared_ptr<TensorTuple> input_after_boxing = std::make_shared<TensorTuple>(inputs.size());
-  {
-    for (int i = 0; i < inputs.size(); ++i) {
-      const auto& boxing_interpreter =
+  // Run instruction LocalCallOpKernel
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
+      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
+  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    // Eager boxing
+    const auto& boxing_interpreter =
           JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
               JUST(inputs.at(i)->parallel_distribution()),
               result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
@@ -104,17 +108,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
           boxing_input, &boxing_output, JUST(inputs.at(i)->parallel_distribution()),
           result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
           JUST(inputs.at(i)->parallel_desc())));
-      input_after_boxing->at(i) = boxing_output.at(0);
-    }
-  }
-  // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
-  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
-      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(input_after_boxing->size());
-  for (int i = 0; i < input_after_boxing->size(); ++i) {
-    const auto& local_tensor = JUST(input_after_boxing->at(i)->cur_rank_phy_tensor());
+    const auto& local_tensor = JUST(boxing_output.at(0)->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
