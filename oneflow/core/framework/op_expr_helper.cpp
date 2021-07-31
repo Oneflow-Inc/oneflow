@@ -609,16 +609,6 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Attr<int64_t>("depth", depth)
       .Build();
 }
-Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
-Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
-  return one::OpBuilder("prelu_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Input("alpha")
-      .Output("dx")
-      .Output("alpha_diff")
-      .Build();
-}
 
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
                                       const bool& align_corners, const std::string& data_format,
@@ -647,8 +637,8 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
   return one::OpBuilder("dim_scatter_add_like", name)
       .Input("like")
-      .Input("input")
       .Input("index")
+      .Input("src")
       .Output("output")
       .Attr<int32_t>("dim", dim)
       .Build();
@@ -870,5 +860,6 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

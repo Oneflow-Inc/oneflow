@@ -40,17 +40,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-namespace {
-
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
-
-}  // namespace
-
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 class NoArgNoRetMockNNGraph : public NNGraphIf {
@@ -73,7 +62,6 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
 };
 
 TEST(RunLazyJobInstructionType, simple) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(0, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
@@ -122,11 +110,9 @@ TEST(RunLazyJobInstructionType, simple) {
   leave_thread.join();
   enter_thread.join();
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  DestroyNumProcessPerNode();
 }
 
 TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(0, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
@@ -247,7 +233,6 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
   enter_thread0.join();
   enter_thread1.join();
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
