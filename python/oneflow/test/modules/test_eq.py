@@ -103,9 +103,9 @@ class TestEq(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_eq_with_0shape_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        y = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        z = torch.eq(y)
+        x = random_pytorch_tensor(3, 2, 0, 3).to(device)
+        y = random_pytorch_tensor(3, 2, 0, 3).to(device)
+        z = torch.eq(x, y)
         return z
 
 
