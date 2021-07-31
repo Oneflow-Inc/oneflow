@@ -149,7 +149,8 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const {
+Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
+    Optional<int64_t>* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
@@ -163,8 +164,8 @@ Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(Optional<int64_t
   return device;
 }
 
-Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(
-    Symbol<ParallelDesc> parallel_desc, Optional<int64_t>* parallel_id) {
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                  Optional<int64_t>* parallel_id) {
   static thread_local HashMap<Symbol<ParallelDesc>, Optional<int64_t>> parallel_desc2parallel_id;
   static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
   auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);

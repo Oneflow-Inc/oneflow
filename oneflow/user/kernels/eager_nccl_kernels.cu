@@ -113,44 +113,44 @@ REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 class EagerNcclReduceKernel final : public user_op::OpKernel {
-public:
- EagerNcclReduceKernel() = default;
- ~EagerNcclReduceKernel() override = default;
+ public:
+  EagerNcclReduceKernel() = default;
+  ~EagerNcclReduceKernel() override = default;
 
- std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-     user_op::KernelInitContext* ctx) const override {
-   return std::make_shared<EagerNcclOpKernelState>(ctx);
- }
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
 
-private:
- void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-   auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
-   CHECK(kernel_state != nullptr);
-   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-   CHECK_EQ(in->shape(), out->shape());
-   CHECK_EQ(in->data_type(), out->data_type());
-   int64_t root = ctx->Attr<int64_t>("root");
-   OF_NCCL_CHECK(ncclReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                            GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
-                            ctx->device_ctx()->cuda_stream()));
-   int64_t cur_machine_id = -1;
-   int64_t cur_device_id = -1;
-   Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
-   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&cur_machine_id, &cur_machine_id);
-   int64_t cur_parallel_id =
-       CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
-   if (cur_parallel_id != root) {
-     Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
-                              out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
-   }
- };
- bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->data_type(), out->data_type());
+    int64_t root = ctx->Attr<int64_t>("root");
+    OF_NCCL_CHECK(ncclReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                             GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
+                             ctx->device_ctx()->cuda_stream()));
+    int64_t cur_machine_id = -1;
+    int64_t cur_device_id = -1;
+    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&cur_machine_id, &cur_machine_id);
+    int64_t cur_parallel_id =
+        CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
+    if (cur_parallel_id != root) {
+      Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
+                               out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+    }
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
-   .SetCreateFn<EagerNcclReduceKernel>()
-   .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+    .SetCreateFn<EagerNcclReduceKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
  public:
@@ -198,7 +198,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx,  user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

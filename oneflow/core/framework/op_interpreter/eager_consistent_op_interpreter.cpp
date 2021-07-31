@@ -80,8 +80,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl =
-        JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device, parallel_id, false, false));
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
+                                                                  parallel_id, false, false));
     const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
@@ -97,17 +97,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < inputs.size(); ++i) {
     // Eager boxing
     const auto& boxing_interpreter =
-          JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
-              JUST(inputs.at(i)->parallel_distribution()),
-              result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
-              JUST(inputs.at(i)->parallel_desc())));
-      TensorTuple boxing_input(1);
-      TensorTuple boxing_output(1);
-      boxing_input.at(0) = inputs.at(i);
-      JUST(boxing_interpreter->Interpret(
-          boxing_input, &boxing_output, JUST(inputs.at(i)->parallel_distribution()),
-          result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
-          JUST(inputs.at(i)->parallel_desc())));
+        JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+            JUST(inputs.at(i)->parallel_distribution()),
+            result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
+            JUST(inputs.at(i)->parallel_desc())));
+    TensorTuple boxing_input(1);
+    TensorTuple boxing_output(1);
+    boxing_input.at(0) = inputs.at(i);
+    JUST(boxing_interpreter->Interpret(
+        boxing_input, &boxing_output, JUST(inputs.at(i)->parallel_distribution()),
+        result->input_parallel_distributions().at(i), JUST(inputs.at(i)->parallel_desc()),
+        JUST(inputs.at(i)->parallel_desc())));
     const auto& local_tensor = JUST(boxing_output.at(0)->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }

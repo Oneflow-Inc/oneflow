@@ -45,7 +45,8 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> parallel_desc,
+                                                           int64_t root) {
   thread_local HashMap<std::pair<Symbol<ParallelDesc>, int64_t>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc2eager_nccl_broadcast;
   const auto& key = std::make_pair(parallel_desc, root);
@@ -57,7 +58,9 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   return iter->second;
 }
 
-Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
+Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor,
+                              Symbol<ParallelDesc> parallel_desc,
+                              Symbol<cfg::ParallelDistribution> parallel_distribution) {
   // TODO(hanbinbin): Sync meta info when sync_consistent_meta_info branch merged in master
   if (parallel_distribution->sbp_parallel_size() == 1) {
     const auto& sbp_parallel = parallel_distribution->sbp_parallel(0);
@@ -72,8 +75,7 @@ Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor, Symbol<Para
             JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc, root));
         return JUST(OpInterpUtil::Dispatch<one::Tensor>(
             *op_expr, {tensor},
-            one::OpExprInterpContext(mutable_attr_map, parallel_desc,
-                                     parallel_distribution)));
+            one::OpExprInterpContext(mutable_attr_map, parallel_desc, parallel_distribution)));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -118,7 +120,8 @@ Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
                .Attr<std::string>("grad_mode", "restore")
                .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
                .Build());
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr, {consistent_tensor}));
+  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
+                                                  {consistent_tensor}));
 }
 
 }  //  namespace
