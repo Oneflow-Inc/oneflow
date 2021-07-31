@@ -23,17 +23,21 @@ void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
 }
 
 void RuntimeCtx::DecreaseCounter(const std::string& name) {
-  int64_t cur_val = counters_.at(name)->Decrease();
+  auto it = counters_.find(name);
+  CHECK(it != counters_.end());
+  int64_t cur_val = it->second->Decrease();
   LOG(INFO) << "DecreaseCounter " << name << ", current val is " << cur_val;
 }
 
 void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
-  counters_.at(name)->WaitUntilCntEqualZero();
+  auto it = counters_.find(name);
+  CHECK(it != counters_.end());
+  it->second->WaitUntilCntEqualZero();
+  counters_.erase(it);
 }
 
-RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase) {
-  total_piece_num_ = total_piece_num;
-  is_experiment_phase_ = is_experiment_phase;
+std::string GetRunningActorCountKeyByJobId(int64_t job_id) {
+  return "job_" + std::to_string(job_id) + "_running_actor_count";
 }
 
 }  // namespace oneflow

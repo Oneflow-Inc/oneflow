@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
 #include "oneflow/api/python/common.h"
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 
@@ -22,28 +24,23 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type_and_id) {
+  std::string type;
+  int device_id = -1;
+  ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
+  if (device_id == -1) { device_id = 0; }
+  return MakeDevice(type, device_id);
+}
 
-struct DeviceExportUtil final {
-  static Symbol<Device> MakeDevice(const std::string& type_and_id) {
-    std::string type;
-    int device_id = -1;
-    ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-    if (device_id == -1) { device_id = 0; }
-    return MakeDevice(type, device_id);
+/* static */ Symbol<Device> DeviceExportUtil::MakeDevice(const std::string& type,
+                                                         int64_t device_id) {
+  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+    std::string error_msg =
+        "Expected one of cpu, cuda device type at start of device string " + type;
+    throw std::runtime_error(error_msg);
   }
-
-  static Symbol<Device> MakeDevice(const std::string& type, int64_t device_id) {
-    if (Device::type_supported.find(type) == Device::type_supported.end()) {
-      std::string error_msg =
-          "Expected one of cpu, cuda device type at start of device string " + type;
-      throw std::runtime_error(error_msg);
-    }
-    return Device::New(type, device_id).GetOrThrow();
-  }
-};
-
-}  // namespace
+  return Device::New(type, device_id).GetOrThrow();
+}
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
@@ -54,9 +51,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })
-      .def("__eq__", [](const Symbol<Device>& d1, const Symbol<Device>& d2) { return *d1 == *d2; })
       .def("__str__", [](const Symbol<Device>& d) { return d->ToString(); })
-      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); });
+      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
 }
 
 }  // namespace oneflow
