@@ -73,8 +73,9 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       if (start < 0) { start = 0; }
       if (end < 0) { end += shape.At(dim); }
       if (end < start) { end = start; }
+      if (start == end) { step = 1; }
       slice_indices->emplace_back(start, end, step);
-      int64_t length = (end - start + step - 1) / step;
+      int64_t length = start == end ? 0 : (end - start + step - 1) / step;
       target_dims->emplace_back(length);
       dim++;
     } else if (index_item.IsInteger()) {
