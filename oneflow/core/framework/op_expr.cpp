@@ -20,11 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -152,7 +150,7 @@ class UserOpExprInferContext : public user_op::InferContext {
         device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {}
-  ~UserOpExprInferContext() = default;
+  virtual ~UserOpExprInferContext() override = default;
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return user_op_expr_->indexed_input_pairs();
@@ -271,7 +269,7 @@ class UserOpExprInferContext : public user_op::InferContext {
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
  public:
   using UserOpExprInferContext::UserOpExprInferContext;
-  ~UserOpExprLogicalInferContext() = default;
+  ~UserOpExprLogicalInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {

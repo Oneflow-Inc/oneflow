@@ -282,10 +282,6 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
 Maybe<one::UserOpExpr> SoftmaxGradOp();
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root);
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          const std::string& name);
-
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc);
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc,
                                           const std::string& name);
@@ -298,11 +294,5 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
                                               const std::string& op_type);
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type, const std::string& name);
-
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp();
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name);
-
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp();
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow

@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include <sstream>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -29,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace one {
@@ -39,6 +42,23 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
   return ctx.parallel_desc.value();
+}
+
+std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
+                                                    const StatefulLocalOpKernel& kernel) {
+  CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
+  std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
+  std::stringstream ss;
+  ss << "operator `" << user_op_expr.op_type_name() << "`"
+     << " does not support consistent mode because the shape" << plentysuffix << " of output tensor"
+     << plentysuffix << " ";
+  int i = 0;
+  for (const auto& out_index : kernel.output_tuple_indexes4mut2_obns()) {
+    if (i++ > 0) { ss << ", "; }
+    ss << out_index;
+  }
+  ss << " are not infered before op computation.";
+  return ss.str();
 }
 
 }  // namespace
@@ -57,14 +77,13 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
-  int64_t parallel_id = -1;
+  Optional<int64_t> parallel_id;
   const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-  using TensorImpl = EagerConsistentTensorImpl;
-  TensorImpl::NewMethod New =
-      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
-        JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
+        JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device, parallel_id, false, false));
+    const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
+    JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
@@ -90,6 +109,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
+      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(input_after_boxing->size());
   for (int i = 0; i < input_after_boxing->size(); ++i) {

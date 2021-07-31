@@ -32,8 +32,29 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, sbp, placement):
-    return ToConsistent()(input, sbp, placement)
+def to_consistent_op(input, placement, sbp):
+    """Cast a local tensor to consistent tensor or (TODO)cast a
+    consistent tensor to another consistent tensor with 
+    different sbp or placement
+
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> placement = flow.placement("cpu", {0:range(1)})
+        >>> output_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
+        >>> output_tensor.is_consistent
+        True
+    """
+    return ToConsistent()(input, placement, sbp)
 
 
 class ToLocal(Module):
@@ -46,4 +67,24 @@ class ToLocal(Module):
 
 @register_tensor_op("to_local")
 def to_local_op(input):
+    """Returns the local tensor of a consistent tensor.
+
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> placement = flow.placement("cpu", {0:range(1)})
+        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
+        >>> consistent_tensor.to_local()
+        tensor([0.5, 0.6, 0.7], dtype=oneflow.float32)
+    """
+    assert input.is_consistent, "input must be a consistent tensor!"
     return ToLocal()(input)

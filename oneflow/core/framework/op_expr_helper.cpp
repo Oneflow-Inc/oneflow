@@ -19,8 +19,8 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace op_expr_helper {
@@ -611,16 +611,6 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Attr<int64_t>("depth", depth)
       .Build();
 }
-Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
-Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
-  return one::OpBuilder("prelu_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Input("alpha")
-      .Output("dx")
-      .Output("alpha_diff")
-      .Build();
-}
 
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
                                       const bool& align_corners, const std::string& data_format,
@@ -873,19 +863,6 @@ Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return EagerNcclBroadcast(parallel_desc, root, UniqueOpName("eager_nccl_broadcast"));
-}
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          const std::string& name) {
-  return one::OpBuilder("eager_nccl_broadcast", name)
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<int64_t>("root", root)
-      .Build();
-}
-
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
   return EagerNcclAllGather(parallel_desc, UniqueOpName("eager_nccl_all_gather"));
 }
@@ -922,24 +899,6 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Attr<std::string>("op_type", op_type)
       .Build();
-}
-
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp() {
-  return CastToConsistentOp(UniqueOpName("cast_to_consistent"));
-}
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name) {
-  std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
-      JUST(one::CastToConsistentOpExpr::New(name));
-  return cast_to_consistent_op_expr;
-}
-
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp() {
-  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"));
-}
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name) {
-  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
-      JUST(one::CastFromConsistentOpExpr::New(name));
-  return cast_from_consistent_op_expr;
 }
 }  // namespace op_expr_helper
 }  // namespace oneflow

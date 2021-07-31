@@ -25,15 +25,10 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.unittest
 from oneflow.framework.multi_client_session import MultiClientSession
-from oneflow.framework.tensor import Tensor as PyTensor
 
 
 def _get_c_tensor(t):
-    if isinstance(t, PyTensor):
-        if not t.is_determined:
-            t.determine()
-        return t._local_or_consistent_tensor
-    elif isinstance(t, oneflow._oneflow_internal.Tensor):
+    if isinstance(t, oneflow._oneflow_internal.Tensor):
         return t
     else:
         raise NotImplementError
@@ -154,6 +149,7 @@ class TestUserOpGraph(unittest.TestCase):
     def test_user_op_graph_cpu(test_case):
         _test_user_op_graph(test_case, False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_user_op_graph_gpu(test_case):
         _test_user_op_graph(test_case, True)
 

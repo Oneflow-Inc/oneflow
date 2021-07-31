@@ -43,11 +43,8 @@ class ConsistentConstantFunctor {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
-                           const int64_t& placement, const std::vector<int64_t>& sbp_tuple) const {
-    CHECK_NE_OR_RETURN(placement, 0);
-    const auto* placement_ptr = reinterpret_cast<const ParallelDesc*>(placement);
-    Symbol<ParallelDesc> parallel_desc =
-        JUST(SymbolUtil<ParallelDesc>::GetSymbolByExistedRawPtr(placement_ptr));
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -63,20 +60,18 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution));
+        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
   }
 
   Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<int64_t>& sbp_tuple) const {
-    static thread_local std::map<std::vector<int64_t>, Symbol<cfg::ParallelDistribution>> map;
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
     auto iter = map.find(sbp_tuple);
     if (iter == map.end()) {
       cfg::ParallelDistribution parallel_distribution;
-      for (int64_t sbp_val : sbp_tuple) {
-        CHECK_NE_OR_RETURN(sbp_val, 0);
-        const auto* sbp_ptr = reinterpret_cast<cfg::SbpParallel*>(sbp_val);
-        Symbol<cfg::SbpParallel> sbp_parallel =
-            JUST(SymbolUtil<cfg::SbpParallel>::GetSymbolByExistedRawPtr(sbp_ptr));
+      for (const auto& sbp_parallel : sbp_tuple) {
         *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
       }
       iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
@@ -92,7 +87,7 @@ class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
-                           const int64_t& device) const {
+                           const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -108,10 +103,8 @@ class ConstantFunctor {
       parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
       JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
     }
-    if (device) {
-      int64_t device_val = device;
-      const auto* device_ptr = reinterpret_cast<Device*>(device_val);
-      Symbol<Device> device_symbol = JUST(SymbolUtil<Device>::GetSymbolByExistedRawPtr(device_ptr));
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -1019,6 +1012,99 @@ class TensorSetItemFunctor {
   }
 };
 
+class ElementwiseMinimumGradFunctor {
+ public:
+  ElementwiseMinimumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_minimum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ElementwiseMaximumGradFunctor {
+ public:
+  ElementwiseMaximumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_maximum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastDivGradFunctor {
+ public:
+  BroadcastDivGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
+                         .Input("dz")
+                         .Input("z")
+                         .Input("y")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& z,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class IdentityFunctor {
+ public:
+  IdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceSumLikeFunctor {
+ public:
+  ReduceSumLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reduce_sum_like").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int32_t>& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1068,6 +1154,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
+  m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
+  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
 };
 
 }  // namespace functional

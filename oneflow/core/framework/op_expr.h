@@ -27,12 +27,6 @@ limitations under the License.
 #include "oneflow/core/framework/arg_tuple.h"
 
 namespace oneflow {
-namespace cfg {
-
-class SbpParallel;
-class ParallelDistribution;
-
-}  // namespace cfg
 namespace one {
 
 class OpExprGradFunctionIf;
