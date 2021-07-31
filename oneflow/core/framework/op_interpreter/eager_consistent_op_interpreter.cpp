@@ -147,7 +147,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   CHECK_OR_RETURN(inputs.at(0)->is_consistent());
   const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
-  const std::shared_ptr<one::Tensor>& mirrored_tensor =
+  const std::shared_ptr<Tensor>& mirrored_tensor =
       JUST(JUST(input_consistent_tensor->cur_rank_phy_tensor())->detach());
   bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
   mirrored_tensor->set_requires_grad(requires_grad);
