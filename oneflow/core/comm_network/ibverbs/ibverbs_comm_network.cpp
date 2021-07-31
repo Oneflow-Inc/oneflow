@@ -173,17 +173,14 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     qp_vec_.at(peer_id)->Connect(conn_info);
     LOG(INFO) << "Connected to peer " << peer_id;
   }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
