@@ -200,15 +200,16 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
 
 void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                               const MemoryCopyNdDesc& desc) const {
-  if(!desc.src_shape.is_initialized() || !desc.dst_shape.is_initialized()){
-    LOG(FATAL) << "HostMemoryCopier::CopyND Error: desc.src_shape or desc.dst_shape not initialized";
+  if (!desc.src_shape.is_initialized() || !desc.dst_shape.is_initialized()) {
+    LOG(FATAL)
+        << "HostMemoryCopier::CopyND Error: desc.src_shape or desc.dst_shape not initialized";
   }
   const int32_t num_axes = desc.src_shape.NumAxes();
-  if (num_axes == 0 || num_axes == 1){
+  if (num_axes == 0 || num_axes == 1) {
     CopyNDCpuImpl<1>(ctx, dst, src, desc);
-  } else if(num_axes == 2){
+  } else if (num_axes == 2) {
     CopyNDCpuImpl<2>(ctx, dst, src, desc);
-  } else if(num_axes == 3){
+  } else if (num_axes == 3) {
     CopyNDCpuImpl<3>(ctx, dst, src, desc);
   } else if (num_axes == 4) {
     CopyNDCpuImpl<4>(ctx, dst, src, desc);
