@@ -105,7 +105,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         return sorted_in_aligned_bytes                                                       \
             + indices_aligned_bytes + temp_storage_bytes;                                    \
         \                         
-                                                                 \
+                                                                                                                            \
       });
 
 REGISTER_GPU_RANDPERM_KERNEL

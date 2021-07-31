@@ -310,6 +310,7 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.round import round_op as round
+from oneflow.nn.modules.randperm import randperm
 from oneflow.nn.modules.scatter_nd import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.sign import sign_op as sign
 from oneflow.nn.modules.sinh import sinh_op as sinh

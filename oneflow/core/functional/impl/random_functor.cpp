@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
-
+#include "oneflow/user/kernels/randperm_kernel.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -62,9 +62,37 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
+class RandPermFunctor {
+ public:
+  RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int32_t N, const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("N", N));
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
+
+    return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
+                                          OpExprInterpContext{attrs, randperm_kernel_state});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> randperm_op_;
+};
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::BernoulliFunctor>("Bernoulli"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
+  m.add_functor<impl::RandPermFunctor>("Randperm");
+};
 
 }  // namespace functional
 }  // namespace one

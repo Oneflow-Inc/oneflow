@@ -39,7 +39,6 @@ def _test_randperm_backward(test_case, N, device):
 
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
-    
     def test_randperm(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [
@@ -54,6 +53,5 @@ class Testrandperm(flow.unittest.TestCase):
 
     @autotest(auto_backward=False)
     def test_ones_auto(test_case):
-        y=torch.randperm(random().to(int))
+        y = torch.randperm(random().to(int))
         return y
-   

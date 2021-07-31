@@ -17,10 +17,12 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow import Tensor
 from typing import Union
+
+
 class Randperm(Module):
     def __init__(
         self,
-        N:flow.int32,
+        N: flow.int32,
         generator=None,
         dtype=flow.int32,
         layout=None,
@@ -71,12 +73,12 @@ class Randperm(Module):
 def randperm(
     N: flow.int32,
     generator=None,
-    out:flow.Tensor=None,
+    out: flow.Tensor = None,
     dtype=flow.int64,
     layout=None,
     device: flow.device = flow.device("cpu"),
-    requires_grad:bool=False,
-    pin_memory:bool=False,
+    requires_grad: bool = False,
+    pin_memory: bool = False,
 ) -> Tensor:
     r"""
     Returns a random permutation of integers from ``0`` to ``n - 1``.
