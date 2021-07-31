@@ -34,10 +34,10 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     const std::string& op_name = fw_op_expr->op_name();
-    std::vector<int64_t> start, stop, step;
     grad_op_ = JUST(op_expr_helper::SliceGradOp(start, stop, step, GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
@@ -90,6 +90,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     std::vector<int64_t> start, stop, step;
     return Maybe<void>::Ok();
