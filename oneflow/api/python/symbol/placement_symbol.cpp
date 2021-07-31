@@ -193,6 +193,7 @@ struct PlacementSymbolExportUtil {
     return placement_str;
   }
 };
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
