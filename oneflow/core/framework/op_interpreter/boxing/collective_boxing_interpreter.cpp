@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *CHECK_JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
@@ -48,6 +50,43 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
       .Build();
 }
 
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllGatherOpExpr(Symbol<ParallelDesc> parallel_desc) {
+  thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
+      parallel_desc2eager_nccl_all_gather;
+  auto iter = parallel_desc2eager_nccl_all_gather.find(parallel_desc);
+  if (iter == parallel_desc2eager_nccl_all_gather.end()) {
+    std::shared_ptr<one::UserOpExpr> op_expr = JUST(EagerNcclAllGather(parallel_desc));
+    iter = parallel_desc2eager_nccl_all_gather.emplace(parallel_desc, op_expr).first;
+  }
+  return iter->second;
+}
+
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllReduceOpExpr(Symbol<ParallelDesc> parallel_desc) {
+  thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
+      parallel_desc2eager_nccl_all_reduce;
+  auto iter = parallel_desc2eager_nccl_all_reduce.find(parallel_desc);
+  if (iter == parallel_desc2eager_nccl_all_reduce.end()) {
+    std::shared_ptr<one::UserOpExpr> op_expr = JUST(EagerNcclAllReduce(parallel_desc));
+    iter = parallel_desc2eager_nccl_all_reduce.emplace(parallel_desc, op_expr).first;
+  }
+  return iter->second;
+}
+
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclReduceScatterOpExpr(
+    Symbol<ParallelDesc> parallel_desc, const std::string& op_type) {
+  thread_local HashMap<std::pair<Symbol<ParallelDesc>, std::string>,
+                       std::shared_ptr<one::UserOpExpr>>
+      parallel_desc_and_reduce_type2eager_nccl_all_gather;
+  const auto& key = std::make_pair(parallel_desc, op_type);
+  auto iter = parallel_desc_and_reduce_type2eager_nccl_all_gather.find(key);
+  if (iter == parallel_desc_and_reduce_type2eager_nccl_all_gather.end()) {
+    std::shared_ptr<one::UserOpExpr> op_expr = JUST(EagerNcclReduceScatter(parallel_desc, op_type));
+    iter = parallel_desc_and_reduce_type2eager_nccl_all_gather.emplace(key, op_expr).first;
+  }
+  return iter->second;
+}
+}  // namespace
+
 Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
     const one::TensorTuple& inputs, one::TensorTuple* outputs,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
@@ -57,7 +96,7 @@ Maybe<void> NcclCollectiveAllGatherBoxingInterpreter::Interpret(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(EagerNcclAllGather(in_parallel_desc));
+      JUST(FindOrCreatEagerNcclNcclAllGatherOpExpr(in_parallel_desc));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
@@ -71,7 +110,7 @@ Maybe<void> NcclCollectiveAllReduceBoxingInterpreter::Interpret(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(EagerNcclAllReduce(in_parallel_desc));
+      JUST(FindOrCreatEagerNcclNcclAllReduceOpExpr(in_parallel_desc));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
@@ -88,7 +127,7 @@ Maybe<void> NcclCollectiveReduceScatterBoxingInterpreter::Interpret(
                                                   out_parallel_distribution->sbp_parallel(0))));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(EagerNcclReduceScatter(in_parallel_desc, op_type_));
+      JUST(FindOrCreatEagerNcclNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
   outputs->at(0) = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, inputs));
   return Maybe<void>::Ok();
 }
