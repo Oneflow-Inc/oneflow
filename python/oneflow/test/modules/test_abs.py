@@ -82,7 +82,7 @@ class TestAbs(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(test_case, "abs", device=device)
 
-    @autotest(auto_backward=False)
+    @autotest()
     def test_abs_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
