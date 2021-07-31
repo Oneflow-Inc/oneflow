@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -58,9 +59,8 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
-                 const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  NewAllGlobal(plan, total_piece_num, is_experiment_phase, variable_op_name2eager_blob);
+Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+  NewAllGlobal(plan, variable_op_name2eager_blob);
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -71,7 +71,14 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
     } else {
       other_tasks.push_back(&task);
     }
-    this_machine_task_num += 1;
+    auto it = job_id2actor_size_.find(task.job_id());
+    if (it == job_id2actor_size_.end()) {
+      auto emplace_ret_pair = job_id2actor_size_.emplace(task.job_id(), 0);
+      CHECK(emplace_ret_pair.second);
+      it = emplace_ret_pair.first;
+    }
+    it->second++;
+    this_machine_task_num++;
   }
   RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
@@ -81,22 +88,22 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   LOG(INFO) << "Actors on this machine constructed";
   OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
-  runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
+  for (auto pair : job_id2actor_size_) {
+    runtime_ctx->NewCounter(GetRunningActorCountKeyByJobId(pair.first), pair.second);
+  }
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
 
 Runtime::~Runtime() {
-  Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
+  for (auto pair : job_id2actor_size_) {
+    Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
+  }
   OF_SESSION_BARRIER();
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase,
+void Runtime::NewAllGlobal(const Plan& plan,
                            const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
-  if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
-    Global<ActEventLogger>::New(is_experiment_phase);
-  }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New();

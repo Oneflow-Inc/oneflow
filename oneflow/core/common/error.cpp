@@ -76,6 +76,12 @@ Error Error::IndexError() {
   return error;
 }
 
+Error Error::TimeoutError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_timeout_error();
+  return error;
+}
+
 Error Error::JobNameExistError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_job_name_exist_error();
