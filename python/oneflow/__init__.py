@@ -370,5 +370,6 @@ from oneflow.ops.user_op_builder import api_user_op_builder as user_op_builder
 from oneflow.ops.user_op_builder import (
     api_user_op_module_builder as user_op_module_builder,
 )
+from oneflow.nn.modules.scatter import *
 
 from . import autograd, distributed, linalg, optim, saved_model, sbp
