@@ -38,7 +38,7 @@ void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& p
 
 void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  CHECK_GT(num_axes, 0);
+  CHECK_GE(num_axes, 0);
   CheckPosExtent(num_axes, desc.dst_shape, desc.dst_pos, desc.extent);
   CheckPosExtent(num_axes, desc.src_shape, desc.src_pos, desc.extent);
 }
@@ -200,8 +200,17 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
 
 void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                               const MemoryCopyNdDesc& desc) const {
+  if(!desc.src_shape.is_initialized() || !desc.dst_shape.is_initialized()){
+    LOG(FATAL) << "HostMemoryCopier::CopyND Error: desc.src_shape or desc.dst_shape not initialized";
+  }
   const int32_t num_axes = desc.src_shape.NumAxes();
-  if (num_axes == 4) {
+  if (num_axes == 0 || num_axes == 1){
+    CopyNDCpuImpl<1>(ctx, dst, src, desc);
+  } else if(num_axes == 2){
+    CopyNDCpuImpl<2>(ctx, dst, src, desc);
+  } else if(num_axes == 3){
+    CopyNDCpuImpl<3>(ctx, dst, src, desc);
+  } else if (num_axes == 4) {
     CopyNDCpuImpl<4>(ctx, dst, src, desc);
   } else if (num_axes == 5) {
     CopyNDCpuImpl<5>(ctx, dst, src, desc);

@@ -25,8 +25,10 @@ TensorSliceView GetRawTenserSliceView(const TensorSliceView& view, DataType data
     return view;
   } else {
     std::vector<Range> range_vec = view.range_vec();
-    range_vec.back().mut_begin() = range_vec.back().begin() * size_of_data_type;
-    range_vec.back().mut_end() = range_vec.back().end() * size_of_data_type;
+    if(!view.IsEmpty()){
+      range_vec.back().mut_begin() = range_vec.back().begin() * size_of_data_type;
+      range_vec.back().mut_end() = range_vec.back().end() * size_of_data_type;
+    }
     return TensorSliceView(range_vec);
   }
 }
