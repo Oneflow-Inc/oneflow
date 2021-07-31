@@ -789,25 +789,6 @@ Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name
       .Build();
 }
 
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step) {
-  return SliceGradOp(start, stop, step, UniqueOpName("slice_grad"));
-}
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name) {
-  return one::OpBuilder("slice_grad", name)
-      .Input("dy")
-      .Input("like")
-      .Attr<std::vector<int64_t>>("start", start)
-      .Attr<std::vector<int64_t>>("stop", stop)
-      .Attr<std::vector<int64_t>>("step", step)
-      .Output("dx")
-      .Build();
-}
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,

@@ -36,9 +36,7 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    std::vector<int64_t> start, stop, step;
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(op_expr_helper::SliceGradOp(start, stop, step, GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -60,19 +58,13 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
   Maybe<void> Apply(const SliceOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& like = ctx->SavedTensors().at(0);
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", ctx->start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", ctx->stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", ctx->step));
 
     in_grads->resize(1);
-    in_grads->at(0) = 
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
+    in_grads->at(0) = JUST(functional::SliceGrad(out_grads.at(0), like, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
   AttrMap base_attrs_;
 };
 
