@@ -58,8 +58,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   return iter->second;
 }
 
-Maybe<Tensor> SyncData(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
-                       Symbol<cfg::ParallelDistribution> parallel_distribution) {
+Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
   // TODO(hanbinbin): Sync meta info when sync_consistent_meta_info branch merged in master
   if (parallel_distribution->sbp_parallel_size() == 1) {
     const auto& sbp_parallel = parallel_distribution->sbp_parallel(0);
@@ -94,12 +93,9 @@ Maybe<Tensor> SyncData(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDes
         return functional::SliceUpdate(tensor, JUST(functional::ZerosLike(tensor)), start, stop,
                                        step);
       }
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
     }
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
   }
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 }  //  namespace
@@ -127,7 +123,7 @@ class ToConsistentFunctor {
       }
       Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
       std::shared_ptr<Tensor> synced_tensor =
-          JUST(SyncData(mirrored_tensor, parallel_desc, parallel_distribution));
+          JUST(SyncMetaAndData(mirrored_tensor, parallel_desc, parallel_distribution));
       const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
           *op_, {synced_tensor},
           OpExprInterpContext(AttrMap{}, parallel_desc, parallel_distribution)));
