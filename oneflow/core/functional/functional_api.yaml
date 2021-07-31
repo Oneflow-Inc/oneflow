@@ -487,6 +487,10 @@
   signature: "Tensor Slice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
   bind_python: True
 
+- name: "slice_grad"
+  signature: "Tensor SliceGrad(Tensor dy, Tensor like, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: False
+
 - name: "slice_update"
   signature:
     "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
@@ -773,6 +777,22 @@
 
 - name: "tensor_getitem"
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
+  bind_python: True
+
+- name: "dim_scatter"
+  signature: "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_add"
+  signature: "Tensor DimScatterAdd(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_scalar"
+  signature: "Tensor DimScatterUpdateScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_add_scalar"
+  signature: "Tensor DimScatterAddScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
   bind_python: True
 
 - name: "tensor_setitem"
