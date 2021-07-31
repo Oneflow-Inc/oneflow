@@ -58,14 +58,14 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
     const auto& like = ctx->SavedTensors().at(0);
 
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::SliceGrad(out_grads.at(0), like, ctx->start, ctx->stop, ctx->step));
+    in_grads->at(0) =
+        JUST(functional::SliceGrad(out_grads.at(0), like, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
  private:
   AttrMap base_attrs_;
 };
-
 
 struct SliceUpdateOpExprInterpState : public OpExprInterpState {
   bool requires_grad_x;
@@ -80,7 +80,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  
+
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -98,9 +98,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
 
-    if(ctx->requires_grad_x){
-      ctx->SaveTensorForBackward(inputs.at(1));
-    }
+    if (ctx->requires_grad_x) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
   }
 
@@ -108,12 +106,13 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
 
-    if(ctx->requires_grad_x){
+    if (ctx->requires_grad_x) {
       const auto& update = ctx->SavedTensors().at(0);
       const auto& temp = JUST(functional::ZerosLike(update));
-      in_grads->at(0) = JUST(functional::SliceUpdate(out_grads.at(0), temp, ctx->start, ctx->stop, ctx->step));
+      in_grads->at(0) =
+          JUST(functional::SliceUpdate(out_grads.at(0), temp, ctx->start, ctx->stop, ctx->step));
     }
-    if(ctx->requires_grad_update){
+    if (ctx->requires_grad_update) {
       in_grads->at(1) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step));
     }
     return Maybe<void>::Ok();
