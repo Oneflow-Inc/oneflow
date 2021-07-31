@@ -92,7 +92,6 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    std::vector<int64_t> start, stop, step;
     return Maybe<void>::Ok();
   }
 
