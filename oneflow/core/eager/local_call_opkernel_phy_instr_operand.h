@@ -30,8 +30,8 @@ class StatefulLocalOpKernel;
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-// using DTREagerBlobObjectListPtr =
-//     std::shared_ptr<const std::vector<std::shared_ptr<vm::DTREagerBlobObject>>>;
+using DTREagerBlobObjectListPtr =
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::DTREagerBlobObject>>>;
 }  // namespace one
 
 namespace user_op {
@@ -42,7 +42,7 @@ class OpKernel;
 
 namespace vm {
 
-template<typename ObjectListPtr>
+template<typename T>
 class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
   LocalCallOpKernelPhyInstrOperand(const LocalCallOpKernelPhyInstrOperand&) = delete;
@@ -50,14 +50,14 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                   const ObjectListPtr& inputs,
-                                   const ObjectListPtr& outputs,
+                                   const T& inputs,
+                                   const T& outputs,
                                    const one::OpExprInterpContext& op_interp_ctx_)
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), op_interp_ctx_(op_interp_ctx_) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
-  const ObjectListPtr& inputs() const { return inputs_; }
-  const ObjectListPtr& outputs() const { return outputs_; }
+  const T& inputs() const { return inputs_; }
+  const T& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
 
@@ -87,62 +87,11 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
-  ObjectListPtr inputs_;
-  ObjectListPtr outputs_;
+  T inputs_;
+  T outputs_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
 };
-
-template <typename ObjectListPtr>
-void LocalCallOpKernelPhyInstrOperand<ObjectListPtr>::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
-
-template <typename ObjectListPtr>
-void LocalCallOpKernelPhyInstrOperand<ObjectListPtr>::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
-  // same device.
-  auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
-
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
-
-template <typename ObjectListPtr>
-void LocalCallOpKernelPhyInstrOperand<ObjectListPtr>::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
-  }
-}
 
 }  // namespace vm
 }  // namespace oneflow

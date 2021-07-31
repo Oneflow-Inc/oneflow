@@ -680,22 +680,31 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   return Maybe<void>::Ok();
 }
 
-// Maybe<void> InstructionsBuilder::DTRLocalCallOpKernel(
-//     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-//     const one::DTREagerBlobObjectListPtr& input_eager_blob_objects,
-//     const one::DTREagerBlobObjectListPtr& output_eager_blob_objects,
-//     const one::OpExprInterpContext& ctx,
-//     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-//     const std::string& instr_type_name) {
-//   ObjectMsgPtr<vm::InstructionMsg> instruction =
-//       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
-//   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand<one::DTREagerBlobObjectListPtr>>(
-//       opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
-//   *instruction->mut_parallel_desc() = parallel_desc_sym;
-//   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
-//   instruction_list_->EmplaceBack(std::move(instruction));
-//   return Maybe<void>::Ok();
-// }
+Maybe<void> InstructionsBuilder::DTRLocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::OpExprInterpContext& ctx,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
+  // dynamic_pointer_cast from EagerBlobObject to DTREagerBlobObject
+  auto input_dtr_blob_objects = std::make_shared<std::vector<std::shared_ptr<vm::DTREagerBlobObject>>>();
+  auto output_dtr_blob_objects = std::make_shared<std::vector<std::shared_ptr<vm::DTREagerBlobObject>>>();
+  for (auto i_ptr : (*input_eager_blob_objects)) {
+    (*input_dtr_blob_objects).push_back(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(i_ptr));
+  }
+  for (auto o_ptr : (*output_eager_blob_objects)) {
+    CHECK_NOTNULL_OR_RETURN(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(o_ptr));
+    (*output_dtr_blob_objects).push_back(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(o_ptr));
+  }
+  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand<one::DTREagerBlobObjectListPtr>>(
+      opkernel, input_dtr_blob_objects, output_dtr_blob_objects, ctx);
+  *instruction->mut_parallel_desc() = parallel_desc_sym;
+  *instruction->mutable_phy_instr_operand() = phy_instr_operand;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {

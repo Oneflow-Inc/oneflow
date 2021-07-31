@@ -30,6 +30,7 @@ class AttrMap;
 
 namespace vm {
 struct LocalCallOpKernelUtil;
+// template <typename T> struct LocalCallOpKernelUtil;
 }  // namespace vm
 
 namespace one {
@@ -357,6 +358,7 @@ class StatefulLocalOpKernel final {
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
+  // template <typename T> friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
                                                       const EagerBlobObjectListPtr& outputs,

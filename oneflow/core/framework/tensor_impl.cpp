@@ -166,6 +166,37 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
+Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
+    const std::shared_ptr<MemoryCase>& mem_case) {
+  const auto& tensor_device = device();
+  CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+  const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& eager_blob_object = std::make_shared<vm::DTREagerBlobObject>(
+      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(),
+      tensor_device->parallel_desc_ptr());
+  JUST(set_eager_blob_object(eager_blob_object));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObjectAndTensorStorage(
+    const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<TensorStorage>& tensor_storage) {
+  CHECK_OR_RETURN(eager_blob_object->tensor_buffer() == tensor_storage->buffer());
+  eager_blob_object_ = eager_blob_object;
+  tensor_storage_ = tensor_storage;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
+    std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object) {
+  eager_blob_object_ = eager_blob_object;
+  CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
+                  == tensor_meta()->shape_ptr().get());
+  CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+  JUST(UpdateTensorStorage());
+  return Maybe<void>::Ok();
+}
+
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
     : TensorMeta(shape, dtype),

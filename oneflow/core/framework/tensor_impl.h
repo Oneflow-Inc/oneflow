@@ -42,6 +42,7 @@ class Device;
 
 namespace vm {
 class EagerBlobObject;
+class DTREagerBlobObject;
 }  // namespace vm
 
 namespace one {
@@ -220,7 +221,7 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  virtual Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
   Maybe<void> InitEagerBlobObjectAndTensorStorage(
       const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const std::shared_ptr<TensorStorage>& tensor_storage);
@@ -244,6 +245,14 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
                           const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
                           bool is_leaf) : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
   ~DTREagerMirroredTensorImpl() {std::cout << "DTREagerMirroredTensorImpl is being deleted." << std::endl;}
+
+  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  Maybe<void> InitEagerBlobObjectAndTensorStorage(
+      const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<TensorStorage>& tensor_storage);
+
+ private:
+  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object);
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {

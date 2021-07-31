@@ -440,6 +440,7 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 
 }  // namespace
 
+// template<typename T>
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
@@ -597,6 +598,14 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  // double enable_dtr = true;
+  // if (enable_dtr) {
+  //   CHECK_OK(LocalCallOpKernelUtil<one::DTREagerBlobObjectListPtr>::Infer(instruction));
+  //   CHECK_OK(LocalCallOpKernelUtil<one::DTREagerBlobObjectListPtr>::Compute(instruction));
+  // } else {
+  //   CHECK_OK(LocalCallOpKernelUtil<one::EagerBlobObjectListPtr>::Infer(instruction));
+  //   CHECK_OK(LocalCallOpKernelUtil<one::EagerBlobObjectListPtr>::Compute(instruction));
+  // }
   CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
 }
