@@ -23,21 +23,35 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+bool OptionalEqual(const Optional<Symbol<cfg::ParallelDistribution>>& lhs,
+                   const Optional<Symbol<cfg::ParallelDistribution>>& rhs) {
+  if (lhs.has_value() != rhs.has_value()) { return false; }
+  if (!lhs.has_value()) { return true; }
+  return CHECK_JUST(lhs.value()) == CHECK_JUST(rhs.value());
+}
+
+}  // namespace
+
 size_t InputConsistentTensorMeta::hash_value() const {
-  return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
-         ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
-             consumer_parallel_distribution_constraint());
+  size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
+  if (consumer_parallel_distribution_constraint().has_value()) {
+    hash_value ^= std::hash<Symbol<cfg::ParallelDistribution>>()(
+        CHECK_JUST(consumer_parallel_distribution_constraint().value()));
+  }
+  return hash_value;
 }
 
 bool InputConsistentTensorMeta::operator==(const InputConsistentTensorMeta& other) const {
   return this->tensor_meta() == other.tensor_meta()
-         && this->consumer_parallel_distribution_constraint()
-                == other.consumer_parallel_distribution_constraint();
+         && OptionalEqual(this->consumer_parallel_distribution_constraint(),
+                          other.consumer_parallel_distribution_constraint());
 }
 
 void InputConsistentTensorMeta::assign(
     Symbol<ConsistentTensorMeta> tensor_meta,
-    Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint) {
+    const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint) {
   tensor_meta_ = tensor_meta;
   consumer_parallel_distribution_constraint_ = consumer_parallel_distribution_constraint;
 }
@@ -77,7 +91,9 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionConstraints(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& constaint =
         input_consistent_tensor_metas_.at(i).consumer_parallel_distribution_constraint();
-    if (constaint) { (*map)[input_arg_tuple.indexed_bns().at(i)] = *constaint; }
+    if (constaint.has_value()) {
+      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint.value());
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -136,8 +152,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::InitInputConsistentTensorMetas(
   for (int i = 0; i < input_tensors.size(); ++i) {
     const auto& tensor = *input_tensors.at(i);
     const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
-    const auto& constraints = JUST(tensor.consumer_parallel_distribution_constraint());
-    input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraints);
+    const auto& constraint = JUST(tensor.consumer_parallel_distribution_constraint());
+    input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraint);
   }
   return Maybe<void>::Ok();
 }

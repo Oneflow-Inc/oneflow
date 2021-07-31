@@ -41,6 +41,7 @@ oneflow
             eq, 
             equal, 
             expand, 
+            eye， 
             exp, 
             expm1, 
             erf, 
