@@ -637,8 +637,8 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
   return one::OpBuilder("dim_scatter_add_like", name)
       .Input("like")
-      .Input("input")
       .Input("index")
+      .Input("src")
       .Output("output")
       .Attr<int32_t>("dim", dim)
       .Build();
