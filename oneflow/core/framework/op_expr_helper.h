@@ -255,20 +255,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::st
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
 
-Maybe<one::UserOpExpr> SliceOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step);
-Maybe<one::UserOpExpr> SliceOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name);
-
-Maybe<one::UserOpExpr> SliceUpdateOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step);
-Maybe<one::UserOpExpr> SliceUpdateOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name);
-
 Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
                                    const std::vector<int64_t>& stop,
                                    const std::vector<int64_t>& step);

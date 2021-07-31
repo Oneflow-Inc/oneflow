@@ -83,16 +83,14 @@ struct SliceUpdateOpExprInterpState : public OpExprInterpState {
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
-  size_t x_index;
-  size_t update_index;
 };
 
 class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     std::vector<int64_t> start, stop, step;
     return Maybe<void>::Ok();
   }
@@ -110,7 +108,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
 
-    if(ctx->requires_grad_update){
+    if(ctx->requires_grad_x){
       ctx->SaveTensorForBackward(inputs.at(1));
     }
     return Maybe<void>::Ok();
@@ -118,7 +116,6 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
 
   Maybe<void> Apply(const SliceUpdateOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    MutableAttrMap attrs;    
     in_grads->resize(2);
 
     if(ctx->requires_grad_x){
@@ -133,9 +130,6 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateOpExprInterpState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_slice_;
-  std::shared_ptr<OpExpr> grad_op_zero_like_;
-  std::shared_ptr<OpExpr> grad_op_slice_update_;
   AttrMap base_attrs_;
 };
 
