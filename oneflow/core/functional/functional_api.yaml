@@ -487,6 +487,10 @@
   signature: "Tensor Slice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
   bind_python: True
 
+- name: "slice_grad"
+  signature: "Tensor SliceGrad(Tensor dy, Tensor like, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: False
+
 - name: "slice_update"
   signature:
     "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
