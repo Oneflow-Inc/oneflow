@@ -105,8 +105,9 @@ class TestDiv(flow.unittest.TestCase):
     def test_0shape_div(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        y = torch.div(x)
-        return y
+        y = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        z = x / y
+        return z
 
 
 if __name__ == "__main__":
