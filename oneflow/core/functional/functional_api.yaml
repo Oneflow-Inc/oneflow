@@ -813,6 +813,7 @@
 
 - name: "to_local"
   signature: "Tensor ToLocal(Tensor x)"
+  bind_python: True
 
 - name: "identity"
   signature: "Tensor Identity(Tensor in)"
