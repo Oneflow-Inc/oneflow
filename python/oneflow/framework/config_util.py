@@ -168,38 +168,6 @@ def compute_thread_pool_size(val):
     sess.config_proto.resource.compute_thread_pool_size = val
 
 
-def api_rdma_mem_block_mbyte(val: int) -> None:
-    """Set up the memory block size in rdma mode.
-
-    Args:
-        val (int): size of block, e.g. 1024(mb)
-    """
-    return enable_if.unique([rdma_mem_block_mbyte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def rdma_mem_block_mbyte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.rdma_mem_block_mbyte = val
-
-
-def api_rdma_recv_msg_buf_mbyte(val: int) -> None:
-    """Set up the buffer size for receiving messages in rama mode
-
-    Args:
-        val (int): buffer size, e.g. 1024(mb)
-    """
-    return enable_if.unique([rdma_recv_msg_buf_mbyte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def rdma_recv_msg_buf_mbyte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.rdma_recv_msg_buf_mbyte = val
-
-
 def api_reserved_host_mem_mbyte(val: int) -> None:
     """Set up the memory size of reserved host
 
@@ -230,23 +198,6 @@ def reserved_device_mem_mbyte(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.reserved_device_mem_mbyte = val
-
-
-def api_use_rdma(val: bool = True) -> None:
-    """Whether use RDMA to speed up data transmission in cluster nodes or not.
-          if not, then use normal epoll mode.
-
-    Args:
-        val (bool, optional):  Defaults to True.
-    """
-    return enable_if.unique([use_rdma, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def use_rdma(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.use_rdma = val
 
 
 def api_thread_enable_local_message_queue(val: bool) -> None:

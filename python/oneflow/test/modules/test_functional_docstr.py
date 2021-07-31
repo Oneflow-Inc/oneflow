@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import inspect
 import unittest
 from collections import OrderedDict
@@ -53,13 +53,14 @@ def _run_functional_doctest(
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()
         arg_dict["module"] = [flow.F]
         for arg in GenArgList(arg_dict):
             _run_functional_doctest(
-                test_case, raise_on_error=True, verbose=None, module=arg[0]
+                test_case, raise_on_error=True, verbose=True, module=arg[0]
             )
 
 
