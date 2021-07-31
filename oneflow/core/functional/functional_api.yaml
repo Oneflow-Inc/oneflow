@@ -775,6 +775,22 @@
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True
 
+- name: "dim_scatter"
+  signature: "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_add"
+  signature: "Tensor DimScatterAdd(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_scalar"
+  signature: "Tensor DimScatterUpdateScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
+  bind_python: True
+
+- name: "dim_scatter_add_scalar"
+  signature: "Tensor DimScatterAddScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
+  bind_python: True
+
 - name: "tensor_setitem"
   signature: "Void TensorSetItem(Tensor x, *, TensorIndex index, Tensor value)"
   bind_python: True
