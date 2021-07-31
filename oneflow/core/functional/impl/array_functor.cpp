@@ -1012,6 +1012,99 @@ class TensorSetItemFunctor {
   }
 };
 
+class ElementwiseMinimumGradFunctor {
+ public:
+  ElementwiseMinimumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_minimum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ElementwiseMaximumGradFunctor {
+ public:
+  ElementwiseMaximumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_maximum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastDivGradFunctor {
+ public:
+  BroadcastDivGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
+                         .Input("dz")
+                         .Input("z")
+                         .Input("y")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& z,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class IdentityFunctor {
+ public:
+  IdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceSumLikeFunctor {
+ public:
+  ReduceSumLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reduce_sum_like").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int32_t>& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1061,6 +1154,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
+  m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
+  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
 };
 
 }  // namespace functional
