@@ -282,7 +282,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
     def test_OFRecordBytesDecoder(test_case):
         batch_size = 16
         record_reader = flow.nn.OfrecordReader(
-            "dataset/imagenette/ofrecord",
+            "dataset",
             batch_size=batch_size,
             part_name_suffix_length=5,
         )
@@ -293,7 +293,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
         image_raw_buffer = bytesdecoder_img(val_record)
 
         image_raw_buffer_nd = image_raw_buffer.numpy()[0]
-        gt_np = cv2.imread("dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        gt_np = cv2.imread("dataset/o.png")
         img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR)
         test_case.assertTrue(np.array_equal(img, gt_np))
 
