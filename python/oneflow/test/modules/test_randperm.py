@@ -18,6 +18,7 @@ from collections import OrderedDict
 from automated_test_util import *
 from test_util import GenArgList
 import numpy as np
+import unittest
 
 
 def _test_randperm_with_generator(test_case, N, device):
@@ -51,7 +52,9 @@ class Testrandperm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("The consistency of randomness with torch is not guaranteed ")
     @autotest(auto_backward=False)
     def test_ones_auto(test_case):
-        y = torch.randperm(random().to(int))
+        x = random().to(int)
+        y = torch.randperm(n=x)
         return y
