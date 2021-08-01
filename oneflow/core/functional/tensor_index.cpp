@@ -65,18 +65,17 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     }
     CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
-      CHECK_GT_OR_RETURN(shape.At(dim), 0) << "Slice cannot be applied to a 0-dim tensor.";
       const auto& slice = index_item.slice();
       int64_t step = std::min(slice.step(), shape.At(dim));
-      CHECK_GT_OR_RETURN(step, 0) << "Step must be greater than zero.";
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));
       if (start < 0) { start += shape.At(dim); }
       if (start < 0) { start = 0; }
       if (end < 0) { end += shape.At(dim); }
       if (end < start) { end = start; }
+      if (start == end) { step = 1; }
       slice_indices->emplace_back(start, end, step);
-      int64_t length = (end - start + step - 1) / step;
+      int64_t length = start == end ? 0 : (end - start + step - 1) / step;
       target_dims->emplace_back(length);
       dim++;
     } else if (index_item.IsInteger()) {

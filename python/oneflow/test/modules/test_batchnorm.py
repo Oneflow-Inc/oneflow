@@ -488,6 +488,17 @@ class TestBatchNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=20, auto_backward=True)
+    def test_batchnorm3d_module_with_random_data(test_case):
+        channel = random().to(int)
+        m = torch.nn.BatchNorm3d(num_features=channel, track_running_stats=False)
+        m.train(random())
+        device = "cpu"
+        m.to(device)
+        x = random_pytorch_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
+        y = m(x)
+        return y
+
     @unittest.skip("batchnorm module has a bug")
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
@@ -515,6 +526,17 @@ class TestBatchNorm(flow.unittest.TestCase):
                     training=training,
                     n=10,
                 )
+
+    @autotest(n=1, auto_backward=False)
+    def test_batchnorm3d_module_with_random_data(test_case):
+        channel = random().to(int)
+        m = torch.nn.BatchNorm2d(num_features=channel, track_running_stats=False)
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, requires_grad=False).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

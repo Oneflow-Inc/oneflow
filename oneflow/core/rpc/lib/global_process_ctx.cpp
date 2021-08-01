@@ -49,9 +49,6 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
-  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());

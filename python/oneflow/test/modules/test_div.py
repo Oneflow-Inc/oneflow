@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_div_impl(test_case, shape, device):
@@ -99,6 +100,14 @@ class TestDiv(flow.unittest.TestCase):
                 },
                 device=arg[1],
             )
+
+    @autotest(auto_backward=False)
+    def test_0shape_div(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        z = x / y
+        return z
 
 
 if __name__ == "__main__":
