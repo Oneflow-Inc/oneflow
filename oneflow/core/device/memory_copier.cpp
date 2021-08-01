@@ -240,6 +240,16 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                                  const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
+  if (num_axes == 0){
+    if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
+        && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
+      size_t copy_size = GetSizeOfDataType(desc.data_type);
+      Copy1D(ctx, dst, src, copy_size);
+    } else {
+      LOG(FATAL) << "MemoryCopier::Copy() Error: illegal copy case!";
+    }
+    return;
+  }
   const bool use_nd_impl =
       CanCurDevAccessPointer(dst) && CanCurDevAccessPointer(src) && (num_axes != 1);
   if (use_nd_impl) {
