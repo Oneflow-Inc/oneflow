@@ -500,6 +500,10 @@ jobs:
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
+      - name: Module API test (distributed)
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        run: |
+          python3 ci/test_multi_client/distributed_run.py --bash_script=ci/test_multi_client/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Dataloader API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)

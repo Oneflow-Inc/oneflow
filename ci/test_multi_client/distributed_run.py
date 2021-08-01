@@ -138,7 +138,7 @@ async def remove_containers_by_name(remote_hosts=None, container_name=None):
     )
 
 
-def get_remote_hosts(args):
+def get_machines(args):
     if len(args.machine) == 0:
         this_host = socket.gethostname()
         this_host = resolve_hostname_hardcoded(this_host)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
                     found = True
             assert found, whl_paths
 
-    machines = get_remote_hosts(args)
+    machines = get_machines(args)
 
     print(f"machines: {machines}", flush=True)
     sub_dir = str(uuid.uuid4())
