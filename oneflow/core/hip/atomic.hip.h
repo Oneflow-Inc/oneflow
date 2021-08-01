@@ -28,14 +28,14 @@ namespace atomic {
 
 __device__ __forceinline__ int Add(int* address, int val) { return atomicAdd(address, val); }
 
-__device__ __forceinline__ half Add(half* address, half val) {
+// __device__ __forceinline__ half Add(half* address, half val) {
 // #if __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 //   return atomicAdd(address, val);
 // #else
 //   __trap();
 // #endif
-  abort();
-}
+  // abort();
+// }
 
 __device__ __forceinline__ float Add(float* address, float val) { return atomicAdd(address, val); }
 

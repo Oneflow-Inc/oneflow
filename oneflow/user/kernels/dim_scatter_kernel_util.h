@@ -19,6 +19,10 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 
+#ifdef WITH_HIP
+#include "oneflow/core/hip/atomic.hip.h"
+#endif  // WITH_HIP
+
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/framework/framework.h"
@@ -46,8 +50,10 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 template<typename T>
 struct BinOpAddFunctor {
   OF_DEVICE_FUNC static void apply(const T* x, T* y) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__)
     cuda::atomic::Add(y, *x);
+#elif defined(__HIP_DEVICE_COMPILE__)
+    hip::atomic::Add(y, *x);
 #else
     *y += *x;
 #endif
@@ -81,6 +87,8 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
     if (idx_elem >= upper_bound) {
 #if __CUDA_ARCH__
       __trap();
+#elif __HIP_DEVICE_COMPILE__
+      abort();
 #else
       std::cout << "The index element " << idx_elem << " is out of bounds for dimension " << dim
                 << " with size " << upper_bound << std::endl;

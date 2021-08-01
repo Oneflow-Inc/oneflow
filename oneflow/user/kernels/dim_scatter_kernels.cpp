@@ -128,7 +128,7 @@ REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_CPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_add", BinOpAddFunctor);
 REGISTER_DIM_SCATTER_GPU_KERNELS("dim_scatter_update", BinOpUpdateFunctor);
