@@ -566,9 +566,35 @@ class SliceBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SliceGradBaseFunctor {
+ public:
+  SliceGradBaseFunctor() = default;
+  virtual ~SliceGradBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SliceFunctor : public SliceBaseFunctor {
  public:
   SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
+};
+
+class SliceGradFunctor : public SliceGradBaseFunctor {
+ public:
+  SliceGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
+  }
 };
 
 class LogicalSliceFunctor : public SliceBaseFunctor {
@@ -1057,8 +1083,6 @@ class TensorGetItemFunctor {
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
-    CHECK_GT_OR_RETURN(target_shape.Count(0), 0)
-        << "Target shape is zero shape which was not supported yet.";
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
@@ -1142,6 +1166,21 @@ class TensorSetItemFunctor {
     JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
     return Maybe<void>::Ok();
   }
+};
+
+class CastLikeFunctor {
+ public:
+  CastLikeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("cast_like").Input("in").Input("dtype_like").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ElementwiseMinimumGradFunctor {
@@ -1258,6 +1297,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
+  m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
@@ -1292,6 +1332,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
   m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
