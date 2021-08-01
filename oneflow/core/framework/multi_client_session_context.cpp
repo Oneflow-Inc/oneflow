@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/vm_util.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -45,6 +46,9 @@ int32_t GetGpuDeviceNum() {
 
 MultiClientSessionContext::~MultiClientSessionContext() {
   if (is_inited_) {
+    VLOG(2) << "Try to delete multi client session." << std::endl;
+    vm::MultiClientSync();
+    VLOG(2) << "Start to delete multi client session." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
