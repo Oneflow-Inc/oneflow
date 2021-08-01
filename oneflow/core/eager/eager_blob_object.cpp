@@ -88,5 +88,30 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DTREagerBlobObject::InitBlob() {
+  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+
+  // reset DTREageBlobObject properties
+  memory_ = 0;
+  compute_time_ = 0;
+  last_access_time_ = 0;
+
+  int num_elements;
+  num_elements = (blob_desc_.shape().NumAxes() > 0) ? 1 : 0;
+  for (int64_t i = 0; i < blob_desc_.shape().NumAxes(); i++) {
+    num_elements *= blob_desc_.shape().At(i);
+  }
+  CHECK_NE_OR_RETURN(num_elements, 0);
+  memory_ = num_elements * GetSizeOfDataType(blob_desc_.data_type());
+  compute_time_ = memory_;
+  // current time
+  last_access_time_ = memory_;
+
+  char* header_buffer =
+      reinterpret_cast<char*>(const_cast<int64_t*>(blob_desc_.shape().dim_vec().data()));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace vm
 }  // namespace oneflow

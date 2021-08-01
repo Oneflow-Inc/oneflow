@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,8 +26,9 @@ namespace oneflow {
 class AttrMap;
 
 namespace vm {
-// struct LocalCallOpKernelUtil;
-template <typename T> struct LocalCallOpKernelUtil;
+struct LocalCallOpKernelUtil;
+struct EagerLocalCallOpKernelUtil;
+struct DTRLocalCallOpKernelUtil;
 }  // namespace vm
 
 namespace one {
@@ -357,8 +355,7 @@ class StatefulLocalOpKernel final {
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
  private:
-  // friend struct vm::LocalCallOpKernelUtil;
-  template <typename T> friend struct vm::LocalCallOpKernelUtil;
+  friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
                                                       const EagerBlobObjectListPtr& outputs,

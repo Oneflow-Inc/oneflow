@@ -136,13 +136,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                                      JUST(tensor->device())->parallel_desc_ptr()));
       }
     }
-    if (enable_dtr) {
-      return builder->DTRLocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                          ctx, op_parallel_desc, instr_type_name);
-    } else {
-      return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_parallel_desc, instr_type_name);
-    }
   }));
   return Maybe<void>::Ok();
 }

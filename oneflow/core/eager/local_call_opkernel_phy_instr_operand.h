@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace one {
@@ -30,8 +26,7 @@ class StatefulLocalOpKernel;
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-using DTREagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::DTREagerBlobObject>>>;
+
 }  // namespace one
 
 namespace user_op {
@@ -42,7 +37,6 @@ class OpKernel;
 
 namespace vm {
 
-template<typename T>
 class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
   LocalCallOpKernelPhyInstrOperand(const LocalCallOpKernelPhyInstrOperand&) = delete;
@@ -50,14 +44,14 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                   const T& inputs,
-                                   const T& outputs,
+                                   const one::EagerBlobObjectListPtr& inputs,
+                                   const one::EagerBlobObjectListPtr& outputs,
                                    const one::OpExprInterpContext& op_interp_ctx_)
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), op_interp_ctx_(op_interp_ctx_) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
-  const T& inputs() const { return inputs_; }
-  const T& outputs() const { return outputs_; }
+  const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
+  const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
 
@@ -87,8 +81,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
-  T inputs_;
-  T outputs_;
+  one::EagerBlobObjectListPtr inputs_;
+  one::EagerBlobObjectListPtr outputs_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
 };

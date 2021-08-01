@@ -59,7 +59,7 @@ class EagerBlobObject : public BlobObject {
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
   Maybe<void> TryInitBlob() override;
-  Maybe<void> InitBlob();
+  virtual Maybe<void> InitBlob();
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
@@ -91,15 +91,39 @@ class DTREagerBlobObject final : public EagerBlobObject {
   DTREagerBlobObject(DTREagerBlobObject&&) = delete;
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
-      : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
+      : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {
+        memory_ = 0;
+        compute_time_ = 0;
+        last_access_time_ = 0;
+      }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                  const std::shared_ptr<const ParallelDesc>& parallel_desc) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, parallel_desc) {}
+                  const std::shared_ptr<const ParallelDesc>& parallel_desc) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, parallel_desc) {
+                    memory_ = 0;
+                    compute_time_ = 0;
+                    last_access_time_ = 0;
+                  }
   ~DTREagerBlobObject() override {
     non_pod_initer_.reset();
     tensor_buffer_.reset();
     blob_.reset();
   }
+
+  Maybe<void> InitBlob();
+
+  // Getters and Setters
+  const int64_t memory() const { return memory_; }
+  const int64_t compute_time() const { return compute_time_; }
+  const double last_access_time() const { return last_access_time_; }
+  void set_memory(int64_t val) { memory_ = val; }
+  void set_compute_time(int64_t val) { compute_time_ = val; }
+  void set_last_access_time(double val) { last_access_time_ = val; }
+
+
+ private:
+  int64_t memory_;
+  int64_t compute_time_;
+  double last_access_time_;
 };
 
 }  // namespace vm
