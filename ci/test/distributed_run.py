@@ -418,10 +418,11 @@ if __name__ == "__main__":
         "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
     )
     parser.add_argument("--timeout", type=int, required=False, default=1 * 60 * 60)
-    parser.add_argument("--multi_client", action="store_true", required=False, default=False)
+    parser.add_argument("--mode", type=str, required=False, default="multi_client")
     parser.add_argument("--copy_files", action="append", default=[])
     args = parser.parse_args()
 
+    assert args.mode in ['multi_client', 'single_client']
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_python_path)
     assert bool(args.bash_script) != bool(args.cmd)
     if args.skip_libs:
@@ -473,7 +474,7 @@ if __name__ == "__main__":
         + "-distributed-run-main-node-at-"
         + this_host.replace(".", "-")
     )
-    if args.multi_client:
+    if args.mode == 'multi_client':
         remote_hosts = [this_host] + remote_hosts
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
@@ -614,7 +615,7 @@ if __name__ == "__main__":
         )
 
     atexit.register(exit_handler)
-    if args.multi_client:
+    if args.mode == 'multi_client':
         if args.bash_script:
             args.cmd = f"bash {args.bash_script}"
         loop.run_until_complete(
@@ -653,7 +654,7 @@ if __name__ == "__main__":
             )
         )
 
-    if not args.multi_client:
+    if args.mode == 'single_client':
         with DockerAgent(
             port=agent_port,
             authkey=agent_authkey.encode(),
