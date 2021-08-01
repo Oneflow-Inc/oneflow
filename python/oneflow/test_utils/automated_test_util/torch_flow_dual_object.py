@@ -78,9 +78,20 @@ def get_args(callable, *args, **kwargs):
         return x
 
     for arg in args:
-        arg = get_generator_value(arg)
-        pytorch_args.append(get_pytorch_value(arg))
-        oneflow_args.append(get_oneflow_value(arg))
+        # TODO: refine codes
+        if isinstance(arg, tuple):
+            pytorch_tuple_args = []
+            oneflow_tuple_args = []
+            for t in arg:
+                t = get_generator_value(t)
+                pytorch_tuple_args.append(get_pytorch_value(t))
+                oneflow_tuple_args.append(get_oneflow_value(t))
+            pytorch_args.append(tuple(pytorch_tuple_args))
+            oneflow_args.append(tuple(oneflow_tuple_args))
+        else:
+            arg = get_generator_value(arg)
+            pytorch_args.append(get_pytorch_value(arg))
+            oneflow_args.append(get_oneflow_value(arg))
     for (key, value) in kwargs.items():
         value = get_generator_value(value)
         if isinstance(value, Nothing):
