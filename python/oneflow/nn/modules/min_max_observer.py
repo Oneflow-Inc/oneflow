@@ -14,86 +14,98 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class FakeQuantization(Module):
+class MinMaxObserver(Module):
     def __init__(
         self,
         quantization_formula: str = "google",
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
+        per_layer_quantization: bool = True,
     ) -> None:
         super().__init__()
         self.quantization_formula = quantization_formula
         self.quantization_bit = quantization_bit
         self.quantization_scheme = quantization_scheme
+        self.per_layer_quantization = per_layer_quantization
 
-    def forward(self, input, scale, zero_point):
-        return flow.F.fake_quantization(
+    def forward(self, input):
+        return flow.F.min_max_observer(
             input,
-            scale,
-            zero_point,
             self.quantization_formula,
             self.quantization_bit,
             self.quantization_scheme,
+            self.per_layer_quantization,
         )
 
 
-def fake_quantization_op(
+def min_max_observer_op(
     input,
-    scale,
-    zero_point,
     quantization_formula: str = "google",
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
+    per_layer_quantization: bool = True,
 ):
-    """Simulate the quantize and dequantize operations in training time.
+    """Compute the quantization parameters of the input tensor.
 
-    The output will be computed as:
+    First compute the max and min values of input tensor:
+
+    .. math::
+
+        & max\\_value = max(input)
+
+        & min\\_value = min(input)
+
+    Then compute the scale and zero_point with the following equations:
 
         if quantization_scheme == "symmetric":
 
         .. math::
 
-            & quant\\_max = 2^{quantization\\_to\\_bit - 1} - 1
+            & denom = 2^{quantization\\_to\\_bit - 1} - 1
 
-            & quant\\_min = -quant\\_max
+            & scale = max(|max\\_value|,|min\\_value|) / denom
 
-            & clamp(round(x / scale), quant\\_min, quant\\_max) * scale
+            & zero\\_point = 0
 
         elif quantization_scheme == "affine":
 
         .. math::
 
-            & quant\\_max = 2^{quantization\\_to\\_bit} - 1
+            & denom = 2^{quantization\\_to\\_bit} - 1
 
-            & quant\\_min = 0
+            & scale = (max\\_value - min\\_value) / denom
 
-            & (clamp(round(x / scale + zero\\_point), quant\\_min, quant\\_max) - zero\\_point) * scale
+            & zero\\_point = -min\\_value / scale
+
+    If per_layer_quantization is False, then the shape of scale and zero_point will be (input.shape[0],).
 
     Args:
         input (oneflow.Tensor): input tensor.
-        scale (oneflow.Tensor): Computed by min_max_observer or moving_average_min_max_observer op.
-        zero_point (oneflow.Tensor): Computed by min_max_observer or moving_average_min_max_observer op.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
+        per_layer_quantization (bool): True or False, means per-layer / per-channel quantization. Defaults to True.
         name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
-        oneflow.Tensor: Input tensor after quantize and dequantize operations.
+        Tuple[oneflow.Tensor, oneflow.Tensor]: The scale and zero_point of input tensor.
 
     For example:
 
     .. code-block:: python
 
+
     """
-    return FakeQuantization(
+    return MinMaxObserver(
         quantization_formula=quantization_formula,
         quantization_bit=quantization_bit,
         quantization_scheme=quantization_scheme,
-    )(input, scale, zero_point)
+        per_layer_quantization=per_layer_quantization,
+    )(input)
 
 
 if __name__ == "__main__":

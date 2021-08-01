@@ -31,6 +31,31 @@ namespace functional {
 
 namespace impl {
 
+class MinMaxObserverFunctor {
+ public:
+  FakeQuantizationFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("min_max_observer")
+                         .Input("in")
+                         .Output("scale")
+                         .Output("zero_point")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& in, const std::string quantization_formula,
+      const int32_t& quantization_bit,
+      const std::string quantization_scheme, const bool per_layer_quantization) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+    JUST(attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FakeQuantizationFunctor {
  public:
   FakeQuantizationFunctor() {
