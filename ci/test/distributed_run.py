@@ -88,7 +88,9 @@ async def build_docker_img(remote_host=None, workspace_dir=None):
         await spawn_shell_and_check(f"bash docker/ci/test/build.sh")
 
 
-async def create_remote_workspace_dir(remote_host=None, workspace_dir=None, copy_files=None):
+async def create_remote_workspace_dir(
+    remote_host=None, workspace_dir=None, copy_files=None
+):
     await spawn_shell_and_check(f"ssh {remote_host} mkdir -p {workspace_dir}")
     if copy_files is not None:
         for path in copy_files:
@@ -422,7 +424,7 @@ if __name__ == "__main__":
     parser.add_argument("--copy_files", action="append", default=[])
     args = parser.parse_args()
 
-    assert args.mode in ['multi_client', 'single_client']
+    assert args.mode in ["multi_client", "single_client"]
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_python_path)
     assert bool(args.bash_script) != bool(args.cmd)
     if args.skip_libs:
@@ -474,14 +476,16 @@ if __name__ == "__main__":
         + "-distributed-run-main-node-at-"
         + this_host.replace(".", "-")
     )
-    if args.mode == 'multi_client':
+    if args.mode == "multi_client":
         remote_hosts = [this_host] + remote_hosts
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
         asyncio.gather(
             *[
                 create_remote_workspace_dir(
-                    remote_host=remote_host, workspace_dir=workspace_dir, copy_files=args.copy_files
+                    remote_host=remote_host,
+                    workspace_dir=workspace_dir,
+                    copy_files=args.copy_files,
                 )
                 for remote_host in remote_hosts
             ],
@@ -615,7 +619,7 @@ if __name__ == "__main__":
         )
 
     atexit.register(exit_handler)
-    if args.mode == 'multi_client':
+    if args.mode == "multi_client":
         if args.bash_script:
             args.cmd = f"bash {args.bash_script}"
         loop.run_until_complete(
@@ -654,7 +658,7 @@ if __name__ == "__main__":
             )
         )
 
-    if args.mode == 'single_client':
+    if args.mode == "single_client":
         with DockerAgent(
             port=agent_port,
             authkey=agent_authkey.encode(),
