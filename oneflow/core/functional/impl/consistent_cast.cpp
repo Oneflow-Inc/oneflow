@@ -69,10 +69,10 @@ Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
                  .Input("in")
                  .Output("out")
                  .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetNdSbpString(sbp_parallels)))
+                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
                  .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                 *JUST(GetNdSbpString(sbp_parallels)))
+                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
                  .Build());
     iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
   }
@@ -121,11 +121,11 @@ Maybe<Tensor> SyncMetaAndData(const std::shared_ptr<Tensor>& tensor,
 }
 
 // used in consistent_tensor.to_consistent(sbp)
-Maybe<Tensor> CastParallelDistribution(const std::shared_ptr<Tensor>& tensor,
-                                       const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                       Symbol<ParallelDesc> parallel_desc) {
+Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& tensor,
+                                     Symbol<ParallelDesc> parallel_desc,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor);
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "local tensors supported only";
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
@@ -146,7 +146,7 @@ class ToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
     if (x->is_consistent()) {
-      return JUST(CastParallelDistribution(x, sbp_parallels, parallel_desc));
+      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
     } else {
       const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(x);
       CHECK_NOTNULL_OR_RETURN(mirrored_tensor) << "local tensors supported only";

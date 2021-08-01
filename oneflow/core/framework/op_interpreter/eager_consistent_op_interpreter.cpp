@@ -96,6 +96,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     // Eager boxing
+    autograd::NoGradGuard no_grad{};
     const auto& boxing_interpreter =
         JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
             JUST(inputs.at(i)->parallel_distribution()),
