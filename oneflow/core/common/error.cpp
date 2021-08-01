@@ -277,12 +277,13 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::sort(error->mutable_stack_frame()->begin(), error->mutable_stack_frame()->end());
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
   case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(error->DebugString());
+    throw OF_PP_CAT(cls, Exception)("\n" + error->DebugString());
 
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
 
