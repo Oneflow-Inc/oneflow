@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import math
 import numpy as np
 from automated_test_util import *
 from test_util import GenArgList
@@ -107,7 +108,14 @@ def _run_test_min_max_observer(
     per_layer_quantization,
 ):
     weight = (np.random.random(weight_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    scale, zero_point = flow.quantization.min_max_observer(weight, quantization_bit, quantization_scheme, quantization_formula, per_layer_quantization)
+    tensor_weight = flow.Tensor(weight)
+    scale, zero_point = flow.quantization.min_max_observer(
+        tensor_weight,
+        quantization_bit,
+        quantization_scheme,
+        quantization_formula,
+        per_layer_quantization,
+    )
     _check_min_max_observer(
         test_case,
         weight,
@@ -136,7 +144,6 @@ class TestMinMaxObserver(flow.unittest.TestCase):
             if arg[-2] == "cambricon" and arg[-1] == False:
                 continue
             _run_test_min_max_observer(*arg)
-
 
 
 if __name__ == "__main__":

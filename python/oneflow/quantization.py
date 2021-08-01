@@ -15,5 +15,9 @@ limitations under the License.
 """
 
 from oneflow.nn.modules.min_max_observer import min_max_observer_op as min_max_observer
-from oneflow.nn.modules.moving_average_min_max_observer import moving_average_min_max_observer_op as moving_average_min_max_observer
-from oneflow.nn.modules.fake_quantization import fake_quantization_op as fake_quantization
+from oneflow.nn.modules.moving_average_min_max_observer import (
+    moving_average_min_max_observer_op as moving_average_min_max_observer,
+)
+from oneflow.nn.modules.fake_quantization import (
+    fake_quantization_op as fake_quantization,
+)
