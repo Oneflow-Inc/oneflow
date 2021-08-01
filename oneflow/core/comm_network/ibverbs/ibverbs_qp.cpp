@@ -28,8 +28,9 @@ namespace oneflow {
 namespace {
 
 constexpr uint32_t kDefaultQueueDepth = 1024;
+constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
-}
+}  // namespace
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
@@ -145,7 +146,8 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
                                 const IBVerbsMemDesc& local_mem, void* read_id) {
   CHECK_EQ(remote_mem.mem_size, local_mem.mem_size());
   WorkRequestId* wr_id = NewWorkRequestId();
-  const size_t block_size = Global<ResourceDesc, ForSession>::Get()->rdma_mem_block_byte();
+  const size_t block_size =
+      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
   const size_t block_num = RoundUp(remote_mem.mem_size, block_size) / block_size;
   wr_id->outstanding_sge_cnt = static_cast<int32_t>(block_num);
   wr_id->read_id = read_id;

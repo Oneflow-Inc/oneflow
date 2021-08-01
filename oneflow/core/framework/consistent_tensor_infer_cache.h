@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -41,7 +42,7 @@ class InputConsistentTensorMeta final {
   InputConsistentTensorMeta() : tensor_meta_(), consumer_parallel_distribution_constraint_() {}
   InputConsistentTensorMeta(
       Symbol<ConsistentTensorMeta> tensor_meta,
-      Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint)
+      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint)
       : tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint) {}
 
@@ -52,15 +53,17 @@ class InputConsistentTensorMeta final {
   size_t hash_value() const;
   bool operator==(const InputConsistentTensorMeta& other) const;
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
+      const {
     return consumer_parallel_distribution_constraint_;
   }
-  void assign(Symbol<ConsistentTensorMeta> tensor_meta,
-              Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint);
+  void assign(
+      Symbol<ConsistentTensorMeta> tensor_meta,
+      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint);
 
  private:
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
 };
 
 class TensorTuple;
