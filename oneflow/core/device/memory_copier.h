@@ -52,6 +52,8 @@ class MemoryCopier {
   void CopyElem(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) const;
 
  protected:
+  template<typename T>
+  void Copy0D(DeviceCtx* ctx, void* dst, const void* src) const;
   virtual void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
   virtual void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                       size_t src_pitch, size_t width, size_t height) const;

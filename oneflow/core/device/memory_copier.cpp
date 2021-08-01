@@ -137,8 +137,7 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
   if(num_axes == 0){
     if(desc.src_shape.NumAxes()==0 && desc.dst_shape.NumAxes()==0 && 
       desc.src_shape.elem_cnt()==1 && desc.dst_shape.elem_cnt()==1){
-      Copy1D(ctx, (unsigned char*)dst, (unsigned char*)src, 1);
-      return;
+      Copy0D<float>(ctx, dst, src);
     }else{
       LOG(FATAL)
         << "MemoryCopier::Copy() Error: illegal copy case!";
@@ -167,6 +166,11 @@ void MemoryCopier::CopyElem(DeviceCtx* ctx, void* dst, const void* src,
                             const MemoryCopyNdDesc& desc) const {
   MemoryCopyNdDesc desc_in_bytes = GetDescInBytes<T>(desc);
   Copy(ctx, dst, src, desc_in_bytes);
+}
+
+template<typename T>
+void MemoryCopier::Copy0D(DeviceCtx* ctx, void* dst, const void* src) const {
+  memcpy(dst, src, sizeof(T));
 }
 
 void MemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
@@ -265,6 +269,11 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
   }
 }
 
+template<typename T>
+void CudaAsyncMemoryCopier::Copy0D(DeviceCtx* ctx, void* dst, const void* src) const {
+  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sizeof(T), cudaMemcpyDefault, ctx->cuda_stream()));
+}
+
 void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, ctx->cuda_stream()));
 }
@@ -319,15 +328,26 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
       ->Create();
 }
 
-#define SPECIALIZE_COPY_ELEM(dtype)                                                        \
-  template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
-                                              const MemoryCopyNdDesc& desc) const;
+#define SPECIALIZE_COPY_ELEM(dtype)                                                               \
+  template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src,        \
+                                              const MemoryCopyNdDesc& desc) const;      
+
 SPECIALIZE_COPY_ELEM(float16)
 SPECIALIZE_COPY_ELEM(float)
 SPECIALIZE_COPY_ELEM(double)
 SPECIALIZE_COPY_ELEM(int32_t)
 SPECIALIZE_COPY_ELEM(int64_t)
 SPECIALIZE_COPY_ELEM(int8_t)
+
+#define SPECIALIZE_COPY_0D(dtype)                                                        \
+  template void MemoryCopier::Copy0D<dtype>(DeviceCtx * ctx, void* dst, const void* src) const;
+
+SPECIALIZE_COPY_0D(float16)
+SPECIALIZE_COPY_0D(float)
+SPECIALIZE_COPY_0D(double)
+SPECIALIZE_COPY_0D(int32_t)
+SPECIALIZE_COPY_0D(int64_t)
+SPECIALIZE_COPY_0D(int8_t)
 
 #define SPECIALIZE_COPY_ND_CPU_IMPL(NDIMS)                                        \
   template void CopyNDCpuImpl<NDIMS>(DeviceCtx * ctx, void* dst, const void* src, \
