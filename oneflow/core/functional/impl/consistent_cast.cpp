@@ -133,7 +133,6 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Optional<Shape>& shape) const {
     CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
-    CHECK_OR_RETURN(x->is_eager()) << Error::Unimplemented() << "eager tensors supported only";
     const auto& device = JUST(x->device());
     if (device->type() != "cpu") {
       CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
@@ -165,19 +164,8 @@ class ConsistentToLocalFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-    CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-    int64_t machine_id = 0;
-    int64_t device_id = 0;
-    const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-    if (!parallel_desc->Containing(machine_id, device_id)) {
-      // should return UndefinesdLocalTensor here, the impl of which need to be discussed
-      return std::shared_ptr<Tensor>();
-    }
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {consistent_tensor}));
-    return output;
+    CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
 
  private:
