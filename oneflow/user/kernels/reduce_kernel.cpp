@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -33,6 +34,16 @@ class ReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+
+    if (input_tensor->shape().elem_cnt() == 0) {
+      if (output_tensor->shape().elem_cnt() != 0) {
+        AutoMemset(
+            ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
+            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
+            output_tensor->mem_case());
+      }
+      return;
+    }
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
