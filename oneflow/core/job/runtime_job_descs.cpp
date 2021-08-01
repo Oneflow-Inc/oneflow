@@ -24,4 +24,10 @@ RuntimeJobDescs::RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto) {
   }
 }
 
+const JobDesc& RuntimeJobDescs::job_desc(int64_t job_id) const {
+  auto it = job_id2job_desc_.find(job_id);
+  CHECK(it != job_id2job_desc_.end());
+  return *(it->second);
+}
+
 }  // namespace oneflow
