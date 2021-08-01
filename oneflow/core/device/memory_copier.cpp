@@ -134,7 +134,16 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                         const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if (num_axes == 1) {
+  if(num_axes == 0){
+    if(desc.src_shape.NumAxes()==0 && desc.dst_shape.NumAxes()==0 && 
+      desc.src_shape.elem_cnt()==1 && desc.dst_shape.elem_cnt()==1){
+      Copy1D(ctx, (unsigned char*)dst, (unsigned char*)src, 1);
+      return;
+    }else{
+      LOG(FATAL)
+        << "MemoryCopier::Copy() Error: illegal copy case!";
+    }
+  } else if (num_axes == 1) {
     Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
            desc.extent.At(0));
   } else if (num_axes == 2) {
@@ -200,18 +209,8 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
 
 void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
                               const MemoryCopyNdDesc& desc) const {
-  if (!desc.src_shape.is_initialized() || !desc.dst_shape.is_initialized()) {
-    LOG(FATAL)
-        << "HostMemoryCopier::CopyND Error: desc.src_shape or desc.dst_shape not initialized";
-  }
   const int32_t num_axes = desc.src_shape.NumAxes();
-  if (num_axes == 0 || num_axes == 1) {
-    CopyNDCpuImpl<1>(ctx, dst, src, desc);
-  } else if (num_axes == 2) {
-    CopyNDCpuImpl<2>(ctx, dst, src, desc);
-  } else if (num_axes == 3) {
-    CopyNDCpuImpl<3>(ctx, dst, src, desc);
-  } else if (num_axes == 4) {
+  if (num_axes == 4) {
     CopyNDCpuImpl<4>(ctx, dst, src, desc);
   } else if (num_axes == 5) {
     CopyNDCpuImpl<5>(ctx, dst, src, desc);
