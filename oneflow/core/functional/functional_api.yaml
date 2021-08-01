@@ -827,6 +827,10 @@
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True
 
+- name: "cast_like"
+  signature: "Tensor CastLike(Tensor x, Tensor like)"
+  bind_python: False
+
 - name: "identity"
   signature: "Tensor Identity(Tensor in)"
   bind_python: True
