@@ -51,6 +51,7 @@ TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
   raw_copy_desc.src_pos = copy_raw_view.OffsetTo(src_raw_view);
   raw_copy_desc.extent = copy_raw_view.shape();
   memory_copy_nd_desc_ = raw_copy_desc.CreateDimReducedDesc();
+  memory_copy_nd_desc_.data_type = data_type;
 }
 
 TensorSliceCopier::TensorSliceCopier(const TensorSliceView& dst_view,
