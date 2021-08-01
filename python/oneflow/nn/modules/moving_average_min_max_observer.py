@@ -125,7 +125,7 @@ def moving_average_min_max_observer_op(
     return MovingAverageMinMaxObserver(
         training=training,
         quantization_formula=quantization_formula,
-        stop_update_after_iter=stop_update_after_iters,
+        stop_update_after_iters=stop_update_after_iters,
         quantization_bit=quantization_bit,
         quantization_scheme=quantization_scheme,
         momentum=momentum,
