@@ -37,7 +37,7 @@ class ReduceKernel final : public user_op::OpKernel {
 
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
-          AutoMemset(
+        AutoMemset(
             ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
             output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
             output_tensor->mem_case());

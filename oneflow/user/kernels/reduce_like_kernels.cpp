@@ -43,10 +43,9 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     if (tensor_x->shape().elem_cnt() == 0) {
       if (tensor_y->shape().elem_cnt() != 0) {
-          AutoMemset(
-            ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
-            tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()),
-            tensor_y->mem_case());
+        AutoMemset(ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
+                   tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()),
+                   tensor_y->mem_case());
       }
       return;
     }
