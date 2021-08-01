@@ -266,11 +266,6 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
   }
 }
 
-// template<typename T>
-// void CudaAsyncMemoryCopier::Copy0D(DeviceCtx* ctx, void* dst, const void* src) const {
-//   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sizeof(T), cudaMemcpyDefault, ctx->cuda_stream()));
-// }
-
 void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, ctx->cuda_stream()));
 }
