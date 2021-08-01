@@ -83,7 +83,8 @@ class MlirJitKernel final : public user_op::OpKernel {
         << "fail to lower OneFlow to LLVM";
     module->dump();
     auto jit_or_error = mlir::ExecutionEngine::create(*module);
-    CHECK(!!jit_or_error) << "failed to create JIT exe engine";
+    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                          << llvm::toString(jit_or_error.takeError());
     user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
     // TODO: extract a function
     mlir::OwningMemRef<int64_t, 2> A(
