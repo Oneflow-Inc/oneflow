@@ -240,7 +240,7 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                                  const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if (num_axes == 0){
+  if (num_axes == 0) {
     if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
         && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
       size_t copy_size = GetSizeOfDataType(desc.data_type);
