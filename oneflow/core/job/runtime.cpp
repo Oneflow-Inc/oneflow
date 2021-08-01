@@ -60,7 +60,20 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  NewAllGlobal(plan, variable_op_name2eager_blob);
+  {
+    // NOTE(chengcheng): All runtime Global objects AddPlan
+    if (!Global<Maybe<bool>, MultiClient>::Get()) {
+      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
+      Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
+    }
+    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
+    Global<ThreadMgr>::Get()->AddPlan(plan);
+    Global<RuntimeJobDescs>::Get()->AddPlan(plan);
+    if (!Global<Maybe<bool>, MultiClient>::Get()) {
+      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
+    }
+  }
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -99,35 +112,12 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  DeleteAllGlobal();
-}
 
-void Runtime::NewAllGlobal(const Plan& plan,
-                           const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  Global<RuntimeCtx>::New();
-  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
-  Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New();
-  Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
-  Global<ActorMsgBus>::New();
-  Global<ThreadMgr>::New();
-  Global<ThreadMgr>::Get()->AddPlan(plan);
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
-  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
-  Global<summary::EventsWriter>::New();
-}
-
-void Runtime::DeleteAllGlobal() {
-  Global<RuntimeJobDescs>::Delete();
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-  Global<ThreadMgr>::Delete();
-  Global<ActorMsgBus>::Delete();
-  Global<RegstMgr>::Delete();
-  Global<MemoryAllocator>::Delete();
-  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
-  Global<ActEventLogger>::Delete();
-  Global<RuntimeCtx>::Delete();
-  Global<summary::EventsWriter>::Delete();
+  // TODO(chengcheng): move to session delete
+  if (!Global<Maybe<bool>, MultiClient>::Get()) {
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
+    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+  }
 }
 
 }  // namespace oneflow
