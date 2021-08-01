@@ -114,7 +114,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
-              const auto& session = JUST(GetDefaultSession());
               autograd::AutoGradMode mode(create_graph);
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();

@@ -206,30 +206,6 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
 /* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
-    const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
-  CHECK_OR_RETURN(!cur_rank_phy_tensor->is_lazy());
-  {
-    int64_t machine_id = 0;
-    int64_t device_id = 0;
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-    const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
-    const auto& cur_rank_phy_device = JUST(cur_rank_phy_tensor->device());
-    CHECK_OR_RETURN(device->device_id() == cur_rank_phy_device->device_id())
-        << "only LocalTensors on current rank Device can be casted to ConsistentTensor: "
-        << device->ToString() << " vs " << cur_rank_phy_device->ToString();
-  }
-  const auto& shape =
-      JUST(GetLogicalShape(*cur_rank_phy_tensor->shape(), *parallel_distribution, *parallel_desc));
-  const auto& dtype = cur_rank_phy_tensor->dtype();
-  Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
-  return std::shared_ptr<EagerConsistentTensorImpl>(
-      new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                    cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor));
-}
-
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   Optional<int64_t> parallel_id;
