@@ -166,9 +166,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
     parser.add_argument("--cmd", type=str, required=False, default=None)
-    parser.add_argument(
-        "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
-    )
     parser.add_argument("--timeout", type=int, required=False, default=1 * 60 * 60)
     args = parser.parse_args()
 
@@ -278,17 +275,6 @@ if __name__ == "__main__":
                     )
                     for remote_host in machines
                 ],
-            )
-        )
-        print("copying artifacts")
-        loop.run_until_complete(
-            asyncio.gather(
-                *[
-                    spawn_shell(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='oneflow_python' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
-                    )
-                    for remote_host in machines
-                ]
             )
         )
         assert workspace_dir
