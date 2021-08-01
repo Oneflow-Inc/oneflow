@@ -134,14 +134,13 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                         const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if(num_axes == 0){
-    if(desc.src_shape.NumAxes()==0 && desc.dst_shape.NumAxes()==0 && 
-      desc.src_shape.elem_cnt()==1 && desc.dst_shape.elem_cnt()==1){
+  if (num_axes == 0) {
+    if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
+        && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
       Copy1D(ctx, (unsigned char*)dst, (unsigned char*)src, 1);
       return;
-    }else{
-      LOG(FATAL)
-        << "MemoryCopier::Copy() Error: illegal copy case!";
+    } else {
+      LOG(FATAL) << "MemoryCopier::Copy() Error: illegal copy case!";
     }
   } else if (num_axes == 1) {
     Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
