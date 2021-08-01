@@ -79,7 +79,6 @@ def fake_quantization_op(
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
-        name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
         oneflow.Tensor: Input tensor after quantize and dequantize operations.

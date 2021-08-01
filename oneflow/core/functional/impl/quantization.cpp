@@ -57,6 +57,41 @@ class MinMaxObserverFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MovingAverageMinMaxObserverFunctor {
+ public:
+  MovingAverageMinMaxObserverFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("moving_average_min_max_observer")
+                         .Input("in")
+                         .Input("current_train_step")
+                         .Input("moving_max")
+                         .Input("moving_min")
+                         .Output("scale")
+                         .Output("zero_point")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
+                                const std::shared_ptr<one::Tensor>& current_train_step,
+                                const std::shared_ptr<one::Tensor>& moving_max,
+                                const std::shared_ptr<one::Tensor>& moving_min, const bool training,
+                                const std::string quantization_formula,
+                                const int64_t& stop_update_after_iters,
+                                const int32_t& quantization_bit,
+                                const std::string quantization_scheme, const float momentum) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("training", training));
+    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+    JUST(attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters));
+    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+    JUST(attrs.SetAttr<float>("momentum", momentum));
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {in, current_train_step, moving_max, moving_min}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FakeQuantizationFunctor {
  public:
   FakeQuantizationFunctor() {
@@ -86,6 +121,10 @@ class FakeQuantizationFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FakeQuantizationFunctor>("FakeQuantization"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::MinMaxObserverFunctor>("MinMaxObserver"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::MovingAverageMinMaxObserverFunctor>("MovingAverageMinMaxObserver");
+};
 
 }  // namespace functional
 }  // namespace one

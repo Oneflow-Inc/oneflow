@@ -18,46 +18,72 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class MinMaxObserver(Module):
+class MovingAverageMinMaxObserver(Module):
     def __init__(
         self,
+        training: bool = False,
         quantization_formula: str = "google",
+        stop_update_after_iters: int = 0,
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
-        per_layer_quantization: bool = True,
+        momentum: float = 0,
     ) -> None:
         super().__init__()
+        self.training = training
         self.quantization_formula = quantization_formula
+        self.stop_update_after_iters = stop_update_after_iters
         self.quantization_bit = quantization_bit
         self.quantization_scheme = quantization_scheme
-        self.per_layer_quantization = per_layer_quantization
+        self.momentum = momentum
 
-    def forward(self, input):
-        return flow.F.min_max_observer(
+    def forward(self, input, current_train_step, moving_max, moving_min):
+        return flow.F.moving_average_min_max_observer(
             input,
+            current_train_step,
+            moving_max,
+            moving_min,
+            self.training,
             self.quantization_formula,
+            self.stop_update_after_iters,
             self.quantization_bit,
             self.quantization_scheme,
-            self.per_layer_quantization,
+            self.momentum,
         )
 
 
-def min_max_observer_op(
+def moving_average_min_max_observer_op(
     input,
+    current_train_step,
+    moving_max,
+    moving_min,
+    training: bool = False,
     quantization_formula: str = "google",
+    stop_update_after_iters: int = 0,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
-    per_layer_quantization: bool = True,
+    momentum: float = 0,
 ):
-    """Compute the quantization parameters of the input tensor.
+    """Compute the quantization parameters based on the moving average of the input tensor's min and max values.
 
-    First compute the max and min values of input tensor:
+    First compute the moving\\_max and moving\\_min value of input tensor:
 
-    .. math::
+        if quantization_scheme == "symmetric":
 
-        & max\\_value = max(input)
+        .. math::
 
-        & min\\_value = min(input)
+            & moving\\_max = moving\\_max * momentum + |max(input)| * (1 - momentum)
+
+            & moving\\_min = moving\\_max
+
+        elif quantization_scheme == "affine":
+
+        .. math::
+
+            & moving\\_max = moving\\_max * momentum + max(input) * (1 - momentum)
+
+            & moving\\_min = moving\\_min * momentum + min(input) * (1 - momentum)
+
+    The moving average of min and max values are initialized as the first batch of input `Blob`'s min and max.
 
     Then compute the scale and zero_point with the following equations:
 
@@ -67,7 +93,7 @@ def min_max_observer_op(
 
             & denom = 2^{quantization\\_to\\_bit - 1} - 1
 
-            & scale = max(|max\\_value|,|min\\_value|) / denom
+            & scale = moving\\_max / denom
 
             & zero\\_point = 0
 
@@ -77,18 +103,16 @@ def min_max_observer_op(
 
             & denom = 2^{quantization\\_to\\_bit} - 1
 
-            & scale = (max\\_value - min\\_value) / denom
+            & scale = (moving\\_max - moving\\_min) / denom
 
-            & zero\\_point = -min\\_value / scale
-
-    If per_layer_quantization is False, then the shape of scale and zero_point will be (input.shape[0],).
+            & zero\\_point = -moving\\_min / scale
 
     Args:
         input (oneflow.Tensor): input tensor.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
-        per_layer_quantization (bool): True or False, means per-layer / per-channel quantization. Defaults to True.
+        momentum (float): Smoothing parameter for exponential moving average operation. Defaults to 0.95.
 
     Returns:
         Tuple[oneflow.Tensor, oneflow.Tensor]: The scale and zero_point of input tensor.
@@ -97,14 +121,15 @@ def min_max_observer_op(
 
     .. code-block:: python
 
-
     """
-    return MinMaxObserver(
+    return MovingAverageMinMaxObserver(
+        training=training,
         quantization_formula=quantization_formula,
+        stop_update_after_iter=stop_update_after_iters,
         quantization_bit=quantization_bit,
         quantization_scheme=quantization_scheme,
-        per_layer_quantization=per_layer_quantization,
-    )(input)
+        momentum=momentum,
+    )(input, current_train_step, moving_max, moving_min)
 
 
 if __name__ == "__main__":

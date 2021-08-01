@@ -304,16 +304,22 @@
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
-- name: "fakequantization"
+- name: "fake_quantization"
   signature:
     "Tensor FakeQuantization(Tensor in, Tensor scale, Tensor zero_point, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme)"
   bind_python: True
 
-- name: "minmaxobserver"
+- name: "min_max_observer"
   signature:
     "TensorTuple MinMaxObserver(Tensor in, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme, Bool per_layer_quantization)"
   bind_python: True
-  
+
+- name: "moving_average_min_max_observer"
+  signature:
+    "TensorTuple MovingAverageMinMaxObserver(Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,  *, Bool training, String quantization_formula,
+          Int64 stop_update_after_iters, Int32 quantization_bit, String quantization_scheme, Float momentum)"
+  bind_python: True
+
 - name: "conv_data_grad"
   signature:
     "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
