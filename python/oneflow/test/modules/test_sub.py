@@ -119,7 +119,7 @@ class TestSubModule(flow.unittest.TestCase):
         out1 = x - y
         out2 = x - 2
         out3 = 2 - x
-        out4 = torch.sub(x - y)
+        out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
 
