@@ -135,14 +135,13 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                         const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if(num_axes == 0){
-    if(desc.src_shape.NumAxes()==0 && desc.dst_shape.NumAxes()==0 && 
-      desc.src_shape.elem_cnt()==1 && desc.dst_shape.elem_cnt()==1){
-      size_t copy_size= GetSizeOfDataType(desc.data_type);
+  if (num_axes == 0) {
+    if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
+        && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
+      size_t copy_size = GetSizeOfDataType(desc.data_type);
       Copy1D(ctx, dst, src, copy_size);
-    }else{
-      LOG(FATAL)
-        << "MemoryCopier::Copy() Error: illegal copy case!";
+    } else {
+      LOG(FATAL) << "MemoryCopier::Copy() Error: illegal copy case!";
     }
   } else if (num_axes == 1) {
     Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
@@ -322,7 +321,7 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
 
 #define SPECIALIZE_COPY_ELEM(dtype)                                                        \
   template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
-                                              const MemoryCopyNdDesc& desc) const;      
+                                              const MemoryCopyNdDesc& desc) const;
 
 SPECIALIZE_COPY_ELEM(float16)
 SPECIALIZE_COPY_ELEM(float)
