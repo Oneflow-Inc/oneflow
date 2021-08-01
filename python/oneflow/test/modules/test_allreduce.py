@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
 
 import numpy as np
@@ -22,6 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllReduce(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_all_reduce(test_case):
@@ -45,7 +46,7 @@ class TestAllReduce(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), arr_rank1 + arr_rank2))
 
     @flow.unittest.skip_unless_2n2d()
-    def test_all_reduce(test_case):
+    def test_all_reduce_2nodes(test_case):
         np_arr = np.array([1, 2])
         x = flow.Tensor(np_arr * flow.distributed.get_rank())
         x = x.to(f"cuda:{flow.distributed.get_local_rank()}")
