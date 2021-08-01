@@ -1,73 +1,13 @@
-from multiprocessing.connection import Listener
 import os
-import subprocess
 import socket
-import tempfile
-from contextlib import closing
 import argparse
 import uuid
 import getpass
 import atexit
-import pathlib
 import asyncio
 import glob
-from datetime import date
 
-HARD_CODED_AFFILIATIONS = {
-    "192.168.1.11": ["192.168.1.12",],
-    "192.168.1.12": ["192.168.1.11",],
-    "192.168.1.13": ["192.168.1.11",],
-    "192.168.1.15": ["192.168.1.16",],
-    "192.168.1.16": ["192.168.1.15",],
-}
-
-
-def is_img_existing(tag):
-    returncode = subprocess.run(
-        "docker image inspect {}".format(tag),
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    ).returncode
-    if returncode == 0:
-        print("[OK]", tag)
-        return True
-    else:
-        return False
-
-
-def get_affiliations(host):
-    # TODO(tsai): Implement a HTTP endpoint to retrieve affiliations
-    if host in HARD_CODED_AFFILIATIONS:
-        return HARD_CODED_AFFILIATIONS[host]
-    else:
-        return None
-
-
-def resolve_hostname_hardcoded(host: str):
-    if host.startswith("oneflow"):
-        number = host.split("-")[-1]
-        return f"192.168.1.{number}"
-    else:
-        return host
-
-
-def find_free_port():
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("localhost", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
-
-
-async def spawn_shell_and_check(cmd: str = None):
-    p = await asyncio.create_subprocess_shell(cmd,)
-    await p.wait()
-    assert p.returncode == 0, cmd
-
-
-async def spawn_shell(cmd: str = None):
-    p = await asyncio.create_subprocess_shell(cmd,)
-    await p.wait()
+from distributed_run_util import spawn_shell_and_check, spawn_shell, resolve_hostname_hardcoded, get_affiliations, is_img_existing, remove_containers_by_name, get_oneflow_wheel_path
 
 
 async def build_docker_img(remote_host=None, workspace_dir=None):
@@ -128,16 +68,6 @@ async def launch_remote_container(
         )
 
 
-async def remove_containers_by_name(remote_hosts=None, container_name=None):
-    rm_cmd = f"docker rm -f {container_name}"
-    assert container_name
-    assert remote_hosts
-    await asyncio.gather(
-        *[spawn_shell(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
-        spawn_shell(rm_cmd),
-    )
-
-
 def get_machines(args):
     if len(args.machine) == 0:
         this_host = socket.gethostname()
@@ -172,30 +102,8 @@ if __name__ == "__main__":
     assert bool(args.bash_script) != bool(args.cmd)
     if args.bash_script:
         args.cmd = f'bash {args.bash_script}'
-    oneflow_wheel_path = args.oneflow_wheel_path
-    if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
-        whl_paths = [
-            name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
-        ]
-        if len(whl_paths) == 1:
-            oneflow_wheel_path = whl_paths[0]
-        else:
-            assert args.oneflow_wheel_python_version
-            assert args.oneflow_wheel_python_version in [
-                "3.6",
-                "3.7",
-                "3.8",
-                "3.9",
-                "3.10",
-                "3.11",
-            ]
-            ver_cat = args.oneflow_wheel_python_version.replace(".", "")
-            found = False
-            for whl_path in whl_paths:
-                if f"cp{ver_cat}" in whl_path:
-                    oneflow_wheel_path = whl_path
-                    found = True
-            assert found, whl_paths
+
+    oneflow_wheel_path = get_oneflow_wheel_path(args)
 
     machines = get_machines(args)
 
@@ -217,9 +125,9 @@ if __name__ == "__main__":
         asyncio.gather(
             *[
                 create_remote_workspace_dir(
-                    remote_host=remote_host, workspace_dir=workspace_dir
+                    remote_host=machine, workspace_dir=workspace_dir
                 )
-                for remote_host in machines
+                for machine in machines
             ],
             remove_containers_by_name(
                 remote_hosts=machines, container_name=container_name
@@ -253,29 +161,16 @@ if __name__ == "__main__":
                         )
                         for remote_host in machines
                     ],
-                    build_docker_img(workspace_dir=workspace_dir),
                 )
             )
             img_tag = default_docker_image
     else:
         img_tag = args.custom_img_tag
     assert img_tag
-    agent_port = find_free_port()
-    agent_authkey = str(uuid.uuid4())
 
     def exit_handler():
         print(
             "---------start cleanup, you should ignore errors below and check the errors above---------"
-        )
-        loop.run_until_complete(
-            asyncio.gather(
-                *[
-                    spawn_shell(
-                        f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R 777 .",
-                    )
-                    for remote_host in machines
-                ],
-            )
         )
         assert workspace_dir
         if args.debug == False:
@@ -283,8 +178,8 @@ if __name__ == "__main__":
             loop.run_until_complete(
                 asyncio.gather(
                     *[
-                        spawn_shell(f"ssh {remote_host} rm -rf {workspace_dir}",)
-                        for remote_host in machines
+                        spawn_shell(f"ssh {machine} rm -rf {workspace_dir}",)
+                        for machine in machines
                     ],
                 )
             )
