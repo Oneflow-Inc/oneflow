@@ -59,6 +59,9 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
                       std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), device(device_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
+      : attrs(attrs_arg),
+        parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
                       Symbol<cfg::ParallelDistribution> parallel_distribution_arg)
       : attrs(attrs_arg),

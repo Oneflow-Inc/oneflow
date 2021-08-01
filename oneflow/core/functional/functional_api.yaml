@@ -808,11 +808,11 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp)"
+  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp)"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor ToLocal(Tensor x)"
+  signature: "Tensor ConsistentToLocal(Tensor x)"
 
 - name: "identity"
   signature: "Tensor Identity(Tensor in)"
