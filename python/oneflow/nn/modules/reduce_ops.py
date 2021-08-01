@@ -114,6 +114,9 @@ class Min(Module):
         self._op = _build_reduce_op("reduce_min", keepdims)
 
     def forward(self, input):
+        # TODO: moves this check in functor
+        if input.shape.numel() == 0:
+            raise RuntimeError("operation does not have an identity.")
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
@@ -151,6 +154,9 @@ class Max(Module):
         self._op = _build_reduce_op("reduce_max", keepdims)
 
     def forward(self, input):
+        # TODO: moves this check in functor
+        if input.shape.numel() == 0:
+            raise RuntimeError("operation does not have an identity.")
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
