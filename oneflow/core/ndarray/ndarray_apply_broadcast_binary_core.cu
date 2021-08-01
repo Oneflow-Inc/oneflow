@@ -89,6 +89,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
+    if (n == 0) { return; }
     if (IsKernelSafeInt32(n) && PartialBroadcast<int32_t>(ctx, y, a, b)) { return; }
     if (!IsKernelSafeInt32(n) && PartialBroadcast<int64_t>(ctx, y, a, b)) { return; }
     RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, a, b);
@@ -151,6 +152,7 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS,
     size_t n = y.host_shape().HostElemNum();
     XpuVarNdarray<const T> a(y.host_shape(), y.host_ptr());
     using NBB = NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>;
+    if (n == 0) { return; }
     if (IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int32_t>(ctx, y, a, x)) { return; }
     if (!IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int64_t>(ctx, y, a, x)) { return; }
     RUN_CUDA_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, x);
