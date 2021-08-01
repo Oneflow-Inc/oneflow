@@ -503,7 +503,7 @@ jobs:
       - name: Module API test (distributed)
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
-          python3 ci/test/distributed_run_multi_client.py --bash_script=ci/test/2node_op_test_multi_client.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --oneflow_wheel_path oneflow-0.5.0.dev20210730+cu102-cp36-cp36m-manylinux2014_x86_64.whl --bash_script ci/test/2node_op_test_multi_client.sh --multi_client --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/
       - name: Dataloader API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)

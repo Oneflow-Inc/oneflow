@@ -13,7 +13,43 @@ import asyncio
 import glob
 from datetime import date
 
-from distributed_run_util import spawn_shell_and_check, spawn_shell, resolve_hostname_hardcoded, get_affiliations, is_img_existing, remove_containers_by_name, get_oneflow_wheel_path
+HARD_CODED_AFFILIATIONS = {
+    "192.168.1.11": ["192.168.1.12",],
+    "192.168.1.12": ["192.168.1.11",],
+    "192.168.1.13": ["192.168.1.11",],
+    "192.168.1.15": ["192.168.1.16",],
+    "192.168.1.16": ["192.168.1.15",],
+}
+
+
+def is_img_existing(tag):
+    returncode = subprocess.run(
+        "docker image inspect {}".format(tag),
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode
+    if returncode == 0:
+        print("[OK]", tag)
+        return True
+    else:
+        return False
+
+
+def get_affiliations(host):
+    # TODO(tsai): Implement a HTTP endpoint to retrieve affiliations
+    if host in HARD_CODED_AFFILIATIONS:
+        return HARD_CODED_AFFILIATIONS[host]
+    else:
+        return None
+
+
+def resolve_hostname_hardcoded(host: str):
+    if host.startswith("oneflow"):
+        number = host.split("-")[-1]
+        return f"192.168.1.{number}"
+    else:
+        return host
 
 
 def find_free_port():
@@ -21,6 +57,17 @@ def find_free_port():
         s.bind(("localhost", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
+
+
+async def spawn_shell_and_check(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
+    assert p.returncode == 0, cmd
+
+
+async def spawn_shell(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
 
 
 async def build_docker_img(remote_host=None, workspace_dir=None):
@@ -41,8 +88,19 @@ async def build_docker_img(remote_host=None, workspace_dir=None):
         await spawn_shell_and_check(f"bash docker/ci/test/build.sh")
 
 
-async def create_remote_workspace_dir(remote_host=None, workspace_dir=None):
+async def create_remote_workspace_dir(remote_host=None, workspace_dir=None, copy_files=None):
     await spawn_shell_and_check(f"ssh {remote_host} mkdir -p {workspace_dir}")
+    if copy_files is not None:
+        for path in copy_files:
+            # Reference: https://stackoverflow.com/a/31278462
+            if os.path.isdir(path) and path[-1] != "/":
+                path += "/"
+            await spawn_shell_and_check(
+                f"ssh {remote_host} mkdir -p {workspace_dir}/{path}"
+            )
+            await spawn_shell_and_check(
+                f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --exclude='__pycache__' {path} {remote_host}:{workspace_dir}/{path}"
+            )
     print("create_remote_workspace_dir done")
 
 
@@ -54,6 +112,8 @@ async def launch_remote_container(
     img_tag=None,
     oneflow_wheel_path=None,
     oneflow_python_path=None,
+    cmd=None,
+    node_rank=None,
 ):
     print("launching remote container at", remote_host)
     assert img_tag
@@ -75,6 +135,14 @@ async def launch_remote_container(
     await spawn_shell(
         f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
+    if cmd:
+        if node_rank is not None:
+            node_rank_args = f"--env NODE_RANK={node_rank}"
+        else:
+            node_rank_args = ""
+        await spawn_shell(
+            f"ssh {remote_host} docker exec {node_rank_args} {container_name} {cmd}"
+        )
 
 
 def handle_cast(conn=None, cmd=None):
@@ -300,6 +368,16 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     )
 
 
+async def remove_containers_by_name(remote_hosts=None, container_name=None):
+    rm_cmd = f"docker rm -f {container_name}"
+    assert container_name
+    assert remote_hosts
+    await asyncio.gather(
+        *[spawn_shell(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
+        spawn_shell(rm_cmd),
+    )
+
+
 def get_remote_hosts(args):
     remote_hosts = None
     if len(args.remote_host) == 1:
@@ -340,6 +418,8 @@ if __name__ == "__main__":
         "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
     )
     parser.add_argument("--timeout", type=int, required=False, default=1 * 60 * 60)
+    parser.add_argument("--multi_client", action="store_true", required=False, default=False)
+    parser.add_argument("--copy_files", action="append", default=[])
     args = parser.parse_args()
 
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_python_path)
@@ -350,7 +430,30 @@ if __name__ == "__main__":
             args.oneflow_python_path
         ), "--skip_libs only works with --oneflow_python_path"
 
-    oneflow_wheel_path = get_oneflow_wheel_path(args)
+    oneflow_wheel_path = args.oneflow_wheel_path
+    if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
+        whl_paths = [
+            name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
+        ]
+        if len(whl_paths) == 1:
+            oneflow_wheel_path = whl_paths[0]
+        else:
+            assert args.oneflow_wheel_python_version
+            assert args.oneflow_wheel_python_version in [
+                "3.6",
+                "3.7",
+                "3.8",
+                "3.9",
+                "3.10",
+                "3.11",
+            ]
+            ver_cat = args.oneflow_wheel_python_version.replace(".", "")
+            found = False
+            for whl_path in whl_paths:
+                if f"cp{ver_cat}" in whl_path:
+                    oneflow_wheel_path = whl_path
+                    found = True
+            assert found, whl_paths
 
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
@@ -370,12 +473,14 @@ if __name__ == "__main__":
         + "-distributed-run-main-node-at-"
         + this_host.replace(".", "-")
     )
+    if args.multi_client:
+        remote_hosts = [this_host] + remote_hosts
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
         asyncio.gather(
             *[
                 create_remote_workspace_dir(
-                    remote_host=remote_host, workspace_dir=workspace_dir
+                    remote_host=remote_host, workspace_dir=workspace_dir, copy_files=args.copy_files
                 )
                 for remote_host in remote_hosts
             ],
@@ -477,11 +582,14 @@ if __name__ == "__main__":
             )
         )
         print("copying artifacts")
+        extra_exclude_args = ""
+        for path in args.copy_files:
+            extra_exclude_args += f"--exclude='{path}' "
         loop.run_until_complete(
             asyncio.gather(
                 *[
                     spawn_shell(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='oneflow_python' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='oneflow_python' {extra_exclude_args} {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -506,37 +614,60 @@ if __name__ == "__main__":
         )
 
     atexit.register(exit_handler)
-    loop.run_until_complete(
-        asyncio.gather(
-            *[
-                launch_remote_container(
-                    remote_host=remote_host,
-                    survival_time=args.timeout,
-                    workspace_dir=workspace_dir,
-                    container_name=container_name,
-                    oneflow_wheel_path=oneflow_wheel_path,
-                    oneflow_python_path=args.oneflow_python_path,
-                    img_tag=img_tag,
-                )
-                for remote_host in remote_hosts
-            ],
-        )
-    )
-
-    with DockerAgent(
-        port=agent_port,
-        authkey=agent_authkey.encode(),
-        this_host=this_host,
-        remote_hosts=remote_hosts,
-        container_name=container_name,
-        workspace_dir=workspace_dir,
-        oneflow_wheel_path=oneflow_wheel_path,
-        oneflow_python_path=args.oneflow_python_path,
-        img_tag=img_tag,
-        oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
-    ) as agent:
+    if args.multi_client:
         if args.bash_script:
-            agent.run_bash_script_async(bash_script=args.bash_script,)
-        elif args.cmd:
-            agent.run_bash_script_async(cmd=args.cmd,)
-        agent.block()
+            args.cmd = f"bash {args.bash_script}"
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    launch_remote_container(
+                        remote_host=remote_host,
+                        survival_time=args.timeout,
+                        workspace_dir=workspace_dir,
+                        container_name=container_name,
+                        oneflow_wheel_path=oneflow_wheel_path,
+                        oneflow_python_path=args.oneflow_python_path,
+                        img_tag=img_tag,
+                        cmd=args.cmd,
+                        node_rank=node_rank,
+                    )
+                    for node_rank, remote_host in enumerate(remote_hosts)
+                ],
+            )
+        )
+    else:
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    launch_remote_container(
+                        remote_host=remote_host,
+                        survival_time=args.timeout,
+                        workspace_dir=workspace_dir,
+                        container_name=container_name,
+                        oneflow_wheel_path=oneflow_wheel_path,
+                        oneflow_python_path=args.oneflow_python_path,
+                        img_tag=img_tag,
+                    )
+                    for remote_host in remote_hosts
+                ],
+            )
+        )
+
+    if not args.multi_client:
+        with DockerAgent(
+            port=agent_port,
+            authkey=agent_authkey.encode(),
+            this_host=this_host,
+            remote_hosts=remote_hosts,
+            container_name=container_name,
+            workspace_dir=workspace_dir,
+            oneflow_wheel_path=oneflow_wheel_path,
+            oneflow_python_path=args.oneflow_python_path,
+            img_tag=img_tag,
+            oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
+        ) as agent:
+            if args.bash_script:
+                agent.run_bash_script_async(bash_script=args.bash_script,)
+            elif args.cmd:
+                agent.run_bash_script_async(cmd=args.cmd,)
+            agent.block()
