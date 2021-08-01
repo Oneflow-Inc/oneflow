@@ -93,6 +93,7 @@ Maybe<Shape> GetConcatenatedShape(
   BalancedSplitter bs(logical_concat_dim, parallel_desc->parallel_num());
   CHECK_EQ_OR_RETURN(first_flat_shape->At(concat_axis), bs.At(0).size());
   const auto& shape = JUST(first_flat_shape->ToShape());
+  shape->Set(concat_axis, logical_concat_dim);
   for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
     const auto& rank_flat_shape = JUST(GetRankPhyShapeByParallelId(parallel_id));
     for (int i = 0; i < shape->NumAxes(); ++i) {
