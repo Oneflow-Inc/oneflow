@@ -58,6 +58,8 @@ def to_consistent_op(input, placement, sbp, shape=None):
         >>> output_tensor.is_consistent
         True
     """
+    if isinstance(sbp, flow.sbp.sbp):
+        sbp = (sbp,)
     return flow.F.to_consistent(input, placement, sbp, shape)
 
 

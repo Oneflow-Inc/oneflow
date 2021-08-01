@@ -101,6 +101,7 @@ Maybe<void> CheckConsistencyAsyncRpcCtx::MakeDataBufferAndCallback(
 }
 
 Maybe<void> CheckConsistencyAsyncRpcCtx::Check() const {
+  if (!flat_tensor_consistency_) { return Maybe<void>::Ok(); }
   JUST(flat_tensor_consistency_->Check(tensor_meta_, consumer_parallel_distribution_constraint_, tensor_rpc_token_));
   return Maybe<void>::Ok();
 }
