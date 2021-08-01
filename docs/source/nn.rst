@@ -14,6 +14,7 @@ Operators for neural networks
         BCEWithLogitsLoss,
         BatchNorm1d,
         BatchNorm2d,
+        BatchNorm3d,
         COCOReader,
         CTCLoss,
         CoinFlip,

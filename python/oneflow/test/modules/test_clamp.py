@@ -153,6 +153,13 @@ class TestClampModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(auto_backward=False)
+    def test_clamp_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.clamp(x, min=random().to(float), max=random().to(float))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
