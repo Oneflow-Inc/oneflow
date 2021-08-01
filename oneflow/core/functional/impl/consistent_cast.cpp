@@ -45,19 +45,20 @@ namespace impl {
 namespace {
 
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape& shape) {
-  const auto& send_buffer = JUST(FlatShape::New(shape));
   const auto& rpc_token =
       JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdAll2AllSyncShape));
-  NaiveAsyncRpcCtx send_ctx(
-    rpc_token, [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+  const auto& send_buffer = JUST(FlatShape::New(shape));
+  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
+  map->emplace(GlobalProcessCtx::Rank(), send_buffer);
+  NaiveAsyncRpcCtx ctx(
+    rpc_token,
+    [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
       *buffer = send_buffer.get();
       *size = sizeof(FlatShape);
       *Cb = [send_buffer] {};
       return Maybe<void>::Ok();
-    });
-  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
-  NaiveAsyncRpcCtx recv_ctx(
-    rpc_token, [map](int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    },
+    [map](int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
       const auto& recv_buffer = std::make_shared<FlatShape>();
       recv_buffer->clear();
       *buffer = recv_buffer.get();
@@ -67,10 +68,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape
       return Maybe<void>::Ok();
     });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &send_ctx));
-  JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &recv_ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(recv_ctx, RpcUtil::TimeoutSeconds()));
+  JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &ctx));
+  JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &ctx));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
   return map;
 }
 

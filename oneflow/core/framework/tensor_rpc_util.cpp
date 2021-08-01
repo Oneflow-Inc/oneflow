@@ -90,7 +90,17 @@ FLAT_MSG_END(FlatTensorConsistency);
 
 CheckConsistencyAsyncRpcCtx::~CheckConsistencyAsyncRpcCtx() {}
 
-Maybe<void> CheckConsistencyAsyncRpcCtx::MakeDataBufferAndCallback(
+Maybe<void> CheckConsistencyAsyncRpcCtx::PrepareSendBufferAndCallback(
+    int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
+  const auto& tensor_consistency =
+      JUST(FlatTensorConsistency::New(tensor_meta_, consumer_parallel_distribution_constraint_, tensor_rpc_token_));
+  *buffer = tensor_consistency.get();
+  *size = sizeof(FlatTensorConsistency);
+  *Callback = [tensor_consistency] {};
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckConsistencyAsyncRpcCtx::PrepareRecvBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
   const auto& flat_tensor_consistency = JUST(FlatTensorConsistency::New());
   *buffer = flat_tensor_consistency.get();
@@ -102,49 +112,23 @@ Maybe<void> CheckConsistencyAsyncRpcCtx::MakeDataBufferAndCallback(
 
 Maybe<void> CheckConsistencyAsyncRpcCtx::Check() const {
   if (!flat_tensor_consistency_) { return Maybe<void>::Ok(); }
-  JUST(flat_tensor_consistency_->Check(tensor_meta_, consumer_parallel_distribution_constraint_, tensor_rpc_token_));
+  JUST(flat_tensor_consistency_->Check(
+      tensor_meta_, consumer_parallel_distribution_constraint_, tensor_rpc_token_));
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> SendTensorMetaToNextRankInRing(const one::Tensor& tensor, Symbol<RankGroup> rank_group,
-                                           const RpcToken& rpc_token) {
-  const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
-  const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
-  const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
-  NaiveAsyncRpcCtx ctx(
-      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Callback) -> Maybe<void> {
-        const auto& tensor_consistency =
-            JUST(FlatTensorConsistency::New(tensor_meta, constaint, tensor_rpc_token));
-        *buffer = tensor_consistency.get();
-        *size = sizeof(FlatTensorConsistency);
-        *Callback = [tensor_consistency] {};
-        return Maybe<void>::Ok();
-      });
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &ctx));
-  return Maybe<void>::Ok();
-}
-
-Maybe<CheckConsistencyAsyncRpcCtx> ReceiveTensorMetaFromPrevRankInRing(const one::Tensor& tensor,
-                                                                       Symbol<RankGroup> rank_group,
-                                                                       const RpcToken& rpc_token) {
-  const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
-  const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
-  const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
-  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(rpc_token, tensor_meta, constaint, tensor_rpc_token);
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
-  return ctx;
-}
-
-}  // namespace
 
 Maybe<CheckConsistencyAsyncRpcCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& rpc_token =
       JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckTensorConsistency));
-  JUST(SendTensorMetaToNextRankInRing(tensor, rank_group, rpc_token));
-  return ReceiveTensorMetaFromPrevRankInRing(tensor, rank_group, rpc_token);
+  const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
+  const auto& constaint = JUST(tensor.consumer_parallel_distribution_constraint());
+  const RpcToken& tensor_rpc_token = JUST(tensor.rpc_token());
+  const auto& ctx = std::make_shared<CheckConsistencyAsyncRpcCtx>(
+    rpc_token, tensor_meta, constaint, tensor_rpc_token);
+  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, ctx.get()));
+  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
+  return ctx;
 }
 
 }  // namespace oneflow
