@@ -20,6 +20,7 @@ from collections import OrderedDict
 import numpy as np
 from automated_test_util import *
 from test_util import GenArgList
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 import oneflow as flow
 import oneflow.unittest
@@ -105,29 +106,8 @@ def _run_test_min_max_observer(
     quantization_formula,
     per_layer_quantization,
 ):
-    assert device_type in ["gpu", "cpu"]
-    flow.clear_default_session()
-    if device_type == "cpu":
-        flow.config.cpu_device_num(device_num)
-    else:
-        flow.config.gpu_device_num(device_num)
-
-    @flow.global_function(type="predict", function_config=flow.FunctionConfig())
-    def QuantizeJob(
-        weight: oft.Numpy.Placeholder(weight_shape, dtype=type_name_to_flow_type[dtype])
-    ):
-        with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
-            (scale, zero_point) = flow.quantization.min_max_observer(
-                weight,
-                quantization_bit,
-                quantization_scheme,
-                quantization_formula,
-                per_layer_quantization,
-            )
-        return (scale, zero_point)
-
     weight = (np.random.random(weight_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    (scale, zero_point) = QuantizeJob(weight).get()
+    scale, zero_point = flow.quantization.min_max_observer(weight, quantization_bit, quantization_scheme, quantization_formula, per_layer_quantization)
     _check_min_max_observer(
         test_case,
         weight,
@@ -140,13 +120,23 @@ def _run_test_min_max_observer(
     )
 
 
-class TestFakeQuantization(flow.unittest.TestCase):
-    def test_flip(test_case):
+class TestMinMaxObserver(flow.unittest.TestCase):
+    def test_min_max_observer(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = []
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_num"] = [1, 4]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["weight_shape"] = [(9, 40, 20, 10)]
+        arg_dict["quantization_bit"] = [8, 2]
+        arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["quantization_formula"] = ["google"]
+        arg_dict["per_layer_quantization"] = [True, False]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
+            _run_test_min_max_observer(*arg)
+
 
 
 if __name__ == "__main__":

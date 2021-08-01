@@ -44,9 +44,9 @@ class MinMaxObserver(Module):
 
 def min_max_observer_op(
     input,
-    quantization_formula: str = "google",
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
     per_layer_quantization: bool = True,
 ):
     """Compute the quantization parameters of the input tensor.
