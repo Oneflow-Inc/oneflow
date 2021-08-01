@@ -22,13 +22,13 @@ class ToConsistent(Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, x, sbp, placement):
+    def forward(self, x, placement, sbp):
         if isinstance(sbp, flow.sbp.sbp):
             sbp = [sbp]
         else:
             assert isinstance(sbp, (list, tuple))
             sbp = list(sbp)
-        return flow.F.to_consistent(x, sbp=sbp, placement=placement)
+        return flow.F.to_consistent(x, placement=placement, sbp=sbp)
 
 
 @register_tensor_op("to_consistent")
