@@ -59,14 +59,16 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape.At(i);
-    if (dim_size == 0) {
+    const int64_t step = step_vec.at(i);
+    int64_t start = start_vec.at(i);
+    int64_t stop = stop_vec.at(i);
+    if (dim_size == 0 || start == stop) {
       dim_vec[i] = 0;
       continue;
     }
-    const int64_t step = step_vec.at(i);
     CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
-    int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
-    int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
+    start = RegulateSliceStart(start, dim_size);
+    stop = RegulateSliceStop(stop, dim_size);
     if (step > 0) {
       CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
                                          ", otherwise empty result will be outputted.";

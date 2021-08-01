@@ -48,7 +48,7 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
   *out_tensor_desc = in_tensor_desc;
   CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
   DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
-  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GT_OR_RETURN(dim_vec.at(i), 0); }
+  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GE_OR_RETURN(dim_vec.at(i), 0); }
   *out_shape = Shape(dim_vec);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();

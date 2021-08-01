@@ -99,7 +99,9 @@ struct NdarrayApplyBroadcastBinary<
     CHECK_EQ(y.shape().NumAxes(), a.shape().NumAxes());
     CHECK_EQ(y.shape().NumAxes(), b.shape().NumAxes());
     for (int i = 0; i < y.shape().NumAxes(); ++i) {
-      CHECK_EQ(y.shape().At(i), std::max(a.shape().At(i), b.shape().At(i)));
+      CHECK_EQ(y.shape().At(i), (a.shape().At(i) == 0 || b.shape().At(i) == 0)
+                                    ? 0
+                                    : std::max(a.shape().At(i), b.shape().At(i)));
       if (a.shape().At(i) != b.shape().At(i)) {
         CHECK(a.shape().At(i) == 1 || b.shape().At(i) == 1);
       }
