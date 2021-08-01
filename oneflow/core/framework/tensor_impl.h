@@ -273,9 +273,10 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
 
-  static Maybe<EagerConsistentTensorImpl> New(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf);
+  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                                              Symbol<Device> device,
+                                              const Optional<int64_t>& parallel_id,
+                                              bool requires_grad, bool is_leaf);
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,

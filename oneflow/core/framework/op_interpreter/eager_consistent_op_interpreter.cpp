@@ -79,8 +79,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl =
-        JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device, parallel_id, false, false));
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
+                                                                  parallel_id, false, false));
     const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
