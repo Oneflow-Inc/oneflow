@@ -46,19 +46,20 @@ namespace impl {
 namespace {
 
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape& shape) {
-  const auto& send_buffer = JUST(FlatShape::New(shape));
   const auto& rpc_token =
       JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdAll2AllSyncShape));
-  NaiveAsyncRpcCtx send_ctx(
-    rpc_token, [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+  const auto& send_buffer = JUST(FlatShape::New(shape));
+  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
+  map->emplace(GlobalProcessCtx::Rank(), send_buffer);
+  NaiveAsyncRpcCtx ctx(
+    rpc_token,
+    [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
       *buffer = send_buffer.get();
       *size = sizeof(FlatShape);
       *Cb = [send_buffer] {};
       return Maybe<void>::Ok();
-    });
-  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
-  NaiveAsyncRpcCtx recv_ctx(
-    rpc_token, [map](int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    },
+    [map](int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
       const auto& recv_buffer = std::make_shared<FlatShape>();
       recv_buffer->clear();
       *buffer = recv_buffer.get();
@@ -68,10 +69,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape
       return Maybe<void>::Ok();
     });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &send_ctx));
-  JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &recv_ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(recv_ctx, RpcUtil::TimeoutSeconds()));
+  JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &ctx));
+  JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &ctx));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
   return map;
 }
 
@@ -94,6 +94,7 @@ Maybe<Shape> GetConcatenatedShape(
   BalancedSplitter bs(logical_concat_dim, parallel_desc->parallel_num());
   CHECK_EQ_OR_RETURN(first_flat_shape->At(concat_axis), bs.At(0).size());
   const auto& shape = JUST(first_flat_shape->ToShape());
+  shape->Set(concat_axis, logical_concat_dim);
   for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
     const auto& rank_flat_shape = JUST(GetRankPhyShapeByParallelId(parallel_id));
     for (int i = 0; i < shape->NumAxes(); ++i) {
@@ -170,7 +171,6 @@ class LocalToConsistentFunctor {
       return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
     }
     CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
-    CHECK_OR_RETURN(x->is_eager()) << Error::Unimplemented() << "eager tensors supported only";
     const auto& device = JUST(x->device());
     if (device->type() != "cpu") {
       CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
@@ -202,19 +202,8 @@ class ConsistentToLocalFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-    CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-    int64_t machine_id = 0;
-    int64_t device_id = 0;
-    const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-    if (!parallel_desc->Containing(machine_id, device_id)) {
-      // should return UndefinesdLocalTensor here, the impl of which need to be discussed
-      return std::shared_ptr<Tensor>();
-    }
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {consistent_tensor}));
-    return output;
+    CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
 
  private:

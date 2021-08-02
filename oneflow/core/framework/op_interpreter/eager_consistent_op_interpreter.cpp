@@ -144,17 +144,12 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_OR_RETURN(inputs.at(0)->is_consistent());
-  const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
-  CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
-  const std::shared_ptr<Tensor>& mirrored_tensor =
-      JUST(JUST(input_consistent_tensor->cur_rank_phy_tensor())->detach());
-  bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
+  const auto& input_tensor = inputs.at(0);
+  const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
+  bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
   mirrored_tensor->set_requires_grad(requires_grad);
   mirrored_tensor->set_is_leaf(!requires_grad);
-  const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(mirrored_tensor);
-  CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
-  outputs->at(0) = out_tensor;
+  outputs->at(0) = mirrored_tensor;
   return Maybe<void>::Ok();
 }
 
