@@ -124,7 +124,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(input_tensor->dtype());
+  blob_conf->set_data_type(input_tensor->dtype()->data_type());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
@@ -174,7 +174,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
@@ -238,7 +238,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   output_conf->set_out("out");
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(input_tensor->dtype());
+  blob_conf->set_data_type(input_tensor->dtype()->data_type());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 

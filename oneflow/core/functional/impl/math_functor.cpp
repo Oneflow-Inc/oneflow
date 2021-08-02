@@ -321,7 +321,7 @@ class ClipByScalarMinGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype()->data_type()) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
     } else if (IsIntegralDataType(x->dtype()->data_type())) {

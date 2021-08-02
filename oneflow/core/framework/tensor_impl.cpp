@@ -222,7 +222,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
       JUST(GetLogicalShape(*cur_rank_phy_tensor->shape(), *parallel_distribution, *parallel_desc));
   const auto& dtype = cur_rank_phy_tensor->dtype();
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
+      ConsistentTensorMeta(shape, dtype->data_type(), parallel_distribution, parallel_desc));
   return std::shared_ptr<EagerConsistentTensorImpl>(
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor));
