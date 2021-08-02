@@ -377,7 +377,6 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
 
     int64_t divide_factor;
     if (divisor_override != 0) {
-      // std::cout << "divisor override != 0" << std::endl;
       divide_factor = divisor_override;
     } else {
       if (count_include_pad) {

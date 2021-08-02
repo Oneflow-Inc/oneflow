@@ -375,7 +375,6 @@ class AvgPool1d(Module):
         >>> import oneflow as flow 
         >>> import numpy as np 
 
-
         >>> of_avgpool1d = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
         >>> x = flow.Tensor(np.random.randn(1, 4, 4))
         >>> y = of_avgpool1d(x)
@@ -449,7 +448,6 @@ class AvgPool2d(Module):
         >>> import oneflow as flow 
         >>> import numpy as np 
 
-        
         >>> of_avgpool2d = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
         >>> x = flow.Tensor(np.random.randn(1, 4, 4, 4))
         >>> y = of_avgpool2d(x)   
