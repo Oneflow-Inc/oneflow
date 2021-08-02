@@ -20,29 +20,31 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
 class TestPooling(unittest.TestCase):
     run_test = False
-
-    def _test_body(self, x, ksize, strides, padding, data_format, dtype=np.float32):
+    def _test_body(self, x, ksize, strides, padding, data_format):
         if not self.run_test:
             return
-        f1 = self.make_job(
-            x.shape, ksize, strides, padding, data_format, dtype=flow.float32
+
+        func = self.make_job(
+            x.shape, ksize, strides, padding, data_format
         )
-        f2 = self.make_trt_job(
-            x.shape, ksize, strides, padding, data_format, dtype=flow.float32
-        )
-        a = f1(x).get()
-        b = f2(x).get()
-        print("without trt: ", a)
-        print("with tensorrt", b)
-        self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
+        out = func(x).get()
+        out_np = out.numpy()
         flow.clear_default_session()
+
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = self.make_job(
+                x.shape, ksize, strides, padding, data_format, xrts=[xrt]
+            )
+            xrt_out = xrt_job(x).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(
         self, shape, ksize, strides, padding, data_format, dtype=np.float32
@@ -54,7 +56,6 @@ class TestPooling(unittest.TestCase):
             strides=strides,
             padding=padding,
             data_format=data_format,
-            dtype=dtype,
         )
 
     def _test_random_body(
@@ -67,7 +68,6 @@ class TestPooling(unittest.TestCase):
             strides=strides,
             padding=padding,
             data_format=data_format,
-            dtype=dtype,
         )
 
     def test_ones_input(self):
@@ -101,13 +101,13 @@ class TestMaxPooling(TestPooling):
     run_test = True
 
     def make_job(
-        self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32
+        self, x_shape, ksize, strides, padding, data_format, xrts=[]
     ):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
+        config = flow.FunctionConfig()
+        xrt_util.set_xrt(config, xrts=xrts)
 
-        @flow.global_function(config)
-        def max_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+        @flow.global_function(function_config=config)
+        def max_pooling_job(x:oft.Numpy.Placeholder(x_shape)):
             return flow.nn.max_pool2d(
                 x,
                 ksize=ksize,
@@ -118,36 +118,17 @@ class TestMaxPooling(TestPooling):
 
         return max_pooling_job
 
-    def make_trt_job(
-        self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32
-    ):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
-
-        @flow.global_function(config)
-        def trt_max_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
-            return flow.nn.max_pool2d(
-                x,
-                ksize=ksize,
-                strides=strides,
-                padding=padding,
-                data_format=data_format,
-            )
-
-        return trt_max_pooling_job
-
-
 class TestAveragePooling(TestPooling):
     run_test = True
 
     def make_job(
-        self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32
+        self, x_shape, ksize, strides, padding, data_format, xrts=[]
     ):
-        config.use_xla_jit(False)
-        config.use_tensorrt(False)
+        config = flow.FunctionConfig()
+        xrt_util.set_xrt(config, xrts=xrts)
 
-        @flow.global_function(config)
-        def avg_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
+        @flow.global_function(function_config=config)
+        def avg_pooling_job(x:oft.Numpy.Placeholder(x_shape)):
             return flow.nn.avg_pool2d(
                 x,
                 ksize=ksize,
@@ -157,25 +138,6 @@ class TestAveragePooling(TestPooling):
             )
 
         return avg_pooling_job
-
-    def make_trt_job(
-        self, x_shape, ksize, strides, padding, data_format, dtype=flow.float32
-    ):
-        config.use_xla_jit(False)
-        config.use_tensorrt(True)
-
-        @flow.global_function(config)
-        def trt_avg_pooling_job(x=flow.FixedTensorDef(x_shape, dtype=dtype)):
-            return flow.nn.avg_pool2d(
-                x,
-                ksize=ksize,
-                strides=strides,
-                padding=padding,
-                data_format=data_format,
-            )
-
-        return trt_avg_pooling_job
-
 
 if __name__ == "__main__":
     unittest.main()

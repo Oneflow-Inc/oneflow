@@ -20,59 +20,31 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
-
-def make_job(input_shape, axis, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
+def make_job(input_shape, axis, xrts=[]):
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
+    def batch_norm_job(x:oft.Numpy.Placeholder(input_shape)):
         return flow.layers.batch_normalization(x, axis=axis)
 
     return batch_norm_job
 
 
-def make_xla_job(input_shape, axis, dtype=flow.float32):
-    config.use_xla_jit(True)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def xla_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.layers.batch_normalization(x, axis=axis)
-
-    return xla_batch_norm_job
-
-
-def make_trt_job(input_shape, axis, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_batch_norm_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.layers.batch_normalization(x, axis=axis)
-
-    return trt_batch_norm_job
-
-
 class TestRelu(unittest.TestCase):
     def _test_body(self, x, axis, dtype=np.float32):
-        f1 = make_job(x.shape, axis, dtype=flow.float32)
-        f2 = make_xla_job(x.shape, axis, dtype=flow.float32)
-        f3 = make_trt_job(x.shape, axis, dtype=flow.float32)
-        check_point = flow.train.CheckPoint()
-        check_point.init()
-        a = f1(x).get()
-        b = f2(x).get()
-        print("without xla: ", a)
-        print("with xla: ", b)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
-        c = f3(x).get()
-        print("with tensorrt: ", c)
-        self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
+        func = make_job(x.shape, axis)
+        out = func(x).get()
+        out_np = out.numpy()
         flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(x.shape, axis, xrts=[xrt])
+            xrt_out = xrt_job(x).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(self, shape, axis, dtype=np.float32):
         x = np.ones(shape, dtype=dtype)
