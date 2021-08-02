@@ -62,6 +62,7 @@ header_fmt = (
 #define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -179,7 +180,7 @@ argument_type_aliases = {
     "String": "const std::string&",
     "StringList": "const std::vector<std::string>&",
     "BoolList": "const std::vector<bool>&",
-    "DataType": "const DataType&",
+    "DataType": "const Symbol<DType>&",
     "Shape": "const Shape&",
     "Generator": "const std::shared_ptr<one::Generator>&",
     "TensorIndex": "const TensorIndex&",
@@ -203,7 +204,7 @@ optional_argument_type_aliases = {
     "String": "const Optional<std::string>&",
     "StringList": "const Optional<std::vector<std::string>>&",
     "BoolList": "const Optional<std::vector<bool>>&",
-    "DataType": "const Optional<DataType>&",
+    "DataType": "const Optional<Symbol<DType>>&",
     "Shape": "const Optional<Shape>&",
     "Generator": "const Optional<one::Generator>&",
     "TensorIndex": "const Optional<TensorIndex>&",
