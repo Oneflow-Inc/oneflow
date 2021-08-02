@@ -282,7 +282,9 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
     def test_OFRecordBytesDecoder(test_case):
         batch_size = 16
         record_reader = flow.nn.OfrecordReader(
-            "/dataset/imagenette/ofrecord", batch_size=batch_size, part_name_suffix_length=5,
+            "/dataset/imagenette/ofrecord",
+            batch_size=batch_size,
+            part_name_suffix_length=5,
         )
         val_record = record_reader()
 
