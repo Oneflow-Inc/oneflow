@@ -23,12 +23,12 @@ class Randperm(Module):
     def __init__(
         self,
         N: flow.int32,
-        generator=None,
-        dtype=flow.int32,
+        generator: flow.Generator=None,
+        dtype:flow.dtype=flow.int32,
         layout=None,
-        device: flow.device = flow.device("cpu"),
-        requires_grad=False,
-        pin_memory=False,
+        device: Union[str, flow.device] = "cpu",
+        requires_grad: bool =False,
+        pin_memory: bool =False,
     ) -> None:
         super().__init__()
 
@@ -38,22 +38,14 @@ class Randperm(Module):
             print(
                 "WARNING:",
                 "oneflow.randperm.layout",
-                "will not be used. Layout is not currently supported.",
+                "will not be used. Layout is no  supported yet.",
             )
         if pin_memory:
             print(
                 "WARNING:",
                 "pin_memory",
-                "will not be used. pin_memory is not currently supported.",
+                "will not be used. pin_memory is not supported yet.",
             ),
-        if isinstance(device, str):
-            device = flow.device(device)
-        else:
-            device = device if device is not None else flow.device("cpu")
-        assert isinstance(device, flow.device)
-        assert isinstance(dtype, flow.dtype)
-        assert isinstance(requires_grad, bool)
-        assert isinstance(pin_memory, bool)
         assert N > 0
 
         self.device = device
@@ -95,6 +87,7 @@ def randperm(
         device: the desired device of returned tensor. Default: cpu.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
+
     Example::
     .. code-block:: python
 
