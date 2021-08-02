@@ -422,37 +422,21 @@ jobs:
         continue-on-error: true
         id: distributed_try_1
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Single client op test (distributed, 2nd try)
         timeout-minutes: 45
         if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: distributed_try_2
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Single client op test (distributed, 3rd try)
         timeout-minutes: 45
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: distributed_try_3
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Upload log (distributed test)
-        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: distributed-tmp
-          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
-      - name: Print backtrace (distributed test)
-        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
-        run: |
-          set -x
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Doctest
         timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
@@ -499,7 +483,41 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
             ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
+      - name: Module API test (distributed, 1st try)
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        id: new_interface_distributed_try_1
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Module API test (distributed, 2nd try)
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_1.outcome=='failure'
+        continue-on-error: true
+        id: new_interface_distributed_try_2
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Module API test (distributed, 3rd try)
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_2.outcome=='failure'
+        continue-on-error: false
+        id: new_interface_distributed_try_3
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Upload log (distributed test)
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
+      - name: Print backtrace (distributed test)
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
+        run: |
+          set -x
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Dataloader API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
@@ -508,7 +526,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/dataloader \
             ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && python3 -m pip install -r docker/ci/test-v2/requirements.txt --user && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && python3 -m pip install -r docker/ci/test-v2/requirements.txt --user && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
       - name: Tensor API test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
@@ -517,7 +535,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor \
             ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Graph API test
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
@@ -525,7 +543,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
             ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
       - name: Checkout Oneflow-Inc/models
         if: matrix.test_suite == 'cuda_new_interface'
         uses: actions/checkout@v2
@@ -541,7 +559,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
             ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test_multi_client/test_speed.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
       - name: Post speed stats
         if: matrix.test_suite == 'cuda_new_interface'
         continue-on-error: true
