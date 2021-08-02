@@ -81,6 +81,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         y = torch.unsqueeze(x, random(1, 3).to(int))
         return y
 
+    @autotest(auto_backward=False)
+    def test_unsqueeze_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(3, 2, 1, 0).to(device)
+        y = torch.unsqueeze(x, random(0, 2).to(int))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

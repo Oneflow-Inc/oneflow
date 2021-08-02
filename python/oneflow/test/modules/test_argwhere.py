@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_argwhere(test_case, shape, device):
@@ -38,10 +39,18 @@ class TestArgwhere(flow.unittest.TestCase):
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_argwhere]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6), (2, 3, 0, 4)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skip("pytorch do not have argwhere fn/module yet!")
+    @autotest(n=5, rtol=1e-5, atol=1e-5)
+    def test_argwhere_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)
+        y = torch.argwhere(x)
+        return y
 
 
 if __name__ == "__main__":

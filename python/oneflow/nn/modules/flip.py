@@ -25,7 +25,9 @@ from oneflow.nn.modules.utils import _check_axis
 class Flip(Module):
     def __init__(self, dims) -> None:
         super().__init__()
-        assert isinstance(dims, (list, tuple)), f"dims must be list or tuple"
+        assert isinstance(dims, (int, list, tuple)), f"dims must be int, list or tuple"
+        if isinstance(dims, int):
+            dims = [dims]
         self.dims = dims
 
     def forward(self, x):

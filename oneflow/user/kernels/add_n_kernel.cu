@@ -56,7 +56,7 @@ struct GpuAddCaller {
     for (int32_t i = 0; i < N; ++i) {
       para.in[i] = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
     }
-
+    if (n == 0) { return; }
     gpu_add<T, N>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, para);
