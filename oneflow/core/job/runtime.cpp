@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -62,14 +63,14 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
-    if (!Global<Maybe<bool>, MultiClient>::Get()) {
+    if (!CHECK_JUST(GlobalMultiClientEnv())) {
       // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
       Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
     }
     Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
     Global<ThreadMgr>::Get()->AddPlan(plan);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
-    if (!Global<Maybe<bool>, MultiClient>::Get()) {
+    if (!CHECK_JUST(GlobalMultiClientEnv())) {
       // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
       Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
     }
@@ -114,7 +115,7 @@ Runtime::~Runtime() {
   OF_SESSION_BARRIER();
 
   // TODO(chengcheng): move to session delete
-  if (!Global<Maybe<bool>, MultiClient>::Get()) {
+  if (!CHECK_JUST(GlobalMultiClientEnv())) {
     Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
     Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   }
