@@ -571,9 +571,9 @@ class Conv3d(Module):
     For example: 
     .. code-block:: python
         >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> import oneflow.experimental.nn as nn
-        >>> flow.enable_eager_execution()
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
         >>> arr = np.random.randn(1, 2, 5, 5, 5)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv3d(2, 4, kernel_size=3, stride=1)
