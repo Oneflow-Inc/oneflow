@@ -27,15 +27,11 @@ class ReturnFirstInputKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
-    const DataType in_data_type = in->data_type();
-    CHECK_EQ(out->data_type(), in_data_type);
-    AutoMemcpy(ctx->device_ctx(), out->mut_raw_dptr(), in->raw_dptr(),
-               in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
-               in->mem_case());
+    // do nothing
+    //
+    // NOTE:
+    // Please NOT use this op directly
+    // This op can only be used as flow.F.return_first_input
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

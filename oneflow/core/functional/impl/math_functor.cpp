@@ -401,7 +401,15 @@ class ReturnFirstInputFunctor {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
       std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
-      outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+      if (i == 0) {
+        // always inplace
+        std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
+        outs->at(0) = partial_inputs.at(0);
+        JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
+        outputs.push_back(outs->at(0));
+      } else {
+        outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+      }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs);
