@@ -19,11 +19,13 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -134,7 +136,8 @@ class ConsistentTensorImpl : public TensorImpl {
     return tensor_meta_->parallel_distribution();
   }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
+      const {
     return consumer_parallel_distribution_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
@@ -155,14 +158,24 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
+  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+
+  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
+    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
+    rpc_token_ = rpc_token;
+    return Maybe<void>::Ok();
+  }
+
  protected:
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_() {}
+        consumer_parallel_distribution_constraint_(),
+        rpc_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
+  Maybe<RpcToken> rpc_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
