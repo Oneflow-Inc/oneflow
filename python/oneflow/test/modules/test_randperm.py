@@ -63,7 +63,7 @@ class Testrandperm(flow.unittest.TestCase):
 
     def test_randperm_randomness(test_case):
         device = "cuda"
-        n = np.random.randint(100, 200)
+        n = np.random.randint(100, 1000)
         x1 = flow.randperm(n, device=device)
         x2 = flow.randperm(n, device=device)
         test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
