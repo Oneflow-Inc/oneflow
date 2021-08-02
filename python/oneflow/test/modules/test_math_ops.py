@@ -602,5 +602,160 @@ class TestAtan2(flow.unittest.TestCase):
         return y
 
 
+def _test_elementwise_minimum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10, 10, 200), (3, 12), (12,)]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.minimum(input_x, input_y)
+        np_values = np.minimum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+def _test_broadcast_minimum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [[(10, 10, 200), (10, 1, 1)], [(3, 12), (1, 12)]]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape[0]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape[1]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.minimum(input_x, input_y)
+        np_values = np.minimum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+@flow.unittest.skip_unless_1n1d()
+class TestMinimum(flow.unittest.TestCase):
+    def test_minimum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_elementwise_minimum,
+            _test_broadcast_minimum,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_elementwise_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.minimum(x, y)
+
+    @autotest()
+    def test_flow_broadcast_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        return torch.minimum(x, y)
+
+
+def _test_elementwise_maximum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10, 10, 200), (3, 12), (12,)]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.maximum(input_x, input_y)
+        np_values = np.maximum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+def _test_broadcast_maximum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [[(10, 10, 200), (10, 1, 1)], [(3, 12), (1, 12)]]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape[0]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape[1]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.maximum(input_x, input_y)
+        np_values = np.maximum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestMaximum(flow.unittest.TestCase):
+    def test_maximum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_elementwise_maximum,
+            _test_broadcast_maximum,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_elementwise_mximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.maximum(x, y)
+
+    @autotest()
+    def test_flow_broadcast_maximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        return torch.maximum(x, y)
+
+
 if __name__ == "__main__":
     unittest.main()
