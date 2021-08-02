@@ -50,7 +50,6 @@ Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
 Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
-  // static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter;
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},
        std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>()},
