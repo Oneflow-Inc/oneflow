@@ -118,7 +118,11 @@ def _check_moving_average_min_max_observer(
             moving_min_np,
         )
     test_case.assertTrue(np.allclose(scale_of[0], scale_np, rtol=0.001))
-    test_case.assertTrue(np.allclose(zero_point_of[0], zero_point_np, rtol=0.001))
+
+    rmse = np.sqrt(
+        np.mean((zero_point_of[0] - zero_point_np) ** 2)
+    )
+    assert rmse <= 1.0, "moving_average_min_max_observer op zero_point calculate has bug!"
 
 
 def _run_test_moving_average_min_max_observer(
@@ -134,23 +138,25 @@ def _run_test_moving_average_min_max_observer(
 ):
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
-    moving_max_tensor = flow.Tensor(moving_max_np)
-    moving_min_tensor = flow.Tensor(moving_min_np)
+    moving_max_tensor = flow.Tensor(moving_max_np, device=flow.device(device_type))
+    moving_min_tensor = flow.Tensor(moving_min_np, device=flow.device(device_type))
     current_train_step_tensor = flow.Tensor(
-        np.zeros((1,)).astype(np.float32), dtype=flow.int64
+        np.zeros((1,)).astype(np.float32),
+        dtype=flow.int64,
+        device=flow.device(device_type),
     )
     for i in range(10):
         activation = (np.random.random(activation_shape) - 0.5).astype(
             type_name_to_np_type[dtype]
         )
-        activation_tensor = flow.Tensor(activation)
+        activation_tensor = flow.Tensor(activation, device=flow.device(device_type))
         (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
             activation_tensor,
             current_train_step_tensor,
             moving_max_tensor,
             moving_min_tensor,
             True,
-            quantization_formula,
+            quantization_formula=quantization_formula,
             stop_update_after_iters=1,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
@@ -174,7 +180,7 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
     def test_moving_average_min_max_observer(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["activation_shape"] = [(9, 40, 20, 10)]
@@ -183,7 +189,8 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["quantization_formula"] = ["google"]
         arg_dict["momentum"] = [0.95]
         for arg in GenArgList(arg_dict):
-            _run_test_moving_average_min_max_observer(*arg)
+            for i in range(50):
+                _run_test_moving_average_min_max_observer(*arg)
 
 
 if __name__ == "__main__":
