@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.F.avg_pool_2d,
     r"""
-    avg_pool_2d(x: Tensor, *, kernel_size: Union[int, Tuple[int, int]], stride: Union[int, Tuple[int, int]], padding: string, padding_before: Union[int, Tuple[int, int]], padding_after: Union[int, Tuple[int, int]], data_format="channels_first": string, ceil_mode=False: bool) -> Tensor
+    avg_pool_2d(x: Tensor, *, kernel_size: Union[T, Tuple[T, T]], stride: Union[T, Tuple[T, T]], padding=0: Union[T, Tuple[T, T]], dilation=1: Union[T, Tuple[T, T]], ceil_mode=False: bool) -> Tensor
 
     Applies 2D average-pooling operation in kH x kW regions by step size sH x sW steps. The number of output features is equal to the number of input planes.
     
@@ -29,11 +29,9 @@ add_docstr(
         x (Tensor): the input tensor.
         kernel_size (Union[int, Tuple[int, int]]):  an int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
         stride (Union[int, Tuple[int, int]]): an int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
-        padding (string): the padding type. "valid" adds no zero padding. "same_lower" adds padding the low position such that if the stride is 1, the output shape is the same as input shape. "same_upper" adds padding the upper position such that if the stride is 1, the output shape is the same as input shape. "customized" adds padding in the customized type.
-        padding_before (Union[int, Tuple[int, int]]): the padding elements.
-        padding_after (Union[int, Tuple[int, int]]): the padding elements.
-        data_format (string, default to "channels_first"): "channels_first" indicates the input shape `NCHW`. "channels_last" indicates the input shape `NHWC`.
-        ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+        padding (Union[int, Tuple[int, int]], default to 0): an int or list of ints that has length 1, 2. Implicit minimum value padding to be added on both sides.
+        dilation (Union[int, Tuple[int, int]], default to 1): a parameter that controls the stride of elements in the window.
+        ceil_mode (bool, default to False): When :attr:`True`, will use ceil instead of floor to compute the output shape.
 
 """,
 )
