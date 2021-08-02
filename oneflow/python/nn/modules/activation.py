@@ -633,13 +633,12 @@ class LogSoftmax(Module):
         if need_transpose:
             x = flow.F.transpose(x, perm=permute)
 
-        x = x.softmax()
-        res = x.log()
+        x = flow.F.logsoftmax(x)
 
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
+            x = flow.F.transpose(x, perm=permute)
 
-        return res
+        return x
 
     def extra_repr(self):
         return f"dim={self.dim}"
