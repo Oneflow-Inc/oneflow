@@ -20,7 +20,6 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-import oneflow.utils.data as data
 
 
 class ScpDataset(flow.utils.data.Dataset):
@@ -41,7 +40,7 @@ class ScpDataset(flow.utils.data.Dataset):
 class TestNumpyDataset(flow.unittest.TestCase):
     def test_numpy_dataset(test_case):
         dataset = ScpDataset()
-        dataloader = data.DataLoader(dataset, batch_size=16, shuffle=True)
+        dataloader = flow.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
         for X in dataloader:
             test_case.assertEqual(X.shape, flow.Size([16, 200, 81]))
 
