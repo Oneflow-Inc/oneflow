@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/common/error.h"
@@ -48,7 +49,7 @@ class Tensor {
   virtual int64_t dim(int64_t index) const = 0;
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual DataType dtype() const = 0;
+  virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<RpcToken> rpc_token() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
@@ -148,7 +149,7 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
-  DataType dtype() const override { return tensor_->dtype(); }
+  Symbol<DType> dtype() const override { return tensor_->dtype(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return tensor_->parallel_distribution();
   }
@@ -247,7 +248,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return DType::DType4DataType(impl_->dtype()); }
   Maybe<RpcToken> rpc_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
@@ -331,7 +332,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return DType::DType4DataType(impl_->dtype()); }
   Maybe<RpcToken> rpc_token() const override { return impl_->rpc_token(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();
