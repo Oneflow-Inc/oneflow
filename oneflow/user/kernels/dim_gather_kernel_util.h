@@ -99,10 +99,6 @@ OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_he
   template struct DimGatherFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                    OF_PP_PAIR_FIRST(itype_pair)>;
 
-#define INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
-  template struct DimScatterAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                       OF_PP_PAIR_FIRST(itype_pair)>;
-
 }  // namespace user_op
 }  // namespace oneflow
 

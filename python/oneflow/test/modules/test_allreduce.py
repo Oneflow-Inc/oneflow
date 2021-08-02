@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow.experimental as flow
 
@@ -20,6 +21,7 @@ import numpy as np
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllReduce(flow.unittest.TestCase):
     def test_all_reduce(test_case):
         arr_rank1 = np.array([1, 2])

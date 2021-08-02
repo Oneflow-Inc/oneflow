@@ -42,7 +42,7 @@ class ReluFunctor {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), AttrMap{}));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
@@ -65,6 +65,26 @@ class PReluFunctor : public BinaryFunctor {
   PReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
   }
+};
+
+class PReluGradFunctor {
+ public:
+  PReluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("prelu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("alpha")
+                         .Output("dx")
+                         .Output("alpha_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
+                                const std::shared_ptr<Tensor>& alpha) const {
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardTanhFunctor {
@@ -266,6 +286,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReluFunctor>("Relu");
   m.add_functor<impl::ReluGradFunctor>("ReluGrad");
   m.add_functor<impl::PReluFunctor>("PRelu");
+  m.add_functor<impl::PReluGradFunctor>("PReluGrad");
   m.add_functor<impl::HardTanhFunctor>("HardTanh");
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
   m.add_functor<impl::EluFunctor>("Elu");

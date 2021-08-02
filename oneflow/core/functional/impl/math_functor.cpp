@@ -50,8 +50,7 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
         outs->at(0) = partial_inputs.at(0);
-        JUST(JUST(OpInterpUtil::GetInterpreter())
-                 ->Apply(*op_.at(size - 1), partial_inputs, outs.get()));
+        JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
         outputs.push_back(outs->at(0));
       } else {
         outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
@@ -87,7 +86,7 @@ class ScalarAddFunctor {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
