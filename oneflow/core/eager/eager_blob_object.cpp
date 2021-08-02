@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
 namespace vm {
@@ -52,6 +53,7 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   char* header_buffer =
       reinterpret_cast<char*>(const_cast<int64_t*>(blob_desc_.shape().dim_vec().data()));
   blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));

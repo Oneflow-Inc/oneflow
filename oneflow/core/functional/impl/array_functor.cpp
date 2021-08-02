@@ -1083,8 +1083,6 @@ class TensorGetItemFunctor {
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
-    CHECK_GT_OR_RETURN(target_shape.Count(0), 0)
-        << "Target shape is zero shape which was not supported yet.";
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
@@ -1168,6 +1166,21 @@ class TensorSetItemFunctor {
     JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
     return Maybe<void>::Ok();
   }
+};
+
+class CastLikeFunctor {
+ public:
+  CastLikeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("cast_like").Input("in").Input("dtype_like").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ElementwiseMinimumGradFunctor {
@@ -1319,6 +1332,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
   m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");

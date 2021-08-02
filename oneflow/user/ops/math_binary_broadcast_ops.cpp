@@ -47,7 +47,9 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
           << "op: " << ctx->op_name() << ", type: " << ctx->op_type_name() << ", i: " << i
           << ", x_shape: " << x_shape << ", y_shape: " << y_shape;
-      out_shape.Set(i, std::max(x_shape.At(i), y_shape.At(i)));
+      out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
+                           ? 0
+                           : std::max(x_shape.At(i), y_shape.At(i)));
     }
     *tensor_z->mut_shape() = out_shape;
   }
