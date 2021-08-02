@@ -99,8 +99,6 @@ def _check_min_max_observer(
 def _run_test_min_max_observer(
     test_case,
     device_type,
-    device_num,
-    dtype,
     weight_shape,
     quantization_bit,
     quantization_scheme,
@@ -135,8 +133,6 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["device_num"] = [1, 4]
-        arg_dict["dtype"] = ["float", "double"]
         arg_dict["weight_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]

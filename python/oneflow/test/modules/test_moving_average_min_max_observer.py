@@ -128,7 +128,6 @@ def _check_moving_average_min_max_observer(
 def _run_test_moving_average_min_max_observer(
     test_case,
     device_type,
-    device_num,
     dtype,
     activation_shape,
     quantization_bit,
@@ -181,7 +180,6 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["activation_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
@@ -189,8 +187,7 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["quantization_formula"] = ["google"]
         arg_dict["momentum"] = [0.95]
         for arg in GenArgList(arg_dict):
-            for i in range(50):
-                _run_test_moving_average_min_max_observer(*arg)
+            _run_test_moving_average_min_max_observer(*arg)
 
 
 if __name__ == "__main__":
