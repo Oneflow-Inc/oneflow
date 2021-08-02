@@ -131,8 +131,6 @@ Maybe<DataType> PythonArg::ObjectAs<DataType>() const {
     return static_cast<DataType>(*dtype);
   } else if (detail::isinstance<DType>(obj)) {
     return JUST(detail::cast<DType&>(obj)).data_type();
-  } else if(detail::isinstance<Symbol<DType>>(obj)){
-    return JUST(detail::cast<Symbol<DType>&>(obj))->data_type();
   } else if (detail::isinstance<int32_t>(obj)) {
     return static_cast<DataType>(JUST(detail::cast<int32_t>(obj)));
   } else if (detail::isinstance<int64_t>(obj)) {
@@ -173,6 +171,11 @@ Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
 
 template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<Device>>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
   return **JUST(detail::cast<std::shared_ptr<Symbol<Device>>>(Borrow()));
 }
 
