@@ -97,6 +97,10 @@
   signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_logical_xor"
+  signature: "Tensor BroadcastLogicalXor(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_less"
   signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
   bind_python: True
