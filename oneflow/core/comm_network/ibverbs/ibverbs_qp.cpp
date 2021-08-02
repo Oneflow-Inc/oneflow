@@ -28,8 +28,9 @@ namespace oneflow {
 namespace {
 
 constexpr uint32_t kDefaultQueueDepth = 1024;
+constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
-}
+}  // namespace
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
@@ -62,6 +63,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
+  num_outstanding_send_wr_ = 0;
+  max_outstanding_send_wr_ = queue_depth;
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -143,7 +146,8 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
                                 const IBVerbsMemDesc& local_mem, void* read_id) {
   CHECK_EQ(remote_mem.mem_size, local_mem.mem_size());
   WorkRequestId* wr_id = NewWorkRequestId();
-  const size_t block_size = Global<ResourceDesc, ForSession>::Get()->rdma_mem_block_byte();
+  const size_t block_size =
+      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
   const size_t block_num = RoundUp(remote_mem.mem_size, block_size) / block_size;
   wr_id->outstanding_sge_cnt = static_cast<int32_t>(block_num);
   wr_id->read_id = read_id;
@@ -162,8 +166,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.imm_data = 0;
     wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
-    ibv_send_wr* bad_wr = nullptr;
-    CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
+    EnqueuePostSendReadWR(wr, sge);
   }
 }
 
@@ -185,8 +188,19 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr.send_flags = 0;
   wr.imm_data = 0;
   memset(&(wr.wr), 0, sizeof(wr.wr));
-  ibv_send_wr* bad_wr = nullptr;
-  CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
+  EnqueuePostSendReadWR(wr, sge);
+}
+
+void IBVerbsQP::EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge) {
+  std::unique_lock<std::mutex> pending_send_wr_lock_(pending_send_wr_mutex_);
+  if (num_outstanding_send_wr_ < max_outstanding_send_wr_) {
+    num_outstanding_send_wr_++;
+    ibv_send_wr* bad_wr = nullptr;
+    CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
+  } else {
+    std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::make_pair(wr, sge);
+    pending_send_wr_queue_.push(ibv_send_wr_sge);
+  }
 }
 
 void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
@@ -196,6 +210,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
     Global<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
+  PostPendingSendWR();
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
@@ -204,6 +219,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
     send_msg_buf_.push(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
+  PostPendingSendWR();
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
@@ -212,6 +228,20 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
+}
+
+void IBVerbsQP::PostPendingSendWR() {
+  std::unique_lock<std::mutex> pending_send_wr_lock_(pending_send_wr_mutex_);
+  if (pending_send_wr_queue_.empty() == false) {
+    std::pair<ibv_send_wr, ibv_sge> ibv_send_wr_sge = std::move(pending_send_wr_queue_.front());
+    ibv_send_wr wr = ibv_send_wr_sge.first;
+    wr.sg_list = &ibv_send_wr_sge.second;
+    pending_send_wr_queue_.pop();
+    ibv_send_wr* bad_wr = nullptr;
+    CHECK_EQ(ibv_post_send(qp_, &wr, &bad_wr), 0);
+  } else {
+    if (num_outstanding_send_wr_ > 0) { num_outstanding_send_wr_--; }
+  }
 }
 
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
