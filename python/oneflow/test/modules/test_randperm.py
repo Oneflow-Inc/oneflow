@@ -38,8 +38,6 @@ def _test_randperm_backward(test_case, N, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(N), 1e-05, 1e-05))
 
 
-
-
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
     def test_randperm(test_case):
@@ -54,7 +52,6 @@ class Testrandperm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-  
     @autotest(auto_backward=False)
     def test_ones_auto(test_case):
         torch.manual_seed(0)
@@ -64,15 +61,14 @@ class Testrandperm(flow.unittest.TestCase):
         y = torch.randperm(x)
         return y
 
-
     def test_randperm_randomness(test_case):
         device = "cuda"
-        n = np.random.randint(100,200)
+        n = np.random.randint(100, 200)
         x1 = flow.randperm(n, device=device)
         x2 = flow.randperm(n, device=device)
-        test_case.assertTrue(not np.all(x1.numpy()==x2.numpy()))
+        test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
         device = "cpu"
-        n = np.random.randint(100,1000)
+        n = np.random.randint(100, 1000)
         x1 = flow.randperm(n, device=device)
         x2 = flow.randperm(n, device=device)
-        test_case.assertTrue(not np.all(x1.numpy()==x2.numpy()))
+        test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))

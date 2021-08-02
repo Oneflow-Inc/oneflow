@@ -23,12 +23,12 @@ class Randperm(Module):
     def __init__(
         self,
         N: flow.int32,
-        generator: flow.Generator=None,
-        dtype:flow.dtype=flow.int32,
+        generator: flow.Generator = None,
+        dtype: flow.dtype = flow.int32,
         layout=None,
         device: Union[str, flow.device] = "cpu",
-        requires_grad: bool =False,
-        pin_memory: bool =False,
+        requires_grad: bool = False,
+        pin_memory: bool = False,
     ) -> None:
         super().__init__()
 

@@ -21,7 +21,6 @@ REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
     .Attr<int32_t>("N")
     .Attr<int64_t>("seed", -1)
-    .Attr<bool>("has_seed", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       int32_t N = ctx->Attr<int32_t>("N");
