@@ -40,6 +40,7 @@ REGISTER_USER_OP("mlir_jit")
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = in_shape;
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 1);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -87,16 +88,22 @@ class MlirJitKernel final : public user_op::OpKernel {
                           << llvm::toString(jit_or_error.takeError());
     user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
     // TODO: extract a function
-    mlir::OwningMemRef<int64_t, 2> A(
+    auto ref_in_0 = mlir::detail::makeStridedMemRefDescriptor<2>(
+        in_0->dptr<int64_t>(), in_0->dptr<int64_t>(),
+        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()},
         {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
     user_op::Tensor* in_1 = ctx->Tensor4ArgNameAndIndex("in", 1);
-    mlir::OwningMemRef<float, 1> B(
+    auto ref_in_1 = mlir::detail::makeStridedMemRefDescriptor<1>(
+        in_1->dptr<float>(), in_1->dptr<float>(),
+        {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()},
         {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()});
-    mlir::OwningMemRef<float, 2> C(
-        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
-    LOG(ERROR) << "Start JIT: " << ctx->op_name();
+    user_op::Tensor* out_0 = ctx->Tensor4ArgNameAndIndex("out", 0);
+    auto ref_out_0 = mlir::detail::makeStridedMemRefDescriptor<2>(
+        out_0->mut_dptr<float>(), out_0->mut_dptr<float>(),
+        {out_0->shape().ptr(), out_0->shape().ptr() + out_0->shape().NumAxes()},
+        {out_0->shape().ptr(), out_0->shape().ptr() + out_0->shape().NumAxes()});
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke(ctx->op_name(), &*A, &*B, &*C);
+    auto error = jit->invoke(ctx->op_name(), &ref_in_0, &ref_in_1, &ref_out_0);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
