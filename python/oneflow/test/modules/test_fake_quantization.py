@@ -126,12 +126,7 @@ def _check_fake_quantize(
         out_np = fake_quant_per_layer_cambricon(
             input_flatten, quantization_bit, scale_np[0]
         )
-    if np.allclose(out_of, out_np, rtol=0.1) == False:
-        for i in range(len(out_np)):
-            if abs(out_of[i]-out_np[i]) > 0.1:
-                print(out_of[i])
-                print(out_np[i])
-    test_case.assertTrue(np.allclose(out_of, out_np, rtol=0.1))
+    test_case.assertTrue(np.allclose(out_of, out_np, rtol=0.001))
     test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=0.001))
 
 
@@ -147,7 +142,7 @@ def _run_test_fake_quantize(
     per_layer_quantization,
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    input_tensor = flow.Tensor(input, requires_grad=True)
+    input_tensor = flow.Tensor(input, requires_grad=True, device=flow.device(device_type))
     (scale, zero_point) = flow.quantization.min_max_observer(
         input_tensor,
         quantization_bit,
@@ -184,7 +179,7 @@ class TestFakeQuantize(flow.unittest.TestCase):
     def test_fake_quantize(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_type"] = ["cuda", "cpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["in_shape"] = [(9, 40, 20, 10)]
@@ -195,7 +190,8 @@ class TestFakeQuantize(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             if arg[-2] == "cambricon" and arg[-1] == False:
                 continue
-            _run_test_fake_quantize(*arg)
+            for i in range(50):
+                _run_test_fake_quantize(*arg)
 
 
 if __name__ == "__main__":
