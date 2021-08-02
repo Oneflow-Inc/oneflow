@@ -13,25 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import os
 import unittest
-
 import numpy as np
 
 import oneflow as flow
-import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
 
 
-@unittest.skip(" nn.Graph cannnot run right now ")
-class TestReluGraph(flow.unittest.TestCase):
+@flow.unittest.skip_unless_1n1d()
+class TestReluGraph(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
         x = flow.tensor(data, dtype=flow.float32)
+
         MyRelu = flow.nn.ReLU()
         y_eager = MyRelu(x)
-        print("eager out :", y_eager)
+        # print("eager out :", y_eager)
 
         class ReluGraph(flow.nn.Graph):
             def __init__(self):
@@ -42,8 +39,9 @@ class TestReluGraph(flow.unittest.TestCase):
                 return self.cc_relu(x)
 
         relu_g = ReluGraph()
-        y_lazy = relu_g(x)[0]
-        print("lazy out :", y_lazy)
+        y_lazy = relu_g(x)
+        # print(f"type of lazy y: {type(y_lazy)}")
+        # print(f"lazy y shape: {y_lazy.shape}, data: {y_lazy}")
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
 
