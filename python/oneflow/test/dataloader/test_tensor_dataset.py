@@ -34,7 +34,7 @@ class LinearNet(nn.Module):
         return y
 
 
-# @unittest.skip("optimizer has a bug with 0-dim tensor")
+@unittest.skip("optimizer has a bug with 0-dim tensor")
 class TestTensorDataset(flow.unittest.TestCase):
     def test_tensor_dataset(test_case):
         num_inputs = 2
