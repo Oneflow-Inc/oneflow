@@ -108,10 +108,10 @@ def _compare_l1loss_with_np(
         of_out_l1loss_dict["of_l1_loss"], np_out_l1loss_dict["np_l1_loss"]
     )
     assert np.allclose(
-        of_out_l1loss_dict["of_l1_loss_mean"][0], np_out_l1loss_dict["np_l1_loss_mean"]
+        of_out_l1loss_dict["of_l1_loss_mean"], np_out_l1loss_dict["np_l1_loss_mean"]
     )
     assert np.allclose(
-        of_out_l1loss_dict["of_l1_loss_sum"][0], np_out_l1loss_dict["np_l1_loss_sum"]
+        of_out_l1loss_dict["of_l1_loss_sum"], np_out_l1loss_dict["np_l1_loss_sum"]
     )
 
 
