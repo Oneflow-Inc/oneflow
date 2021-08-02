@@ -16,14 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_RUNTIME_JOB_DESCS_H_
 #define ONEFLOW_CORE_JOB_RUNTIME_JOB_DESCS_H_
 
-#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 class RuntimeJobDescs final {
  public:
-  explicit RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto);
+  RuntimeJobDescs() = default;
+  ~RuntimeJobDescs() = default;
+
+  void AddPlan(const Plan& plan);
   const JobDesc& job_desc(int64_t job_id) const;
 
  private:
