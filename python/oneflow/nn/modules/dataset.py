@@ -614,7 +614,7 @@ class OFRecordBytesDecoder(Module):
 
         >>> batch_size = 16
         >>> record_reader = flow.nn.OfrecordReader(
-        ...     "dataset",
+        ...    "/dataset/imagenette/ofrecord",
         ...     batch_size=batch_size,
         ...     part_name_suffix_length=5,
         >>> )
