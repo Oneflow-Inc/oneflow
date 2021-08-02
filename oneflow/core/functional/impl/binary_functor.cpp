@@ -162,6 +162,44 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastMinimumFunctor : public BinaryFunctor {
+ public:
+  BroadcastMinimumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastMaximumFunctor : public BinaryFunctor {
+ public:
+  BroadcastMaximumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ElementwiseMinimumFunctor : public BinaryFunctor {
+ public:
+  ElementwiseMinimumFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_minimum").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ElementwiseMaximumFunctor : public BinaryFunctor {
+ public:
+  ElementwiseMaximumFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_maximum").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class ReshapeLikeFunctor : public BinaryFunctor {
+ public:
+  ReshapeLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -172,6 +210,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastSubFunctor>("BroadcastSub");
   m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
   m.add_functor<impl::BroadcastDivFunctor>("BroadcastDiv");
+  m.add_functor<impl::BroadcastMinimumFunctor>("BroadcastMin");
+  m.add_functor<impl::BroadcastMaximumFunctor>("BroadcastMax");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
@@ -182,7 +222,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
+  m.add_functor<impl::ElementwiseMinimumFunctor>("ElementwiseMin");
+  m.add_functor<impl::ElementwiseMaximumFunctor>("ElementwiseMax");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
+  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
 };
 
 }  // namespace functional
