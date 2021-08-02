@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <utility>
 #include "oneflow/core/common/constant.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/collective_boxing_interpreter.h"
@@ -62,8 +63,9 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
-  return sbp_pair2eager_boxing_interpreter.at(
-      {in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)});
+  return JUST(MapAt(sbp_pair2eager_boxing_interpreter,
+                    std::make_pair(in_parallel_distribution->sbp_parallel(0),
+                                   out_parallel_distribution->sbp_parallel(0))));
 }
 
 }  // namespace
