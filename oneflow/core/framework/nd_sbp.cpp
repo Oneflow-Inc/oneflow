@@ -36,7 +36,35 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
   return iter->second;
 }
 
+Maybe<void> GetDualSbpParallel(
+    const cfg::SbpParallel& sbp_parallel, cfg::SbpParallel* dual_sbp_parallel) {
+  if (sbp_parallel.has_split_parallel()) {
+    *dual_sbp_parallel = sbp_parallel;
+  } else if (sbp_parallel.has_broadcast_parallel()) {
+    dual_sbp_parallel->mutable_partial_sum_parallel();
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
+    dual_sbp_parallel->mutable_broadcast_parallel();
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
+
+Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>> map;
+  auto iter = map.find(parallel_distribution);
+  if (iter == map.end()) {
+    cfg::ParallelDistribution dual_parallel_distribution;
+    auto* mut_sbp_parallel = dual_parallel_distribution.mutable_sbp_parallel();
+    for (const auto& sbp_parallel : parallel_distribution->sbp_parallel()) {
+      JUST(GetDualSbpParallel(sbp_parallel, mut_sbp_parallel->Add()));
+    }
+    iter = map.emplace(parallel_distribution, SymbolOf(dual_parallel_distribution)).first;
+  }
+  return iter->second;
+}
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
