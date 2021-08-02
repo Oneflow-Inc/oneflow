@@ -72,7 +72,8 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
       JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
   const auto& recv_buffer = std::make_shared<FlatParallelConf>();
   NaiveAsyncRpcCtx ctx(
-      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+      rpc_token,
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer = JUST(FlatParallelConf::New(symbol_id, parallel_desc));
         *buffer = send_buffer.get();
         *size = send_buffer->available_size();

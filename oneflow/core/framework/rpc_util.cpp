@@ -43,8 +43,7 @@ namespace {
 
 template<Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
-         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*,
-                                   std::function<void()>*)>
+         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
 Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
                                   AsyncRpcCtx* ctx) {
   CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
@@ -68,8 +67,7 @@ Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& 
 template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
          Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
-         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*,
-                                   std::function<void()>*)>
+         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
 Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& token,
                                AsyncRpcCtx* ctx) {
   if (rank_group->size() == 1) { return Maybe<void>::Ok(); }
@@ -113,25 +111,29 @@ Maybe<void> Recv(const RpcToken& token, int64_t rank, void* buffer, std::size_t 
 
 /*static*/ Maybe<void> RpcUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
                                                          const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Send, &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token, ctx));
+  JUST(AccessToAllOtherRanks<&Send, &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token,
+                                                                                ctx));
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> RpcUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                                          const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Recv, &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
+  JUST(AccessToAllOtherRanks<&Recv, &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token,
+                                                                                ctx));
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> RpcUtil::SendToNextRankInRing(Symbol<RankGroup> rank_group,
                                                      const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&RankGroup::GetNextRankInRing, &Send, &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token, ctx));
+  JUST(AccessToNearbyRank<&RankGroup::GetNextRankInRing, &Send,
+                          &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> RpcUtil::ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
                                                           const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv, &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
+  JUST(AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv,
+                          &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 

@@ -29,7 +29,7 @@ namespace one {
 namespace {
 
 Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return one::OpBuilder("eager_nccl_reduce", *CHECK_JUST(UniqueStr("eager_nccl_reduce")))
+  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))

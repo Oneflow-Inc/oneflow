@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -12,12 +27,11 @@ using StrideVector = DimVector;
 
 void GetStrideVector(const Shape& shape, StrideVector* strides) {
   strides->resize(shape.NumAxes());
-  for (int i = 0; i < shape.NumAxes(); ++i) {
-    strides->at(i) = shape.Count(i + 1);
-  }
+  for (int i = 0; i < shape.NumAxes(); ++i) { strides->at(i) = shape.Count(i + 1); }
 }
 
-Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset, IndexVector* indexes) {
+Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset,
+                                 IndexVector* indexes) {
   indexes->resize(strides.size());
   for (int i = 0; i < strides.size(); ++i) {
     indexes->at(i) = offset / strides.at(i);
@@ -27,7 +41,8 @@ Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset, In
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetOffsetFromIndexes(const StrideVector& strides, const IndexVector& indexes, int64_t* offset) {
+Maybe<void> GetOffsetFromIndexes(const StrideVector& strides, const IndexVector& indexes,
+                                 int64_t* offset) {
   CHECK_EQ_OR_RETURN(strides.size(), indexes.size());
   *offset = 0;
   for (int i = 0; i < strides.size(); ++i) { *offset += indexes.at(i) * strides.at(i); }
@@ -47,8 +62,8 @@ Maybe<void> GetBroadcastIndex2OriginIndex(
   return Maybe<void>::Ok();
 }
 
-Maybe<const Shape> GetBroadcastShape(
-    const Shape& hierarchy_shape, const std::vector<bool>& dim2is_broadcast) {
+Maybe<const Shape> GetBroadcastShape(const Shape& hierarchy_shape,
+                                     const std::vector<bool>& dim2is_broadcast) {
   CHECK_EQ_OR_RETURN(hierarchy_shape.NumAxes(), dim2is_broadcast.size());
   DimVector dim_vec = hierarchy_shape.dim_vec();
   for (int i = 0; i < dim2is_broadcast.size(); ++i) {
@@ -66,7 +81,7 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     dim2is_broadcast.at(i) = parallel_distribution.sbp_parallel(i).has_broadcast_parallel();
   }
   const auto& broadcast_parallel_ids =
-    JUST(GetBroadcastParallelIds(hierarchy_shape, dim2is_broadcast, parallel_id));
+      JUST(GetBroadcastParallelIds(hierarchy_shape, dim2is_broadcast, parallel_id));
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag(parallel_desc.device_tag());
   bool found_parallel_id = false;
@@ -74,21 +89,21 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     found_parallel_id = found_parallel_id || (i == parallel_id);
     int64_t machine_id = JUST(parallel_desc.MachineId4ParallelId(i));
     int64_t device_id = JUST(parallel_desc.DeviceId4ParallelId(i));
-    parallel_conf.add_device_name(
-        std::string("@") + std::to_string(machine_id) + ":" + std::to_string(device_id));
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                  + std::to_string(device_id));
   }
   CHECK_OR_RETURN(found_parallel_id);
   return SymbolOf(ParallelDesc(parallel_conf));
 }
 
-}
+}  // namespace
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
   using PlacementSbp = std::pair<Symbol<ParallelDesc>, Symbol<cfg::ParallelDistribution>>;
   static thread_local HashMap<PlacementSbp, Symbol<ParallelDesc>> map;
   const auto& key = std::make_pair(parallel_desc, parallel_distribution);
-  auto iter = map.find(key); 
+  auto iter = map.find(key);
   if (iter == map.end()) {
     Optional<int64_t> opt_parallel_id;
     JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
@@ -100,8 +115,9 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
   return iter->second;
 }
 
-Maybe<std::vector<int64_t>> GetBroadcastParallelIds(
-    const Shape& hierarchy_shape, const std::vector<bool>& dim2is_broadcast, int64_t parallel_id) {
+Maybe<std::vector<int64_t>> GetBroadcastParallelIds(const Shape& hierarchy_shape,
+                                                    const std::vector<bool>& dim2is_broadcast,
+                                                    int64_t parallel_id) {
   CHECK_EQ_OR_RETURN(hierarchy_shape.NumAxes(), dim2is_broadcast.size());
   StrideVector hierarchy_strides{};
   GetStrideVector(hierarchy_shape, &hierarchy_strides);
@@ -125,4 +141,4 @@ Maybe<std::vector<int64_t>> GetBroadcastParallelIds(
   return origin_offsets;
 }
 
-}
+}  // namespace oneflow

@@ -39,7 +39,8 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
   }
 
   Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpExprInterpContext& interp_ctx) const override {
+                      const TensorTuple& outputs,
+                      const OpExprInterpContext& interp_ctx) const override {
     ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
     ctx->parallel_distribution = JUST(interp_ctx.parallel_distribution.value());
     return Maybe<void>::Ok();
@@ -68,7 +69,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
     const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = CHECK_JUST(one::CastToConsistentOpExpr::New(GradientOpName(op_name)));
+    grad_op_ = JUST(one::CastToConsistentOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -86,7 +87,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
                     TensorTuple* in_grads) const override {
     const auto& dual_parallel_distribution = JUST(GetDualNdSbp(ctx->parallel_distribution));
     MutableAttrMap attrs;
-    attrs.SetAttr<Shape>("shape", *ctx->shape);
+    JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)},
         OpExprInterpContext(attrs, ctx->parallel_desc, dual_parallel_distribution)));

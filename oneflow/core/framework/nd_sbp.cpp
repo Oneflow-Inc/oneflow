@@ -36,8 +36,8 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
   return iter->second;
 }
 
-Maybe<void> GetDualSbpParallel(
-    const cfg::SbpParallel& sbp_parallel, cfg::SbpParallel* dual_sbp_parallel) {
+Maybe<void> GetDualSbpParallel(const cfg::SbpParallel& sbp_parallel,
+                               cfg::SbpParallel* dual_sbp_parallel) {
   if (sbp_parallel.has_split_parallel()) {
     *dual_sbp_parallel = sbp_parallel;
   } else if (sbp_parallel.has_broadcast_parallel()) {
@@ -52,8 +52,10 @@ Maybe<void> GetDualSbpParallel(
 
 }  // namespace
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>> map;
+Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>>
+      map;
   auto iter = map.find(parallel_distribution);
   if (iter == map.end()) {
     cfg::ParallelDistribution dual_parallel_distribution;

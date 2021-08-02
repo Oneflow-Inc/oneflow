@@ -45,28 +45,28 @@ namespace impl {
 namespace {
 
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape& shape) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdAll2AllSyncShape));
+  const auto& rpc_token = JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdAll2AllSyncShape));
   const auto& send_buffer = JUST(FlatShape::New(shape));
   const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
   NaiveAsyncRpcCtx ctx(
-    rpc_token,
-    [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-      *buffer = send_buffer.get();
-      *size = sizeof(FlatShape);
-      *Cb = [send_buffer] {};
-      return Maybe<void>::Ok();
-    },
-    [map](int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-      const auto& recv_buffer = std::make_shared<FlatShape>();
-      recv_buffer->clear();
-      *buffer = recv_buffer.get();
-      *size = sizeof(FlatShape);
-      *Cb = [recv_buffer] {};
-      CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
-      return Maybe<void>::Ok();
-    });
+      rpc_token,
+      [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = send_buffer.get();
+        *size = sizeof(FlatShape);
+        *Cb = [send_buffer] {};
+        return Maybe<void>::Ok();
+      },
+      [map](int64_t rank, void** buffer, std::size_t* size,
+            std::function<void()>* Cb) -> Maybe<void> {
+        const auto& recv_buffer = std::make_shared<FlatShape>();
+        recv_buffer->clear();
+        *buffer = recv_buffer.get();
+        *size = sizeof(FlatShape);
+        *Cb = [recv_buffer] {};
+        CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
+        return Maybe<void>::Ok();
+      });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &ctx));
   JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &ctx));
@@ -107,14 +107,15 @@ Maybe<Shape> GetConcatenatedShape(
   return shape;
 }
 
-Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
+Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc,
+                                Symbol<cfg::ParallelDistribution> parallel_distribution) {
   if (parallel_distribution->sbp_parallel_size() == 1
       && parallel_distribution->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape = JUST(All2AllSyncShape(physical_shape));
     int64_t concat_axis = parallel_distribution->sbp_parallel(0).split_parallel().axis();
     return GetConcatenatedShape(*rank2flat_shape, parallel_desc, concat_axis);
   } else {
-    // no need to check shape across ranks because we will do it later by checking tensor meta. 
+    // no need to check shape across ranks because we will do it later by checking tensor meta.
     return GetLogicalShape(physical_shape, *parallel_distribution, *parallel_desc);
   }
 }
@@ -146,7 +147,7 @@ class LocalToConsistentFunctor {
       shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
     }
     MutableAttrMap attrs;
-    attrs.SetAttr<Shape>("shape", *shape_ptr);
+    JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
     const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
     return output;
