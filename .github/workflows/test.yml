@@ -485,25 +485,25 @@ jobs:
             ${{ env.image_tag }} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
       - name: Module API test (distributed, 1st try)
-        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        if: matrix.test_suite == 'cuda_new_interface'
         continue-on-error: true
         id: new_interface_distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Module API test (distributed, 2nd try)
-        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && steps.new_interface_distributed_try_1.outcome=='failure'
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: new_interface_distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Module API test (distributed, 3rd try)
-        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && steps.new_interface_distributed_try_2.outcome=='failure'
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: new_interface_distributed_try_3
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
-        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite))
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
@@ -512,7 +512,7 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
-        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite))
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
         run: |
           set -x
           docker run \
