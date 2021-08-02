@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_interpreter.h"
 
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -131,7 +132,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n" << op_conf.DebugString() << std::endl;
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -187,7 +189,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n" << op_conf.DebugString() << std::endl;
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -243,7 +246,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n" << op_conf.DebugString() << std::endl;
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -335,7 +339,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n" << op_conf->DebugString() << std::endl;
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf->DebugString() << std::endl;
 
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 
@@ -354,9 +359,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr,
                                                      /* is_lazy= */ true, is_local));
     } else {
-      // TODO(chengcheng, hjchen2) Reset shape, dtype and so on for InplaceUserOp.
-      OF_UNIMPLEMENTED() << " Op: " << op_conf->DebugString()
-                         << " outputs tensor CANNOT use inplace in nn.Graph.";
+      std::shared_ptr<Tensor> inplace_out = outputs->at(i);
+      JUST(OpInterpUtil::CheckTensorMatchAttr(inplace_out, blob_attr, parallel_attr,
+                                              /* is_lazy= */ true, is_local,
+                                              /* requires_gra */ false,
+                                              /* is_leaf */ false));
     }
     TensorNameScope::Global()->Record(outputs->at(i), GenLogicalBlobName(new_op_name, obn));
   }

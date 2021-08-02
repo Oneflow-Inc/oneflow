@@ -44,28 +44,6 @@ int32_t GetGpuDeviceNum() {
 
 }  // namespace
 
-MultiClientSessionContext::~MultiClientSessionContext() {
-  if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session." << std::endl;
-    vm::MultiClientSync();
-    VLOG(2) << "Start to delete multi client session." << std::endl;
-    {
-      // NOTE(chengcheng): delete runtime global objects
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-    }
-
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<IDMgr>::Delete();
-    Global<const ProfilerConf>::Delete();
-
-    // TODO(chengcheng): remove template ForEnv and ForSession
-    Global<ResourceDesc, ForSession>::Delete();
-    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
-    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
-  }
-}
-
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
     CHECK_OR_RETURN(JUST(GlobalMultiClientEnv()));
@@ -115,6 +93,29 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
 
     is_inited_ = true;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientSessionContext::TryClose() {
+  if (is_inited_) {
+    VLOG(2) << "Try to delete multi client session." << std::endl;
+    JUST(vm::MultiClientSync());
+    VLOG(2) << "Start to delete multi client session." << std::endl;
+    {
+      // NOTE(chengcheng): delete runtime global objects
+      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+    }
+
+    Global<LazyJobBuildAndInferCtxMgr>::Delete();
+    Global<IDMgr>::Delete();
+    Global<const ProfilerConf>::Delete();
+
+    // TODO(chengcheng): remove template ForEnv and ForSession
+    Global<ResourceDesc, ForSession>::Delete();
+    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
+    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
+                                          GlobalProcessCtx::NumOfProcessPerNode());
   }
   return Maybe<void>::Ok();
 }

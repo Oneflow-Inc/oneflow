@@ -115,20 +115,7 @@ template<>
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
-  bool inplace_output = false;
-  if (outputs->size() > 0 && (outputs->at(0).get())) {
-    inplace_output = true;
-    CHECK_OR_RETURN(outputs->size() == op_expr.output_size());
-  }
-  if (inplace_output && LazyMode::is_enabled()) {
-    // lazy mode will ignore inplace
-    auto lazy_outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-    JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, lazy_outputs.get(), ctx);
-    FOR_RANGE(size_t, i, 0, op_expr.output_size()) { outputs->at(i) = lazy_outputs->at(i); }
-    return Maybe<void>::Ok();
-  } else {
-    return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
-  }
+  return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
@@ -171,6 +158,33 @@ template<>
                                      /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
+}
+
+/* static */ Maybe<void> OpInterpUtil::CheckTensorMatchAttr(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr, const bool is_lazy,
+    const bool is_local, const bool requires_grad, const bool is_leaf) {
+  CHECK_EQ_OR_RETURN(*tensor->shape(), *blob_attr->shape());
+  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
+  const auto& dtype = DataType(blob_attr->get_dtype());
+  CHECK_EQ_OR_RETURN(tensor->dtype(), dtype);
+  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
+  // TODO(xuxiaoyu): inplece tensor's valid leaf attr value
+  // CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
+  if (is_local) {
+    const auto& device =
+        JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
+    CHECK_EQ_OR_RETURN(JUST(tensor->device()), device);
+  } else {
+    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
+    CHECK_EQ_OR_RETURN(JUST(tensor->parallel_distribution()), SymbolOf(*parallel_distribution));
+    CHECK_EQ_OR_RETURN(JUST(tensor->parallel_desc()),
+                       SymbolOf(*parallel_attr->parallel_desc_symbol()));
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one

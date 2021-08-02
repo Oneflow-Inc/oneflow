@@ -26,9 +26,10 @@ class MultiClientSessionContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultiClientSessionContext);
   MultiClientSessionContext() : is_inited_(false) {}
-  ~MultiClientSessionContext();
+  ~MultiClientSessionContext() {}
 
   Maybe<void> TryInit(const ConfigProto& config_proto);
+  Maybe<void> TryClose();
 
  private:
   bool is_inited_;

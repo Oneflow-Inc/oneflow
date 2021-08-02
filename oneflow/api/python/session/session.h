@@ -131,6 +131,7 @@ inline Maybe<void> TryDestroyMultiClientSessionContext() {
   // Global<T>::Delete is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   if (Global<MultiClientSessionContext>::Get() != nullptr) {
+    JUST(Global<MultiClientSessionContext>::Get()->TryClose());
     delete Global<MultiClientSessionContext>::Get();
     Global<MultiClientSessionContext>::SetAllocated(nullptr);
   }
