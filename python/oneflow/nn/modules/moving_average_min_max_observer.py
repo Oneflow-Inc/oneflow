@@ -117,6 +117,45 @@ def moving_average_min_max_observer_op(
     Returns:
         Tuple[oneflow.Tensor, oneflow.Tensor]: The scale and zero_point of input tensor.
 
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
+        
+        >>> tensor_weight = flow.Tensor(
+        ...    weight, dtype=flow.float32
+        ... )
+
+        >>> moving_max_np = np.zeros((1,))
+        >>> moving_min_np = np.zeros((1,))
+        >>> moving_max_tensor = flow.Tensor(moving_max_np)
+        >>> moving_min_tensor = flow.Tensor(moving_min_np)
+        >>> current_train_step_tensor = flow.Tensor(
+        ...   np.zeros((1,)).astype(np.float32),
+        ...    dtype=flow.int64,
+        ... )
+        
+        >>> momentum = 0.95
+        >>> quantization_bit = 8
+        >>> quantization_scheme = "symmetric"
+        >>> quantization_formula = "google"
+
+        >>> (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
+        ...    tensor_weight,
+        ...    current_train_step_tensor,
+        ...    moving_max_tensor,
+        ...    moving_min_tensor,
+        ...    True,
+        ...    quantization_formula=quantization_formula,
+        ...    stop_update_after_iters=1,
+        ...    quantization_bit=quantization_bit,
+        ...    quantization_scheme=quantization_scheme,
+        ...    momentum=momentum,
+        ... )
 
     """
     return MovingAverageMinMaxObserver(
@@ -132,4 +171,4 @@ def moving_average_min_max_observer_op(
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
