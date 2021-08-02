@@ -239,12 +239,12 @@ class ClipByScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min,
                            const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
@@ -269,12 +269,12 @@ class ClipByScalarGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Scalar& min,
                            const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
@@ -296,10 +296,10 @@ class ClipByScalarMinFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
     } else {
@@ -321,10 +321,10 @@ class ClipByScalarMinGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type()) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
     } else {
@@ -344,10 +344,10 @@ class ClipByScalarMaxFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
     } else {
@@ -369,10 +369,10 @@ class ClipByScalarMaxGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
     } else {

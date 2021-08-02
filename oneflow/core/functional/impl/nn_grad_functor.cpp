@@ -272,10 +272,10 @@ class PadGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
-      if (IsFloatingDataType(dy->dtype())) {
+      if (IsFloatingDataType(dy->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_value", 0));
-      } else if (IsIntegralDataType(dy->dtype())) {
+      } else if (IsIntegralDataType(dy->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
       } else {
