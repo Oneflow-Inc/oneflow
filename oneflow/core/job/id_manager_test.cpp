@@ -47,14 +47,17 @@ Resource GetResource() {
 
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
-  Global<NumProcessPerNode>::New()->set_value(1);
+  Global<ProcessCtx>::New();
+  Global<ProcessCtx>::Get()->mutable_ctrl_addr()->Add();
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
   Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
-  Global<NumProcessPerNode>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
 }
