@@ -117,9 +117,6 @@ def moving_average_min_max_observer_op(
     Returns:
         Tuple[oneflow.Tensor, oneflow.Tensor]: The scale and zero_point of input tensor.
 
-    For example:
-
-    .. code-block:: python
 
     """
     return MovingAverageMinMaxObserver(

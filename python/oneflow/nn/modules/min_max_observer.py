@@ -96,7 +96,28 @@ def min_max_observer_op(
     For example:
 
     .. code-block:: python
+        
+        >>> import numpy as np
+        >>> import oneflow as flow
 
+        >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
+        
+        >>> tensor_weight = flow.Tensor(
+        ...    weight, dtype=flow.float32
+        ... )
+        
+        >>> quantization_bit = 8
+        >>> quantization_scheme = "symmetric"
+        >>> quantization_formula = "google"
+        >>> per_layer_quantization = True
+
+        >>> scale, zero_point = flow.quantization.min_max_observer(
+        ...    tensor_weight,
+        ...    quantization_bit,
+        ...    quantization_scheme,
+        ...    quantization_formula,
+        ...    per_layer_quantization,
+        ... )
 
     """
     return MinMaxObserver(
