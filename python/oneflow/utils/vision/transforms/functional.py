@@ -182,7 +182,7 @@ def normalize(
     std = flow.tensor(std, dtype=dtype, device=tensor.device)
     # TODO: use tensor.any()
     # if (std == 0).any():
-    if std.eq(0).sum().numpy()[0] > 0:
+    if std.eq(0).sum().numpy() > 0:
         raise ValueError(
             "std evaluated to zero after conversion to {}, leading to division by zero.".format(
                 dtype

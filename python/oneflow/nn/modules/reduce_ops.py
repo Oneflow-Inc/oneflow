@@ -58,7 +58,7 @@ def _sum(input, dim=None, keepdim=False):
         >>> import oneflow as flow
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.sum(input)
-        tensor([21.], dtype=oneflow.float32)
+        tensor(21., dtype=oneflow.float32)
         >>> flow.sum(input, dim=0)
         tensor([5., 7., 9.], dtype=oneflow.float32)
         >>> flow.sum(input, dim=1)
@@ -94,7 +94,7 @@ def _mean(input, dim=None, keepdim=False):
         >>> import oneflow as flow
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.mean(input)
-        tensor([3.5], dtype=oneflow.float32)
+        tensor(3.5, dtype=oneflow.float32)
         >>> flow.mean(input, dim=0)
         tensor([2.5, 3.5, 4.5], dtype=oneflow.float32)
         >>> flow.mean(input, dim=1)
@@ -134,7 +134,7 @@ def _min(input, dim=None, keepdim=False):
         >>> import oneflow as flow
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
-        tensor([1.], dtype=oneflow.float32)
+        tensor(1., dtype=oneflow.float32)
         >>> flow.min(input, dim=0)
         tensor([2., 1., 3.], dtype=oneflow.float32)
         >>> flow.min(input, dim=1)
@@ -174,7 +174,7 @@ def _max(input, dim=None, keepdim=False):
         >>> import oneflow as flow
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
-        tensor([6.], dtype=oneflow.float32)
+        tensor(6., dtype=oneflow.float32)
         >>> flow.max(input, dim=0)
         tensor([4., 6., 5.], dtype=oneflow.float32)
         >>> flow.max(input, dim=1)

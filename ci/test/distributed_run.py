@@ -483,7 +483,9 @@ if __name__ == "__main__":
     loop.run_until_complete(
         asyncio.gather(
             *[
-                spawn_shell_and_check(f"ssh -o StrictHostKeyChecking=no {remote_host} true")
+                spawn_shell_and_check(
+                    f"ssh -o StrictHostKeyChecking=no {remote_host} true"
+                )
                 for remote_host in remote_hosts
             ],
         ),
