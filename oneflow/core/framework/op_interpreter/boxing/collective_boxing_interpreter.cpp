@@ -25,7 +25,7 @@ namespace oneflow {
 namespace {
 
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *CHECK_JUST(UniqueStr("eager_nccl_all_reduce")))
+  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -33,7 +33,7 @@ Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
 }
 
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_gather", *CHECK_JUST(UniqueStr("eager_nccl_all_gather")))
+  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -43,7 +43,7 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type) {
   return one::OpBuilder("eager_nccl_reduce_scatter",
-                        *CHECK_JUST(UniqueStr("eager_nccl_reduce_scatter")))
+                        *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))

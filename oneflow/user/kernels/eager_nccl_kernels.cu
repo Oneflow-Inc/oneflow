@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -173,7 +174,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     const auto& op_type = ctx->Attr<std::string>("op_type");
     OF_NCCL_CHECK(ncclReduceScatter(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
-        op_type2ncclRedOp_t.at(op_type), kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
+        CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)), kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

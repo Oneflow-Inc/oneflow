@@ -75,7 +75,7 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   if (in_parallel_distribution == out_parallel_distribution
       && in_parallel_desc == out_parallel_desc) {
-    std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
+    static std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
         std::make_shared<IdentityBoxingInterpreter>();
     return identity_boxing_interpreter;
   }
@@ -93,13 +93,13 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_parallel_distribution,
                                                              out_parallel_distribution);
       } else {
-        OF_UNIMPLEMENTED();
+        UNIMPLEMENTED_THEN_RETURN();
       }
     } else {
-      OF_UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   } else {
-    OF_UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
 }
 
