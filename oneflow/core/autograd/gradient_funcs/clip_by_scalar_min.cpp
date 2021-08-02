@@ -41,9 +41,9 @@ class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinInterpState> {
     ctx->SaveTensorForBackward(inputs.at(0));
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    if (IsFloatingDataType(inputs.at(0)->dtype())) {
+    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       ctx->min = functional::Scalar(JUST(composed_attrs.GetAttr<double>("floating_min")));
-    } else if (IsIntegralDataType(inputs.at(0)->dtype())) {
+    } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
       ctx->min = functional::Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_min")));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";

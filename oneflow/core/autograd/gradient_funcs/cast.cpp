@@ -48,7 +48,7 @@ class Cast : public OpExprGradFunction<CastOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", ctx->data_type));
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", ctx->data_type));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }
