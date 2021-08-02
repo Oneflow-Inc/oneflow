@@ -49,7 +49,7 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d
+from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
 from oneflow.nn.modules.dataset import (
     COCOReader,
     CoinFlip,
