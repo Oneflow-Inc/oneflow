@@ -29,7 +29,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
     def test_fuse_cast_scale_mlir(test_case):
         in_type = flow.int64
         out_type = flow.float32
-        shape = (2, 2)
+        shape = (96, 96)
 
         @flow.global_function(function_config=func_config)
         def FuseCastScaleJob(
