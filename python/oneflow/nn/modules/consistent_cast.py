@@ -25,7 +25,9 @@ class ToConsistent(Module):
         if isinstance(sbp, flow.sbp.sbp):
             sbp = [sbp]
         for elem in sbp:
-            assert isinstance(elem, flow.sbp.sbp), "element %s is not an sbp instance"%(sbp) 
+            assert isinstance(
+                elem, flow.sbp.sbp
+            ), "element %s is not an sbp instance" % (sbp)
         self.sbp = sbp
 
     def forward(self, x, sbp, placement):

@@ -211,9 +211,9 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   return iter->second;
 }
 
-Maybe<Tensor> GetSyncedTensorIfBroadcast(
-    const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
+                                         Symbol<ParallelDesc> parallel_desc,
+                                         Symbol<cfg::ParallelDistribution> parallel_distribution) {
   Optional<int64_t> parallel_id;
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
@@ -228,7 +228,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(
       *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
 }
 
-}
+}  // namespace
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
@@ -251,23 +251,23 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& parallel_distribution = JUST(ctx.parallel_distribution.value());
     const auto& parallel_desc = JUST(ctx.parallel_desc.value());
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
-    ConsistentTensorMeta tensor_meta(
-        std::make_shared<const Shape>(logical_shape), input_mirrored_tensor->dtype(),
-        parallel_distribution, parallel_desc);
+    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape),
+                                     input_mirrored_tensor->dtype(), parallel_distribution,
+                                     parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        SymbolOf(tensor_meta), device, parallel_id,
-        input_mirrored_tensor->requires_grad(), !input_mirrored_tensor->requires_grad()));
+        SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
+        !input_mirrored_tensor->requires_grad()));
     const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(consistent_tensor_impl->set_rpc_token(rpc_token));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*consistent_tensor));
     if (parallel_id.has_value()) {
-      const auto& synced_tensor = JUST(GetSyncedTensorIfBroadcast(
-          input_mirrored_tensor, parallel_desc, parallel_distribution));
+      const auto& synced_tensor = JUST(
+          GetSyncedTensorIfBroadcast(input_mirrored_tensor, parallel_desc, parallel_distribution));
       consistent_tensor_impl->reset_cur_rank_phy_tensor(
-        std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
+          std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
     }
     JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, RpcUtil::TimeoutSeconds()));
     JUST(ctx->Check());

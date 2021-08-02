@@ -97,7 +97,7 @@ FLAT_MSG_END(FlatParallelDistribution);
 class FlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
  public:
   FlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
-                                          Symbol<cfg::ParallelDistribution> parallel_distribution)
+                                      Symbol<cfg::ParallelDistribution> parallel_distribution)
       : AsyncRpcCtx(rpc_token),
         symbol_id_(symbol_id),
         parallel_distribution_(parallel_distribution) {}
@@ -105,7 +105,7 @@ class FlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
   ~FlatParallelDistributionAsyncRpcCtx() override {}
 
   Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override {
+                                           std::function<void()>* Callback) override {
     const auto& flat_parallel_distribution = std::make_shared<FlatParallelDistribution>();
     JUST(flat_parallel_distribution->Init(symbol_id_, parallel_distribution_));
     *buffer = flat_parallel_distribution.get();

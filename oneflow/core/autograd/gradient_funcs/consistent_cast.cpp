@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -24,6 +25,7 @@ namespace one {
 struct CastConsistentOpExprInterpState : public OpExprInterpState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<cfg::ParallelDistribution> parallel_distribution;
+  std::shared_ptr<const Shape> shape;
 };
 
 class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
@@ -37,13 +39,20 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
   }
 
   Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // do nothing
+                      const TensorTuple& outputs,
+                      const OpExprInterpContext& interp_ctx) const override {
+    ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
+    ctx->parallel_distribution = JUST(interp_ctx.parallel_distribution.value());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    const auto& out_grad = out_grads.at(0);
+    CHECK_OR_RETURN(out_grad->is_consistent());
+    const auto& bw_parallel_distribution = JUST(out_grad->parallel_distribution());
+    const auto& dual_parallel_distribution = JUST(GetDualNdSbp(ctx->parallel_distribution));
+    CHECK_OR_RETURN(bw_parallel_distribution == dual_parallel_distribution);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
@@ -66,16 +75,22 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
 
   Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
-    ctx->parallel_distribution = JUST(inputs.at(0)->parallel_distribution());
+    const auto& input = inputs.at(0);
+    CHECK_OR_RETURN(input->is_consistent());
+    ctx->parallel_desc = JUST(input->parallel_desc());
+    ctx->parallel_distribution = JUST(input->parallel_distribution());
+    ctx->shape = input->shape();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    const auto& dual_parallel_distribution = JUST(GetDualNdSbp(ctx->parallel_distribution));
+    MutableAttrMap attrs;
+    attrs.SetAttr<Shape>("shape", *ctx->shape);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)},
-        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->parallel_distribution)));
+        OpExprInterpContext(attrs, ctx->parallel_desc, dual_parallel_distribution)));
     return Maybe<void>::Ok();
   }
 

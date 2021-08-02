@@ -42,8 +42,7 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
 
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type) {
-  return one::OpBuilder("eager_nccl_reduce_scatter",
-                        *JUST(UniqueStr("eager_nccl_reduce_scatter")))
+  return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))

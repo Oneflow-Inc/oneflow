@@ -40,10 +40,10 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
                  .Input("in")
                  .Output("out")
                  .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetNdSbpStrList(parallel_distribution)))
+                                                 *JUST(GetDualNdSbpStrList(parallel_distribution)))
                  .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                 *JUST(GetNdSbpStrList(parallel_distribution)))
+                                                 std::vector<std::string>())
                  .Build());
     iter = parallel_distribution2hierarchical_parallel_cast_op_expr
                .emplace(parallel_distribution, op_expr)

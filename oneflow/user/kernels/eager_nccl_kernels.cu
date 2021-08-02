@@ -172,9 +172,10 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     CHECK(!(in->shape() == out->shape()));
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
-    OF_NCCL_CHECK(ncclReduceScatter(
-        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
-        CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)), kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()),
+                                    CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)),
+                                    kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
