@@ -20,67 +20,35 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
-def make_job(x_shape, b_shape, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
+def make_job(x_shape, b_shape, xrts=[]):
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
     def bias_add_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        bias=flow.FixedTensorDef(b_shape, dtype=dtype),
+        x:oft.Numpy.Placeholder(x_shape),
+        bias:oft.Numpy.Placeholder(b_shape),
     ):
         return flow.nn.bias_add(x, bias)
 
     return bias_add_job
 
 
-def make_xla_job(x_shape, b_shape, dtype=flow.float32):
-    config.use_xla_jit(True)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def xla_bias_add_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        bias=flow.FixedTensorDef(b_shape, dtype=dtype),
-    ):
-        return flow.nn.bias_add(x, bias)
-
-    return xla_bias_add_job
-
-
-def make_trt_job(x_shape, b_shape, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_bias_add_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        bias=flow.FixedTensorDef(b_shape, dtype=dtype),
-    ):
-        return flow.nn.bias_add(x, bias)
-
-    return trt_bias_add_job
-
-
 class TestBiasAdd(unittest.TestCase):
     def _test_body(self, x, bias, dtype=np.float32):
-        f1 = make_job(x.shape, bias.shape, dtype=flow.float32)
-        f2 = make_xla_job(x.shape, bias.shape, dtype=flow.float32)
-        a = f1(x, bias).get()
-        b = f2(x, bias).get()
-        print("without xla: ", a)
-        print("with xla: ", b)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
+        func = make_job(x.shape, bias.shape)
+        out = func(x, bias).get()
+        out_np = out.numpy()
         flow.clear_default_session()
-        f3 = make_trt_job(x.shape, bias.shape, dtype=flow.float32)
-        c = f3(x, bias).get()
-        print("with tensorrt: ", c)
-        self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
-        flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(x.shape, bias.shape, xrts=[xrt])
+            xrt_out = xrt_job(x, bias).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, bias_shape, dtype=np.float32):
         x = np.ones(x_shape, dtype=dtype)

@@ -20,70 +20,42 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
-def make_job(input_shape, permute, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
+def make_job(input_shape, permute, xrts=[]):
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
+    def transpose_job(x:oft.Numpy.Placeholder(input_shape)):
         return flow.transpose(x, perm=permute)
 
     return transpose_job
 
 
-def make_xla_job(input_shape, permute, dtype=flow.float32):
-    config.use_xla_jit(True)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def xla_transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.transpose(x, perm=permute)
-
-    return xla_transpose_job
-
-
-def make_trt_job(input_shape, permute, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_transpose_job(x=flow.FixedTensorDef(input_shape, dtype=dtype)):
-        return flow.transpose(x, perm=permute)
-
-    return trt_transpose_job
-
-
 class TestTranspose(unittest.TestCase):
-    def _test_body(self, x, permute, dtype=flow.float32):
-        f1 = make_job(x.shape, permute, dtype=dtype)
-        f2 = make_xla_job(x.shape, permute, dtype=dtype)
-        a = f1(x).get()
-        b = f2(x).get()
-        print("without xla: ", a)
-        print("with xla: ", b)
-        self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
+    def _test_body(self, x, permute):
+        func = make_job(x.shape, permute)
+        out = func(x).get()
+        out_np = out.numpy()
         flow.clear_default_session()
-        f3 = make_trt_job(x.shape, permute, dtype=dtype)
-        c = f3(x).get()
-        print("with tensorrt: ", c)
-        self.assertTrue(a.shape == c.shape)
-        self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
-        flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(x.shape, permute, xrts=[xrt])
+            xrt_out = xrt_job(x).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(self, shape, permute, dtype=flow.float32):
         np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
         x = np.ones(shape, dtype=np_dtype)
-        self._test_body(x, permute, dtype=dtype)
+        self._test_body(x, permute)
 
     def _test_random_body(self, shape, permute, dtype=flow.float32):
         np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
         x = np.random.random(shape).astype(np_dtype)
-        self._test_body(x, permute, dtype=dtype)
+        self._test_body(x, permute)
 
     def test_ones_input(self):
         self._test_ones_body((1, 2), (1, 0))

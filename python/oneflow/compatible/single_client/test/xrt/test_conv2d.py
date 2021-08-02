@@ -20,58 +20,34 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
 def make_job(
     x_shape,
     w_shape,
-    kernel_size=None,
     strides=None,
     padding="valid",
+    bias=None,
     data_format="NCHW",
     dilation_rate=None,
-    dtype=flow.float32,
+    groups=1,
+    xrts=[]
 ):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
     def conv2d_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        weight=flow.FixedTensorDef(w_shape, dtype=dtype),
+        x:oft.Numpy.Placeholder(x_shape),
+        weight:oft.Numpy.Placeholder(w_shape),
     ):
         return flow.nn.conv2d(
-            x, weight, strides, padding, None, data_format, dilation_rate
+            x, weight, strides, padding, bias, data_format, dilation_rate, groups
         )
 
     return conv2d_job
-
-
-def make_trt_job(
-    x_shape,
-    w_shape,
-    kernel_size=None,
-    strides=None,
-    padding="valid",
-    data_format="NCHW",
-    dilation_rate=None,
-    dtype=flow.float32,
-):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_conv2d_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        weight=flow.FixedTensorDef(w_shape, dtype=dtype),
-    ):
-        return flow.nn.conv2d(
-            x, weight, strides, padding, None, data_format, dilation_rate
-        )
-
-    return trt_conv2d_job
 
 
 class TestConv2d(unittest.TestCase):
@@ -85,40 +61,33 @@ class TestConv2d(unittest.TestCase):
         self,
         x,
         filters,
-        kernel_size,
         strides,
         padding,
         data_format,
         dilation_rate,
-        dtype=np.float32,
     ):
-        f1 = make_job(
+        func = make_job(
             x.shape,
             filters.shape,
-            kernel_size,
-            strides,
-            padding,
-            data_format,
-            dilation_rate,
-            dtype=flow.float32,
-        )
-        f2 = make_trt_job(
-            x.shape,
-            filters.shape,
-            kernel_size,
-            strides,
-            padding,
-            data_format,
-            dilation_rate,
-            dtype=flow.float32,
-        )
-        a = f1(x, filters).get()
-        b = f2(x, filters).get()
-        print("without xla: ", a)
-        print("with tensorrt: ", b)
-        self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
+            strides=strides,
+            padding=padding,
+            data_format=data_format,
+            dilation_rate=dilation_rate)
+
+        out = func(x, filters).get()
+        out_np = out.numpy()
         flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(
+                x.shape,
+                filters.shape,
+                strides=strides,
+                padding=padding,
+                data_format=data_format,
+                dilation_rate=dilation_rate)
+            xrt_out = xrt_job(x, filters).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(
         self,
@@ -138,7 +107,6 @@ class TestConv2d(unittest.TestCase):
         self._test_body(
             x,
             weight,
-            kernel_size=kernel_size,
             strides=strides,
             padding=padding,
             data_format=data_format,
@@ -163,7 +131,6 @@ class TestConv2d(unittest.TestCase):
         self._test_body(
             x,
             weight,
-            kernel_size=kernel_size,
             strides=strides,
             padding=padding,
             data_format=data_format,

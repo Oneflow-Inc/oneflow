@@ -20,69 +20,34 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
-def make_job(x_shape, like_shape, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
+def make_job(x_shape, like_shape, xrts=[]):
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
     def reshape_like_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        like=flow.FixedTensorDef(like_shape, dtype=dtype),
+        x: oft.Numpy.Placeholder(x_shape),
+        like: oft.Numpy.Placeholder(like_shape),
     ):
         return flow.reshape_like(x, like)
 
     return reshape_like_job
 
-
-def make_xla_job(x_shape, like_shape, dtype=flow.float32):
-    config.use_xla_jit(True)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def xla_reshape_like_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        like=flow.FixedTensorDef(like_shape, dtype=dtype),
-    ):
-        return flow.reshape_like(x, like)
-
-    return xla_reshape_like_job
-
-
-def make_trt_job(x_shape, like_shape, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_reshape_like_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-        like=flow.FixedTensorDef(like_shape, dtype=dtype),
-    ):
-        return flow.reshape_like(x, like)
-
-    return trt_reshape_like_job
-
-
 class TestReshapeLike(unittest.TestCase):
     def _test_body(self, x, like, dtype=np.float32):
-        f1 = make_job(x.shape, like.shape, dtype=flow.float32)
-        f2 = make_xla_job(x.shape, like.shape, dtype=flow.float32)
-        a = f1(x, like).get()
-        b = f2(x, like).get()
-        print("without xla: ", a)
-        print("with xla: ", b)
-        self.assertTrue(a.shape == b.shape)
-        self.assertTrue(np.allclose(a.numpy(), b.numpy(), rtol=0.001, atol=1e-05))
+        func = make_job(x.shape, like.shape)
+        out = func(x, like).get()
+        out_np = out.numpy()
         flow.clear_default_session()
-        f3 = make_trt_job(x.shape, like.shape, dtype=flow.float32)
-        c = f3(x, like).get()
-        print("with tensorrt: ", c)
-        self.assertTrue(a.shape == c.shape)
-        self.assertTrue(np.allclose(a.numpy(), c.numpy(), rtol=0.001, atol=1e-05))
-        flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(x.shape, like.shape, xrts=[xrt])
+            xrt_out = xrt_job(x, like).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(self, x_shape, like_shape, dtype=np.float32):
         x = np.ones(x_shape, dtype=dtype)
