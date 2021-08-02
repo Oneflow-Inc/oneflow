@@ -489,19 +489,19 @@ jobs:
         continue-on-error: true
         id: new_interface_distributed_try_1
         run: |
-          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --multi_client --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Module API test (distributed, 2nd try)
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && steps.new_interface_distributed_try_1.outcome=='failure'
         continue-on-error: true
         id: new_interface_distributed_try_2
         run: |
-          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --multi_client --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Module API test (distributed, 3rd try)
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && steps.new_interface_distributed_try_2.outcome=='failure'
         continue-on-error: false
         id: new_interface_distributed_try_3
         run: |
-          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --multi_client --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Upload log (distributed test)
         if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite))
         uses: ./.github/actions/upload_oss
