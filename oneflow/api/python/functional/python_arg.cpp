@@ -131,6 +131,8 @@ Maybe<DataType> PythonArg::ObjectAs<DataType>() const {
     return static_cast<DataType>(*dtype);
   } else if (detail::isinstance<DType>(obj)) {
     return JUST(detail::cast<DType&>(obj)).data_type();
+  } else if(detail::isinstance<Symbol<DType>>(obj)){
+    return JUST(detail::cast<Symbol<DType>&>(obj))->data_type();
   } else if (detail::isinstance<int32_t>(obj)) {
     return static_cast<DataType>(JUST(detail::cast<int32_t>(obj)));
   } else if (detail::isinstance<int64_t>(obj)) {
