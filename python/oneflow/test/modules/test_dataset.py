@@ -294,7 +294,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
 
         image_raw_buffer_nd = image_raw_buffer.numpy()[0]
         gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
-        img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR) 
+        img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR)
         test_case.assertTrue(np.array_equal(img, gt_np))
 
 
