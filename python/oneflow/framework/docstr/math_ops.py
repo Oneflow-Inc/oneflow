@@ -30,10 +30,7 @@ add_docstr(
     ceil(x: Tensor) -> Tensor
 
 
-    Returns a new tensor with the ceil of the elements of :attr:`x`,
-    the smallest integer greater than or equal to each element.
-
-    The equation is: 
+    Returns a new tensor with the ceil of the elements of :attr:`x`,the smallest integer greater than or equal to each element.
 
     .. math::
         \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
@@ -79,8 +76,6 @@ add_docstr(
     
     Returns a new tensor of the element-wise sum of the input arrays `x` and `y` with broadcasting.
 
-    The equation is: 
-
     .. math::
         out = x + y
 
@@ -116,9 +111,9 @@ add_docstr(
          [2. 1. 3. 2.]
          [5. 6. 7. 3.]]
 
+    The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
     """,
 )
-#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
 
 
 add_docstr(
@@ -127,8 +122,6 @@ add_docstr(
     broadcast_div(x: Tensor,y : Tensor) -> Tensor
     
     Returns element-wise division of the input arrays `x` and `y` with broadcasting.
-
-    The equation is: 
 
     .. math::
         out = \frac{x}{y}
@@ -162,14 +155,16 @@ add_docstr(
         [[3. 3. 3.]
          [2. 2. 2.]]
 
+
+    The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
     """,
 )
-#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
+
 
 add_docstr(
     oneflow.F.broadcast_greater,
     r""" 
-    broadcast_greater(x: Tensor,y : Tensor) -> Tensor
+    broadcast_greater(x: Tensor,y: Tensor) -> Tensor
     
     Returns the result of element-wise greater than (>) comparison operation with broadcasting.
 
@@ -203,20 +198,21 @@ add_docstr(
         [[0 0 0]
          [1 1 1]]
 
+    
+    The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
     """,
 )
-#The documentation is referenced from: https://mxnet.apache.org/versions/1.6/api/r/docs/api/
 
 add_docstr(
     oneflow.F.add_scalar_by_tensor,
     r""" 
-    add_scalar_by_tensor(x: Tensor,y : Tensor(1 dimension,1 element),Bool inplace=False) -> Tensor
+    add_scalar_by_tensor(x: Tensor, y: Tensor, Bool inplace=False) -> Tensor
     
     Adds the element of `y` (scalar) to each element of the input tensor `x` and return a new Tensor 
 
     Args:
         x (oneflow.Tensor): A Tensor.
-        y (oneflow.Tensor): A scalar saved in Tensor.
+        y (oneflow.Tensor): A Tensor.
         inplace(Bool): if true, will do inplace.Default False 
 
     For example: 
