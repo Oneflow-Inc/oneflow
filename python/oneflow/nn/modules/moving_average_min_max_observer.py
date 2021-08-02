@@ -63,7 +63,9 @@ def moving_average_min_max_observer_op(
     quantization_scheme: str = "symmetric",
     momentum: float = 0,
 ):
-    """Compute the quantization parameters based on the moving average of the input tensor's min and max values.
+    """
+    
+    Compute the quantization parameters based on the moving average of the input tensor's min and max values.
 
     First compute the moving\\_max and moving\\_min value of input tensor:
 

@@ -48,7 +48,9 @@ def fake_quantization_op(
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
 ):
-    """Simulate the quantize and dequantize operations in training time.
+    """
+    
+    Simulate the quantize and dequantize operations in training time.
 
     The output will be computed as:
 

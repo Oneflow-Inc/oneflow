@@ -49,7 +49,9 @@ def min_max_observer_op(
     quantization_formula: str = "google",
     per_layer_quantization: bool = True,
 ):
-    """Compute the quantization parameters of the input tensor.
+    """
+    
+    Compute the quantization parameters of the input tensor.
 
     First compute the max and min values of input tensor:
 
