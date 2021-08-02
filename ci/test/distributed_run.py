@@ -479,6 +479,15 @@ if __name__ == "__main__":
     if args.mode == "multi_client":
         remote_hosts = [this_host] + remote_hosts
     loop = asyncio.get_event_loop()
+    # add host key to all machines (needed by ssh/scp/rsync)
+    loop.run_until_complete(
+        asyncio.gather(
+            *[
+                spawn_shell_and_check(f"ssh -o StrictHostKeyChecking=no {remote_host} true")
+                for remote_host in remote_hosts
+            ],
+        ),
+    )
     loop.run_until_complete(
         asyncio.gather(
             *[
