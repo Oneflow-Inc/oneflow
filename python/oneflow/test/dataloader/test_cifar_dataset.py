@@ -70,8 +70,8 @@ def test(test_case):
 
     transform = flow.utils.vision.transforms.Compose(
         [
-            flow.utils.vision.transforms.ToTensor(), 
-            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            flow.utils.vision.transforms.ToTensor(),
+            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
 
