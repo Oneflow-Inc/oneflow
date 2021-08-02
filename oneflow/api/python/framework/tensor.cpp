@@ -272,7 +272,7 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
+Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_dtype,
                         bool treat_single_int_as_size) {
   Symbol<Device> device;
   if (kwargs.contains("device")) {
