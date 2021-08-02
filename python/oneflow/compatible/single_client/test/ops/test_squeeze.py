@@ -58,7 +58,6 @@ def compare_with_tensorflow(device_type, x_shape, axis):
 
     of_out = SqueezeJob().get().numpy()
     tf_out = tf.squeeze(np.ones(x_shape, dtype=np.float32), axis).numpy()
-    tf_out = np.array([tf_out]) if isinstance(tf_out, np.float32) else tf_out
     assert np.array_equal(of_out, tf_out)
 
 
