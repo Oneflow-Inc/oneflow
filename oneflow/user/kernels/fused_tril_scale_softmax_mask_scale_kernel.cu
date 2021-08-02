@@ -57,6 +57,7 @@ struct TrilScaleLoad {
 
 template<typename SRC, typename DST>
 struct MaskAndScaleStore {
+  MaskAndScaleStore() : dst(nullptr) {}
   MaskAndScaleStore(DST* dst, DST* softmax_y, const int8_t* mask, int64_t row_size, DST scale)
       : dst(dst), softmax_y(softmax_y), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
@@ -76,6 +77,7 @@ struct MaskAndScaleStore {
         softmax_y_pack.storage;
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
   }
+  __device__ bool empty() { return dst == nullptr; }
   DST* dst;
   DST* softmax_y;
   const int8_t* mask;
@@ -108,6 +110,7 @@ struct MaskAndScaleLoad {
 
 template<typename SRC, typename DST>
 struct TrilScaleStore {
+  TrilScaleStore() : dst(nullptr) {}
   TrilScaleStore(DST* dst, int64_t tril_num_rows, int64_t row_size, int64_t diagonal, DST fill,
                  DST scale)
       : dst(dst),
@@ -131,6 +134,7 @@ struct TrilScaleStore {
     }
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
   }
+  __device__ bool empty() { return dst == nullptr; }
   DST* dst;
   int64_t tril_num_rows;
   int64_t row_size;
