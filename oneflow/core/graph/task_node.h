@@ -86,7 +86,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
 
-  void EraseZeroSizeProducedBlob();
+  void EraseUninitializedShapeProducedBlob();
   void EraseZeroSizeConsumedRegst();
   void EraseZeroSizeProducedRegst();
   void UnbindBnWithEmptyRegst();

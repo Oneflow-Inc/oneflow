@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+import oneflow.optim as optim
 import oneflow.utils.data as data
 
 
@@ -34,7 +35,7 @@ class LinearNet(nn.Module):
         return y
 
 
-@flow.unittest.skip_unless_1n1d()
+@unittest.skip("optimizer has a bug with 0-dim tensor")
 class TestTensorDataset(flow.unittest.TestCase):
     def test_tensor_dataset(test_case):
         num_inputs = 2
@@ -45,7 +46,8 @@ class TestTensorDataset(flow.unittest.TestCase):
         flow.nn.init.normal_(net.linear.weight, mean=0, std=0.01)
         flow.nn.init.constant_(net.linear.bias, val=0)
         loss = nn.MSELoss()
-        optimizer = flow.optim.SGD(net.parameters(), lr=0.03)
+        optimizer = optim.SGD(net.parameters(), lr=0.03)
+
         features = flow.tensor(
             np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float
         )
@@ -53,6 +55,7 @@ class TestTensorDataset(flow.unittest.TestCase):
         labels += flow.tensor(
             np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float
         )
+
         batch_size = 10
         dataset = data.TensorDataset(features, labels)
         data_iter = data.DataLoader(dataset, batch_size, shuffle=True, num_workers=0)
@@ -60,7 +63,7 @@ class TestTensorDataset(flow.unittest.TestCase):
         for epoch in range(1, num_epochs + 1):
             for (X, y) in data_iter:
                 output = net(X)
-                l = loss(output, y)
+                l = loss(output, y).sum()
                 optimizer.zero_grad()
                 l.backward()
                 optimizer.step()

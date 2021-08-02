@@ -990,7 +990,7 @@ def std_op(tensor, dim, unbiased=False, keepdim=False):
         >>> input = flow.Tensor(arr)
         >>> output = flow.std(input, dim=0).numpy()
         >>> output
-        array([0.8164968], dtype=float32)
+        array(0.8164968, dtype=float32)
 
     """
     return Std(dim, unbiased, keepdim)(tensor)
