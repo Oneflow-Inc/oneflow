@@ -21,6 +21,7 @@ limitations under the License.
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
@@ -58,6 +59,51 @@ REGISTER_USER_OP("mlir_jit")
       return Maybe<void>::Ok();
     });
 
+using OpaqueMemRefDescriptor = std::shared_ptr<void>;
+
+template<unsigned N, typename T>
+OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
+  using MemRefType = StridedMemRefType<const T, N>;
+  auto desc = new MemRefType();
+  *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
+      tensor->dptr<T>(), tensor->dptr<T>(),
+      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
+      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+  auto deleter = [](void const* data) {
+    auto p = static_cast<MemRefType const*>(data);
+    delete p;
+  };
+
+  OpaqueMemRefDescriptor ret(desc, deleter);
+  return ret;
+}
+
+template<unsigned N, typename T>
+OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
+  using MemRefType = StridedMemRefType<T, N>;
+  auto desc = new MemRefType();
+  *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
+      tensor->mut_dptr<T>(), tensor->mut_dptr<T>(),
+      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
+      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+  auto deleter = [](void const* data) {
+    auto p = static_cast<MemRefType const*>(data);
+    delete p;
+  };
+
+  OpaqueMemRefDescriptor ret(desc, deleter);
+  return ret;
+}
+
+#define MAKE_STRIDED_MEM_REF_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
+DEFINE_STATIC_SWITCH_FUNC(OpaqueMemRefDescriptor, CreateMemRefDescriptor,
+                          MAKE_STRIDED_MEM_REF_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(OpaqueMemRefDescriptor, CreateMutMemRefDescriptor,
+                          MAKE_STRIDED_MEM_REF_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+#undef MAKE_STRIDED_MEM_REF_SWITCH_ENTRY
+
 template<DeviceType device_type, typename T>
 class MlirJitKernel final : public user_op::OpKernel {
  public:
@@ -87,22 +133,16 @@ class MlirJitKernel final : public user_op::OpKernel {
                           << llvm::toString(jit_or_error.takeError());
     user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
     // TODO: extract a function
-    auto ref_in_0 = mlir::detail::makeStridedMemRefDescriptor<2>(
-        in_0->dptr<int64_t>(), in_0->dptr<int64_t>(),
-        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()},
-        {in_0->shape().ptr(), in_0->shape().ptr() + in_0->shape().NumAxes()});
+    auto ref_in_0 =
+        SwitchCreateMemRefDescriptor(SwitchCase(in_0->shape().NumAxes(), in_0->data_type()), in_0);
     user_op::Tensor* in_1 = ctx->Tensor4ArgNameAndIndex("in", 1);
-    auto ref_in_1 = mlir::detail::makeStridedMemRefDescriptor<1>(
-        in_1->dptr<float>(), in_1->dptr<float>(),
-        {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()},
-        {in_1->shape().ptr(), in_1->shape().ptr() + in_1->shape().NumAxes()});
+    auto ref_in_1 =
+        SwitchCreateMemRefDescriptor(SwitchCase(in_1->shape().NumAxes(), in_1->data_type()), in_1);
     user_op::Tensor* out_0 = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto ref_out_0 = mlir::detail::makeStridedMemRefDescriptor<2>(
-        out_0->mut_dptr<float>(), out_0->mut_dptr<float>(),
-        {out_0->shape().ptr(), out_0->shape().ptr() + out_0->shape().NumAxes()},
-        {out_0->shape().ptr(), out_0->shape().ptr() + out_0->shape().NumAxes()});
+    auto ref_out_0 = SwitchCreateMutMemRefDescriptor(
+        SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke(ctx->op_name(), &ref_in_0, &ref_in_1, &ref_out_0);
+    auto error = jit->invoke(ctx->op_name(), ref_in_0.get(), ref_in_1.get(), ref_out_0.get());
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
