@@ -255,13 +255,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::st
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
 
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step);
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name);
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,
@@ -275,9 +268,6 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
                                     const std::vector<int32_t>& pool_size,
                                     const std::vector<int32_t>& strides, const bool& ceil_mode,
                                     const std::string& name);
-
-Maybe<one::UserOpExpr> AdaptivePoolGradOp();
-Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name);
 
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);

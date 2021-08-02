@@ -49,9 +49,6 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
-  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());
@@ -60,11 +57,6 @@ int64_t GlobalProcessCtx::NumOfProcessPerNode() {
 bool GlobalProcessCtx::IsThisProcessMaster() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank() == 0;
-}
-
-bool GlobalProcessCtx::IsMultiClient() {
-  CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return Global<ProcessCtx>::Get()->is_multi_client();
 }
 
 size_t GlobalProcessCtx::WorldSize() {

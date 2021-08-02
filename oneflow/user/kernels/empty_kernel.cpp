@@ -27,10 +27,6 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    CHECK_GT(elem_cnt, 0);
-
     // Do nothing
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -44,7 +40,7 @@ class EmptyKernel final : public OpKernel {
 #define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, POD_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 REGISTER_EMPTY_XPU_KERNEL(DeviceType::kGPU, float16);

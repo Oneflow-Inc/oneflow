@@ -72,7 +72,7 @@ Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple&
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
   in_grads->at(0) = JUST(
-      OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {like, out_grads.at(0), index}, attrs));
+      OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {like, index, out_grads.at(0)}, attrs));
   return Maybe<void>::Ok();
 }
 

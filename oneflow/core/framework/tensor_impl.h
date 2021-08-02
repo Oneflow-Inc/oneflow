@@ -19,11 +19,13 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -62,26 +64,35 @@ class TensorImpl {
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<bool> has_eager_blob_object() const = 0;
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const { return autograd_meta_->acc_grad(); }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const { return autograd_meta_->now_grad_arg(); }
-  bool requires_grad() const { return autograd_meta_->requires_grad(); }
-  bool is_leaf() const { return autograd_meta_->is_leaf(); }
+  Maybe<Tensor> acc_grad() const;
+  Maybe<TensorArg> current_grad() const;
+  bool requires_grad() const { return requires_grad_; }
+  bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return autograd_meta_->retain_grad(); }
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { autograd_meta_->set_acc_grad(grad); }
-  std::shared_ptr<Tensor> mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
-  void set_requires_grad(bool requires_grad) { autograd_meta_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) { autograd_meta_->set_retain_grad(retain_grad); }
-  void set_is_leaf(bool is_leaf) { autograd_meta_->set_is_leaf(is_leaf); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
+  Maybe<Tensor> mut_acc_grad();
+  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  Maybe<void> set_retain_grad(bool retain_grad);
+  void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
+    autograd_meta_ = autograd_meta;
+  }
+  bool has_autograd_meta() const { return autograd_meta_.get(); }
 
  protected:
-  TensorImpl(const std::shared_ptr<AutogradMeta>& autograd_meta) : autograd_meta_(autograd_meta) {}
+  TensorImpl(bool requires_grad, bool is_leaf) : requires_grad_(requires_grad), is_leaf_(is_leaf) {}
 
  protected:
+  bool requires_grad_;
+  bool is_leaf_;
   std::shared_ptr<AutogradMeta> autograd_meta_;
 };
 
@@ -106,8 +117,8 @@ class MirroredTensorImpl : public TensorImpl {
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                     const std::shared_ptr<AutogradMeta>& autograd_meta)
-      : TensorImpl(autograd_meta), tensor_meta_(tensor_meta) {}
+                     bool requires_grad, bool is_leaf)
+      : TensorImpl(requires_grad, is_leaf), tensor_meta_(tensor_meta) {}
 
   std::shared_ptr<const MirroredTensorMeta> tensor_meta_;
 };
@@ -125,7 +136,8 @@ class ConsistentTensorImpl : public TensorImpl {
     return tensor_meta_->parallel_distribution();
   }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
+      const {
     return consumer_parallel_distribution_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
@@ -134,6 +146,7 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
@@ -145,15 +158,24 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
+  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+
+  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
+    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
+    rpc_token_ = rpc_token;
+    return Maybe<void>::Ok();
+  }
+
  protected:
-  ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta,
-                       const std::shared_ptr<AutogradMeta>& autograd_meta)
-      : TensorImpl(autograd_meta),
+  ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
+      : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_() {}
+        consumer_parallel_distribution_constraint_(),
+        rpc_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
+  Maybe<RpcToken> rpc_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -161,17 +183,18 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   OF_DISALLOW_COPY_AND_MOVE(LazyMirroredTensorImpl);
   LazyMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                          bool requires_grad, bool is_leaf)
-      : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)) {}
+      : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const { return tensor_meta()->shape_ptr(); }
+  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta()->shape_ptr(); }
   bool is_lazy() const override { return true; }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
+  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<MirroredTensorImpl> detach() const override;
 };
 
@@ -179,8 +202,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl();
-  EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                          const std::shared_ptr<AutogradMeta>& autograd_meta);
   EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                           bool requires_grad, bool is_leaf);
   EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
@@ -203,6 +224,9 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     CHECK_OR_RETURN(eager_blob_object_);
     return tensor_storage_;
   }
+  Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
+  Maybe<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
+  Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
@@ -226,7 +250,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
   LazyConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
                            bool is_leaf)
-      : ConsistentTensorImpl(consistent_tensor_meta, NewAutogradMeta(requires_grad, is_leaf)) {}
+      : ConsistentTensorImpl(consistent_tensor_meta, requires_grad, is_leaf) {}
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
@@ -262,8 +286,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                                                         Symbol<Device>, int64_t, bool, bool);
 
  private:
-  EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-                            const std::shared_ptr<AutogradMeta>& autograd_meta,
+  EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
+                            bool is_leaf,
                             const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor);
 
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor_;

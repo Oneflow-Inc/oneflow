@@ -27,19 +27,19 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .Attr<int64_t>("seed", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
-      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
       user_op::TensorDesc* mapped_label = ctx->OutputTensorDesc("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->OutputTensorDesc("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->OutputTensorDesc("sampled_label", 0);
-      *mapped_label->mut_shape() = label->shape();
-      *mapped_label->mut_is_dynamic() = label->is_dynamic();
-      *sampled_weight->mut_shape() = weight->shape();
+      *mapped_label->mut_shape() = label.shape();
+      *mapped_label->mut_is_dynamic() = label.is_dynamic();
+      *sampled_weight->mut_shape() = weight.shape();
       sampled_weight->mut_shape()->Set(0, num_sample);
-      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
-      *sampled_label->mut_shape() = label->shape();
+      *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
+      *sampled_label->mut_shape() = label.shape();
       sampled_label->mut_shape()->Set(0, num_sample);
-      *sampled_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_label->mut_is_dynamic() = label.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -47,26 +47,27 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       CHECK_EQ_OR_RETURN(num_sample % parallel_num, 0);
       const int64_t num_sample_per_rank = num_sample / parallel_num;
-      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
       user_op::TensorDesc* mapped_label = ctx->OutputTensorDesc("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->OutputTensorDesc("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->OutputTensorDesc("sampled_label", 0);
-      *mapped_label->mut_shape() = label->shape();
-      *mapped_label->mut_is_dynamic() = label->is_dynamic();
-      *sampled_weight->mut_shape() = weight->shape();
+      *mapped_label->mut_shape() = label.shape();
+      *mapped_label->mut_is_dynamic() = label.is_dynamic();
+      *sampled_weight->mut_shape() = weight.shape();
       sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
-      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
-      *sampled_label->mut_shape() = label->shape();
+      *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
+      *sampled_label->mut_shape() = label.shape();
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
-      *sampled_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_label->mut_is_dynamic() = label.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
-      CHECK_NOTNULL(label_modifier);
+      CHECK_NOTNULL_OR_RETURN(label_modifier);
       label_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
@@ -136,7 +137,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
     });
 
 REGISTER_USER_OP_GRAD("distributed_partial_fc_sample")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto disable_boxing_op_name = ctx->FwOp().op_name() + "_disable_boxing";
       ctx->DefineOp(disable_boxing_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("distributed_partial_fc_sample_disable_boxing")
@@ -167,6 +168,7 @@ REGISTER_USER_OP_GRAD("distributed_partial_fc_sample")
           [&ctx, &unsorted_segment_sum_like_op_name]() -> const std::string& {
             return ctx->GetOp(unsorted_segment_sum_like_op_name).output("out", 0);
           });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

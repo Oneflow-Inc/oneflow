@@ -21,10 +21,18 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
 class Shape;
+
+class Device;
+class ParallelDesc;
+namespace cfg {
+class ParallelDistribution;
+}
 
 namespace one {
 
@@ -39,11 +47,11 @@ class AutogradMeta final {
       : is_leaf_(is_leaf),
         requires_grad_(requires_grad),
         retain_grad_(false),
-        now_grad_arg_(new TensorArg) {}
+        current_grad_(new TensorArg) {}
 
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
+  const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
@@ -68,7 +76,7 @@ class AutogradMeta final {
   bool retain_grad_;
 
   std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_arg_;
+  std::shared_ptr<TensorArg> current_grad_;
   std::vector<Hook> hooks_;
 };
 
@@ -86,7 +94,9 @@ class TensorInfo final {
  private:
   std::shared_ptr<const Shape> shape_;
   DataType dtype_;
-  // TODO: Add device info
+  Optional<Symbol<Device>> device_;                                    // for local tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;                       // for consistent tensor
+  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution_;  // for consistent tensor
 };
 
 }  // namespace one

@@ -229,6 +229,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
   }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name,
+                                                                                    index);
+  }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }

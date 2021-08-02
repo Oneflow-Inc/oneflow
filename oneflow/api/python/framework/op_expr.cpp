@@ -37,8 +37,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple&
       << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
   auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(op, inputs, outputs.get(), attrs));
+  JUST(one::OpInterpUtil::Dispatch(op, inputs, outputs.get(), attrs));
   return outputs;
 }
 
@@ -95,6 +94,10 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
+  // NOTE(chengcheng): export for Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
+  PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");
+  PybindExportOpExpr<one::FeedVariableOpExpr, cfg::FeedVariableOpConf>(m, "FeedVariableOpExpr");
+  PybindExportOpExpr<one::FetchOutputOpExpr, cfg::FetchOutputOpConf>(m, "FetchOutputOpExpr");
 }
 
 }  // namespace oneflow

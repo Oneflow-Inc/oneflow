@@ -37,7 +37,10 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
+  if (ctx.device.has_value()) { return ctx.device.value(); }
+  return Device::New("cpu", 0);
+}
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
@@ -59,14 +62,17 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       outputs->at(i) =
           std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
     }
+    if (JUST(outputs->at(i)->has_eager_blob_object())) {
+      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+    }
   }
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
   Symbol<Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
@@ -102,9 +108,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
-    output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    if (!output_eager_blob_objects->at(i)) {
+      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
+      output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    }
   }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
@@ -118,7 +126,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     if (need_event_record) {
       for (const auto& input_tensor : inputs) {
-        const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
+        const auto& tensor = JUST(input_tensor->AsMirroredTensor());
         CHECK_OR_RETURN(static_cast<bool>(tensor));
         // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
         // stream
@@ -140,8 +148,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   const auto& device = tensor_impl->device();
   const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
-  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs,
-                      OpExprInterpContext{AttrMap{}, nullptr}));
+  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs, OpExprInterpContext(AttrMap{})));
   return Maybe<void>::Ok();
 }
 
@@ -150,7 +157,7 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   Symbol<Device> default_device;
   if (inputs.empty()) {
-    default_device = JUST(GetDefaultDevice());
+    default_device = JUST(GetDefaultDevice(ctx));
   } else {
     default_device = JUST(inputs.at(0)->device());
   }

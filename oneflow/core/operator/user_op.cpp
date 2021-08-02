@@ -145,6 +145,10 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   ~UserOpInferContext() override = default;
 
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
@@ -484,8 +488,8 @@ class UserOpInferParallelDistributionFnContext
       parallel_distribution_infer_hint4ibn_fn_;
 };
 
-void UserOp::InitFromOpConf() {
-  CHECK(op_conf().has_user_conf());
+Maybe<void> UserOp::InitFromOpConf() {
+  CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
     EnrollRepeatedInputBn(pair.first, pair.second.s_size());
     for (int32_t i = 0; i < pair.second.s_size(); ++i) {
@@ -512,7 +516,7 @@ void UserOp::InitFromOpConf() {
         }
         return nullptr;
       };
-      val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_);
+      JUST(val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_));
     }
     if (val_->output_arg_modify_fn) {
       user_op::GetOutputArgModifier GetOutputArgModifierFn =
@@ -524,9 +528,10 @@ void UserOp::InitFromOpConf() {
         }
         return nullptr;
       };
-      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+      JUST(val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_));
     }
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferInternalBlobDescs(
@@ -763,12 +768,23 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
                                                  ParallelDistributionInferHint4Ibn);
-    return val_->parallel_distribution_infer_fn(&ctx);
+    JUST(val_->parallel_distribution_infer_fn(&ctx));
   } else {
-    return Operator::InferParallelDistributionSignature(
+    JUST(Operator::InferParallelDistributionSignature(
         parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
-        ParallelDistributionInferHint4Ibn);
+        ParallelDistributionInferHint4Ibn));
   }
+  std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
+  if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {
+    auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
+    if (map->count(tick_bn) == 0) {
+      auto* sbp_list = (*map)[tick_bn].mutable_sbp_parallel();
+      for (int i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+        sbp_list->Add()->mutable_broadcast_parallel();
+      }
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
