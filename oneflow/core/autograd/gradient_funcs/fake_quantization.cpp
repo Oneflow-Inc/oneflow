@@ -28,7 +28,7 @@ class FakeQuantization : public OpExprGradFunction<FakeQuantizationInterpState> 
 
   Maybe<void> Capture(FakeQuantizationInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 3);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
@@ -36,13 +36,13 @@ class FakeQuantization : public OpExprGradFunction<FakeQuantizationInterpState> 
   Maybe<void> Apply(const FakeQuantizationInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
+    in_grads->resize(3);
     if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fakequantization", FakeQuantization);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fake_quantization", FakeQuantization);
 
 }  // namespace one
 }  // namespace oneflow

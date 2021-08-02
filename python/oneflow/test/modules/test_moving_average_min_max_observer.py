@@ -136,15 +136,26 @@ def _run_test_moving_average_min_max_observer(
     moving_min_np = np.zeros((1,))
     moving_max_tensor = flow.Tensor(moving_max_np)
     moving_min_tensor = flow.Tensor(moving_min_np)
-    current_train_step_tensor = flow.Tensor(np.zeros((1,)).astype(np.float32), dtype=flow.int64)
+    current_train_step_tensor = flow.Tensor(
+        np.zeros((1,)).astype(np.float32), dtype=flow.int64
+    )
     for i in range(10):
         activation = (np.random.random(activation_shape) - 0.5).astype(
             type_name_to_np_type[dtype]
         )
         activation_tensor = flow.Tensor(activation)
-        (scale, zero_point) = flow.quantization.moving_average_min_max_observer(activation_tensor, current_train_step_tensor, moving_max_tensor, 
-                                moving_min_tensor, True, quantization_formula, stop_update_after_iters=1, quantization_bit=quantization_bit, 
-                                quantization_scheme=quantization_scheme, momentum=momentum)
+        (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
+            activation_tensor,
+            current_train_step_tensor,
+            moving_max_tensor,
+            moving_min_tensor,
+            True,
+            quantization_formula,
+            stop_update_after_iters=1,
+            quantization_bit=quantization_bit,
+            quantization_scheme=quantization_scheme,
+            momentum=momentum,
+        )
         _check_moving_average_min_max_observer(
             test_case,
             activation,
@@ -157,7 +168,6 @@ def _run_test_moving_average_min_max_observer(
             quantization_formula,
             momentum,
         )
-
 
 
 class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):

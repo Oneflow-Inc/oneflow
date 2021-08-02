@@ -373,4 +373,3 @@ from oneflow.ops.user_op_builder import (
 from oneflow.nn.modules.scatter import *
 
 from . import autograd, distributed, linalg, optim, saved_model, sbp, quantization
-
