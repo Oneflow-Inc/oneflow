@@ -25,7 +25,7 @@ namespace oneflow {
 namespace one {
 
 struct CastOpExprInterpState : public OpExprInterpState {
-  DataType data_type;
+  Symbol<DType> data_type;
 };
 
 class Cast : public OpExprGradFunction<CastOpExprInterpState> {
