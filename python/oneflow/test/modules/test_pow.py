@@ -96,7 +96,7 @@ def _test_pow_backward_impl(test_case, device):
 class TestPow(flow.unittest.TestCase):
     def test_pow_forward(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4, 5)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4, 5), (2, 3, 0, 5)]
         arg_dict["scalar"] = [2.1, 0.8]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

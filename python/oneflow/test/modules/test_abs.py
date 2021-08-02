@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_abs_forward(test_case, device):
@@ -61,7 +62,7 @@ def _test_abs_tensor_function_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAbs(flow.unittest.TestCase):
-    def test_cosh(test_case):
+    def test_abs(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_abs_forward,
@@ -80,6 +81,13 @@ class TestAbs(flow.unittest.TestCase):
     def test_flow_tensor_abs_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_tensor_against_pytorch(test_case, "abs", device=device)
+
+    @autotest()
+    def test_abs_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.abs(x)
+        return y
 
 
 if __name__ == "__main__":
