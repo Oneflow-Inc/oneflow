@@ -266,10 +266,9 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return false; }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
-
-  static Maybe<EagerConsistentTensorImpl> New(
-      const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-      Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc);
+  void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {
+    cur_rank_phy_tensor_ = val;
+  }
 
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
