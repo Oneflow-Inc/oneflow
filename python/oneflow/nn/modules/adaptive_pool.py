@@ -63,7 +63,7 @@ class AdaptiveAvgPool1d(Module):
 
     def __init__(self, output_size: _size_1_t) -> None:
         super().__init__()
-        assert output_size is not None
+        assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _single(output_size)
 
     def forward(self, x):
@@ -127,7 +127,7 @@ class AdaptiveAvgPool2d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        assert output_size is not None
+        assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _pair(output_size)
 
     def forward(self, x):
@@ -191,7 +191,7 @@ class AdaptiveAvgPool3d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        assert output_size is not None
+        assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _triple(output_size)
 
     def forward(self, x):
