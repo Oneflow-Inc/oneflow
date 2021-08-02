@@ -20,7 +20,6 @@ import unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-import oneflow.utils.vision.transforms as transforms
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
@@ -62,9 +61,9 @@ def load_data_fashion_mnist(
     root = os.path.expanduser(root)
     trans = []
     if resize:
-        trans.append(transforms.Resize(resize))
-    trans.append(transforms.ToTensor())
-    transform = transforms.Compose(trans)
+        trans.append(flow.utils.vision.transforms.Resize(resize))
+    trans.append(flow.utils.vision.transforms.ToTensor())
+    transform = flow.utils.vision.transforms.Compose(trans)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
         root=root,

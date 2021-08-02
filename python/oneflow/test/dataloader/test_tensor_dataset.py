@@ -21,7 +21,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-import oneflow.utils.data as data
 
 
 class LinearNet(nn.Module):
@@ -54,8 +53,8 @@ class TestTensorDataset(flow.unittest.TestCase):
             np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float
         )
         batch_size = 10
-        dataset = data.TensorDataset(features, labels)
-        data_iter = data.DataLoader(dataset, batch_size, shuffle=True, num_workers=0)
+        dataset = flow.utils.data.TensorDataset(features, labels)
+        data_iter = flow.utils.data.DataLoader(dataset, batch_size, shuffle=True, num_workers=0)
         num_epochs = 10
         for epoch in range(1, num_epochs + 1):
             for (X, y) in data_iter:
