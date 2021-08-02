@@ -87,6 +87,37 @@ def fake_quantization_op(
 
     .. code-block:: python
 
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
+        
+        >>> input_tensor = flow.Tensor(
+        ...    weight, dtype=flow.float32
+        ... )
+        
+        >>> quantization_bit = 8
+        >>> quantization_scheme = "symmetric"
+        >>> quantization_formula = "google"
+        >>> per_layer_quantization = True
+
+        >>> scale, zero_point = flow.quantization.min_max_observer(
+        ...    input_tensor,
+        ...    quantization_bit,
+        ...    quantization_scheme,
+        ...    quantization_formula,
+        ...    per_layer_quantization,
+        ... )
+
+        >>> output_tensor = flow.quantization.fake_quantization(
+        ...    input_tensor,
+        ...    scale,
+        ...    zero_point,
+        ...    quantization_formula=quantization_formula,
+        ...    quantization_bit=quantization_bit,
+        ...    quantization_scheme=quantization_scheme,
+        ... )
+
     """
     return FakeQuantization(
         quantization_formula=quantization_formula,

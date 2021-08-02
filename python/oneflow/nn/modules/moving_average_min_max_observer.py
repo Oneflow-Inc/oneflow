@@ -126,7 +126,7 @@ def moving_average_min_max_observer_op(
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> tensor_weight = flow.Tensor(
+        >>> input_tensor = flow.Tensor(
         ...    weight, dtype=flow.float32
         ... )
 
@@ -145,7 +145,7 @@ def moving_average_min_max_observer_op(
         >>> quantization_formula = "google"
 
         >>> (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
-        ...    tensor_weight,
+        ...    input_tensor,
         ...    current_train_step_tensor,
         ...    moving_max_tensor,
         ...    moving_min_tensor,

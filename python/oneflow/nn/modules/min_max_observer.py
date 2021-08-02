@@ -102,7 +102,7 @@ def min_max_observer_op(
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> tensor_weight = flow.Tensor(
+        >>> input_tensor = flow.Tensor(
         ...    weight, dtype=flow.float32
         ... )
         
@@ -112,7 +112,7 @@ def min_max_observer_op(
         >>> per_layer_quantization = True
 
         >>> scale, zero_point = flow.quantization.min_max_observer(
-        ...    tensor_weight,
+        ...    input_tensor,
         ...    quantization_bit,
         ...    quantization_scheme,
         ...    quantization_formula,
