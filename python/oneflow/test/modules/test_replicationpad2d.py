@@ -22,6 +22,7 @@ from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _np_replication_pad2d_grad(src, dest, padding):
@@ -101,6 +102,19 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_ReplicationPad2d(test_case, *arg)
+
+    @autotest(n=5)
+    def test_replication_pad2d_with_random_data(test_case):
+        c = random(1, 6).to(int)
+        h = random(1, 6).to(int)
+        w = random(1, 6).to(int)
+        m = torch.nn.ReplicationPad2d(padding=random(low=0, high=7))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
