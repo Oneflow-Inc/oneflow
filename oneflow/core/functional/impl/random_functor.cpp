@@ -38,10 +38,10 @@ class BernoulliFunctor {
   BernoulliFunctor() {
     bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(bernoulli_attrs.SetAttr<Symbol<DType>>("dtype", dtype));
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {

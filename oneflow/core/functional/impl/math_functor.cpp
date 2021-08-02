@@ -200,12 +200,12 @@ class RangeFunctor {
  public:
   RangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-                           const DataType& dtype) const {
+                           const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("limit", limit));
     JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
@@ -221,9 +221,9 @@ class ArgMaxFunctor : public UnaryFunctor {
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

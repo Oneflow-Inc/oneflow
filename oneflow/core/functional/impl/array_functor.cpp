@@ -42,13 +42,13 @@ class ConsistentConstantFunctor {
   ConsistentConstantFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -86,12 +86,12 @@ class ConsistentConstantFunctor {
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -169,9 +169,9 @@ class ArgWhereFunctor {
         one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const DataType& dtype) const {
+                                const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
