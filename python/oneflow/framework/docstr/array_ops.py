@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.F.avg_pool_2d,
     r"""
-    avg_pool_2d(x: Tensor, *, kernel_size: Int32List, stride: Int32List, padding: String, padding_before: Int32List, padding_after: Int32List, data_format="channels_first": String, ceil_mode=False: Bool) -> Tensor
+    avg_pool_2d(x: Tensor, *, kernel_size: Union[int, Tuple[int, int]], stride: Union[int, Tuple[int, int]], padding: string, padding_before: Union[int, Tuple[int, int]], padding_after: Union[int, Tuple[int, int]], data_format="channels_first": string, ceil_mode=False: bool) -> Tensor
 
     Applies 2D average-pooling operation in kH x kW regions by step size sH x sW steps. The number of output features is equal to the number of input planes.
     
@@ -27,12 +27,12 @@ add_docstr(
     
     Args:
         x (Tensor): the input tensor.
-        kernel_size (Int32List):  a list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
-        stride (Int32List): a list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
-        padding (String): the padding type. "valid" adds no zero padding. "same_lower" adds padding the low position such that if the stride is 1, the output shape is the same as input shape. "same_upper" adds padding the upper position such that if the stride is 1, the output shape is the same as input shape. "customized" adds padding in the customized type.
-        padding_before (Int32List): the padding elements.
-        padding_after (Int32List): the padding elements.
-        data_format (String): "channels_first" indicates the input shape `NCHW`. "channels_last" indicates the input shape `NHWC`.
+        kernel_size (Union[int, Tuple[int, int]]):  an int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        stride (Union[int, Tuple[int, int]]): an int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (string): the padding type. "valid" adds no zero padding. "same_lower" adds padding the low position such that if the stride is 1, the output shape is the same as input shape. "same_upper" adds padding the upper position such that if the stride is 1, the output shape is the same as input shape. "customized" adds padding in the customized type.
+        padding_before (Union[int, Tuple[int, int]]): the padding elements.
+        padding_after (Union[int, Tuple[int, int]]): the padding elements.
+        data_format (string, default to "channels_first"): "channels_first" indicates the input shape `NCHW`. "channels_last" indicates the input shape `NHWC`.
         ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
 
 """,
@@ -41,7 +41,7 @@ add_docstr(
 add_docstr(
     oneflow.F.clip_by_scalar,
     r"""
-    clip_by_scalar(x: Tensor, *, min: Scalar, max: Scalar) -> Tensor
+    clip_by_scalar(x: Tensor, *, min: Union[float, int], max: Union[float, int]) -> Tensor
 
     Clips all elements in :attr:`x` into the range [:attr:`min`, :attr:`max`]. Letting min_value and max_value be :attr:`min` and :attr:`max`, respectively, this returns:
     
@@ -50,8 +50,8 @@ add_docstr(
     
     Args:
         x (Tensor): the input tensor.
-        min (Scalar): lower-bound of the range to be cliped to.
-        max (Scalar): upper-bound of the range to be cliped to.
+        min (Union[float, int]): lower-bound of the range to be cliped to.
+        max (Union[float, int]): upper-bound of the range to be cliped to.
     
     For example:
     
@@ -70,16 +70,16 @@ add_docstr(
 add_docstr(
     oneflow.F.clip_by_scalar_max,
     r"""
-    clip_by_scalar_max(x: Tensor, *, max: Scalar) -> Tensor
+    clip_by_scalar_max(x: Tensor, *, max: Union[float, int]) -> Tensor
 
-    Clips all elements in :attr:`x` into the range [-∞, :attr:`max`]. Letting max_value be :attr:`max`, this returns:
+    Clips all elements in :attr:`x` into the range [:math:`-\infty`, :attr:`max`]. Letting max_value be :attr:`max`, this returns:
     
     .. math::
         y_i = \min(x_i, \text{max_value})
     
     Args:
         x (Tensor): the input tensor.
-        max (Scalar): upper-bound of the range to be cliped to.
+        max (Union[float, int]): upper-bound of the range to be cliped to.
     
     For example:
     
@@ -98,16 +98,16 @@ add_docstr(
 add_docstr(
     oneflow.F.clip_by_scalar_min,
     r"""
-    clip_by_scalar_min(x: Tensor, *, min: Scalar) -> Tensor
+    clip_by_scalar_min(x: Tensor, *, min: Union[float, int]) -> Tensor
 
-    Clips all elements in :attr:`x` into the range [:attr:`min`, +∞]. Letting min_value be :attr:`min`, this returns:
+    Clips all elements in :attr:`x` into the range [:attr:`min`, :math:`+\infty`]. Letting min_value be :attr:`min`, this returns:
 
     .. math::
         y_i = \max(x_i, \text{min_value})
     
     Args:
         x (Tensor): the input tensor.
-        min (Scalar): lower-bound of the range to be cliped to.
+        min (Union[float, int]): lower-bound of the range to be cliped to.
     
     For example:
     

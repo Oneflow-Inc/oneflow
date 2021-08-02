@@ -52,7 +52,7 @@ add_docstr(
 add_docstr(
     oneflow.F.batch_matmul,
     r"""
-    batch_matmul(a: Tensor, b: Tensor, *, transpose_a=False: Bool, transpose_b=False: Bool, alpha=1.0: Double) -> Tensor 
+    batch_matmul(a: Tensor, b: Tensor, *, transpose_a=False: bool, transpose_b=False: bool, alpha=1.0: double) -> Tensor 
 
     Performs a batch matrix-matrix product of matrices stored in :attr:`a` and :attr:`b`.
 
@@ -63,9 +63,9 @@ add_docstr(
     Args:
         a (Tensor): the first batch of matrices to be multiplied.
         b (Tensor): the second batch of matrices to be multiplied.
-        transpose_a (Bool): whether to transpose the last two dimensions on :attr:`a`.
-        transpose_b (Bool): whether to transpose the last two dimensions on :attr:`b`.
-        alpha (Double): the scaling factor on matrix-matrix product.
+        transpose_a (bool, default to False): whether to transpose the last two dimensions on :attr:`a`.
+        transpose_b (bool, default to False): whether to transpose the last two dimensions on :attr:`b`.
+        alpha (double, default to 1.0): the scaling factor on matrix-matrix product.
     
     For example:
     
@@ -85,14 +85,14 @@ add_docstr(
 add_docstr(
     oneflow.F.bias_add,
     r"""
-    bias_add(x: Tensor, bias: Tensor, *, axis=1: Int32) -> Tensor
+    bias_add(x: Tensor, bias: Tensor, *, axis=1: int) -> Tensor
 
     Adds :attr:`bias` to the :attr:`axis` of the tensor :attr:`x` and returns a new resulting tensor.
     
     Args:
         x (Tensor): the input tensor.
         bias (Tensor): the bias tensor.
-        axis (Int32): the axis to perform addition operation.
+        axis (int, default to 1): the axis to perform addition operation.
     
     For example:
     
@@ -114,7 +114,7 @@ add_docstr(
     r"""
     broadcast_equal(x: Tensor, y: Tensor) -> Tensor
 
-    Computes :attr:`x` = :attr:`y` element-wise.
+    Computes :attr:`x` :math:`=` :attr:`y` element-wise.
 
     :attr:`y` should be a tensor whose shape is broadcastable with tensor :attr:`x`.
     
@@ -141,7 +141,7 @@ add_docstr(
     r"""
     broadcast_greater_equal(x: Tensor, y: Tensor) -> Tensor
 
-    Computes :attr:`x` ≥ :attr:`y` element-wise.
+    Computes :attr:`x` :math:`\ge` :attr:`y` element-wise.
 
     :attr:`y` should be a tensor whose shape is broadcastable with tensor :attr:`x`.
     
@@ -164,7 +164,7 @@ add_docstr(
 add_docstr(
     oneflow.F.broadcast_matmul,
     r"""
-    broadcast_matmul(a: Tensor, b: Tensor, *, transpose_a=False: Bool, transpose_b=False: Bool, alpha=1.0: Double) -> Tensor 
+    broadcast_matmul(a: Tensor, b: Tensor, *, transpose_a=False: bool, transpose_b=False: bool, alpha=1.0: double) -> Tensor 
 
     Performs a matrix-matrix product of matrices stored in :attr:`a` and :attr:`b`.
 
@@ -173,9 +173,9 @@ add_docstr(
     Args:
         a (Tensor): the first batch of matrices to be multiplied.
         b (Tensor): the matrice to be multiplied.
-        transpose_a (Bool): whether to transpose the last two dimensions on :attr:`a`.
-        transpose_b (Bool): whether to transpose the last two dimensions on :attr:`b`.
-        alpha (Double): the scaling factor on matrix-matrix product.
+        transpose_a (bool, default to False): whether to transpose the last two dimensions on :attr:`a`.
+        transpose_b (bool, default to False): whether to transpose the last two dimensions on :attr:`b`.
+        alpha (double, default to 1.0): the scaling factor on matrix-matrix product.
     
     For example:
     
@@ -195,7 +195,7 @@ add_docstr(
 add_docstr(
     oneflow.F.broadcast_mul,
     r"""
-    broadcast_mul(a: Tensor, b: Tensor, *, transpose_a=False: Bool, transpose_b=False: Bool, alpha=1.0: Double) -> Tensor 
+    broadcast_mul(a: Tensor, b: Tensor, *, transpose_a=False: bool, transpose_b=False: bool, alpha=1.0: double) -> Tensor 
 
     Computes the multiplication of :attr:`a` by :attr:`b` for each element.
 
@@ -204,9 +204,9 @@ add_docstr(
     Args:
         a (Tensor): the input tensor.
         b (Tensor):  the tensor to be multiplied to each element of :attr:`a`.
-        transpose_a (Bool): whether to transpose the last two dimensions on :attr:`a`.
-        transpose_b (Bool): whether to transpose the last two dimensions on :attr:`b`.
-        alpha (Double): the scaling factor on multiplication product.
+        transpose_a (bool, default to False): whether to transpose the last two dimensions on :attr:`a`.
+        transpose_b (bool, default to False): whether to transpose the last two dimensions on :attr:`b`.
+        alpha (double, default to 1.0): the scaling factor on multiplication product.
     
     For example:
     
