@@ -68,7 +68,7 @@ class MlirJitKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "MlirJitKernel::Compute";
     LOG(ERROR) << ctx->Attr<std::string>("mlir_assembly");
-    // TODO: extrac a function
+    // TODO: extract a function
     mlir::DialectRegistry registry;
     registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
                     mlir::memref::MemRefDialect, mlir::tosa::TosaDialect,
