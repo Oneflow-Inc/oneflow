@@ -25,10 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class CpuStreamType final : public StreamType {
+class AsyncCpuStreamType final : public StreamType {
  public:
-  CpuStreamType() = default;
-  ~CpuStreamType() override = default;
+  AsyncCpuStreamType() = default;
+  ~AsyncCpuStreamType() override = default;
 
   const char* device_tag() const override { return "cpu"; }
 
