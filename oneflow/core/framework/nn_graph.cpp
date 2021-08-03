@@ -109,8 +109,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       Global<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
     OF_SESSION_BARRIER();
-    // NOTE(zwx): After barrier, plan is synchronized between all ranks,
-    //     we can delete it for save mem.
+    // NOTE(zwx): After barrier plan is synchronized between all ranks,
+    //     then it can be cleared for save mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
   // NOTE(chengcheng): recovery op_attr
