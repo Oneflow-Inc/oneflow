@@ -25,7 +25,7 @@ namespace oneflow {
 namespace one {
 
 struct CastOpExprInterpState : public OpExprInterpState {
-  Symbol<DType> data_type;
+  DataType data_type;
 };
 
 class Cast : public OpExprGradFunction<CastOpExprInterpState> {
@@ -40,7 +40,7 @@ class Cast : public OpExprGradFunction<CastOpExprInterpState> {
 
   Maybe<void> Capture(CastOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->data_type = inputs.at(0)->dtype();
+    ctx->data_type = inputs.at(0)->dtype()->data_type();
     return Maybe<void>::Ok();
   }
 
@@ -48,7 +48,7 @@ class Cast : public OpExprGradFunction<CastOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Symbol<DType>>("dtype", ctx->data_type));
+    JUST(attrs.SetAttr<DataType>("dtype", ctx->data_type));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }
