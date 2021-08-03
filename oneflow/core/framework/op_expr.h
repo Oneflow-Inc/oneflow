@@ -167,6 +167,34 @@ using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
 using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
 
+class SelectFirstOpExpr final : public OpExpr {
+ public:
+  static Maybe<SelectFirstOpExpr> New() {
+    return std::shared_ptr<SelectFirstOpExpr>(new SelectFirstOpExpr());
+  }
+
+  const std::string& op_type_name() const override {
+    static const std::string kOpTypeName = "select_first";
+    return kOpTypeName;
+  }
+
+  int input_size() const override {
+    UNIMPLEMENTED();
+    return 0;
+  }
+
+  int output_size() const override { return 1; }
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ private:
+  SelectFirstOpExpr() = default;
+
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+};
+
 class OpExprInterpState;
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {

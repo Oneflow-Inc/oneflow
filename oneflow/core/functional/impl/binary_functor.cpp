@@ -34,6 +34,12 @@ namespace impl {
 class AddFunctor : public InplaceableBinaryFunctor {
  public:
   AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
+    if (std::dynamic_pointer_cast<StaticAllZeroTensor>(y)) { return x; }
+    return InplaceableBinaryFunctor::operator()(x, y, inplace);
+  }
 };
 
 class MultiplyFunctor : public BinaryFunctor {

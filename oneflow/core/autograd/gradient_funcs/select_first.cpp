@@ -23,34 +23,33 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ReturnFirstInputExprInterpState : public OpExprInterpState {
+struct SelectFirstExprInterpState : public OpExprInterpState {
   TensorTuple inputs;
   bool requires_grad;
 };
 
-class ReturnFirstInput : public OpExprGradFunction<ReturnFirstInputExprInterpState> {
+class SelectFirst : public OpExprGradFunction<SelectFirstExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(ReturnFirstInputExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SelectFirstExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->inputs = inputs;
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ReturnFirstInputExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SelectFirstExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->at(0) = out_grads.at(0);
     for (int i = 1; i < ctx->inputs.size(); i++) {
       const auto& tensor = ctx->inputs.at(i);
-      std::shared_ptr<OpExpr> grad_op = JUST(op_expr_helper::ZeroLikeOp());
-      in_grads->at(i) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {tensor}, AttrMap{}));
+      in_grads->at(i) = JUST(StaticAllZeroTensor::MakeTensor(tensor->shape(), tensor->dtype(), JUST(tensor->device())));
     }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("return_first_input", ReturnFirstInput);
+REGISTER_OP_EXPR_GRAD_FUNCTION("select_first", SelectFirst);
 
 }  // namespace one
 }  // namespace oneflow

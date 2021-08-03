@@ -833,8 +833,8 @@
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True
 
-- name: "return_first_input"
-  signature: "Tensor ReturnFirstInput(TensorTuple inputs)"
+- name: "select_first"
+  signature: "Tensor SelectFirst(TensorTuple inputs)"
   bind_python: True
 
 - name: "cast_like"

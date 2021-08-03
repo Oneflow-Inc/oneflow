@@ -385,38 +385,17 @@ class ClipByScalarMaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReturnFirstInputFunctor {
+class SelectFirstFunctor {
  public:
-  ReturnFirstInputFunctor() {
-    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-    for (int n = 1; n < op_.size(); ++n) {
-      op_[n] =
-          CHECK_JUST(one::OpBuilder("return_first_input").Input("in", n).Output("out").Build());
-    }
-  }
+  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
 
   Maybe<Tensor> operator()(const TensorTuple& inputs) const {
-    TensorTuple outputs;
-    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
-      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
-      TensorTuple partial_inputs(size);
-      std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
-      if (i == 0) {
-        // always inplace
-        std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        outs->at(0) = partial_inputs.at(0);
-        JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.push_back(outs->at(0));
-      } else {
-        outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
-      }
-    }
-    if (outputs.size() == 1) { return outputs.at(0); }
-    return this->operator()(outputs);
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+    return output;
   }
 
  private:
-  std::vector<std::shared_ptr<OpExpr>> op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
@@ -438,7 +417,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ClipByScalarMinGradFunctor>("ClipByScalarMinGrad");
   m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
   m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
-  m.add_functor<impl::ReturnFirstInputFunctor>("ReturnFirstInput");
+  m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
 };
 
 }  // namespace functional

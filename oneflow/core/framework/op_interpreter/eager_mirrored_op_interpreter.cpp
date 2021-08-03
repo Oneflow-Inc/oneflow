@@ -233,5 +233,13 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_ex
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  outputs->at(0) = inputs.at(0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 }  // namespace oneflow

@@ -44,8 +44,11 @@ class Tensor {
   virtual ~Tensor() = default;
 
   // Getters
-  virtual int64_t nelement() const = 0;
-  virtual int64_t dim(int64_t index) const = 0;
+  int64_t dim(int64_t index) const { return shape()->At(index); }
+
+  int64_t nelement() const { return shape()->elem_cnt(); }
+
+  int64_t ndim() const { return shape()->NumAxes(); }
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
@@ -54,7 +57,6 @@ class Tensor {
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
   virtual Maybe<Symbol<Device>*> mut_device() = 0;
-  virtual int64_t ndim() const = 0;
   virtual bool is_cuda() const = 0;
   virtual bool is_consistent() const = 0;
   virtual bool is_local() const { return !is_consistent(); }
@@ -114,6 +116,122 @@ class Tensor {
   Tensor() = default;
 };
 
+class StaticAllZeroTensor final : public Tensor {
+ public:
+  static Maybe<StaticAllZeroTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                               DataType dtype, Symbol<Device> device) {
+    return std::shared_ptr<StaticAllZeroTensor>(new StaticAllZeroTensor(shape, dtype, device));
+  }
+  // Getters
+  const std::shared_ptr<const Shape>& shape() const { return shape_; }
+  DataType dtype() const { return dtype_; }
+  Maybe<RpcToken> rpc_token() const { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<Device>> device() const { return device_; }
+  Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
+  bool is_cuda() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool is_consistent() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool is_local() const { return !is_consistent(); }
+  bool is_lazy() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool is_eager() const { return !is_lazy(); }
+  const TensorMeta& tensor_meta() const {
+    UNIMPLEMENTED();
+    return *(TensorMeta*)nullptr;
+  }
+  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
+
+  // Getters valid only for EagerMirroredTensor
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
+  Maybe<bool> has_eager_blob_object() const { OF_UNIMPLEMENTED(); }
+  Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
+  Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
+
+  // Getters/Setters valid only for EagerConsistentTensor
+  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const {
+    OF_UNIMPLEMENTED();
+  }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
+  Maybe<void> set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
+    OF_UNIMPLEMENTED();
+  }
+
+  // Getters for autograd
+  bool requires_grad() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool is_leaf() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  bool retain_grad() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  std::shared_ptr<const FunctionNode> grad_fn_node() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  Maybe<Tensor> acc_grad() const { OF_UNIMPLEMENTED(); }
+  Maybe<TensorArg> current_grad() const { OF_UNIMPLEMENTED(); }
+  Maybe<Tensor> detach() const { OF_UNIMPLEMENTED(); }
+  Maybe<Tensor> clone() const { OF_UNIMPLEMENTED(); }
+  std::shared_ptr<Tensor> data() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  // Setters for autograd
+  void set_requires_grad(bool requires_grad) { UNIMPLEMENTED(); }
+  Maybe<void> set_retain_grad(bool retain_grad) { OF_UNIMPLEMENTED(); }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) { UNIMPLEMENTED(); }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
+    UNIMPLEMENTED();
+    return *(std::shared_ptr<FunctionNode>*)nullptr;
+  }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { OF_UNIMPLEMENTED(); }
+  Maybe<Tensor> mut_acc_grad() { OF_UNIMPLEMENTED(); }
+  void set_is_leaf(bool is_leaf) { UNIMPLEMENTED(); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  bool has_autograd_meta() const {
+    UNIMPLEMENTED();
+    return false;
+  }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) { UNIMPLEMENTED(); }
+
+  user_op::TensorDesc* mut_tensor_meta() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  Maybe<MirroredTensor> AsMirroredTensor() { OF_UNIMPLEMENTED(); }
+
+ private:
+  StaticAllZeroTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                      Symbol<Device> device)
+      : shape_(shape), dtype_(dtype), device_(device) {}
+  const std::shared_ptr<const Shape> shape_;
+  DataType dtype_;
+  Symbol<Device> device_;
+};
+
 template<typename DerivedT>
 class TensorIf : public Tensor {
  public:
@@ -155,7 +273,6 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
-  int64_t ndim() const override { return tensor_->ndim(); }
   bool is_cuda() const override { return tensor_->is_cuda(); }
   bool is_consistent() const override { return tensor_->is_consistent(); }
   bool is_local() const override { return tensor_->is_local(); }
@@ -230,9 +347,6 @@ class Parameter final : public TensorIf<Parameter> {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
-  int64_t nelement() const override { return tensor_->nelement(); }
-  int64_t dim(int64_t index) const override { return tensor_->dim(index); }
-
  private:
   std::shared_ptr<Tensor> tensor_;
 };
@@ -257,10 +371,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
-  int64_t ndim() const override;
   bool is_cuda() const override;
-  int64_t dim(int64_t index) const override;
-  int64_t nelement() const override;
   std::shared_ptr<Tensor> data() const override;
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
@@ -348,10 +459,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return impl_->cur_rank_phy_tensor();
   }
-  int64_t ndim() const override;
   bool is_cuda() const override;
-  int64_t dim(int64_t index) const override;
-  int64_t nelement() const override;
   std::shared_ptr<Tensor> data() const override;
 
   // Getters valid only for EagerMirroredTensor

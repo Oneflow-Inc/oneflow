@@ -42,7 +42,9 @@ def allreducefn(ddp_state_for_reversed_params, param, allreduce_module):
 
 def DistributedDataParallel(module: "flow.nn.Module"):
     world_size = flow.framework.distribute.get_world_size()
-    allreduce_module = flow.nn.AllReduce(list(range(world_size)))
+    # assert single node
+    assert flow.framework.distribute.get_local_rank() == flow.framework.distribute.get_rank()
+    allreduce_module = flow.nn.AllReduce(f'device_tag: "gpu", device_name: "0:0-{world_size-1}"')
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters()])
     )
@@ -55,7 +57,7 @@ def DistributedDataParallel(module: "flow.nn.Module"):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        output = flow.F.return_first_input(
+        output = flow.F.select_first(
             convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
         )
         return output

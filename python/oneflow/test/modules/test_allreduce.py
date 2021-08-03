@@ -15,9 +15,11 @@ limitations under the License.
 """
 import os
 import unittest
-import oneflow.experimental as flow
 
 import numpy as np
+
+import oneflow as flow
+import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n2d()
@@ -33,17 +35,14 @@ class TestAllReduce(flow.unittest.TestCase):
         else:
             raise ValueError
         x = x.to(f"cuda:{flow.distributed.get_local_rank()}")
-
         nccl_allreduce_op = (
             flow.builtin_op("eager_nccl_all_reduce")
             .Input("in")
             .Output("out")
-            .Attr("sorted_ranks", list(range(flow.distributed.get_world_size())))
+            .Attr("parallel_conf", f'device_tag: "gpu", device_name: "0:0-1"')
             .Build()
         )
-
         y = nccl_allreduce_op(x)[0]
-
         test_case.assertTrue(np.allclose(y.numpy(), arr_rank1 + arr_rank2))
 
 
