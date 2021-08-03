@@ -29,7 +29,7 @@ class OFRecordDataLoader(object):
         channel_last = False
         output_layout = "NHWC" if channel_last else "NCHW"
         self.train_record_reader = flow.nn.OfrecordReader(
-            os.path.join(ofrecord_root, mode),
+            ofrecord_root,
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
