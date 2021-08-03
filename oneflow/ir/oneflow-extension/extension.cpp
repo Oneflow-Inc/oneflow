@@ -147,11 +147,11 @@ class MlirJitKernel final : public user_op::OpKernel {
     auto ref_out_0 = SwitchCreateMutMemRefDescriptor(
         SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
-    llvm::SmallVector<void*> argsArray{};
-    argsArray.push_back(&ref_in_0);
-    argsArray.push_back(&ref_in_1);
-    argsArray.push_back(&ref_out_0);
-    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), argsArray);
+    llvm::SmallVector<void*> args{};
+    args.push_back(&ref_in_0);
+    args.push_back(&ref_in_1);
+    args.push_back(&ref_out_0);
+    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), args);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
