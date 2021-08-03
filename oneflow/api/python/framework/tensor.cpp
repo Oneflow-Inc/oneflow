@@ -48,7 +48,7 @@ namespace one {
 namespace {
 
 const Symbol<DType> GetTensorDType(const Tensor& tensor) {
-  return DType::DType4DataType(tensor.dtype());
+  return tensor.dtype();
 }
 
 std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shape,
@@ -150,7 +150,7 @@ Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
 }
 
 const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
 }
 
 Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
@@ -165,7 +165,7 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
 }
 
 const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
 }
 
 Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dtype,
@@ -192,7 +192,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   }
   if (desired_dtype) {
     autograd::NoGradGuard no_grad;
-    tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
+    tensor = JUST(functional::Cast(tensor, desired_dtype));
     tensor->set_requires_grad(requires_grad);
   }
   return tensor;
@@ -300,8 +300,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
       std::shared_ptr<Tensor> other_tensor = py::cast<std::shared_ptr<Tensor>>(arg);
       std::shared_ptr<Tensor> tensor =
           JUST(functional::Copy(other_tensor, device->type(), device->device_id()));
-      if (desired_dtype && desired_dtype->data_type() != tensor->dtype()) {
-        tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
+      if (desired_dtype && desired_dtype != tensor->dtype()) {
+        tensor = JUST(functional::Cast(tensor, desired_dtype));
       }
       return tensor;
     } else {
