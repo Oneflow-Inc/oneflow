@@ -192,6 +192,26 @@ struct PlacementSymbolExportUtil {
                                 + ", hierarchy=" + hierarchy + ")";
     return placement_str;
   }
+
+  static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                               const std::string& device_type) {
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+        std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
+    parallel_conf->set_device_tag(type2device_tag.at(device_type));
+    std::shared_ptr<ParallelDesc> out_parallel_desc;
+    JUST(LogicalRun(
+        [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+          out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+          return Maybe<void>::Ok();
+        }));
+    return SymbolOf(*out_parallel_desc);
+  }
+
+  static Symbol<ParallelDesc> ApiReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                           const std::string& device_type) {
+    return ReplacePlacementDeviceTag(parallel_desc, device_type).GetOrThrow();
+  }
 };
 
 }  // namespace
@@ -244,6 +264,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::self == py::self)
       .def(py::hash(py::self));
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
+  m.def("_ReplacePlacementDeviceTag", &PlacementSymbolExportUtil::ApiReplacePlacementDeviceTag);
 }
 
 }  // namespace oneflow

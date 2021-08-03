@@ -36,6 +36,24 @@ class To(Module):
         return result
 
 
+def ConsistentTo(input, device):
+    assert device in (
+        "cuda",
+        "cpu",
+    ), 'consistent tensor only support to("cuda") or to("cpu")'
+    if (device == "cuda" and input.is_cuda) or (device == "cpu" and not input.is_cuda):
+        return input
+    out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
+        input.placement, device
+    )
+    sbp = input.sbp
+    input_local_tesnor = input.to_local()
+    device = flow.device(device)
+    output_local_tesnor = To(False)(input_local_tesnor, device, None)
+    ret = output_local_tesnor.to_consistent(out_placement, sbp)
+    return ret
+
+
 @register_tensor_op("to")
 def to_op(input, *args, **kwargs):
     """Performs Tensor dtype and/or device conversion. 
@@ -71,6 +89,17 @@ def to_op(input, *args, **kwargs):
     copy = kwargs.get("copy", False)
     device = kwargs.get("device", None)
     dtype = kwargs.get("dtype", None)
+    if input.is_consistent:
+        if len(args) > 0:
+            assert args[0] in (
+                "cuda",
+                "cpu",
+            ), 'consistent tensor only support to("cuda") or to("cpu")'
+            return ConsistentTo(input, args[0])
+        if device in ("cuda", "cpu"):
+            return ConsistentTo(input, device)
+        raise TypeError("to() received an invalid combination of arguments")
+
     if len(args) > 0:
         if isinstance(args[0], flow.Tensor):
             if len(args) == 2:
