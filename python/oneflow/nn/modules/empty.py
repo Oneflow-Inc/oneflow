@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import oneflow as flow
 
@@ -26,6 +26,10 @@ def empty_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str] = None,
+    placement: flow.placement = None,
+    sbp: Union[
+        flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
+    ] = None,
     requires_grad: bool = False,
 ):
     """
@@ -58,11 +62,27 @@ def empty_op(
     shape = _single(size)
     if dtype is None:
         dtype = flow.float32
-    if device is None:
-        device = flow.device("cpu")
+    if placement is None:
+        if device is None:
+            device = flow.device("cpu")
+    else:
+        assert device is None
 
-    tensor = flow.F.empty(shape=shape, dtype=dtype)
-    tensor = tensor.to(device=device)
+    if placement is not None:
+        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+        if isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            for elem in sbp:
+                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+        assert len(sbp) == len(placement.hierarchy)
+    else:
+        assert sbp is None, "sbp: %s" % sbp
+
+    if placement is not None:
+        tensor = flow.F.consistent_empty(shape, dtype, placement, sbp)
+    else:
+        tensor = flow.F.empty(shape, dtype, device,)
     tensor.requires_grad_(requires_grad)
     return tensor
 

@@ -165,11 +165,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtyp
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape = Shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, flow_dtype));
-  if (JUST(tensor->device())->type() != device->type()
-      || JUST(tensor->device())->device_id() != device->device_id()) {
-    tensor = JUST(functional::Copy(tensor, device->type(), device->device_id()));
-  }
+  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, flow_dtype, device));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
     desired_dtype = DType::Float().get();
@@ -303,11 +299,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
   }
   const Shape shape = Shape(dim_vector);
   CHECK_NOTNULL_OR_RETURN(desired_dtype);
-  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, desired_dtype->data_type()));
-  if (JUST(tensor->device())->type() != device->type()
-      || JUST(tensor->device())->device_id() != device->device_id()) {
-    tensor = JUST(functional::Copy(tensor, device->type(), device->device_id()));
-  }
+  std::shared_ptr<Tensor> tensor =
+      JUST(functional::Empty(shape, desired_dtype->data_type(), device));
   tensor->set_requires_grad(requires_grad);
   return tensor;
 }

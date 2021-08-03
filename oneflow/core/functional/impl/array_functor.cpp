@@ -118,11 +118,59 @@ class ConstantFunctor {
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype) const {
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    {
+      ParallelDistribution parallel_distribution;
+      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
+    }
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentEmptyFunctor {
+ public:
+  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+  }
+
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
+    auto iter = map.find(sbp_tuple);
+    if (iter == map.end()) {
+      cfg::ParallelDistribution parallel_distribution;
+      for (const auto& sbp_parallel : sbp_tuple) {
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+      }
+      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+    }
+    return iter->second;
   }
 
  private:
