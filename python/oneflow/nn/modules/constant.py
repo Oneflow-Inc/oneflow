@@ -30,7 +30,7 @@ class _ConstantBase(Module):
         dtype: Optional[flow.dtype],
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
     ) -> None:
         super().__init__()

@@ -21,6 +21,26 @@ import oneflow._oneflow_internal
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
+
+_DEPRECATED = set()
+
+
+def oneflow_deprecate(*api_names, **kwargs):
+    def Decorator(func_or_class):
+        _DEPRECATED.add(func_or_class)
+        return func_or_class
+
+    return Decorator
+
+
+def is_deprecated(func_or_class):
+    return (
+        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+    )
+
+
+from . import sbp
+
 placement = oneflow._oneflow_internal.placement
 no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
@@ -43,24 +63,6 @@ from oneflow.core.job.job_conf_pb2 import JobConfigProto
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.version import __version__
 
-_DEPRECATED = set()
-
-
-def oneflow_deprecate(*api_names, **kwargs):
-    def Decorator(func_or_class):
-        _DEPRECATED.add(func_or_class)
-        return func_or_class
-
-    return Decorator
-
-
-def is_deprecated(func_or_class):
-    return (
-        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
-    )
-
-
-from . import sbp
 import atexit
 
 import oneflow.framework.c_api_util
