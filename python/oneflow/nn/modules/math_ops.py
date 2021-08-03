@@ -76,7 +76,7 @@ class Variance(Module):
     def forward(self, input):
         axis = _check_axis(self.dim, input.shape)
         if isinstance(axis, list) and len(axis) == 0:
-            return flow.zeros(size=input.shape)
+            return flow.zeros(input.shape)
         else:
             return flow.sub(
                 flow.mean(flow.square(input), axis, self.keepdim),
@@ -787,7 +787,7 @@ class Std(Module):
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.zeros(size=x.shape)
+            return flow.zeros(x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelement()
