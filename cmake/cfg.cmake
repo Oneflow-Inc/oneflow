@@ -23,6 +23,11 @@ execute_process(
     --get_message_type=template_files
   OUTPUT_VARIABLE TEMPLATE_FILES)
 
+execute_process(
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+    --get_message_type=build_proto_java
+  OUTPUT_VARIABLE BUILD_PROTO_JAVA)
+
 include_directories(${CFG_INCLUDE_DIR})
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${CFG_INCLUDE_DIR})
