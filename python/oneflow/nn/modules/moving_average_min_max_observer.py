@@ -121,6 +121,9 @@ def moving_average_min_max_observer_op(
 
             & zero\\_point = -moving\\_min / scale
 
+    Note:
+        ``current_train_step`` can be directly assigned to an optimizer(eg.SGD) step.
+
     Args:
         input (oneflow.Tensor): input tensor.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
