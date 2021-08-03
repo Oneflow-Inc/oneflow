@@ -59,6 +59,15 @@ Maybe<Tensor> TensorInfo::zeros() const {
   }
 }
 
+Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticAllZeroTensor>(grad)) {
+    acc_grad_ = JUST(static_zeros_tensor->AsMirroredTensor());
+  } else {
+    acc_grad_ = grad;
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 
 }  // namespace oneflow

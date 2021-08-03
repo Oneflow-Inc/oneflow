@@ -48,9 +48,9 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   if (autograd_meta->acc_grad()) {
     const auto& output =
         JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/true));
-    autograd_meta->set_acc_grad(output);
+    JUST(autograd_meta->set_acc_grad(output));
   } else {
-    autograd_meta->set_acc_grad(current_grad);
+    JUST(autograd_meta->set_acc_grad(current_grad));
   }
   return Maybe<void>::Ok();
 }
