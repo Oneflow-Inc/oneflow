@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -34,26 +35,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-
-namespace {
-
-Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
-  static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                               Symbol<cfg::ParallelDistribution>>
-      map;
-  auto iter = map.find(sbp_tuple);
-  if (iter == map.end()) {
-    cfg::ParallelDistribution parallel_distribution;
-    for (const auto& sbp_parallel : sbp_tuple) {
-      *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-    }
-    iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-  }
-  return iter->second;
-}
-
-}  // namespace
 
 namespace impl {
 
@@ -75,7 +56,7 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
@@ -102,11 +83,6 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    {
-      ParallelDistribution parallel_distribution;
-      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
-    }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -127,11 +103,6 @@ class EmptyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    {
-      ParallelDistribution parallel_distribution;
-      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
-    }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -153,7 +124,7 @@ class ConsistentEmptyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
