@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/thread/consistent_unique_id.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
+#include <array>
 
 namespace oneflow {
 
