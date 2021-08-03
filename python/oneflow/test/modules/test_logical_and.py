@@ -21,12 +21,12 @@ import numpy as np
 from test_util import GenArgList
 
 import oneflow as flow
-import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_logical_and(test_case, shape, dtype, device):
-    np_input = np.random.randint(2, size=shape)
-    np_other = np.random.randint(2, size=shape)
+    np_input = np.random.randint(3, size=shape)
+    np_other = np.random.randint(3, size=shape)
     input = flow.Tensor(np_input, dtype=dtype, device=flow.device(device))
     other = flow.Tensor(np_other, dtype=dtype, device=flow.device(device))
     of_out = flow.logical_and(input, other)
@@ -35,8 +35,8 @@ def _test_logical_and(test_case, shape, dtype, device):
 
 
 def _test_tensor_logical_and(test_case, shape, dtype, device):
-    np_input = np.random.randint(2, size=shape)
-    np_other = np.random.randint(2, size=shape)
+    np_input = np.random.randint(3, size=shape)
+    np_other = np.random.randint(3, size=shape)
     input = flow.Tensor(np_input, dtype=dtype, device=flow.device(device))
     other = flow.Tensor(np_other, dtype=dtype, device=flow.device(device))
     of_out = input.logical_and(other)
@@ -57,6 +57,15 @@ class TestLogicalAndModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=10, auto_backward=False)
+    def test_logical_and_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.logical_and(x1, x2)
+        return y
 
 
 if __name__ == "__main__":
