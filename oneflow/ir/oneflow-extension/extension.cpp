@@ -73,9 +73,7 @@ OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
   };
-
-  OpaqueMemRefDescriptor ret(desc, deleter);
-  return ret;
+  return OpaqueMemRefDescriptor(desc, deleter);
 }
 
 template<unsigned N, typename T>
@@ -90,9 +88,7 @@ OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
   };
-
-  OpaqueMemRefDescriptor ret(desc, deleter);
-  return ret;
+  return OpaqueMemRefDescriptor(desc, deleter);
 }
 
 #define MAKE_STRIDED_MEM_REF_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
@@ -106,6 +102,26 @@ DEFINE_STATIC_SWITCH_FUNC(OpaqueMemRefDescriptor, CreateMutMemRefDescriptor,
 
 std::string GetMLIRCInterface(const std::string& func_name) {
   return std::string("_mlir_ciface_") + func_name;
+}
+
+llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
+    user_op::KernelComputeContext* ctx) {
+  llvm::SmallVector<OpaqueMemRefDescriptor> args{};
+  for (auto& pair : ctx->inputs()) {
+    LOG(ERROR) << "pair.first: " << pair.first;
+    auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+    auto ref = SwitchCreateMemRefDescriptor(
+        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+    args.push_back(ref);
+  }
+  for (auto& pair : ctx->outputs()) {
+    LOG(ERROR) << "pair.first: " << pair.first;
+    auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+    auto ref = SwitchCreateMutMemRefDescriptor(
+        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+    args.push_back(ref);
+  }
+  return args;
 }
 
 template<DeviceType device_type, typename T>
@@ -136,23 +152,12 @@ class MlirJitKernel final : public user_op::OpKernel {
     auto jit_or_error = mlir::ExecutionEngine::create(*module);
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
-    user_op::Tensor* in_0 = ctx->Tensor4ArgNameAndIndex("in", 0);
-    // TODO: extract a function
-    auto ref_in_0 =
-        SwitchCreateMemRefDescriptor(SwitchCase(in_0->shape().NumAxes(), in_0->data_type()), in_0);
-    user_op::Tensor* in_1 = ctx->Tensor4ArgNameAndIndex("in", 1);
-    auto ref_in_1 =
-        SwitchCreateMemRefDescriptor(SwitchCase(in_1->shape().NumAxes(), in_1->data_type()), in_1);
-    user_op::Tensor* out_0 = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto ref_out_0 = SwitchCreateMutMemRefDescriptor(
-        SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
-    llvm::SmallVector<void*> args{};
-    // TODO: find a way to make sure user op's input output order
-    args.push_back(&ref_in_0);
-    args.push_back(&ref_in_1);
-    args.push_back(&ref_out_0);
-    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), args);
+    llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
+        GetMLIRCInterfaceArgs(ctx);
+    llvm::SmallVector<void*> packed_args{};
+    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
