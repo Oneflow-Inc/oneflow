@@ -21,15 +21,15 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow._oneflow_internal import Tensor as InternalTensor
+from oneflow.framework.tensor import Tensor
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptimizerConfig
+from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.utils import add_indent
+from oneflow.nn.util import add_indent
 
 
 class Graph(object):
@@ -41,9 +41,9 @@ class Graph(object):
         self.config.proto.set_job_name(self._name)
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
-        self._optimizers = OrderedDict()
+        self._optimizers_conf = OrderedDict()
+        self._variables_conf = OrderedDict()
         self._is_compiled = False
-        self._var2var_op_name = dict()
         self._job_proto = None
 
     @property
@@ -75,7 +75,7 @@ class Graph(object):
         assert isinstance(
             optimizer, Optimizer
         ), "optimizer must be an instance of Optimizer"
-        self._optimizers[name] = OptimizerConfig(
+        self._optimizers_conf[name] = OptimizerConfig(
             name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
 
@@ -87,7 +87,7 @@ class Graph(object):
         Graph._child_init_cnt[child_name] += 1
 
     def _state(self):
-        for (_, b) in self._blocks.items():
+        for _, b in self._blocks.items():
             pa_gen = b.parameters(recurse=True)
             for pa in pa_gen:
                 yield pa
@@ -95,37 +95,39 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
-    def _preprocess_state(self):
-        state_list = list()
+    def _generate_optimizer_and_variable_configs(self):
+        if len(self._optimizers_conf) > 0:
+            self.config._train(True)
         for state_block in self._state():
-            state_list.append(state_block.origin)
             if state_block.type == BlockType.PARAMETER:
-                self._var2var_op_name[state_block.origin] = (
+                self._variables_conf[state_block.origin] = VariableConfig(
                     state_block.name_prefix + state_block.name
                 )
-
-    def _complete_graph_config(self):
-        if len(self._optimizers):
-            self.config._train(True)
-        for (name, opt_config) in self._optimizers.items():
-            self.config.add_optimizer_config(opt_config, self._var2var_op_name)
+        for name, opt_config in self._optimizers_conf.items():
+            self.config._generate_optimizer_and_variable_configs(
+                opt_config, self._variables_conf
+            )
 
     def _compile(self, *args):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        self._preprocess_state()
-        self._complete_graph_config()
+
+        self._generate_optimizer_and_variable_configs()
+
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         session.TryInit()
         with graph_build_util.graph_build_context(self.config.proto, session):
+            # Deal with input
             lazy_args = []
             lazy_arg_op_names = []
-            for (idx, arg) in enumerate(args):
+            for idx, arg in enumerate(args):
                 op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
+
+            # Deal with parameter and buffer
             state_op_names = []
             state_tensors = []
             for state_block in self._state():
@@ -133,20 +135,34 @@ class Graph(object):
                 state_tensor = state_block.origin
                 state_op_names.append(op_name)
                 state_tensors.append(state_tensor)
+                if state_block.type == BlockType.PARAMETER:
+                    state_config = self._variables_conf[state_block.origin]
+                else:
+                    state_config = None
                 state_block.set_lazy_origin_builder(
-                    partial(graph_build_util.build_graph_state, op_name, state_tensor)
+                    partial(
+                        graph_build_util.build_graph_state,
+                        op_name,
+                        state_tensor,
+                        state_config,
+                    )
                 )
+
             self._variables = convert_to_tensor_tuple(state_tensors)
+
+            # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
+
+            # Deal with outputs
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
                     outputs = ()
                 else:
-                    assert type(outputs) is InternalTensor
+                    assert type(outputs) is Tensor
                     outputs = (outputs,)
             eager_outputs = []
             eager_output_op_names = []
-            for (idx, out) in enumerate(outputs):
+            for idx, out in enumerate(outputs):
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
@@ -156,19 +172,27 @@ class Graph(object):
                 eager_outputs = eager_outputs[0]
             else:
                 eager_outputs = tuple(eager_outputs)
+
             self._outputs = convert_to_tensor_tuple(eager_outputs)
             self._eager_outputs = eager_outputs
+
+            # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
             self._c_nn_graph.register_output_op_names(eager_output_op_names)
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._variables
             )
+
+            # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
+
+        # Complie and init Runtime
         self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
         return eager_outputs
 
     def _launch(self, *args):
+        # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
         oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
             convert_to_tensor_tuple(args),
             self._outputs,
@@ -183,7 +207,7 @@ class Graph(object):
         return self._launch(*args)
 
     def _add_block(self, name: str, module: Module = None) -> None:
-        """Adds a module to the current graph as a block.
+        r"""Adds a module to the current graph as a block.
 
         The block can be accessed as an attribute using the given name.
 
@@ -209,7 +233,8 @@ class Graph(object):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(
+                "'{}' object are not allowed to set Optimizer attribute named '{}', "
+                "please use add_optimizer(...) instead.".format(
                     type(self).__name__, name
                 )
             )
@@ -230,11 +255,12 @@ class Graph(object):
         lines = None
         if len(self._blocks) > 0:
             child_lines = []
-            for (n, m) in self._blocks.items():
+            for n, m in self._blocks.items():
                 mod_str = repr(m)
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
             lines = child_lines
+
         main_str = "(" + self._name + ":" + self.__class__.__name__ + ":GRAPH): ("
         if lines is not None:
             main_str += "\n  " + "\n  ".join(lines) + "\n"
@@ -266,11 +292,13 @@ class GraphConfig(FunctionConfig):
         else:
             self.proto.mutable_predict_conf()
 
-    def add_optimizer_config(
-        self, optimizer_config: OptimizerConfig = None, var2var_op_name: Dict = None
+    def _generate_optimizer_and_variable_configs(
+        self,
+        optimizer_config: OptimizerConfig = None,
+        variables_conf: OrderedDict = None,
     ):
-        optimizer_config.optimizer.add_to_graph_train_config(
-            self.proto.mutable_train_conf(), var2var_op_name
+        optimizer_config.generate_optimizer_and_variable_configs(
+            self.proto.mutable_train_conf(), variables_conf
         )
 
 

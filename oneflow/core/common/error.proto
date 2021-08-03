@@ -127,6 +127,8 @@ message ValueError {}
 
 message IndexError {}
 
+message TimeoutError {}
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -148,6 +150,7 @@ message ErrorProto {
     DeviceTagNotFoundError device_tag_not_found_error = 26;
     ValueError value_error = 27;
     IndexError index_error = 28;
+    TimeoutError timeout_error = 29;
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
     JobNameNotEqualError job_name_not_equal_error = 102;

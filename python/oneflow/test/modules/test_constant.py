@@ -18,11 +18,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
-
 import oneflow as flow
+
 import oneflow.unittest
-from oneflow.framework.tensor import register_tensor_op
+from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_ones(test_case, device, shape):
@@ -85,15 +85,10 @@ def _test_zeros_like(test_case, device, shape):
 
 
 def _test_new_ones(test_case, device, shape):
-    x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    x = flow.ones(shape, device=flow.device("cpu"))
     y = x.new_ones(shape, device=device)
     test_case.assertTrue(x.dtype == y.dtype)
-    test_case.assertTrue(x.device == y.device)
-    test_case.assertTrue(x.requires_grad == y.requires_grad)
-    x = flow.Tensor(np.ones(shape), device=flow.device(device))
-    y = x.new_ones(x.shape, device=device)
-    test_case.assertTrue(x.dtype == y.dtype)
-    test_case.assertTrue(x.device == y.device)
+    test_case.assertEqual(flow.device(device), y.device)
     test_case.assertTrue(x.requires_grad == y.requires_grad)
     x = flow.Tensor(np.ones(shape), device=flow.device(device))
     x = x.new_ones(shape, device=device, requires_grad=True)
@@ -104,6 +99,13 @@ def _test_new_ones(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
+    def test_consistent_naive(test_case):
+        placement = flow.placement("cpu", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        x = flow.ones((16, 16), placement=placement, sbp=sbp)
+        test_case.assertEqual(x.sbp, sbp)
+        test_case.assertEqual(x.placement, placement)
+
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -117,7 +119,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_new_ones,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

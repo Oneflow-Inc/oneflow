@@ -66,6 +66,17 @@ class TestCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_cast_with_0shape_data(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_cast_float2int,
+            _test_cast_int2float,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2, 3, 0, 5)]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

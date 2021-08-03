@@ -21,8 +21,16 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
+
+class Device;
+class ParallelDesc;
+namespace cfg {
+class ParallelDistribution;
+}
+
 namespace one {
 
 class OpExprInterpState {
@@ -43,7 +51,26 @@ class OpExprInterpState {
 };
 
 struct OpExprInterpContext {
+  OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
+      : attrs(attrs_arg), device(device_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
+                      std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg), device(device_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
+                      Symbol<cfg::ParallelDistribution> parallel_distribution_arg)
+      : attrs(attrs_arg),
+        parallel_desc(parallel_desc_arg),
+        parallel_distribution(parallel_distribution_arg) {}
+
   AttrMap attrs;
+  Optional<Symbol<Device>> device;                                    // for local op
+  Optional<Symbol<ParallelDesc>> parallel_desc;                       // for consistent op
+  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution;  // for consistent op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
@@ -54,7 +81,7 @@ class OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
@@ -70,6 +97,8 @@ class OpExprInterpreter {
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(CastToConsistentOp);        \
+  _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \
@@ -92,7 +121,7 @@ class LazyInterpreter : public OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
@@ -113,7 +142,7 @@ class EagerInterpreter : public OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
@@ -156,11 +185,11 @@ class AutogradInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(AttrMap{}));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
