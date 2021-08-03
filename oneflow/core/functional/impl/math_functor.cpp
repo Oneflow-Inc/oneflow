@@ -103,7 +103,7 @@ class ScalarMulFunctor {
     op_ = CHECK_JUST(one::OpBuilder("scalar_mul").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    if (std::dynamic_pointer_cast<StaticAllZeroTensor>(x)) {
+    if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return x;
     }
     MutableAttrMap attrs;

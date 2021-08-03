@@ -65,9 +65,9 @@ class AllReduceFunctor {
     } else {
       op_expr = iter->second;
     }
-    if (const auto& static_all_zero_tensor = std::dynamic_pointer_cast<StaticAllZeroTensor>(x)) {
+    if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_all_zero_tensor->AsMirroredTensor())}, {});
+                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
     }

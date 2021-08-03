@@ -30,7 +30,7 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<MirroredTensor> StaticAllZeroTensor::AsMirroredTensor() {
+Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
       JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));

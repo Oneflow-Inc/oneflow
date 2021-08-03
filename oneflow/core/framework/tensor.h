@@ -114,11 +114,11 @@ class Tensor {
   Tensor() = default;
 };
 
-class StaticAllZeroTensor final : public Tensor {
+class StaticZerosTensor final : public Tensor {
  public:
-  static Maybe<StaticAllZeroTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+  static Maybe<StaticZerosTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                DataType dtype, Symbol<Device> device) {
-    return std::shared_ptr<StaticAllZeroTensor>(new StaticAllZeroTensor(shape, dtype, device));
+    return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
@@ -221,7 +221,7 @@ class StaticAllZeroTensor final : public Tensor {
   Maybe<MirroredTensor> AsMirroredTensor();
 
  private:
-  StaticAllZeroTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
+  StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                       Symbol<Device> device)
       : shape_(shape), dtype_(dtype), device_(device) {}
   const std::shared_ptr<const Shape> shape_;
