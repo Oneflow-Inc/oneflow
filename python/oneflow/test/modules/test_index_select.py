@@ -23,15 +23,6 @@ from automated_test_util import *
 
 
 @autotest()
-def test_index_select_by_cpu(test_case):
-    axis = random(0,1).to(int)  
-    index = random_pytorch_tensor(ndim=1, low=0, high=1, dtype=int)
-
-    x = random_pytorch_tensor(ndim=2,dim0=2,dim1=2)  
-    y = torch.index_select(input=x,dim=axis,index=index)   
-     
-    return y
-
 def test_index_select_by_gpu(test_case):
     device = random_device()
 
@@ -41,10 +32,10 @@ def test_index_select_by_gpu(test_case):
 
     dim = []
     for i in range(0,4):
-        dim.append(random(3,6).to(int))
+        dim.append(random(2,6).to(int))
 
-    x = random_pytorch_tensor(ndim=4,dim0=dim[0],dim1=dim[1],dim2=dim[2],dim3=dim[3]).to(device)  
-    y = torch.index_select(input=x,dim=axis,index=index)  
+    x = random_pytorch_tensor(ndim=4, dim0=dim[0], dim1=dim[1], dim2=dim[2], dim3=dim[3]).to(device)  
+    y = torch.index_select(input=x, dim=axis, index=index)  
 
     return y
 
