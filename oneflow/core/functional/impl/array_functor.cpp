@@ -1302,6 +1302,7 @@ class ReduceSumLikeFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");

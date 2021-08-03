@@ -22,26 +22,52 @@ import oneflow as flow
 from test_util import GenArgDict
 
 
-def _test_empty(test_case, shape, dtype, device, requires_grad):
+def _test_local_empty(test_case, shape, dtype, device, requires_grad):
     x = flow.empty(
         shape, dtype=dtype, device=flow.device(device), requires_grad=requires_grad
     )
+    test_case.assertFalse(x.is_consistent)
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.device, flow.device(device))
     test_case.assertEqual(x.requires_grad, requires_grad)
 
 
+def _test_consistent_empty(test_case, shape, dtype, placement, sbp, requires_grad):
+    x = flow.empty(
+        shape, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
+    )
+    test_case.assertTrue(x.is_consistent)
+    test_case.assertEqual(x.shape, flow.Size(shape))
+    test_case.assertEqual(x.dtype, dtype)
+    test_case.assertEqual(x.placement, placement)
+    test_case.assertEqual(x.sbp[0], sbp)
+    test_case.assertEqual(x.requires_grad, requires_grad)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestEmptyOp(flow.unittest.TestCase):
-    def test_cast(test_case):
+    def test_local_empty(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["dtype"] = [flow.float32, flow.int32]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
-            _test_empty(test_case, **arg)
+            _test_local_empty(test_case, **arg)
+
+    def test_consistent_empty(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["dtype"] = [flow.float32, flow.int32]
+        arg_dict["placement"] = [
+            flow.placement("cuda", {0: [0]}),
+            flow.placement("cpu", {0: [0]}),
+        ]
+        arg_dict["sbp"] = [flow.sbp.broadcast]
+        arg_dict["requires_grad"] = [True, False]
+        for arg in GenArgDict(arg_dict):
+            _test_consistent_empty(test_case, **arg)
 
 
 if __name__ == "__main__":

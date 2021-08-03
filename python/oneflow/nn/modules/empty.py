@@ -40,8 +40,11 @@ def empty_op(
         size (int... or flow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
-        device (torch.device, optional): The desired device of returned tensor. Default: if None, uses the
-          current device for the default tensor type
+        device (torch.device, optional): The desired device of returned local tensor. If None, uses the
+          current device.
+        placement (flow.placement): The desired device of returned consistent tensor. If None, will construct
+          local tensor.
+        sbp (flow.sbp): The desired sbp of returned consistent tensor. It must be equal with the numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -49,9 +52,15 @@ def empty_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.empty(4, 5)
+        >>> y = flow.empty(4, 5)  # construct local empty tensor
         >>> y.shape
         flow.Size([4, 5])
+        >>> y.is_consistent
+        False
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.empty(4, 5, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent empty tensor
+        >>> y.is_consistent
+        True
 
     """
     assert size is not None, "shape must not be None"
