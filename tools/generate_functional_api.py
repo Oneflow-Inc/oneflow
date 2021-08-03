@@ -225,7 +225,7 @@ return_type_aliases = {
 
 value_aliases = {
     "True": "true",
-    "False": "false", 
+    "False": "false",
     "kInt": "DType::Int32()",
     "kInt32": "DType::Int32()",
     "kInt64": "DType::Int64()",
@@ -233,6 +233,7 @@ value_aliases = {
     "kDouble": "DType::Double()",
     "kBool": "DType::Bool()",
 }
+
 
 def _escape_quote(fmt):
     return re.sub(r"\"|\'", '\\"', fmt)

@@ -47,9 +47,7 @@ namespace one {
 
 namespace {
 
-const Symbol<DType> GetTensorDType(const Tensor& tensor) {
-  return tensor.dtype();
-}
+const Symbol<DType> GetTensorDType(const Tensor& tensor) { return tensor.dtype(); }
 
 std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shape,
                                         const Symbol<DType> dtype, const Symbol<Device>& device,
