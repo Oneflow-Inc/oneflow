@@ -115,6 +115,7 @@ def make_trt_job(
         return out
 
     return trt_matmul_job
+                continue
 
 
 class TestMatmul(unittest.TestCase):

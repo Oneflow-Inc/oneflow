@@ -20,50 +20,22 @@ import numpy as np
 
 import oneflow.compatible.single_client.unittest
 from oneflow.compatible import single_client as flow
+import oneflow.compatible.single_client.typing as oft
 
-config = flow.function_config()
+import xrt_util
 
 
-def make_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
+def make_job(a_shape, b_shape, trans_a=False, trans_b=False, xrts=[]):
+    config = flow.FunctionConfig()
+    xrt_util.set_xrt(config, xrts=xrts)
+    @flow.global_function(function_config=config)
     def matmul_job(
-        a=flow.FixedTensorDef(a_shape, dtype=dtype),
-        b=flow.FixedTensorDef(b_shape, dtype=dtype),
+        a:oft.Numpy.Placeholder(a_shape),
+        b:oft.Numpy.Placeholder(b_shape)
     ):
         return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
 
     return matmul_job
-
-
-def make_xla_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
-    config.use_xla_jit(True)
-    config.use_tensorrt(False)
-
-    @flow.global_function(config)
-    def xla_matmul_job(
-        a=flow.FixedTensorDef(a_shape, dtype=dtype),
-        b=flow.FixedTensorDef(b_shape, dtype=dtype),
-    ):
-        return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
-
-    return xla_matmul_job
-
-
-def make_trt_job(a_shape, b_shape, trans_a=False, trans_b=False, dtype=flow.float32):
-    config.use_xla_jit(False)
-    config.use_tensorrt(True)
-
-    @flow.global_function(config)
-    def trt_matmul_job(
-        a=flow.FixedTensorDef(a_shape, dtype=dtype),
-        b=flow.FixedTensorDef(b_shape, dtype=dtype),
-    ):
-        return flow.matmul(a, b, transpose_a=trans_a, transpose_b=trans_b)
-
-    return trt_matmul_job
 
 
 class TestMatmul(unittest.TestCase):
@@ -73,33 +45,30 @@ class TestMatmul(unittest.TestCase):
         else:
             return (m, n)
 
-    def _test_body(self, a, b, trans_a, trans_b, dtype=np.float32):
-        f1 = make_job(a.shape, b.shape, trans_a, trans_b)
-        f2 = make_xla_job(a.shape, b.shape, trans_a, trans_b)
-        f3 = make_trt_job(a.shape, b.shape, trans_a, trans_b)
-        x = f1(a, b).get()
-        y = f2(a, b).get()
-        z = f3(a, b).get()
-        print("without xla: ", x)
-        print("with xla: ", y)
-        print("with tensorrt: ", y)
-        self.assertTrue(np.allclose(x.numpy(), y.numpy(), rtol=0.001, atol=1e-05))
-        self.assertTrue(np.allclose(x.numpy(), z.numpy(), rtol=0.001, atol=1e-05))
+    def _test_body(self, a, b, trans_a, trans_b):
+        func = make_job(a.shape, b.shape, trans_a=trans_a, trans_b=trans_b)
+        out = func(a, b).get()
+        out_np = out.numpy()
         flow.clear_default_session()
+        for xrt in xrt_util.xrt_backends:
+            xrt_job = make_job(a.shape, b.shape, trans_a=trans_a, trans_b=trans_b, xrts=[xrt])
+            xrt_out = xrt_job(a, b).get()
+            self.assertTrue(np.allclose(out_np, xrt_out.numpy(), rtol=0.001, atol=1e-05))
+            flow.clear_default_session()
 
     def _test_ones_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):
         shape_a = self.make_shape(m, k, trans_a)
         shape_b = self.make_shape(k, n, trans_b)
         a = np.ones(shape_a, dtype=dtype)
         b = np.ones(shape_b, dtype=dtype)
-        self._test_body(a, b, trans_a, trans_b, dtype=dtype)
+        self._test_body(a, b, trans_a, trans_b)
 
     def _test_random_body(self, m, k, n, trans_a, trans_b, dtype=np.float32):
         shape_a = self.make_shape(m, k, trans_a)
         shape_b = self.make_shape(k, n, trans_b)
         a = np.random.random(shape_a).astype(dtype)
         b = np.random.random(shape_b).astype(dtype)
-        self._test_body(a, b, trans_a, trans_b, dtype=dtype)
+        self._test_body(a, b, trans_a, trans_b)
 
     def test_ones1x1x1_input(self):
         print("run test_ones1x1x1_input: ")

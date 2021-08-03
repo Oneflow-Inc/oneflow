@@ -97,8 +97,8 @@ void MarkClusterIdPass::ClusteringSubgraphs(const ClusteringOptions& options,
     algorithm::TopologyVisit(*this, [&](ClusterNode* node) {
       if (!node->IsCompiled(engine, options.train_phase)
           || node->IsOptimizer(engine) /* skip model update op */) {
-        LOG(WARNING) << "node " << node->xrt_node()->type() << "," << node->xrt_node()->name()
-                     << " cannot be compile by xrt";
+        // LOG(WARNING) << "node " << node->xrt_node()->type() << "," << node->xrt_node()->name()
+        //              << " cannot be compile by xrt";
         return;
       }
       ordered_nodes.push_back(node);
