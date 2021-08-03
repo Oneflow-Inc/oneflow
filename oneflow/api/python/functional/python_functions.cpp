@@ -67,7 +67,8 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
       } else if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
-        return functional::BroadcastAdd(a, b);  // inplace is not supported
+        CHECK_OR_RETURN(!inplace) << "Inplace is not supported for broadcast add.";
+        return functional::BroadcastAdd(a, b);
       }
     }
   }();

@@ -13,24 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
-#define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
-
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-static constexpr size_t kMaxInputCount = 128;
-static constexpr size_t kMaxOutputCount = 128;
+bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
+  return !(x->is_leaf() && x->requires_grad());
+}
 
-bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
-
-Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
+Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
+  CHECK_OR_RETURN(IsInplaceValid(x))
+      << "a leaf Tensor that requires grad is being used in an in-place operation.";
+  return Maybe<void>::Ok();
+}
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
