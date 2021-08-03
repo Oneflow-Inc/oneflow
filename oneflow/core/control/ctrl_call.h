@@ -56,7 +56,6 @@ class CtrlCall final : public CtrlCallIf {
   void Process() override {
     switch (status_) {
       case Status::kBeforeHandleRequest: {
-        LOG(ERROR) << "CtrlCall " << ctrl_method << " processed with status kBeforeHandleRequest";
         request_handler_();
         return;
       }
