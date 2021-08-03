@@ -134,6 +134,7 @@ void RpcServer::Init() {
     const std::string& k = call->request().key();
     const std::string& v = call->request().val();
     CHECK(kv_.emplace(k, v).second);
+    LOG(ERROR) << "kPushKV process, key: " << k;
 
     auto pending_kv_calls_it = pending_kv_calls_.find(k);
     if (pending_kv_calls_it != pending_kv_calls_.end()) {
@@ -149,8 +150,8 @@ void RpcServer::Init() {
 
   Add([this](CtrlCall<CtrlMethod::kClearKV>* call) {
     const std::string& k = call->request().key();
-    CHECK_EQ(kv_.erase(k), 1);
-    CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
+    kv_.erase(k);
+    CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end()) << k;
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kClearKV>();
   });
@@ -159,9 +160,11 @@ void RpcServer::Init() {
     const std::string& k = call->request().key();
     auto kv_it = kv_.find(k);
     if (kv_it != kv_.end()) {
+      LOG(ERROR) << "kPullKV process, key found: " << k;
       call->mut_response()->set_val(kv_it->second);
       call->SendResponse();
     } else {
+      LOG(ERROR) << "kPullKV process, pending key: " << k;
       pending_kv_calls_[k].push_back(call);
     }
     EnqueueRequest<CtrlMethod::kPullKV>();
