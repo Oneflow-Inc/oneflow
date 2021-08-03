@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
 #include "oneflow/api/python/common.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
@@ -27,7 +29,7 @@ namespace oneflow {
   std::string type;
   int device_id = -1;
   ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-  if (device_id == -1) { device_id = 0; }
+  if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
   return MakeDevice(type, device_id);
 }
 
@@ -50,9 +52,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def_property_readonly("type", [](const Symbol<Device>& d) { return d->type(); })
       .def_property_readonly("index", [](const Symbol<Device>& d) { return d->device_id(); })
-      .def("__eq__", [](const Symbol<Device>& d1, const Symbol<Device>& d2) { return *d1 == *d2; })
       .def("__str__", [](const Symbol<Device>& d) { return d->ToString(); })
-      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); });
+      .def("__repr__", [](const Symbol<Device>& d) { return d->ToRepr(); })
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
 }
 
 }  // namespace oneflow

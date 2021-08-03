@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
@@ -247,8 +248,28 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
+  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
+  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  JUST(ctx->Check());
+  return Maybe<void>::Ok();
+}
+
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
+}
+
+Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
+  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
+  }
+  return tuple;
+}
+
+py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
+  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
 Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
@@ -332,6 +353,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
       // Properties of pytorch
+      .def_property_readonly("ndim", &Tensor::ndim)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
       .def_property_readonly("is_cuda", &Tensor::is_cuda)
@@ -390,6 +412,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
+      .def("rpc_token",
+           [](const one::Tensor& tensor) -> int64_t {
+             return static_cast<uint64_t>(tensor.rpc_token().GetOrThrow());
+           })
+      .def("check_meta_consistency",
+           [](const one::Tensor& tensor) {
+             return CheckConsistentTensorMeta(tensor, 60 * 5).GetOrThrow();
+           })
+      .def("check_meta_consistency",
+           [](const one::Tensor& tensor, int64_t seconds) {
+             return CheckConsistentTensorMeta(tensor, seconds).GetOrThrow();
+           })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
@@ -399,7 +433,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only
-      .def_property_readonly("placement", &TensorGetParallelDesc);
+      .def_property_readonly("placement", &TensorGetParallelDesc)
+      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
 
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")

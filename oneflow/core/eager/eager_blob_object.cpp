@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
 namespace vm {

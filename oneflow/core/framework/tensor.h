@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/common/error.h"
 
 namespace oneflow {
@@ -48,6 +49,7 @@ class Tensor {
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
+  virtual Maybe<RpcToken> rpc_token() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
@@ -71,8 +73,8 @@ class Tensor {
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
-      const {
+  virtual Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
@@ -178,10 +180,11 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<const Stride> stride() const override { return tensor_->stride(); }
   Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const override {
     return tensor_->consumer_parallel_distribution_constraint();
   }
+  Maybe<RpcToken> rpc_token() const override { return tensor_->rpc_token(); }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
@@ -245,6 +248,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
+  Maybe<RpcToken> rpc_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
   }
@@ -328,6 +332,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
+  Maybe<RpcToken> rpc_token() const override { return impl_->rpc_token(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();
   }
@@ -336,8 +341,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&>
+  consumer_parallel_distribution_constraint() const override {
     return impl_->consumer_parallel_distribution_constraint();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
