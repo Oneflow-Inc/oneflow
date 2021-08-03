@@ -50,8 +50,7 @@ def ConsistentTo(input, device):
     input_local_tesnor = input.to_local()
     device = flow.device(device)
     output_local_tesnor = To(False)(input_local_tesnor, device, None)
-    ret = output_local_tesnor.to_consistent(out_placement, sbp)
-    return ret
+    return output_local_tesnor.to_consistent(out_placement, sbp)
 
 
 @register_tensor_op("to")
