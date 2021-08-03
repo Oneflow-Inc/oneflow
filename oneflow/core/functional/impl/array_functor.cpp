@@ -597,6 +597,22 @@ class SliceGradFunctor : public SliceGradBaseFunctor {
   }
 };
 
+class NarrowFunctor {
+ public:
+  NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const int64_t& dim,
+                           const int64_t& start, const int64_t& length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("length", length));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class LogicalSliceFunctor : public SliceBaseFunctor {
  public:
   LogicalSliceFunctor() {
@@ -1298,6 +1314,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
+  m.add_functor<impl::NarrowFunctor>("Narrow");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
