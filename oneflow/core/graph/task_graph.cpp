@@ -540,7 +540,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
-  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
+  ForEachNode([&](TaskNode* node) { node->EraseUninitializedShapeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
