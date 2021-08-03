@@ -103,7 +103,7 @@ def _handle_size_arg(*size):
 
 
 def ones_op(
-    *size,
+    *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -153,7 +153,7 @@ class Zeros(_ConstantBase):
 
 
 def zeros_op(
-    *size,
+    *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
