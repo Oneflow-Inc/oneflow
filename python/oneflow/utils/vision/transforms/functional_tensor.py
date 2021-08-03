@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
 from typing import Optional, Tuple, List
 
 from oneflow.framework.tensor import Tensor
@@ -44,12 +45,11 @@ def _get_image_num_channels(img: Tensor) -> int:
 
 
 def _max_value(dtype: flow.dtype) -> float:
-    # TODO: replace this method with torch.iinfo when it gets torchscript support.
-    # https://github.com/pytorch/pytorch/issues/41492
 
     a = flow.tensor(2, dtype=dtype)
     # TODO:Tensor.is_signed()
-    signed = 1 if flow.tensor(0, dtype=dtype).is_signed() else 0
+    # signed = 1 if flow.tensor(0, dtype=dtype).is_signed() else 0
+    signed = 1
     bits = 1
     max_value = flow.tensor(-signed, dtype=flow.long)
     while True:
@@ -132,17 +132,25 @@ def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> f
 
         # int to int
         if input_max > output_max:
-            # factor should be forced to int for torch jit script
-            # otherwise factor is a float and image // factor can produce different results
             factor = int((input_max + 1) // (output_max + 1))
             image = flow.div(image, factor, rounding_mode='floor')
             return image.to(dtype)
         else:
-            # factor should be forced to int for torch jit script
-            # otherwise factor is a float and image * factor can produce different results
             factor = int((output_max + 1) // (input_max + 1))
             image = image.to(dtype)
             return image * factor
+
+
+def vflip(img: Tensor) -> Tensor:
+    _assert_image_tensor(img)
+
+    return img.flip(-2)
+
+
+def hflip(img: Tensor) -> Tensor:
+    _assert_image_tensor(img)
+
+    return img.flip(-1)
 
 
 def crop(img: Tensor, top: int, left: int, height: int, width: int) -> Tensor:
@@ -312,3 +320,40 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
     )
 
     return img
+
+
+def _assert_grid_transform_inputs(
+        img: Tensor,
+        matrix: Optional[List[float]],
+        interpolation: str,
+        fill: Optional[List[float]],
+        supported_interpolation_modes: List[str],
+        coeffs: Optional[List[float]] = None,
+):
+
+    if not (isinstance(img, flow.Tensor)):
+        raise TypeError("Input img should be Tensor")
+
+    _assert_image_tensor(img)
+
+    if matrix is not None and not isinstance(matrix, list):
+        raise TypeError("Argument matrix should be a list")
+
+    if matrix is not None and len(matrix) != 6:
+        raise ValueError("Argument matrix should have 6 float values")
+
+    if coeffs is not None and len(coeffs) != 8:
+        raise ValueError("Argument coeffs should have 8 float values")
+
+    if fill is not None and not isinstance(fill, (int, float, tuple, list)):
+        warnings.warn("Argument fill should be either int, float, tuple or list")
+
+    # Check fill
+    num_channels = _get_image_num_channels(img)
+    if isinstance(fill, (tuple, list)) and (len(fill) > 1 and len(fill) != num_channels):
+        msg = ("The number of elements in 'fill' cannot broadcast to match the number of "
+               "channels of the image ({} != {})")
+        raise ValueError(msg.format(len(fill), num_channels))
+
+    if interpolation not in supported_interpolation_modes:
+        raise ValueError("Interpolation mode '{}' is unsupported with Tensor input".format(interpolation))

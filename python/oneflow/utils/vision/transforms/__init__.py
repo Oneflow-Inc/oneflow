@@ -26,5 +26,17 @@ __all__ = [
     "Scale",
     "CenterCrop",
     "Pad",
-    "Lambda"
+    "Lambda",
+    "RandomTransforms",
+    "RandomApply",
+    "RandomOrder",
+    "RandomChoice",
+    "RandomCrop",
+    "RandomHorizontalFlip",
+    "RandomVerticalFlip",
+    "RandomResizedCrop",
+    "RandomSizedCrop",
+    "FiveCrop",
+    "TenCrop",
+    "InterpolationMode"
 ]

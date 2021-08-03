@@ -44,6 +44,20 @@ def _get_image_num_channels(img: Any) -> int:
         return 1 if img.mode == 'L' else 3
 
 
+def hflip(img):
+    if not _is_pil_image(img):
+        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+
+    return img.transpose(Image.FLIP_LEFT_RIGHT)
+
+
+def vflip(img):
+    if not _is_pil_image(img):
+        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+
+    return img.transpose(Image.FLIP_TOP_BOTTOM)
+
+
 def pad(img, padding, fill=0, padding_mode="constant"):
     if not _is_pil_image(img):
         raise TypeError("img should be PIL Image. Got {}".format(type(img)))
@@ -167,3 +181,11 @@ def _parse_fill(fill, img, name="fillcolor"):
         fill = tuple(fill)
 
     return {name: fill}
+
+
+def rotate(img, angle, interpolation=0, expand=False, center=None, fill=None):
+    if not _is_pil_image(img):
+        raise TypeError("img should be PIL Image. Got {}".format(type(img)))
+
+    opts = _parse_fill(fill, img)
+    return img.rotate(angle, interpolation, expand, center, **opts)

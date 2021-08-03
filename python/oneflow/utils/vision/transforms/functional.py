@@ -16,10 +16,10 @@ limitations under the License.
 import warnings
 import numbers
 from enum import Enum
-from typing import List, Any
-
+from typing import List, Any, Tuple, Optional
 import numpy as np
 from PIL import Image
+import math
 
 try:
     import accimage
@@ -455,3 +455,252 @@ def resized_crop(
     img = crop(img, top, left, height, width)
     img = resize(img, size, interpolation)
     return img
+
+
+def hflip(img: Tensor) -> Tensor:
+    """Horizontally flip the given image.
+
+    Args:
+        img (PIL Image or Tensor): Image to be flipped. If img
+            is a Tensor, it is expected to be in [..., H, W] format,
+            where ... means it can have an arbitrary number of leading
+            dimensions.
+
+    Returns:
+        PIL Image or Tensor:  Horizontally flipped image.
+    """
+    if not isinstance(img, flow.Tensor):
+        return F_pil.hflip(img)
+
+    return F_t.hflip(img)
+
+
+def vflip(img: Tensor) -> Tensor:
+    """Vertically flip the given image.
+
+    Args:
+        img (PIL Image or Tensor): Image to be flipped. If img
+            is a Tensor, it is expected to be in [..., H, W] format,
+            where ... means it can have an arbitrary number of leading
+            dimensions.
+
+    Returns:
+        PIL Image or Tensor:  Vertically flipped image.
+    """
+    if not isinstance(img, flow.Tensor):
+        return F_pil.vflip(img)
+
+    return F_t.vflip(img)
+
+
+def five_crop(img: Tensor, size: List[int]) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    """Crop the given image into four corners and the central crop.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
+
+    .. Note::
+        This transform returns a tuple of images and there may be a
+        mismatch in the number of inputs and targets your ``Dataset`` returns.
+
+    Args:
+        img (PIL Image or Tensor): Image to be cropped.
+        size (sequence or int): Desired output size of the crop. If size is an
+            int instead of sequence like (h, w), a square crop (size, size) is
+            made. If provided a sequence of length 1, it will be interpreted as (size[0], size[0]).
+
+    Returns:
+       tuple: tuple (tl, tr, bl, br, center)
+       Corresponding top left, top right, bottom left, bottom right and center crop.
+    """
+    if isinstance(size, numbers.Number):
+        size = (int(size), int(size))
+    elif isinstance(size, (tuple, list)) and len(size) == 1:
+        size = (size[0], size[0])
+
+    if len(size) != 2:
+        raise ValueError("Please provide only two dimensions (h, w) for size.")
+
+    image_width, image_height = _get_image_size(img)
+    crop_height, crop_width = size
+    if crop_width > image_width or crop_height > image_height:
+        msg = "Requested crop size {} is bigger than input size {}"
+        raise ValueError(msg.format(size, (image_height, image_width)))
+
+    tl = crop(img, 0, 0, crop_height, crop_width)
+    tr = crop(img, 0, image_width - crop_width, crop_height, crop_width)
+    bl = crop(img, image_height - crop_height, 0, crop_height, crop_width)
+    br = crop(img, image_height - crop_height, image_width - crop_width, crop_height, crop_width)
+
+    center = center_crop(img, [crop_height, crop_width])
+
+    return tl, tr, bl, br, center
+
+
+def ten_crop(img: Tensor, size: List[int], vertical_flip: bool = False) -> List[Tensor]:
+    """Generate ten cropped images from the given image.
+    Crop the given image into four corners and the central crop plus the
+    flipped version of these (horizontal flipping is used by default).
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
+
+    .. Note::
+        This transform returns a tuple of images and there may be a
+        mismatch in the number of inputs and targets your ``Dataset`` returns.
+
+    Args:
+        img (PIL Image or Tensor): Image to be cropped.
+        size (sequence or int): Desired output size of the crop. If size is an
+            int instead of sequence like (h, w), a square crop (size, size) is
+            made. If provided a sequence of length 1, it will be interpreted as (size[0], size[0]).
+        vertical_flip (bool): Use vertical flipping instead of horizontal
+
+    Returns:
+        tuple: tuple (tl, tr, bl, br, center, tl_flip, tr_flip, bl_flip, br_flip, center_flip)
+        Corresponding top left, top right, bottom left, bottom right and
+        center crop and same for the flipped image.
+    """
+    if isinstance(size, numbers.Number):
+        size = (int(size), int(size))
+    elif isinstance(size, (tuple, list)) and len(size) == 1:
+        size = (size[0], size[0])
+
+    if len(size) != 2:
+        raise ValueError("Please provide only two dimensions (h, w) for size.")
+
+    first_five = five_crop(img, size)
+
+    if vertical_flip:
+        img = vflip(img)
+    else:
+        img = hflip(img)
+
+    second_five = five_crop(img, size)
+    return first_five + second_five
+
+
+
+def _get_inverse_affine_matrix(
+        center: List[float], angle: float, translate: List[float], scale: float, shear: List[float]
+) -> List[float]:
+    # Helper method to compute inverse matrix for affine transformation
+
+    # As it is explained in PIL.Image.rotate
+    # We need compute INVERSE of affine transformation matrix: M = T * C * RSS * C^-1
+    # where T is translation matrix: [1, 0, tx | 0, 1, ty | 0, 0, 1]
+    #       C is translation matrix to keep center: [1, 0, cx | 0, 1, cy | 0, 0, 1]
+    #       RSS is rotation with scale and shear matrix
+    #       RSS(a, s, (sx, sy)) =
+    #       = R(a) * S(s) * SHy(sy) * SHx(sx)
+    #       = [ s*cos(a - sy)/cos(sy), s*(-cos(a - sy)*tan(x)/cos(y) - sin(a)), 0 ]
+    #         [ s*sin(a + sy)/cos(sy), s*(-sin(a - sy)*tan(x)/cos(y) + cos(a)), 0 ]
+    #         [ 0                    , 0                                      , 1 ]
+    #
+    # where R is a rotation matrix, S is a scaling matrix, and SHx and SHy are the shears:
+    # SHx(s) = [1, -tan(s)] and SHy(s) = [1      , 0]
+    #          [0, 1      ]              [-tan(s), 1]
+    #
+    # Thus, the inverse is M^-1 = C * RSS^-1 * C^-1 * T^-1
+
+    rot = math.radians(angle)
+    sx, sy = [math.radians(s) for s in shear]
+
+    cx, cy = center
+    tx, ty = translate
+
+    # RSS without scaling
+    a = math.cos(rot - sy) / math.cos(sy)
+    b = -math.cos(rot - sy) * math.tan(sx) / math.cos(sy) - math.sin(rot)
+    c = math.sin(rot - sy) / math.cos(sy)
+    d = -math.sin(rot - sy) * math.tan(sx) / math.cos(sy) + math.cos(rot)
+
+    # Inverted rotation matrix with scale and shear
+    # det([[a, b], [c, d]]) == 1, since det(rotation) = 1 and det(shear) = 1
+    matrix = [d, -b, 0.0, -c, a, 0.0]
+    matrix = [x / scale for x in matrix]
+
+    # Apply inverse of translation and of center translation: RSS^-1 * C^-1 * T^-1
+    matrix[2] += matrix[0] * (-cx - tx) + matrix[1] * (-cy - ty)
+    matrix[5] += matrix[3] * (-cx - tx) + matrix[4] * (-cy - ty)
+
+    # Apply center translation: C * RSS^-1 * C^-1 * T^-1
+    matrix[2] += cx
+    matrix[5] += cy
+
+    return matrix
+
+
+def rotate(
+        img: Tensor, angle: float, interpolation: InterpolationMode = InterpolationMode.NEAREST,
+        expand: bool = False, center: Optional[List[int]] = None,
+        fill: Optional[List[float]] = None, resample: Optional[int] = None
+) -> Tensor:
+    """Rotate the image by angle.
+    If the image is oneflow Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions.
+
+    Args:
+        img (PIL Image or Tensor): image to be rotated.
+        angle (number): rotation angle value in degrees, counter-clockwise.
+        interpolation (InterpolationMode): Desired interpolation enum defined by
+            :class:`flow.utils.vision.transforms.InterpolationMode`. Default is ``InterpolationMode.NEAREST``.
+            If input is Tensor, only ``InterpolationMode.NEAREST``, ``InterpolationMode.BILINEAR`` are supported.
+            For backward compatibility integer values (e.g. ``PIL.Image.NEAREST``) are still acceptable.
+        expand (bool, optional): Optional expansion flag.
+            If true, expands the output image to make it large enough to hold the entire rotated image.
+            If false or omitted, make the output image the same size as the input image.
+            Note that the expand flag assumes rotation around the center and no translation.
+        center (sequence, optional): Optional center of rotation. Origin is the upper left corner.
+            Default is the center of the image.
+        fill (sequence or number, optional): Pixel fill value for the area outside the transformed
+            image. If given a number, the value is used for all bands respectively.
+
+
+    Returns:
+        PIL Image or Tensor: Rotated image.
+
+    .. _filters: https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters
+
+    """
+    if resample is not None:
+        warnings.warn(
+            "Argument resample is deprecated and will be removed since v0.10.0. Please, use interpolation instead"
+        )
+        interpolation = _interpolation_modes_from_int(resample)
+
+    # Backward compatibility with integer value
+    if isinstance(interpolation, int):
+        warnings.warn(
+            "Argument interpolation should be of type InterpolationMode instead of int. "
+            "Please, use InterpolationMode enum."
+        )
+        interpolation = _interpolation_modes_from_int(interpolation)
+
+    if not isinstance(angle, (int, float)):
+        raise TypeError("Argument angle should be int or float")
+
+    if center is not None and not isinstance(center, (list, tuple)):
+        raise TypeError("Argument center should be a sequence")
+
+    if not isinstance(interpolation, InterpolationMode):
+        raise TypeError("Argument interpolation should be a InterpolationMode")
+
+    if not isinstance(img, flow.Tensor):
+        pil_interpolation = pil_modes_mapping[interpolation]
+        return F_pil.rotate(img, angle=angle, interpolation=pil_interpolation, expand=expand, center=center, fill=fill)
+    
+
+    center_f = [0.0, 0.0]
+    if center is not None:
+        img_size = _get_image_size(img)
+        # Center values should be in pixel coordinates but translated such that (0, 0) corresponds to image center.
+        center_f = [1.0 * (c - s * 0.5) for c, s in zip(center, img_size)]
+
+    # due to current incoherence of rotation angle direction between affine and rotate implementations
+    # we need to set -angle.
+    matrix = _get_inverse_affine_matrix(center_f, -angle, [0.0, 0.0], 1.0, [0.0, 0.0])
+    raise NotImplementedError("Tensor rotate is not implemented yet!")
+    return F_t.rotate(img, matrix=matrix, interpolation=interpolation.value, expand=expand, fill=fill)
+
+
+
+
