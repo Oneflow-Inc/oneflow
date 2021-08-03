@@ -20,7 +20,7 @@ from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreducefn(ddp_state_for_reversed_params, param, allreduce_module):
+def allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module):
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
         ret = None
@@ -51,7 +51,7 @@ def DistributedDataParallel(module: "flow.nn.Module"):
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
         param.register_hook(lambda grad: grad / world_size)
-        param.register_hook(allreducefn(ddp_state_for_reversed_params, param, allreduce_module))
+        param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module))
 
     def hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

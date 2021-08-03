@@ -37,7 +37,12 @@ class AddFunctor : public InplaceableBinaryFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
-    if (std::dynamic_pointer_cast<StaticAllZeroTensor>(y)) { return x; }
+    if (std::dynamic_pointer_cast<StaticAllZeroTensor>(y)) {
+      CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
+      CHECK_OR_RETURN(*x->shape() == *y->shape());
+      CHECK_OR_RETURN(x->dtype() == y->dtype());
+      return x;
+    }
     return InplaceableBinaryFunctor::operator()(x, y, inplace);
   }
 };
