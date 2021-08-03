@@ -15,6 +15,7 @@ limitations under the License.
 """
 import collections
 
+
 def calc_pool_padding(padding, dhw_offset, ndims):
     if isinstance(padding, str):
         padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
