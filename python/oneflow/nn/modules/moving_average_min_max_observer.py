@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-
 
 class MovingAverageMinMaxObserver(Module):
     def __init__(
@@ -35,13 +35,27 @@ class MovingAverageMinMaxObserver(Module):
         self.quantization_bit = quantization_bit
         self.quantization_scheme = quantization_scheme
         self.momentum = momentum
+        if training == True:
+            self.register_buffer("moving_max", flow.Tensor(1))
+            self.register_buffer("moving_min", flow.Tensor(1))
+        else:
+            self.register_parameter("moving_max", None)
+            self.register_parameter("moving_min", None)
+        self.reset_running_stats()
 
-    def forward(self, input, current_train_step, moving_max, moving_min):
+    def reset_running_stats(self) -> None:
+        if self.training:
+            self.moving_max.fill_(0)
+            self.moving_min.fill_(0)
+
+    def forward(self, input, current_train_step):
+        self.moving_max = self.moving_max.to(input.device.type)
+        self.moving_min = self.moving_min.to(input.device.type)
         return flow.F.moving_average_min_max_observer(
             input,
             current_train_step,
-            moving_max,
-            moving_min,
+            self.moving_max,
+            self.moving_min,
             self.training,
             self.quantization_formula,
             self.stop_update_after_iters,
@@ -54,8 +68,6 @@ class MovingAverageMinMaxObserver(Module):
 def moving_average_min_max_observer_op(
     input,
     current_train_step,
-    moving_max,
-    moving_min,
     training: bool = False,
     quantization_formula: str = "google",
     stop_update_after_iters: int = 0,
@@ -132,10 +144,6 @@ def moving_average_min_max_observer_op(
         ...    weight, dtype=flow.float32
         ... )
 
-        >>> moving_max_np = np.zeros((1,))
-        >>> moving_min_np = np.zeros((1,))
-        >>> moving_max_tensor = flow.Tensor(moving_max_np)
-        >>> moving_min_tensor = flow.Tensor(moving_min_np)
         >>> current_train_step_tensor = flow.Tensor(
         ...   np.zeros((1,)).astype(np.float32),
         ...    dtype=flow.int64,
@@ -149,8 +157,6 @@ def moving_average_min_max_observer_op(
         >>> (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
         ...    input_tensor,
         ...    current_train_step_tensor,
-        ...    moving_max_tensor,
-        ...    moving_min_tensor,
         ...    True,
         ...    quantization_formula=quantization_formula,
         ...    stop_update_after_iters=1,
@@ -167,7 +173,7 @@ def moving_average_min_max_observer_op(
         quantization_bit=quantization_bit,
         quantization_scheme=quantization_scheme,
         momentum=momentum,
-    )(input, current_train_step, moving_max, moving_min)
+    )(input, current_train_step)
 
 
 if __name__ == "__main__":

@@ -137,8 +137,6 @@ def _run_test_moving_average_min_max_observer(
 ):
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
-    moving_max_tensor = flow.Tensor(moving_max_np, device=flow.device(device_type))
-    moving_min_tensor = flow.Tensor(moving_min_np, device=flow.device(device_type))
     current_train_step_tensor = flow.Tensor(
         np.zeros((1,)).astype(np.float32),
         dtype=flow.int64,
@@ -152,8 +150,6 @@ def _run_test_moving_average_min_max_observer(
         (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
             activation_tensor,
             current_train_step_tensor,
-            moving_max_tensor,
-            moving_min_tensor,
             True,
             quantization_formula=quantization_formula,
             stop_update_after_iters=1,
