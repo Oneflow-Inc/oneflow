@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import collections.abc as container_abcs
 from itertools import repeat
 from typing import List
+
+import oneflow as flow
 
 
 def _ntuple(n):
@@ -41,6 +44,16 @@ _single = _ntuple(1)
 _pair = _ntuple(2)
 _triple = _ntuple(3)
 _quadruple = _ntuple(4)
+
+
+def _handle_size_arg(size):
+    assert len(size) > 0, "size of tensor doesn't exists"
+    if isinstance(size[0], (list, tuple, flow.Size)):
+        assert (
+            len(size) == 1
+        ), "shape should be specified by tuple of int size, not tuple of list"
+        size = size[0]
+    return size
 
 
 def _reverse_repeat_tuple(t, n):

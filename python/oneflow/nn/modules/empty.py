@@ -19,11 +19,11 @@ from typing import List, Optional, Union
 import oneflow as flow
 
 from oneflow.nn.common_types import _size_any_t
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 def empty_op(
-    size: Union[_size_any_t, flow.Size],
+    *size,
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str] = None,
     placement: flow.placement = None,
@@ -37,7 +37,7 @@ def empty_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (an integer or tuple of integer values or flow.Size): Defining the shape of the output tensor.
+        size (int... or flow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         device (torch.device, optional): The desired device of returned tensor. Default: if None, uses the
@@ -55,11 +55,8 @@ def empty_op(
 
     """
     assert size is not None, "shape must not be None"
-    assert isinstance(
-        size, (int, tuple, flow.Size)
-    ), "shape should be int or tuple of int or flow.Size"
 
-    shape = _single(size)
+    shape = _single(_handle_size_arg(size))
     if dtype is None:
         dtype = flow.float32
     if placement is None:
