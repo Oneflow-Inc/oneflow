@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/async_cpu_stream_type.h"
 
 namespace oneflow {
 
@@ -40,7 +40,7 @@ class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
  public:
   CpuReleaseTensorInstructionType() = default;
   ~CpuReleaseTensorInstructionType() override = default;
-  using stream_type = vm::CpuStreamType;
+  using stream_type = vm::AsyncCpuStreamType;
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
 
