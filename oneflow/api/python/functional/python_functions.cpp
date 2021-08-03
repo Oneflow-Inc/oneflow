@@ -30,8 +30,9 @@ namespace one {
 namespace functional {
 
 py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
-  // "Add(Tensor input, Scalar other, *, bool inplace=False)"
+  // "Add(Tensor input, Scalar other, *, Scalar alpha, bool inplace=False)"
   // "Add(Tensor input, Tensor other, *, Scalar alpha, bool inplace=False)"
+  // "Add(Scalar input, Tensor other, *, Scalar alpha, bool inplace=False)"
   PyObject* args = py_args.ptr();
   PyObject* kwargs = py_kwargs.ptr();
   size_t nargs = PyTuple_Size(args);
@@ -50,7 +51,7 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
     if (!input_is_tensor) {
-      CHECK_OR_RETURN(!inplace) << "Can't apply inplace on scalar input.";
+      CHECK_OR_RETURN(!inplace) << "Can not apply inplace on scalar input.";
       input = other;
       other = PyTuple_GetItem(args, 0);
     }
@@ -83,7 +84,11 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
       } else if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
-        CHECK_OR_RETURN(!inplace) << "Inplace is not supported for broadcast add.";
+        if (inplace) {
+          const auto& tmp = functional::Expand(b, *a->shape());
+          CHECK_OR_RETURN(tmp.IsOk()) << "Can not apply inplace on the broadcasting input.";
+          return functional::Add(a, JUST(tmp), inplace);
+        }
         return functional::BroadcastAdd(a, b);
       }
     }
