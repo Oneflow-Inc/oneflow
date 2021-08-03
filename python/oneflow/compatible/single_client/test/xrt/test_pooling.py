@@ -71,7 +71,6 @@ class TestPooling(unittest.TestCase):
         )
 
     def test_ones_input(self):
-        print("test ones input: ")
         self._test_ones_body((1, 1, 6, 6), 1, 1, "VALID", "NCHW")
         self._test_ones_body((1, 3, 6, 6), 3, 2, "SAME", "NCHW")
         self._test_ones_body((1, 1, 3, 3), 1, 1, "VALID", "NCHW")
@@ -84,7 +83,6 @@ class TestPooling(unittest.TestCase):
         self._test_ones_body((1, 1, 9, 9), 2, 2, "VALID", "NCHW")
 
     def test_random_input(self):
-        print("test random input: ")
         self._test_random_body((1, 1, 6, 6), 1, 1, "VALID", "NCHW")
         self._test_random_body((1, 3, 6, 6), 3, 2, "SAME", "NCHW")
         self._test_random_body((1, 5, 6, 6), 3, 2, "VALID", "NCHW")
