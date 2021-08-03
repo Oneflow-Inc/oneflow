@@ -110,7 +110,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
-    //     then it can be cleared for save mem.
+    //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
   // NOTE(chengcheng): recovery op_attr
