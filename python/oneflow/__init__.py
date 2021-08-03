@@ -329,6 +329,8 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
+from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
+from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
@@ -358,9 +360,6 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-from oneflow.ops.loss_ops import ctc_loss, smooth_l1_loss
-from oneflow.ops.one_hot import one_hot
-from oneflow.ops.partial_fc_sample import distributed_partial_fc_sample
 from oneflow.ops.user_op_builder import (
     api_consistent_user_op_builder as consistent_user_op_builder,
 )
