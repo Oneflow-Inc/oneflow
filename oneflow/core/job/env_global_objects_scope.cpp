@@ -192,8 +192,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #else
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
 #endif  // WITH_RDMA
-#endif  // __linux__
     }
+#endif  // __linux__
   }
   return Maybe<void>::Ok();
 }
