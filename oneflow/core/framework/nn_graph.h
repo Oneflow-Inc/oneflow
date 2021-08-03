@@ -52,6 +52,7 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> input_op_names_;
   std::vector<std::string> output_op_names_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
+  HashSet<std::string> variable_op_names_;
   Job job_;
   Plan plan_;
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.

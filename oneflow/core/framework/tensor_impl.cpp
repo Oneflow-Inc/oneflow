@@ -61,23 +61,13 @@ Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
-  const auto& shape = std::make_shared<Shape>();
-  const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
-}
-
-}  // namespace
-
 Maybe<MirroredTensorImpl> LazyMirroredTensorImpl::detach() const {
   auto detached_impl = std::make_shared<LazyMirroredTensorImpl>(tensor_meta_, false, true);
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl()
-    : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), false, false) {}
+    : MirroredTensorImpl(std::make_shared<const MirroredTensorMeta>(), false, false) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
@@ -173,6 +163,12 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   detached_impl->eager_blob_object_ = eager_blob_object_;
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
+
+MirroredTensorMeta::MirroredTensorMeta()
+    : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
+      device_(Symbol<Device>()),
+      stride_(std::make_shared<const Stride>()),
+      storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)

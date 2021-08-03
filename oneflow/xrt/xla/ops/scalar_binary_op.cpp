@@ -44,6 +44,8 @@ class ScalarBinaryOp : public XlaOpKernel {
       double value = ctx->Attr<double>("float_operand");
       return FloatLiteral(builder, data_type, value);
     }
+    UNIMPLEMENTED();
+    return xla::XlaOp();
   }
 };
 

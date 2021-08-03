@@ -66,7 +66,10 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     } else {
       var_blob = JUST(var->eager_blob_object())->mut_blob();
     }
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(variable_op_names.at(i), var_blob).second);
+    const std::string& var_name = variable_op_names.at(i);
+    CHECK_OR_RETURN(!var_name.empty());
+    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
 }
@@ -85,6 +88,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     LOG(INFO) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
@@ -93,7 +97,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    PlanUtil::SetForceInplaceMemBlock(&plan_);
+    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
@@ -110,7 +114,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
 
   NewRuntimeBuffers();
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }

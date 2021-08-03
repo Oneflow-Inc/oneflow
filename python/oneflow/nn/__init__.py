@@ -32,13 +32,16 @@ from oneflow.nn.modules.activation import (
     Softmax,
     Softplus,
     Tanh,
+    SELU,
+    SiLU,
+    Softsign,
 )
 from oneflow.nn.modules.adaptive_pool import (
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
 )
-from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d
+from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -46,7 +49,7 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d
+from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
 from oneflow.nn.modules.dataset import (
     COCOReader,
     CoinFlip,
