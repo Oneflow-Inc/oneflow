@@ -52,11 +52,32 @@ def product(tu):
     return np.prod(tu).astype(np.int).item()
 
 
-def _check_min_max_observer(
+def quant_per_layer_symmetric(input, quantization_bit, scale):
+    upper_bound = 2.0 ** (quantization_bit - 1) - 1
+    lower_bound = -upper_bound
+    return np.clip(np.rint(input / scale), lower_bound, upper_bound)
+
+
+def quant_per_layer_affine(input, quantization_bit, scale, zero_point):
+    upper_bound = 2.0 ** quantization_bit - 1
+    lower_bound = 0
+    return (
+        np.clip(np.rint(input / scale + zero_point), lower_bound, upper_bound)
+    )
+
+
+def quant_per_layer_cambricon(input, quantization_bit, shift):
+    upper_bound = 2.0 ** (quantization_bit - 1) - 1
+    lower_bound = -upper_bound
+    scale = 2 ** shift
+    return np.clip(np.rint(input / scale), lower_bound, upper_bound)
+
+
+def _check_quantize(
     test_case,
-    weight,
-    scale_of,
-    zero_point_of,
+    input,
+    input_diff_of,
+    out_of,
     quantization_bit,
     quantization_scheme,
     quantization_formula,
@@ -64,61 +85,90 @@ def _check_min_max_observer(
 ):
     if per_layer_quantization or quantization_formula == "cambricon":
         outer_num = 1
-        inner_num = product(weight.shape[0:])
+        inner_num = product(input.shape[0:])
     else:
-        outer_num = weight.shape[0]
-        inner_num = product(weight.shape[1:])
+        outer_num = input.shape[0]
+        inner_num = product(input.shape[1:])
     scale_np = np.zeros((outer_num,))
     zero_point_np = np.zeros((outer_num,))
-    weight_flatten = weight.flatten()
+    out_np = np.zeros((inner_num * outer_num,))
+    input_flatten = input.flatten()
+    input_diff_np = np.full((inner_num * outer_num,), 1.0 / (inner_num * outer_num))
     if quantization_formula == "google":
         if quantization_scheme == "symmetric":
             for c in range(outer_num):
                 (scale_np[c], zero_point_np[c]) = gen_quant_scale_for_min_max_symmetric(
-                    weight_flatten[c * inner_num : (c + 1) * inner_num],
-                    quantization_bit,
+                    input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
                 )
+                out = quant_per_layer_symmetric(
+                    input_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                    scale_np[c],
+                )
+                out_np[c * inner_num : (c + 1) * inner_num] = out
         else:
             for c in range(outer_num):
                 (scale_np[c], zero_point_np[c]) = gen_quant_scale_for_min_max_affine(
-                    weight_flatten[c * inner_num : (c + 1) * inner_num],
-                    quantization_bit,
+                    input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
                 )
+                out = quant_per_layer_affine(
+                    input_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                    scale_np[c],
+                    zero_point_np[c],
+                )
+                out_np[c * inner_num : (c + 1) * inner_num] = out
     else:
         (scale_np[0], zero_point_np[0]) = gen_quant_scale_for_min_max_cambricon(
-            weight_flatten, quantization_bit
+            input_flatten, quantization_bit
         )
-    test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=0.001))
+        out_np = quant_per_layer_cambricon(
+            input_flatten, quantization_bit, scale_np[0]
+        )
+    rmse = np.sqrt(np.mean((out_of - out_np) ** 2))
+    assert rmse <= 1.0, "quantization op has bug!"
+    test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=0.001))
 
-    rmse = np.sqrt(np.mean((zero_point_of - zero_point_np) ** 2))
-    assert rmse <= 1.0, "min_max_observer op zero_point calculate has bug!"
 
-
-def _run_test_min_max_observer(
+def _run_test_quantize(
     test_case,
     device_type,
-    weight_shape,
+    dtype,
+    in_shape,
     quantization_bit,
     quantization_scheme,
     quantization_formula,
     per_layer_quantization,
 ):
-    weight = (np.random.random(weight_shape) - 0.5).astype(np.float32)
-    tensor_weight = flow.Tensor(
-        weight, device=flow.device(device_type), dtype=flow.float32
+    input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
+    input_tensor = flow.Tensor(
+        input, requires_grad=True, device=flow.device(device_type)
     )
-    scale, zero_point = flow.quantization.min_max_observer(
-        tensor_weight,
+    (scale, zero_point) = flow.quantization.min_max_observer(
+        input_tensor,
         quantization_bit,
         quantization_scheme,
         quantization_formula,
         per_layer_quantization,
     )
-    _check_min_max_observer(
+    output_tensor = flow.quantization.quantization(
+        input_tensor,
+        scale,
+        zero_point,
+        quantization_formula=quantization_formula,
+        quantization_bit=quantization_bit,
+        quantization_scheme=quantization_scheme,
+    )
+    y = output_tensor.mean()
+    y = y.backward()
+
+    out = output_tensor.numpy()
+    input_diff = input_tensor.grad.numpy()
+    _check_quantize(
         test_case,
-        weight,
-        scale.numpy(),
-        zero_point.numpy(),
+        input,
+        input_diff.flatten(),
+        out.flatten(),
         quantization_bit,
         quantization_scheme,
         quantization_formula,
@@ -126,12 +176,13 @@ def _run_test_min_max_observer(
     )
 
 
-class TestMinMaxObserver(flow.unittest.TestCase):
-    def test_min_max_observer(test_case):
+class TestQuantize(flow.unittest.TestCase):
+    def test_quantize(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["weight_shape"] = [(9, 40, 20, 10)]
+        arg_dict["device_type"] = ["cuda", "cpu"]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["in_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
         arg_dict["quantization_formula"] = ["google"]
@@ -139,7 +190,7 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             if arg[-2] == "cambricon" and arg[-1] == False:
                 continue
-            _run_test_min_max_observer(*arg)
+            _run_test_quantize(*arg)
 
 
 if __name__ == "__main__":

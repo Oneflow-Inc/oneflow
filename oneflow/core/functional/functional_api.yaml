@@ -309,6 +309,11 @@
     "Tensor FakeQuantization(Tensor in, Tensor scale, Tensor zero_point, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme)"
   bind_python: True
 
+- name: "quantization"
+  signature:
+    "Tensor Quantization(Tensor in, Tensor scale, Tensor zero_point, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme)"
+  bind_python: True
+
 - name: "min_max_observer"
   signature:
     "TensorTuple MinMaxObserver(Tensor in, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme, Bool per_layer_quantization)"

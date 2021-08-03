@@ -18,6 +18,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
+
 class MovingAverageMinMaxObserver(Module):
     def __init__(
         self,
@@ -182,4 +183,4 @@ def moving_average_min_max_observer_op(
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)

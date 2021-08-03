@@ -118,9 +118,36 @@ class FakeQuantizationFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class QuantizationFunctor {
+ public:
+  QuantizationFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("quantization")
+                         .Input("in")
+                         .Input("scale")
+                         .Input("zero_point")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& scale,
+                           const std::shared_ptr<one::Tensor>& zero_point,
+                           const std::string quantization_formula, const int32_t& quantization_bit,
+                           const std::string quantization_scheme) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FakeQuantizationFunctor>("FakeQuantization"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::QuantizationFunctor>("Quantization"); };
 ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::MinMaxObserverFunctor>("MinMaxObserver"); };
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MovingAverageMinMaxObserverFunctor>("MovingAverageMinMaxObserver");

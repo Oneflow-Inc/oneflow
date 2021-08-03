@@ -119,10 +119,10 @@ def _check_moving_average_min_max_observer(
         )
     test_case.assertTrue(np.allclose(scale_of[0], scale_np, rtol=0.001))
 
-    rmse = np.sqrt(
-        np.mean((zero_point_of[0] - zero_point_np) ** 2)
-    )
-    assert rmse <= 1.0, "moving_average_min_max_observer op zero_point calculate has bug!"
+    rmse = np.sqrt(np.mean((zero_point_of[0] - zero_point_np) ** 2))
+    assert (
+        rmse <= 1.0
+    ), "moving_average_min_max_observer op zero_point calculate has bug!"
 
 
 def _run_test_moving_average_min_max_observer(

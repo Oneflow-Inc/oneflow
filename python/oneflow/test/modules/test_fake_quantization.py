@@ -126,9 +126,7 @@ def _check_fake_quantize(
         out_np = fake_quant_per_layer_cambricon(
             input_flatten, quantization_bit, scale_np[0]
         )
-    rmse = np.sqrt(
-        np.mean((out_of - out_np) ** 2)
-    )
+    rmse = np.sqrt(np.mean((out_of - out_np) ** 2))
     assert rmse <= 1.0, "fake_quantization op has bug!"
     test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=0.001))
 
