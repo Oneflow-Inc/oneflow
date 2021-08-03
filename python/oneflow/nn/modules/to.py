@@ -90,6 +90,7 @@ def to_op(input, *args, **kwargs):
     device = kwargs.get("device", None)
     dtype = kwargs.get("dtype", None)
     if input.is_consistent:
+        input.check_meta_consistency()
         if len(args) > 0:
             assert args[0] in (
                 "cuda",
