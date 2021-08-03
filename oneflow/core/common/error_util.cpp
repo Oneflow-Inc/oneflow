@@ -64,9 +64,9 @@ void ErrorMsgShortenMaybe(std::string& str) {
       word_num++;
     }
   }
-  if (word_num > 8) {
+  if (word_num > 10) {
     str = str.substr(0, delim_index2length.at(4)) + " ... "
-          + str.substr(delim_index2length.at(word_num - 4));
+          + str.substr(delim_index2length.at(word_num - 4) + 1);
   }
 }
 
