@@ -161,8 +161,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                const Optional<Shape>& shape,
-                                const std::shared_ptr<OpExpr>& op) {
+                                const Optional<Shape>& shape, const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
   const auto& device = JUST(x->device());
   if (device->type() != "cpu") {

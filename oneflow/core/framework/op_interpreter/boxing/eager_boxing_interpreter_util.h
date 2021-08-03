@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 struct EagerBoxingInterpreterUtil {
-  static bool IsPlacementSymmetrical(Symbol<ParallelDesc> src, Symbol<ParallelDesc> dst);
+  static bool IsPlacementEqual(Symbol<ParallelDesc> src, Symbol<ParallelDesc> dst);
   static bool IsDeviceTypeGPU(Symbol<ParallelDesc> parallel_desc);
   static bool IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);

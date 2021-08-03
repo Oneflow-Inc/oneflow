@@ -17,8 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
-bool EagerBoxingInterpreterUtil::IsPlacementSymmetrical(Symbol<ParallelDesc> src,
-                                                        Symbol<ParallelDesc> dst) {
+bool EagerBoxingInterpreterUtil::IsPlacementEqual(Symbol<ParallelDesc> src,
+                                                  Symbol<ParallelDesc> dst) {
   return src == dst;
 }
 

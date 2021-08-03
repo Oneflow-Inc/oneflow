@@ -82,10 +82,9 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
   }
   if (in_parallel_distribution->sbp_parallel_size() == 1
       && out_parallel_distribution->sbp_parallel_size() == 1) {
-    if (EagerBoxingInterpreterUtil::IsPlacementSymmetrical(in_parallel_desc, out_parallel_desc)) {
-      if (in_parallel_desc == out_parallel_desc
-          && EagerBoxingInterpreterUtil::IsBoxingB2P(in_parallel_distribution->sbp_parallel(0),
-                                                     out_parallel_distribution->sbp_parallel(0))) {
+    if (EagerBoxingInterpreterUtil::IsPlacementEqual(in_parallel_desc, out_parallel_desc)) {
+      if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_parallel_distribution->sbp_parallel(0),
+                                                  out_parallel_distribution->sbp_parallel(0))) {
         std::shared_ptr<EagerBoxingInterpreter> naive_bp_boxing_interpreter =
             std::make_shared<NaiveB2PBoxingInterpreter>();
         return naive_bp_boxing_interpreter;
