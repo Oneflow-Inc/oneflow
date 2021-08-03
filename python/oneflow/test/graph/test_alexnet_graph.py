@@ -22,8 +22,8 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test.graph.alexnet.alexnet_model import alexnet
-from oneflow.test.graph.alexnet.ofrecord_data_utils import OFRecordDataLoader
+from oneflow.test.graph.alexnet_model import alexnet
+from oneflow.test.graph.ofrecord_data_utils import OFRecordDataLoader
 
 
 def _parse_args():
