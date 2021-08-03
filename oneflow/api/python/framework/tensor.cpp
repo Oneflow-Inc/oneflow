@@ -61,9 +61,9 @@ std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shap
 
 std::shared_ptr<Tensor> MakeConsistentTensor(
     const std::shared_ptr<const Shape>& shape, const DType* dtype,
-    Symbol<cfg::ParallelDistribution>& parallel_distribution, Symbol<ParallelDesc> parallel_desc,
+    Symbol<cfg::ParallelDistribution>& nd_sbp, Symbol<ParallelDesc> parallel_desc,
     bool is_lazy, bool requires_grad, bool is_leaf) {
-  return ConsistentTensor::MakeTensor(shape, dtype->data_type(), parallel_distribution,
+  return ConsistentTensor::MakeTensor(shape, dtype->data_type(), nd_sbp,
                                       parallel_desc, is_lazy, requires_grad, is_leaf)
       .GetPtrOrThrow();
 }
@@ -260,7 +260,7 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
 }
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
-  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& nd_sbp = JUST(tensor.nd_sbp());
   const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));

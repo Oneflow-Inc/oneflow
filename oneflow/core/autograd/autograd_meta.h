@@ -96,7 +96,7 @@ class TensorInfo final {
   DataType dtype_;
   Optional<Symbol<Device>> device_;                                    // for local tensor
   Optional<Symbol<ParallelDesc>> parallel_desc_;                       // for consistent tensor
-  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution_;  // for consistent tensor
+  Optional<Symbol<cfg::ParallelDistribution>> nd_sbp_;  // for consistent tensor
 };
 
 }  // namespace one

@@ -41,8 +41,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<const Operator> shared_op() const { return op_; }
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const cfg::SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
-  const cfg::ParallelDistributionSignature& parallel_distribution_signature() const {
-    return *CHECK_JUST(op().parallel_distribution_signature());
+  const cfg::ParallelDistributionSignature& nd_sbp_signature() const {
+    return *CHECK_JUST(op().nd_sbp_signature());
   }
   const cfg::SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const cfg::SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
@@ -69,7 +69,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
-  HashMap<LogicalBlobId, cfg::ParallelDistribution> lbi2parallel_distribution_;
+  HashMap<LogicalBlobId, cfg::ParallelDistribution> lbi2nd_sbp_;
   std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_and_output_index_;
 };
 
@@ -138,7 +138,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferOpNodeParallelDistributionSignature(
       OpNode* op_node,
-      const cfg::ParallelDistributionSignature& parallel_distribution_sig_conf) const;
+      const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

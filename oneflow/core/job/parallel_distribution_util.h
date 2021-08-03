@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_PARALLEL_DISTRIBUTION_UTIL_H_
-#define ONEFLOW_CORE_JOB_PARALLEL_DISTRIBUTION_UTIL_H_
+#ifndef ONEFLOW_CORE_JOB_nd_sbp_UTIL_H_
+#define ONEFLOW_CORE_JOB_nd_sbp_UTIL_H_
 
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -25,13 +25,13 @@ std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
                                                 const cfg::SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc);
 std::vector<TensorSliceView> GetTensorSliceView(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
     const Shape& logical_shape);
 TensorSliceView GetTensorSliceView4ParallelRank(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
     const Shape& logical_shape, const std::vector<int64_t>& parallel_rank);
 TensorSliceView GetTensorSliceView4ParallelId(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
     const Shape& logical_shape, int64_t parallel_id);
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 

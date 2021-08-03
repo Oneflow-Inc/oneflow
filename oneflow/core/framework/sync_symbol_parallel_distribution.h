@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_PARALLEL_DISTRIBUTION_H_
-#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_PARALLEL_DISTRIBUTION_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_nd_sbp_H_
+#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_nd_sbp_H_
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
@@ -33,4 +33,4 @@ Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id, Symbol<cfg::Paral
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_PARALLEL_DISTRIBUTION_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_nd_sbp_H_

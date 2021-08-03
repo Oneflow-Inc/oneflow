@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_PARALLEL_DISTRIBUTION_INFER_HINT_H_
-#define ONEFLOW_CORE_JOB_PARALLEL_DISTRIBUTION_INFER_HINT_H_
+#ifndef ONEFLOW_CORE_JOB_nd_sbp_INFER_HINT_H_
+#define ONEFLOW_CORE_JOB_nd_sbp_INFER_HINT_H_
 
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -26,24 +26,24 @@ class ParallelDistributionInferHint final {
  public:
   ParallelDistributionInferHint(const ParallelDesc* parallel_desc,
                                 const BlobDesc* logical_blob_desc,
-                                const cfg::ParallelDistribution* parallel_distribution)
+                                const cfg::ParallelDistribution* nd_sbp)
       : parallel_desc_(parallel_desc),
         logical_blob_desc_(logical_blob_desc),
-        parallel_distribution_(parallel_distribution) {}
+        nd_sbp_(nd_sbp) {}
   ParallelDistributionInferHint(const ParallelDistributionInferHint&) = default;
   ~ParallelDistributionInferHint() = default;
 
   // Getters
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const BlobDesc& logical_blob_desc() const { return *logical_blob_desc_; }
-  const cfg::ParallelDistribution& parallel_distribution() const { return *parallel_distribution_; }
+  const cfg::ParallelDistribution& nd_sbp() const { return *nd_sbp_; }
 
  private:
   const ParallelDesc* parallel_desc_;
   const BlobDesc* logical_blob_desc_;
-  const cfg::ParallelDistribution* parallel_distribution_;
+  const cfg::ParallelDistribution* nd_sbp_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_PARALLEL_DISTRIBUTION_INFER_HINT_H_
+#endif  // ONEFLOW_CORE_JOB_nd_sbp_INFER_HINT_H_

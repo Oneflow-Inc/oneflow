@@ -49,31 +49,31 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
   }
 }
 
-Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
+Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* nd_sbp,
                                             const std::shared_ptr<Tensor>& tensor) {
-  parallel_distribution->clear_sbp_parallel();
+  nd_sbp->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
     //   OneFlow Lazy is always consistent. LocalTensor is a special case of ConsistentTensor which
     //   placement is only this rank, and SbpParallel is Broadcast.
-    parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+    nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
-    JUST(tensor->parallel_distribution())->ToProto(parallel_distribution);
+    JUST(tensor->nd_sbp())->ToProto(nd_sbp);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
     VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
-  var_conf->clear_parallel_distribution();
+  var_conf->clear_nd_sbp();
   if (tensor->is_local()) {
     cfg::SbpParallel broadcast;
     broadcast.mutable_broadcast_parallel();
-    var_conf->add_parallel_distribution(SbpParallelToString(broadcast));
+    var_conf->add_nd_sbp(SbpParallelToString(broadcast));
   } else {
-    const cfg::ParallelDistribution& parallel_distribution = *JUST(tensor->parallel_distribution());
-    for (const auto& sbp_parallel : parallel_distribution.sbp_parallel()) {
-      var_conf->add_parallel_distribution(SbpParallelToString(sbp_parallel));
+    const cfg::ParallelDistribution& nd_sbp = *JUST(tensor->nd_sbp());
+    for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+      var_conf->add_nd_sbp(SbpParallelToString(sbp_parallel));
     }
   }
   return Maybe<void>::Ok();
@@ -126,7 +126,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
+  JUST(GenParallelDistributionByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
@@ -240,7 +240,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype());
   blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
+  JUST(GenParallelDistributionByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));

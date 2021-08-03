@@ -27,11 +27,11 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
       new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>();
   auto iter = sbp_list2nd_sbp->find(sbp_list);
   if (iter == sbp_list2nd_sbp->end()) {
-    cfg::ParallelDistribution parallel_distribution;
+    cfg::ParallelDistribution nd_sbp;
     for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_list) {
-      *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
+      *(nd_sbp.mutable_sbp_parallel()->Add()) = *sbp_symbol;
     }
-    iter = sbp_list2nd_sbp->emplace(sbp_list, SymbolOf(parallel_distribution)).first;
+    iter = sbp_list2nd_sbp->emplace(sbp_list, SymbolOf(nd_sbp)).first;
   }
   return iter->second;
 }
@@ -53,17 +53,17 @@ Maybe<void> GetDualSbpParallel(const cfg::SbpParallel& sbp_parallel,
 }  // namespace
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    Symbol<cfg::ParallelDistribution> nd_sbp) {
   static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>>
       map;
-  auto iter = map.find(parallel_distribution);
+  auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
-    cfg::ParallelDistribution dual_parallel_distribution;
-    auto* mut_sbp_parallel = dual_parallel_distribution.mutable_sbp_parallel();
-    for (const auto& sbp_parallel : parallel_distribution->sbp_parallel()) {
+    cfg::ParallelDistribution dual_nd_sbp;
+    auto* mut_sbp_parallel = dual_nd_sbp.mutable_sbp_parallel();
+    for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
       JUST(GetDualSbpParallel(sbp_parallel, mut_sbp_parallel->Add()));
     }
-    iter = map.emplace(parallel_distribution, SymbolOf(dual_parallel_distribution)).first;
+    iter = map.emplace(nd_sbp, SymbolOf(dual_nd_sbp)).first;
   }
   return iter->second;
 }

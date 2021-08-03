@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/job/parallel_distribution_infer_hint.h"
+#include "oneflow/core/job/nd_sbp_infer_hint.h"
 
 namespace oneflow {
 
@@ -150,7 +150,7 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferParallelDistributionSignatureIf(
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn);
@@ -178,7 +178,7 @@ class Operator {
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const cfg::SbpSignature*> sbp_signature() const;
-  Maybe<const cfg::ParallelDistributionSignature*> parallel_distribution_signature() const;
+  Maybe<const cfg::ParallelDistributionSignature*> nd_sbp_signature() const;
   BlobLastUsedSignature* mut_blob_last_used_signature();
   BlobBackwardUsedSignature* mut_blob_backward_used_signature();
 
@@ -214,8 +214,8 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* nd_sbp_signature,
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const;
@@ -302,7 +302,7 @@ class Operator {
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
   std::shared_ptr<const Shape> op_time_shape_;
   std::shared_ptr<const cfg::SbpSignature> sbp_signature_;
-  std::shared_ptr<const cfg::ParallelDistributionSignature> parallel_distribution_signature_;
+  std::shared_ptr<const cfg::ParallelDistributionSignature> nd_sbp_signature_;
   PbRpf<std::string> input_bns_;
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
@@ -428,16 +428,16 @@ class ParallelDistribution;
 }
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& parallel_distribution,
+                              const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& parallel_distribution,
+                              const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc, int64_t parallel_id);
 
 Maybe<Shape> GetLogicalShape(const Shape& physical_shape,
-                             const cfg::ParallelDistribution& parallel_distribution,
+                             const cfg::ParallelDistribution& nd_sbp,
                              const ParallelDesc& parallel_desc);
 
 }  // namespace oneflow

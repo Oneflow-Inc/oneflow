@@ -53,11 +53,11 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
-        JUST(ctx.parallel_distribution.value());
+        JUST(ctx.nd_sbp.value());
         CHECK_OR_RETURN(!ctx.device.has_value());
         return g_eager_consistent_interpreter;
       } else {
-        CHECK_OR_RETURN(!ctx.parallel_distribution.has_value());
+        CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
         return g_eager_mirrored_interpreter;
       }
     } else {
@@ -147,10 +147,10 @@ template<>
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
-    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
-    *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
+    const auto& nd_sbp = std::make_shared<cfg::ParallelDistribution>();
+    *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     const auto& tensor = JUST(
-        ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*parallel_distribution),
+        ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*nd_sbp),
                                      SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
                                      /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);

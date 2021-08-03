@@ -24,10 +24,10 @@ namespace {
 using namespace user_op;
 using namespace data;
 
-size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist) {
+size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp) {
   size_t num_shards = 1;
-  FOR_RANGE(size_t, i, 0, parallel_dist.sbp_parallel_size()) {
-    const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
+  FOR_RANGE(size_t, i, 0, nd_sbp.sbp_parallel_size()) {
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       num_shards *= hierarchy.At(sbp_parallel.split_parallel().axis());
     }
@@ -35,7 +35,7 @@ size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& par
   return num_shards;
 }
 
-size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist,
+size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp,
                      size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
@@ -47,7 +47,7 @@ size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& pa
   size_t stride = 1;
   size_t index = 0;
   for (int i = ndim - 1; i >= 0; --i) {
-    const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       index += nd_index[i] * stride;
       stride *= hierarchy.At(i);
