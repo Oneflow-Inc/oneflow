@@ -360,3 +360,5 @@ from oneflow.ops.initializer_util import (
 from oneflow.nn.modules.scatter import *
 
 from . import autograd, distributed, linalg, optim, saved_model, sbp
+import oneflow.utils.data
+import oneflow.utils.vision
