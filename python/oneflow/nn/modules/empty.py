@@ -42,9 +42,10 @@ def empty_op(
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         device (torch.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement): The desired device of returned consistent tensor. If None, will construct
-          local tensor.
-        sbp (flow.sbp): The desired sbp of returned consistent tensor. It must be equal with the numbers of placement.
+        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+          numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
