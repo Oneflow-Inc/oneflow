@@ -92,8 +92,20 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
+def _handle_size_arg(*size):
+    assert isinstance(size[0], int) or isinstance(
+        size[0], tuple
+    ), "shape should be specified by tuple of ints size"
+    if isinstance(size[0], tuple):
+        assert (
+            len(size) == 1
+        ), "shape should be specified by tuple of ints size, not tuple of list"
+        size = size[0]
+    return size
+
+
 def ones_op(
-    size: Union[_size_any_t, flow.Size],
+    *size,
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -118,8 +130,14 @@ def ones_op(
         >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
+        >>> y = flow.ones(2,3)
+        >>> y
+        tensor([[1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+
 
     """
+    size = _handle_size_arg(*size)
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -137,7 +155,7 @@ class Zeros(_ConstantBase):
 
 
 def zeros_op(
-    size: Union[_size_any_t, flow.Size],
+    *size,
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -165,8 +183,13 @@ def zeros_op(
         >>> y = flow.zeros(5)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
+        >>> y = flow.zeros(2,3)
+        >>> y
+        tensor([[0., 0., 0.],
+                [0., 0., 0.]], dtype=oneflow.float32)
 
     """
+    size = _handle_size_arg(*size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 
