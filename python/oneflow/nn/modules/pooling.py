@@ -193,7 +193,7 @@ class MaxPool2d(Module):
             "channels_first" if data_format == "NCHW" else "channels_last"
         )
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
-        self.dilation = _GetSequence(dilation, 2, "dilation")
+        self.dilation = _pair(dilation)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
         self.padding = _pair(padding)
@@ -316,7 +316,7 @@ class MaxPool3d(Module):
         self.channel_pos = (
             "channels_last" if data_format == "NDHWC" else "channels_first"
         )
-        self.dilation = _GetSequence(dilation, 3, "dilation")
+        self.dilation = _triple(dilation)
         self.padding = _triple(padding)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
