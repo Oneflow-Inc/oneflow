@@ -659,7 +659,7 @@ class Conv3d(Module):
                         groups=1,
                     )
                 )
-            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+            res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv3d(
                 x,
