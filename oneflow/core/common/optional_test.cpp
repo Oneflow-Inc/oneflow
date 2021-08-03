@@ -13,21 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace test {
 
-void RuntimeJobDescs::AddPlan(const Plan& plan) {
-  for (const auto& pair : plan.job_confs().job_id2job_conf()) {
-    auto job_desc = std::make_unique<JobDesc>(pair.second, pair.first);
-    CHECK(job_id2job_desc_.emplace(pair.first, std::move(job_desc)).second);
-  }
+TEST(Optional, copy_constructor) {
+  Optional<int64_t> a(0);
+  std::vector<Optional<int64_t>> vec;
+  vec.push_back(a);
+  ASSERT_TRUE(vec[0].has_value());
+  int64_t val = CHECK_JUST(vec[0].value());
+  ASSERT_EQ(val, 0);
 }
 
-const JobDesc& RuntimeJobDescs::job_desc(int64_t job_id) const {
-  auto it = job_id2job_desc_.find(job_id);
-  CHECK(it != job_id2job_desc_.end());
-  return *(it->second);
+TEST(Optional, move_constructor) {
+  Optional<int64_t> a(0);
+  std::map<int64_t, Optional<int64_t>> map;
+  map.emplace(0, a);
+  ASSERT_TRUE(map.at(0).has_value());
+  int64_t val = CHECK_JUST(map.at(0).value());
+  ASSERT_EQ(val, 0);
 }
 
+}  // namespace test
 }  // namespace oneflow
