@@ -612,21 +612,24 @@ class OFRecordBytesDecoder(Module):
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> batch_size = 16
-        >>> record_reader = flow.nn.OfrecordReader(
-        ...     "dataset",
-        ...     batch_size=batch_size,
-        ...     part_name_suffix_length=5,
-        >>> )
-        >>> val_record = record_reader()
+        >>> def example():
+        ...      batch_size = 16
+        ...      record_reader = flow.nn.OfrecordReader(
+        ...         "dataset/",
+        ...         batch_size=batch_size,
+        ...         part_name_suffix_length=5,
+        ...      )
+        ...      val_record = record_reader()
 
-        >>> bytesdecoder_img = flow.nn.OFRecordBytesDecoder("encoded")
+        ...      bytesdecoder_img = flow.nn.OFRecordBytesDecoder("encoded")
 
-        >>> image_bytes_batch = bytesdecoder_img(val_record)
+        ...      image_bytes_batch = bytesdecoder_img(val_record)
 
-        >>> image_bytes = image_bytes_batch.numpy()[0]
-        >>> image_bytes
+        ...      image_bytes = image_bytes_batch.numpy()[0]
+        ...      return image_bytes
+        ... example()  # doctest: +SKIP
         array([255 216 255 ...  79 255 217], dtype=uint8)
+        
         
 
     """
