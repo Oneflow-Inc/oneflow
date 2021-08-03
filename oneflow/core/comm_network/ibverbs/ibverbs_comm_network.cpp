@@ -43,6 +43,26 @@ void IBVForkInit() {
   }
 }
 
+void ParseUserDevicePort(std::string* device_name, int* port) {
+  std::string user_device_port = GetStringFromEnv("ONEFLOW_COMM_NET_IB_HCA", "");
+  if (user_device_port.empty()) {
+    *device_name = "";
+    *port = 0;
+    return;
+  } else {
+    const std::string::size_type pos = user_device_port.find(':', 0);
+    if (pos == std::string::npos) {
+      *device_name = user_device_port;
+      *port = 0;
+      return;
+    } else {
+      *device_name = user_device_port.substr(0, pos);
+      *port = std::strtol(user_device_port.data() + pos + 1, nullptr, 10);
+      return;
+    }
+  }
+}
+
 }  // namespace
 
 IBVerbsCommNet::~IBVerbsCommNet() {
@@ -87,9 +107,25 @@ void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
 }
 
 IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv::wrapper.ibv_get_device_list(nullptr);
+  int num_device;
+  ibv_device** device_list = ibv::wrapper.ibv_get_device_list(&num_device);
+  CHECK_GT(num_device, 0) << "No IB device found";
   PCHECK(device_list);
-  ibv_device* device = device_list[0];
+  std::string user_device;
+  int user_port;
+  ParseUserDevicePort(&user_device, &user_port);
+  ibv_device* device = nullptr;
+  if (user_device.empty()) {
+    device = device_list[0];
+  } else {
+    for (int i = 0; i < num_device; ++i) {
+      if (device_list[i]->name == user_device) {
+        device = device_list[i];
+        break;
+      }
+    }
+    CHECK(device != nullptr) << "No IB device match " << user_device;
+  }
   context_ = ibv::wrapper.ibv_open_device(device);
   CHECK(context_);
   ibv::wrapper.ibv_free_device_list(device_list);
@@ -100,37 +136,51 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
   ibv_port_attr port_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, 1, &port_attr), 0);
+  const uint8_t port = user_port == 0 ? 1 : user_port;
+  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, port, &port_attr), 0);
   ibv_gid gid{};
-  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, 1, 0, &gid), 0);
+  const int64_t gid_index = ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_GID_INDEX", 0);
+  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid), 0);
+  LOG(INFO) << "Using IB device " << device->name << " port " << static_cast<int32_t>(port)
+            << " gid index " << gid_index;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_, cq_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
     conn_info.set_lid(port_attr.lid);
     conn_info.set_qp_num(cur_qp->qp_num());
     conn_info.set_subnet_prefix(gid.global.subnet_prefix);
     conn_info.set_interface_id(gid.global.interface_id);
+    conn_info.set_port_num(port);
+    conn_info.set_mtu(static_cast<int>(port_attr.active_mtu));
     Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_id), conn_info);
   }
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsConnectionInfo conn_info;
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
+    if (conn_info.lid() == 0) {
+      LOG(INFO) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
+                << conn_info.qp_num() << " gid index " << gid_index << " spn "
+                << conn_info.subnet_prefix() << " iid " << conn_info.interface_id() << " mtu "
+                << conn_info.mtu();
+    } else {
+      LOG(INFO) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
+                << conn_info.qp_num() << " lid " << conn_info.interface_id() << " mtu "
+                << conn_info.mtu();
+    }
     qp_vec_.at(peer_id)->Connect(conn_info);
+    LOG(INFO) << "Connected to peer " << peer_id;
   }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  // TODO(chengcheng): change to OF_ENV_BARRIER
-  OF_SESSION_BARRIER();
+  OF_ENV_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,

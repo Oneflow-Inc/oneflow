@@ -22,7 +22,7 @@ namespace oneflow {
 
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
-  *device_id = *machine_id % NumOfProcessPerNode();
+  *device_id = LocalRank();
 }
 
 int64_t GlobalProcessCtx::Rank() {
@@ -49,9 +49,6 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
-  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());

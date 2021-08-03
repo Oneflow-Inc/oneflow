@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_add_forward(test_case, shape, device):
@@ -150,6 +151,14 @@ class TestAddModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_0shape_add(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(2, 0, 3).to(device)
+        y = random_pytorch_tensor(2, 1, 3).to(device)
+        out = x + y
+        return out
 
 
 if __name__ == "__main__":

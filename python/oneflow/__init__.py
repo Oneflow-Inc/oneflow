@@ -79,6 +79,7 @@ if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
+oneflow._oneflow_internal.InitDefaultConsistentRpcTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
@@ -206,7 +207,7 @@ from oneflow.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import construct_tensor as tensor
+from oneflow.framework.tensor import tensor as tensor
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -216,6 +217,12 @@ from oneflow.nn.modules.activation import mish_op as mish
 from oneflow.nn.modules.activation import sigmoid_op as sigmoid
 from oneflow.nn.modules.activation import softmax_op as softmax
 from oneflow.nn.modules.activation import tanh_op as tanh
+from oneflow.nn.modules.activation import silu_op as silu
+from oneflow.nn.modules.activation import selu_op as selu
+from oneflow.nn.modules.activation import softsign_op as softsign
+from oneflow.nn.modules.activation import mish_op as mish
+
+
 from oneflow.nn.modules.adaptive_pool import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -278,6 +285,8 @@ from oneflow.nn.modules.math_ops import erfc_op as erfc
 from oneflow.nn.modules.math_ops import expm1_op as expm1
 from oneflow.nn.modules.math_ops import fmod_op as fmod
 from oneflow.nn.modules.math_ops import log_op as log
+from oneflow.nn.modules.math_ops import minimum as minimum
+from oneflow.nn.modules.math_ops import maximum as maximum
 from oneflow.nn.modules.math_ops import pow_op as pow
 from oneflow.nn.modules.math_ops import rsqrt_op as rsqrt
 from oneflow.nn.modules.math_ops import sin_op as sin
@@ -311,6 +320,7 @@ from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.squeeze import squeeze_op as squeeze
 from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.tan import tan_op as tan
+from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
@@ -318,6 +328,8 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
+from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
+from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
@@ -326,8 +338,6 @@ from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
 from oneflow.ops.constant_op import constant, constant_like, constant_scalar
-from oneflow.ops.count_not_finite import count_not_finite, multi_count_not_finite
-from oneflow.ops.eager_nccl_ops import eager_nccl_all_reduce
 from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
@@ -347,18 +357,6 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-from oneflow.ops.loss_ops import ctc_loss, smooth_l1_loss
-from oneflow.ops.one_hot import one_hot
-from oneflow.ops.partial_fc_sample import distributed_partial_fc_sample
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_builder as consistent_user_op_builder,
-)
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_module_builder as consistent_user_op_module_builder,
-)
-from oneflow.ops.user_op_builder import api_user_op_builder as user_op_builder
-from oneflow.ops.user_op_builder import (
-    api_user_op_module_builder as user_op_module_builder,
-)
+from oneflow.nn.modules.scatter import *
 
 from . import autograd, distributed, linalg, optim, saved_model, sbp
