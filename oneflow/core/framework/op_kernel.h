@@ -178,7 +178,10 @@ class KernelInferContext {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
+  virtual const TensorDescInferFn& GetOpInferFn() const {
+    UNIMPLEMENTED();
+    return *(const TensorDescInferFn*)nullptr;
+  }
 
  protected:
   KernelInferContext() = default;

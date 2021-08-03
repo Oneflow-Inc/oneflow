@@ -29,6 +29,7 @@ struct MemoryCopyNdDesc {
   NdIndex dst_pos;
   NdIndex src_pos;
   Shape extent;
+  DataType data_type;
 
   MemoryCopyNdDesc CreateDimReducedDesc() const;
 };

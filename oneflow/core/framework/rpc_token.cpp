@@ -136,6 +136,12 @@ static_assert(sizeof(CtrlRpcTokenView) == sizeof(uint64_t), "");
 
 }  // namespace
 
+RpcToken::RpcToken(RpcTokenType type) {
+  static_assert(sizeof(RpcToken) == sizeof(int64_t), "");
+  *reinterpret_cast<int64_t*>(this) = 0;
+  type_ = type;
+}
+
 /*static*/ RpcToken RpcToken::NewDataRpcToken() {
   static auto* seq_id = new std::atomic<int64_t>();
   RpcToken rpc_token(kDataRpcTokenType);

@@ -192,7 +192,7 @@ class TestResNet50(flow.unittest.TestCase):
             loss.backward()
             of_sgd.step()
             of_sgd.zero_grad()
-            l = loss.numpy()[0]
+            l = loss.numpy()
             test_case.assertTrue(np.allclose(l.item(), gt_of_losses[b], atol=1e-05))
 
 

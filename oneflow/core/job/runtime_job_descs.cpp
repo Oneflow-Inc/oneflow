@@ -17,8 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
-RuntimeJobDescs::RuntimeJobDescs(const PbMap<int64_t, JobConfigProto>& proto) {
-  for (const auto& pair : proto) {
+void RuntimeJobDescs::AddPlan(const Plan& plan) {
+  for (const auto& pair : plan.job_confs().job_id2job_conf()) {
     auto job_desc = std::make_unique<JobDesc>(pair.second, pair.first);
     CHECK(job_id2job_desc_.emplace(pair.first, std::move(job_desc)).second);
   }

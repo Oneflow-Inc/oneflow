@@ -116,8 +116,14 @@ class Kernel {
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual bool IsStateless() const { return false; }
-  virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
-  virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
+  virtual const PbMessage& GetCustomizedOpConf() const {
+    UNIMPLEMENTED();
+    return *(const PbMessage*)nullptr;
+  }
+  virtual const PbMessage& GetCustomizedKernelConf() const {
+    UNIMPLEMENTED();
+    return *(const PbMessage*)nullptr;
+  }
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 

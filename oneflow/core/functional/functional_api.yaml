@@ -303,6 +303,12 @@
     "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
+
+- name: "conv3d"
+  signature:
+    "Tensor Conv3d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
   
 - name: "conv_data_grad"
   signature:
@@ -825,6 +831,14 @@
 
 - name: "stack"
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
+  bind_python: True
+
+- name: "to_consistent"
+  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None)"
+  bind_python: True
+
+- name: "to_local"
+  signature: "Tensor ConsistentToLocal(Tensor x)"
   bind_python: True
 
 - name: "cast_like"

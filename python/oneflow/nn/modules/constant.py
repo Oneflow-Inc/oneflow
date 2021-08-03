@@ -38,7 +38,7 @@ class _ConstantBase(Module):
         super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
-            size, (int, tuple, flow.Size)
+            size, (int, tuple, list, flow.Size)
         ), "shape should be int or tuple int!"
         self.device = device
         if isinstance(self.device, str):
@@ -112,7 +112,7 @@ def ones_op(
         placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
-
+    
     For example:
 
     .. code-block:: python
