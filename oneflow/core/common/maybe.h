@@ -254,7 +254,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
   return maybe.IsOk();
 }
 
-#define MAYBE_FAILED_LOC __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
+#define MAYBE_FAILED_LOC __FILE__ "line" OF_PP_STRINGIZE(__LINE__)
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
@@ -273,6 +273,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
       stack_frame->set_location(MAYBE_FAILED_LOC);                             \
       stack_frame->set_function(__FUNCTION__);                                 \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
       return maybe.error();                                                    \
     }                                                                          \
     maybe;                                                                     \
@@ -284,6 +285,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
       stack_frame->set_location(MAYBE_FAILED_LOC);                             \
       stack_frame->set_function(func_name);                                    \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
       LOG(FATAL) << maybe.GetSerializedError();                                \
     }                                                                          \
     return maybe;                                                              \

@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
