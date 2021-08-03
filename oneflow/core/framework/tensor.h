@@ -117,7 +117,7 @@ class Tensor {
 class StaticZerosTensor final : public Tensor {
  public:
   static Maybe<StaticZerosTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                               DataType dtype, Symbol<Device> device) {
+                                             DataType dtype, Symbol<Device> device) {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
@@ -132,9 +132,7 @@ class StaticZerosTensor final : public Tensor {
     UNIMPLEMENTED();
     return false;
   }
-  bool is_consistent() const {
-    return false;
-  }
+  bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
     UNIMPLEMENTED();
@@ -222,7 +220,7 @@ class StaticZerosTensor final : public Tensor {
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                      Symbol<Device> device)
+                    Symbol<Device> device)
       : shape_(shape), dtype_(dtype), device_(device) {}
   const std::shared_ptr<const Shape> shape_;
   DataType dtype_;

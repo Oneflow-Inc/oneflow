@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 struct DeviceExportUtil final {
   static void CheckDeviceType(const std::string& type);
-  
+
   static Symbol<Device> ParseAndNew(const std::string& type_and_id);
 
   static Symbol<Device> New(const std::string& type_and_id);

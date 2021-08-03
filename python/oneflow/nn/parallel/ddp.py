@@ -62,4 +62,3 @@ def DistributedDataParallel(module: "flow.nn.Module"):
 
     module.register_forward_hook(hook)
     return module
-
