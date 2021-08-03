@@ -64,16 +64,23 @@ class NarrowGradKernel final : public user_op::OpKernel {
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
     const int64_t& length = ctx->Attr<int64_t>("length");
+    size_t dx_byte_size = dx->shape().elem_cnt() * sizeof(T);
+    Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_byte_size);
     NarrowKernelUtil<device_type, T>::Backward(ctx->device_ctx(), dy->dptr<T>(),
                                                GetFlatShape(dx->shape(), dim), dx->mut_dptr<T>(),
                                                start, length);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_NARROW_KERNELS(device, dtype)                                               \
   REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                       \
+  REGISTER_USER_KERNEL("narrow_grad")                                                        \
+      .SetCreateFn<NarrowGradKernel<device, dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_NARROW_KERNELS_WITH_DEVICE(device) \
   REGISTER_NARROW_KERNELS(device, float)            \

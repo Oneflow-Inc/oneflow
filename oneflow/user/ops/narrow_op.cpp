@@ -135,7 +135,7 @@ REGISTER_USER_OP("narrow_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("narrow").SegGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+REGISTER_USER_OP_GRAD("narrow").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
