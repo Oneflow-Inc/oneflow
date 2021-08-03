@@ -93,10 +93,8 @@ class Ones(_ConstantBase):
 
 
 def _handle_size_arg(*size):
-    assert isinstance(size[0], int) or isinstance(
-        size[0], tuple
-    ), "shape should be specified by tuple of ints size"
-    if isinstance(size[0], tuple):
+    assert len(size) > 0, "size of tensor doesn't exists"
+    if isinstance(size[0], (tuple, flow.Size)):
         assert (
             len(size) == 1
         ), "shape should be specified by tuple of ints size, not tuple of list"
