@@ -42,11 +42,11 @@
 
 - name: "sub_scalar_by_tensor"
   signature: "Tensor ScalarSubByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_sub"
   signature: "Tensor BroadcastSub(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul"
   signature: "Tensor Multiply(Tensor x, Tensor y)"
