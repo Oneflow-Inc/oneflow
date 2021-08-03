@@ -32,8 +32,11 @@ class AsyncRpcCtx {
   const RpcToken& rpc_token() const { return rpc_token_; }
   std::shared_ptr<std::atomic<int64_t>> flying_cnt() const { return flying_cnt_; }
 
-  virtual Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                                std::function<void()>* Callback) = 0;
+  virtual Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                                   std::function<void()>* Callback) = 0;
+
+  virtual Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                                   std::function<void()>* Callback) = 0;
 
  private:
   RpcToken rpc_token_;
@@ -42,19 +45,60 @@ class AsyncRpcCtx {
 
 class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
  public:
-  explicit NaiveAsyncRpcCtx(
+  NaiveAsyncRpcCtx(
       const RpcToken& rpc_token,
-      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& Prepare)
-      : AsyncRpcCtx(rpc_token), prepare_(Prepare) {}
+      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareSend,
+      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareRecv)
+      : AsyncRpcCtx(rpc_token), prepare_send_(PrepareSend), prepare_recv_(PrepareRecv) {}
+
+  NaiveAsyncRpcCtx(
+      const RpcToken& rpc_token,
+      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareSend,
+      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
+          PrepareRecvWithRank)
+      : AsyncRpcCtx(rpc_token),
+        prepare_send_(PrepareSend),
+        prepare_recv_with_rank_(PrepareRecvWithRank) {}
+
+  NaiveAsyncRpcCtx(
+      const RpcToken& rpc_token,
+      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
+          PrepareSendWithRank,
+      const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareRecv)
+      : AsyncRpcCtx(rpc_token),
+        prepare_send_with_rank_(PrepareSendWithRank),
+        prepare_recv_(PrepareRecv) {}
+
+  NaiveAsyncRpcCtx(const RpcToken& rpc_token,
+                   const std::function<Maybe<void>(int64_t, void**, std::size_t*,
+                                                   std::function<void()>*)>& PrepareSendWithRank,
+                   const std::function<Maybe<void>(int64_t, void**, std::size_t*,
+                                                   std::function<void()>*)>& PrepareRecvWithRank)
+      : AsyncRpcCtx(rpc_token),
+        prepare_send_with_rank_(PrepareSendWithRank),
+        prepare_recv_with_rank_(PrepareRecvWithRank) {}
+
   ~NaiveAsyncRpcCtx() override = default;
 
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override {
-    return prepare_(buffer, size, Callback);
+  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override {
+    if (prepare_send_with_rank_) { return prepare_send_with_rank_(rank, buffer, size, Callback); }
+    return prepare_send_(buffer, size, Callback);
+  }
+
+  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override {
+    if (prepare_recv_with_rank_) { return prepare_recv_with_rank_(rank, buffer, size, Callback); }
+    return prepare_recv_(buffer, size, Callback);
   }
 
  private:
-  std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_;
+  std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_send_;
+  std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>
+      prepare_send_with_rank_;
+  std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)> prepare_recv_;
+  std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>
+      prepare_recv_with_rank_;
 };
 
 class RankGroup;

@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import functools
-import operator
-from typing import List, Optional, Sequence
+*/
+#ifndef ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_
+#define ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_
 
-import oneflow as flow
-import oneflow._oneflow_internal
-import oneflow.framework.id_util as id_util
+#include <vector>
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+
+namespace oneflow {
+
+Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> sbp_list);
+
+Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_

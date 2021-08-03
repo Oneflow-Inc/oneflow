@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/common.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
@@ -28,7 +29,7 @@ namespace oneflow {
   std::string type;
   int device_id = -1;
   ParsingDeviceTag(type_and_id, &type, &device_id).GetOrThrow();
-  if (device_id == -1) { device_id = 0; }
+  if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
   return MakeDevice(type, device_id);
 }
 
