@@ -133,7 +133,6 @@ class StaticAllZeroTensor final : public Tensor {
     return false;
   }
   bool is_consistent() const {
-    UNIMPLEMENTED();
     return false;
   }
   bool is_local() const { return !is_consistent(); }
@@ -219,7 +218,7 @@ class StaticAllZeroTensor final : public Tensor {
     return nullptr;
   }
 
-  Maybe<MirroredTensor> AsMirroredTensor() { OF_UNIMPLEMENTED(); }
+  Maybe<MirroredTensor> AsMirroredTensor();
 
  private:
   StaticAllZeroTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,

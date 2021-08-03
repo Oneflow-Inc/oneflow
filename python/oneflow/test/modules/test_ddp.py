@@ -23,7 +23,6 @@ import numpy as np
 
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
-    @unittest.skip("")
     def test_ddp_basic(test_case):
         class Mul(flow.nn.Module):
             def __init__(self):
@@ -49,7 +48,6 @@ class TestDDP(flow.unittest.TestCase):
 
         test_case.assertTrue(np.allclose(m.w.grad.numpy(), np.array([1.5])))
 
-    @unittest.skip("")
     def test_ddp_with_unused_param(test_case):
         class Model(flow.nn.Module):
             def __init__(self):

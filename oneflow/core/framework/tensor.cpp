@@ -30,6 +30,12 @@ namespace oneflow {
 
 namespace one {
 
+Maybe<MirroredTensor> StaticAllZeroTensor::AsMirroredTensor() {
+  CHECK_OR_RETURN(is_local());
+  return std::dynamic_pointer_cast<MirroredTensor>(
+      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+}
+
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
