@@ -38,7 +38,7 @@ class Randperm(Module):
             print(
                 "WARNING:",
                 "oneflow.randperm.layout",
-                "will not be used. Layout is no  supported yet.",
+                "will not be used. Layout is not  supported yet.",
             )
         if pin_memory:
             print(
