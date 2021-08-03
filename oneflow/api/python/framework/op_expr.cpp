@@ -31,22 +31,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistributionBySbpTuple(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
-  static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                               Symbol<cfg::ParallelDistribution>>
-      map;
-  auto iter = map.find(sbp_tuple);
-  if (iter == map.end()) {
-    cfg::ParallelDistribution parallel_distribution;
-    for (const auto& sbp_parallel : sbp_tuple) {
-      *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-    }
-    iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-  }
-  return iter->second;
-}
-
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
                                   const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())

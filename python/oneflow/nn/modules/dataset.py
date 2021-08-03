@@ -242,12 +242,24 @@ class CropMirrorNormalize(Module):
             if input.dtype is flow.uint8:
                 res = self._op_uint8_with_mirror(input, mirror)[0]
             elif input.dtype is flow.tensor_buffer:
-                ret = self._op_buffer_with_mirror(input, mirror)[0]
+                res = self._op_buffer_with_mirror(input, mirror)[0]
+            else:
+                print(
+                    "ERROR! oneflow.nn.CropMirrorNormalize module NOT support input dtype = ",
+                    input.dtype,
+                )
+                raise NotImplementedError
         else:
             if input.dtype is flow.uint8:
                 res = self._op_uint8_no_mirror(input)[0]
             elif input.dtype is flow.tensor_buffer:
-                ret = self._op_buffer_no_mirror(input)[0]
+                res = self._op_buffer_no_mirror(input)[0]
+            else:
+                print(
+                    "ERROR! oneflow.nn.CropMirrorNormalize module NOT support input dtype = ",
+                    input.dtype,
+                )
+                raise NotImplementedError
         return res
 
 

@@ -20,8 +20,9 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-# @flow.unittest.skip_unless_1n1d()
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
 class TestCopyGraph(oneflow.unittest.TestCase):
     def test_copy_graph(test_case):
         linear = flow.nn.Linear(3, 8, False)
