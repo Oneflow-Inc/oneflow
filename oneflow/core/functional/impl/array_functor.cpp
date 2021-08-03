@@ -35,6 +35,26 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
+namespace {
+
+Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
+  static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                               Symbol<cfg::ParallelDistribution>>
+      map;
+  auto iter = map.find(sbp_tuple);
+  if (iter == map.end()) {
+    cfg::ParallelDistribution parallel_distribution;
+    for (const auto& sbp_parallel : sbp_tuple) {
+      *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+    }
+    iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+  }
+  return iter->second;
+}
+
+}  // namespace
+
 namespace impl {
 
 class ConsistentConstantFunctor {
@@ -61,22 +81,6 @@ class ConsistentConstantFunctor {
     }
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
-  }
-
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
-        map;
-    auto iter = map.find(sbp_tuple);
-    if (iter == map.end()) {
-      cfg::ParallelDistribution parallel_distribution;
-      for (const auto& sbp_parallel : sbp_tuple) {
-        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-      }
-      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-    }
-    return iter->second;
   }
 
  private:
@@ -155,22 +159,6 @@ class ConsistentEmptyFunctor {
     }
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
-  }
-
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
-        map;
-    auto iter = map.find(sbp_tuple);
-    if (iter == map.end()) {
-      cfg::ParallelDistribution parallel_distribution;
-      for (const auto& sbp_parallel : sbp_tuple) {
-        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-      }
-      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-    }
-    return iter->second;
   }
 
  private:
