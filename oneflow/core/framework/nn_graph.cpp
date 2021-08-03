@@ -101,7 +101,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
-    std::string plan_name = job_name() + "_plan";
+    std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
       Global<CtrlClient>::Get()->PushKV(plan_name, plan_);
