@@ -328,6 +328,8 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
+from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
+from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
@@ -336,8 +338,6 @@ from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
 from oneflow.ops.constant_op import constant, constant_like, constant_scalar
-from oneflow.ops.count_not_finite import count_not_finite, multi_count_not_finite
-from oneflow.ops.eager_nccl_ops import eager_nccl_all_reduce
 from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
@@ -356,16 +356,6 @@ from oneflow.ops.initializer_util import (
     truncated_normal_initializer,
     variance_scaling_initializer,
     zeros_initializer,
-)
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_builder as consistent_user_op_builder,
-)
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_module_builder as consistent_user_op_module_builder,
-)
-from oneflow.ops.user_op_builder import api_user_op_builder as user_op_builder
-from oneflow.ops.user_op_builder import (
-    api_user_op_module_builder as user_op_module_builder,
 )
 from oneflow.nn.modules.scatter import *
 
