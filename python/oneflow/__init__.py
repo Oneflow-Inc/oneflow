@@ -297,6 +297,7 @@ from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.matmul import matmul_op as matmul
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.ne import ne_op as ne
 from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
