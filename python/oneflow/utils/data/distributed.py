@@ -60,15 +60,12 @@ class DistributedSampler(Sampler[T_co]):
     def __init__(self, dataset: Dataset, num_replicas: Optional[int] = None,
                  rank: Optional[int] = None, shuffle: bool = True,
                  seed: int = 0, drop_last: bool = False) -> None:
+        if not dist.is_multi_client():
+            raise RuntimeError("Requires multi-client env to be available")
+
         if num_replicas is None:
-            # if not dist.is_available():
-            if not dist.is_multi_client():
-                raise RuntimeError("Requires multi-client env to be available")
             num_replicas = dist.get_world_size()
         if rank is None:
-            # if not dist.is_available():
-            if not dist.is_multi_client():
-                raise RuntimeError("Requires multi-client env to be available")
             rank = dist.get_rank()
         if rank >= num_replicas or rank < 0:
             raise ValueError(
