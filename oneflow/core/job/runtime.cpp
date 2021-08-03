@@ -15,10 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
-#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -32,9 +31,6 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
-#ifdef WITH_RDMA
-#include "oneflow/core/platform/include/ibv.h"
-#endif  // WITH_RDMA
 
 namespace oneflow {
 
@@ -65,7 +61,20 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  NewAllGlobal(plan, variable_op_name2eager_blob);
+  {
+    // NOTE(chengcheng): All runtime Global objects AddPlan
+    if (!CHECK_JUST(GlobalMultiClientEnv())) {
+      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
+      Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
+    }
+    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
+    Global<ThreadMgr>::Get()->AddPlan(plan);
+    Global<RuntimeJobDescs>::Get()->AddPlan(plan);
+    if (!CHECK_JUST(GlobalMultiClientEnv())) {
+      // TODO(chengcheng, guoran) handle CollectiveBoxing Global for multi-runtime add plan.
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
+    }
+  }
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -104,85 +113,12 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  DeleteAllGlobal();
-}
 
-void Runtime::NewAllGlobal(const Plan& plan,
-                           const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  Global<RuntimeCtx>::New();
-  if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef __linux__
-    // NOTE(chengcheng): Global<EpollCommNet> will new in any case, and will new in env start.
-    // if use RDMA,
-    //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
-    // else,
-    //   The Global<CommNet> is set allocated by Global<EpollCommNet>
-    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
-#ifdef WITH_RDMA
-      if (ibv::IsAvailable()) {
-        Global<IBVerbsCommNet>::New();
-        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
-      } else {
-        LOG(ERROR) << "libibverbs not available, falling back to epoll";
-        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-      }
-#else
-      LOG(FATAL) << "RDMA components not found";
-#endif
-    } else {
-      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-    }
-#endif
+  // TODO(chengcheng): move to session delete
+  if (!CHECK_JUST(GlobalMultiClientEnv())) {
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
+    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   }
-  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
-  Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New();
-  Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
-  Global<ActorMsgBus>::New();
-  Global<ThreadMgr>::New();
-  Global<ThreadMgr>::Get()->AddPlan(plan);
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
-  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
-  Global<summary::EventsWriter>::New();
-}
-
-void Runtime::DeleteAllGlobal() {
-  Global<RuntimeJobDescs>::Delete();
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-  Global<ThreadMgr>::Delete();
-  Global<ActorMsgBus>::Delete();
-  Global<RegstMgr>::Delete();
-  Global<MemoryAllocator>::Delete();
-  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
-
-  // should be called after Global<Transport>::Delete()
-  if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef __linux__
-    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
-#ifdef WITH_RDMA
-      if (ibv::IsAvailable()) {
-        CHECK(Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get()));
-        // NOTE(chengcheng): it means that
-        // Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
-        // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
-        // then need delete both.
-        Global<CommNet>::Delete();
-      }
-#else
-      LOG(FATAL) << "RDMA components not found";
-#endif
-    } else {
-      CHECK(Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get()));
-      // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
-      // so the Global<CommNet> and Global<EpollCommNet> are same global object
-      // then only need delete once.
-    }
-#endif
-  }
-
-  Global<ActEventLogger>::Delete();
-  Global<RuntimeCtx>::Delete();
-  Global<summary::EventsWriter>::Delete();
 }
 
 }  // namespace oneflow

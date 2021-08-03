@@ -36,11 +36,13 @@ def _tensor_numpy(eager_local_tensor):
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
+
     ndarray = np.empty(
-        tuple(eager_local_tensor.shape),
+        shape=tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
-    copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
