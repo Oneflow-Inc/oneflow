@@ -49,9 +49,9 @@ def empty_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.empty(5)
+        >>> y = flow.empty(4, 5)
         >>> y.shape
-        flow.Size([5])
+        flow.Size([4, 5])
 
     """
     assert size is not None, "shape must not be None"
