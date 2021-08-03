@@ -108,7 +108,7 @@ Maybe<Shape> GetConcatenatedShape(
 }
 
 Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc,
-                                Symbol<cfg::ParallelDistribution> nd_sbp) {
+                                Symbol<cfg::NdSbp> nd_sbp) {
   if (nd_sbp->sbp_parallel_size() == 1
       && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape = JUST(All2AllSyncShape(physical_shape));
@@ -139,7 +139,7 @@ class LocalToConsistentFunctor {
       CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
           << Error::Unimplemented() << "tensor must be on default device of the current rank.";
     }
-    Symbol<cfg::ParallelDistribution> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+    Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     std::shared_ptr<const Shape> shape_ptr;
     if (shape.has_value()) {
       shape_ptr = JUST(shape.value());

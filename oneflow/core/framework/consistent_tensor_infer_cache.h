@@ -28,7 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace cfg {
-class ParallelDistribution;
+class NdSbp;
 }
 
 class ParallelDesc;
@@ -42,7 +42,7 @@ class InputConsistentTensorMeta final {
   InputConsistentTensorMeta() : tensor_meta_(), consumer_nd_sbp_constraint_() {}
   InputConsistentTensorMeta(
       Symbol<ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint)
+      const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint)
       : tensor_meta_(tensor_meta),
         consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint) {}
 
@@ -53,17 +53,17 @@ class InputConsistentTensorMeta final {
   size_t hash_value() const;
   bool operator==(const InputConsistentTensorMeta& other) const;
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint()
+  const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint()
       const {
     return consumer_nd_sbp_constraint_;
   }
   void assign(
       Symbol<ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint);
+      const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint);
 
  private:
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
+  Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint_;
 };
 
 class TensorTuple;
@@ -84,16 +84,16 @@ class ConsistentTensorMetaInferArgs final {
 
   bool operator==(const ConsistentTensorMetaInferArgs& other) const;
 
-  Maybe<void> MakeParallelDistributionConstraints(
+  Maybe<void> MakeNdSbpConstraints(
       const UserOpExpr& user_op_expr,
-      cfg::ParallelDistributionSignature* nd_sbp_signature) const;
+      cfg::NdSbpSignature* nd_sbp_signature) const;
 
   Maybe<void> MakeInputBlobDescs(const UserOpExpr& user_op_expr,
                                  std::vector<BlobDesc>* blob_descs) const;
 
-  Maybe<void> MakeParallelDistributionInferHints(
+  Maybe<void> MakeNdSbpInferHints(
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
-      std::vector<ParallelDistributionInferHint>* hints) const;
+      std::vector<NdSbpInferHint>* hints) const;
 
   static Maybe<ConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
                                                   const TensorTuple& input_tensors);
@@ -113,7 +113,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
   ~SrcOpConsistentTensorMetaInferArgs() = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
-  Symbol<cfg::ParallelDistribution> nd_sbp() const { return nd_sbp_; }
+  Symbol<cfg::NdSbp> nd_sbp() const { return nd_sbp_; }
   const AttrMap& attrs() const { return attrs_; }
 
   size_t hash_value() const;
@@ -122,14 +122,14 @@ class SrcOpConsistentTensorMetaInferArgs final {
 
   static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
-      Symbol<cfg::ParallelDistribution> nd_sbp);
+      Symbol<cfg::NdSbp> nd_sbp);
 
  private:
   SrcOpConsistentTensorMetaInferArgs() = default;
 
   AttrMap attrs_;
   Symbol<ParallelDesc> parallel_desc_;
-  Symbol<cfg::ParallelDistribution> nd_sbp_;
+  Symbol<cfg::NdSbp> nd_sbp_;
 };
 
 class OpArgMutConsistentTensorMeta final {
@@ -188,14 +188,14 @@ class ConsistentTensorInferResult final {
   ConsistentTensorInferResult(ConsistentTensorInferResult&&) = delete;
   ~ConsistentTensorInferResult() = default;
 
-  const std::vector<Symbol<cfg::ParallelDistribution>>& input_nd_sbps() const {
+  const std::vector<Symbol<cfg::NdSbp>>& input_nd_sbps() const {
     return input_nd_sbps_;
   }
   const std::vector<Symbol<ConsistentTensorMeta>>& output_tensor_metas() const {
     return output_tensor_metas_;
   }
 
-  std::vector<Symbol<cfg::ParallelDistribution>>* mut_input_nd_sbps() {
+  std::vector<Symbol<cfg::NdSbp>>* mut_input_nd_sbps() {
     return &input_nd_sbps_;
   }
   std::vector<Symbol<ConsistentTensorMeta>>* mut_output_tensor_metas() {
@@ -203,7 +203,7 @@ class ConsistentTensorInferResult final {
   }
 
  private:
-  std::vector<Symbol<cfg::ParallelDistribution>> input_nd_sbps_;
+  std::vector<Symbol<cfg::NdSbp>> input_nd_sbps_;
   std::vector<Symbol<ConsistentTensorMeta>> output_tensor_metas_;
 };
 

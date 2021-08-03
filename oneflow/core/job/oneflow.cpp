@@ -64,7 +64,7 @@ bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
 
 bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
 
-bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
     if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
@@ -72,7 +72,7 @@ bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs
   return true;
 }
 
-bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+bool operator!=(const NdSbp& lhs, const NdSbp& rhs) {
   return !(lhs == rhs);
 }
 

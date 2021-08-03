@@ -66,14 +66,14 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     std::string op_name = node->op().op_name();
     const auto& op_nd_sbp_sig =
-        job_builder->ParallelDistributionSignature4OpName(op_name);
+        job_builder->NdSbpSignature4OpName(op_name);
     const auto& nd_sbp_map =
         op_nd_sbp_sig.bn_in_op2nd_sbp();
     const auto it = nd_sbp_map.find("prediction_0");
     CHECK(it != nd_sbp_map.end());
     const auto& prediction_nd_sbp = it->second;
 
-    cfg::ParallelDistribution stat_distribution_for_consumer;
+    cfg::NdSbp stat_distribution_for_consumer;
 
     bool has_split_axis_parallel = false;
     CHECK_EQ(prediction_nd_sbp.sbp_parallel_size(),
@@ -102,16 +102,16 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(),
                         {reduce_max_device_stage_op.op_conf()});
-    cfg::ParallelDistributionSignature reduce_max_device_stage_signature;
+    cfg::NdSbpSignature reduce_max_device_stage_signature;
     (*reduce_max_device_stage_signature.mutable_bn_in_op2nd_sbp())["in_0"] =
-        cfg::ParallelDistribution(prediction_nd_sbp);
+        cfg::NdSbp(prediction_nd_sbp);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2nd_sbp())["out_0"] =
-        cfg::ParallelDistribution(prediction_nd_sbp);
+        cfg::NdSbp(prediction_nd_sbp);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2nd_sbp())["mask_0"] =
-        cfg::ParallelDistribution(prediction_nd_sbp);
+        cfg::NdSbp(prediction_nd_sbp);
     (*reduce_max_device_stage_signature.mutable_bn_in_op2nd_sbp())["count_0"] =
-        cfg::ParallelDistribution(prediction_nd_sbp);
-    job_builder->AddParallelDistributionSignature4OpName(reduce_max_device_stage_op.op_name(),
+        cfg::NdSbp(prediction_nd_sbp);
+    job_builder->AddNdSbpSignature4OpName(reduce_max_device_stage_op.op_name(),
                                                          reduce_max_device_stage_signature);
 
     auto reduce_max_global_stage_op =
@@ -127,7 +127,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(),
                         {reduce_max_global_stage_op.op_conf()});
-    cfg::ParallelDistributionSignature reduce_max_global_stage_signature;
+    cfg::NdSbpSignature reduce_max_global_stage_signature;
     (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["in_0"] =
         stat_distribution_for_consumer;
     (*reduce_max_global_stage_signature
@@ -135,7 +135,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         stat_distribution_for_consumer;
     (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["out_0"] =
         stat_distribution_for_consumer;
-    job_builder->AddParallelDistributionSignature4OpName(reduce_max_global_stage_op.op_name(),
+    job_builder->AddNdSbpSignature4OpName(reduce_max_global_stage_op.op_name(),
                                                          reduce_max_global_stage_signature);
 
     auto broadcast_sub_max_op =

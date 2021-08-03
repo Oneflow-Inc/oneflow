@@ -28,7 +28,7 @@ namespace oneflow {
 class Device;
 class ParallelDesc;
 namespace cfg {
-class ParallelDistribution;
+class NdSbp;
 }
 
 namespace one {
@@ -62,7 +62,7 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::ParallelDistribution> nd_sbp_arg)
+                      Symbol<cfg::NdSbp> nd_sbp_arg)
       : attrs(attrs_arg),
         parallel_desc(parallel_desc_arg),
         nd_sbp(nd_sbp_arg) {}
@@ -70,7 +70,7 @@ struct OpExprInterpContext {
   AttrMap attrs;
   Optional<Symbol<Device>> device;                                    // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;                       // for consistent op
-  Optional<Symbol<cfg::ParallelDistribution>> nd_sbp;  // for consistent op
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;  // for consistent op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 

@@ -61,7 +61,7 @@ std::shared_ptr<Tensor> MakeLocalTensor(const std::shared_ptr<const Shape>& shap
 
 std::shared_ptr<Tensor> MakeConsistentTensor(
     const std::shared_ptr<const Shape>& shape, const DType* dtype,
-    Symbol<cfg::ParallelDistribution>& nd_sbp, Symbol<ParallelDesc> parallel_desc,
+    Symbol<cfg::NdSbp>& nd_sbp, Symbol<ParallelDesc> parallel_desc,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   return ConsistentTensor::MakeTensor(shape, dtype->data_type(), nd_sbp,
                                       parallel_desc, is_lazy, requires_grad, is_leaf)

@@ -36,8 +36,8 @@ struct FlatConsistentTensorMeta final {
     JUST(this->shape.Init(consistent_tensor_meta->shape()));
     this->dtype = static_cast<int32_t>(consistent_tensor_meta->dtype());
     this->is_dynamic = consistent_tensor_meta->is_dynamic();
-    this->nd_sbp = JUST(SyncedSymbolMap<cfg::ParallelDistribution>::FindOrSync(
-        consistent_tensor_meta->nd_sbp(), &SyncSymbolParallelDistribution));
+    this->nd_sbp = JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(
+        consistent_tensor_meta->nd_sbp(), &SyncSymbolNdSbp));
     this->parallel_desc = JUST(SyncedSymbolMap<ParallelDesc>::FindOrSync(
         consistent_tensor_meta->parallel_desc(), &SyncSymbolParallelDesc));
     return Maybe<void>::Ok();
@@ -49,7 +49,7 @@ struct FlatConsistentTensorMeta final {
     CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), consistent_tensor_meta->dtype());
     CHECK_EQ_OR_RETURN(this->is_dynamic, consistent_tensor_meta->is_dynamic());
     const auto& nd_sbp =
-        JUST(SyncedSymbolMap<cfg::ParallelDistribution>::Symbol4SyncedSymbolId(
+        JUST(SyncedSymbolMap<cfg::NdSbp>::Symbol4SyncedSymbolId(
             this->nd_sbp));
     CHECK_OR_RETURN(nd_sbp == consistent_tensor_meta->nd_sbp());
     const auto& parallel_desc =

@@ -190,7 +190,7 @@ bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::ParallelDistribution>>()(nd_sbp())
+         ^ std::hash<Symbol<cfg::NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -213,7 +213,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 namespace {
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& nd_sbp,
+                              const cfg::NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {

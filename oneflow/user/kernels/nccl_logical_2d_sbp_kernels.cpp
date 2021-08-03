@@ -328,9 +328,9 @@ size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
   const cfg::SbpParallel& in_sbp =
-      ctx->ParallelDistribution4ArgNameAndIndex("in", 0).sbp_parallel(1);
+      ctx->NdSbp4ArgNameAndIndex("in", 0).sbp_parallel(1);
   const cfg::SbpParallel& out_sbp =
-      ctx->ParallelDistribution4ArgNameAndIndex("out", 0).sbp_parallel(1);
+      ctx->NdSbp4ArgNameAndIndex("out", 0).sbp_parallel(1);
   CHECK(in_sbp.has_split_parallel() && out_sbp.has_split_parallel());
   if (in_sbp.split_parallel().axis() != 0) { ret += tensor_byte_size; }
   if (out_sbp.split_parallel().axis() != 0) { ret += tensor_byte_size; }

@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> InferConstantParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
+Maybe<void> InferConstantNdSbp(user_op::InferNdSbpFnContext* ctx);
 
 REGISTER_NO_GRAD_USER_OP("constant")
     .Output("out")
@@ -50,13 +50,13 @@ REGISTER_NO_GRAD_USER_OP("constant")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&InferConstantParallelDistribution);
+    .SetNdSbpInferFn(&InferConstantNdSbp);
 
-Maybe<void> InferConstantParallelDistribution(user_op::InferParallelDistributionFnContext* ctx) {
-  cfg::ParallelDistribution* out = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+Maybe<void> InferConstantNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
   if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
-    ParallelDistribution pb;
+    NdSbp pb;
     CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
     out->InitFromProto(pb);
   } else {

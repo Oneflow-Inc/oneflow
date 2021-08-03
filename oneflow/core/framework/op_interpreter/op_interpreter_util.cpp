@@ -147,7 +147,7 @@ template<>
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
-    const auto& nd_sbp = std::make_shared<cfg::ParallelDistribution>();
+    const auto& nd_sbp = std::make_shared<cfg::NdSbp>();
     *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     const auto& tensor = JUST(
         ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*nd_sbp),

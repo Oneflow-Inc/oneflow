@@ -55,7 +55,7 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    const auto& nd_sbp = JUST(MakeParallelDistribution(sbp_tuple));
+    const auto& nd_sbp = JUST(MakeNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
@@ -63,14 +63,14 @@ class ConsistentConstantFunctor {
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+  Maybe<Symbol<cfg::NdSbp>> MakeNdSbp(
       const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
+                                 Symbol<cfg::NdSbp>>
         map;
     auto iter = map.find(sbp_tuple);
     if (iter == map.end()) {
-      cfg::ParallelDistribution nd_sbp;
+      cfg::NdSbp nd_sbp;
       for (const auto& sbp_parallel : sbp_tuple) {
         *nd_sbp.mutable_sbp_parallel()->Add() = *sbp_parallel;
       }
@@ -99,7 +99,7 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     {
-      ParallelDistribution nd_sbp;
+      NdSbp nd_sbp;
       nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
       JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(nd_sbp)));
     }

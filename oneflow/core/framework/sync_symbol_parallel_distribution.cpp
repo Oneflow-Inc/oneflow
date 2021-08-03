@@ -67,9 +67,9 @@ FLAT_MSG_DEFINE_ONEOF(parallel_type,
                               FLAT_MSG_ONEOF_FIELD(FlatPartialSumParallel, partial_sum_parallel));
 FLAT_MSG_END(FlatSbpParallel);
 
-FLAT_MSG_BEGIN(FlatParallelDistribution);
+FLAT_MSG_BEGIN(FlatNdSbp);
 OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
-                           Symbol<cfg::ParallelDistribution> nd_sbp) {
+                           Symbol<cfg::NdSbp> nd_sbp) {
   this->set_symbol_id(symbol_id);
   this->set_size(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -80,7 +80,7 @@ OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
 }
 
 OF_PUBLIC Maybe<void> Check(uint64_t symbol_id,
-                            Symbol<cfg::ParallelDistribution> nd_sbp) const {
+                            Symbol<cfg::NdSbp> nd_sbp) const {
   CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
   CHECK_EQ_OR_RETURN(this->size(), nd_sbp->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -92,33 +92,33 @@ OF_PUBLIC Maybe<void> Check(uint64_t symbol_id,
 FLAT_MSG_DEFINE_OPTIONAL(uint64_t, symbol_id);
 FLAT_MSG_DEFINE_OPTIONAL(size_t, size);
 FLAT_MSG_DEFINE_REPEATED(FlatSbpParallel, sbp_parallel, SHAPE_MAX_AXIS_SIZE);
-FLAT_MSG_END(FlatParallelDistribution);
+FLAT_MSG_END(FlatNdSbp);
 
-class FlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
+class FlatNdSbpAsyncRpcCtx : public AsyncRpcCtx {
  public:
-  FlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
-                                      Symbol<cfg::ParallelDistribution> nd_sbp)
+  FlatNdSbpAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
+                                      Symbol<cfg::NdSbp> nd_sbp)
       : AsyncRpcCtx(rpc_token),
         symbol_id_(symbol_id),
         nd_sbp_(nd_sbp) {}
 
-  ~FlatParallelDistributionAsyncRpcCtx() override {}
+  ~FlatNdSbpAsyncRpcCtx() override {}
 
   Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override {
-    const auto& flat_nd_sbp = std::make_shared<FlatParallelDistribution>();
+    const auto& flat_nd_sbp = std::make_shared<FlatNdSbp>();
     JUST(flat_nd_sbp->Init(symbol_id_, nd_sbp_));
     *buffer = flat_nd_sbp.get();
-    *size = sizeof(FlatParallelDistribution);
+    *size = sizeof(FlatNdSbp);
     *Callback = [flat_nd_sbp]() {};
     return Maybe<void>::Ok();
   }
 
   Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override {
-    const auto& flat_nd_sbp = std::make_shared<FlatParallelDistribution>();
+    const auto& flat_nd_sbp = std::make_shared<FlatNdSbp>();
     *buffer = flat_nd_sbp.get();
-    *size = sizeof(FlatParallelDistribution);
+    *size = sizeof(FlatNdSbp);
     *Callback = [flat_nd_sbp]() {};
     flat_nd_sbp_ = flat_nd_sbp;
     return Maybe<void>::Ok();
@@ -132,20 +132,20 @@ class FlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
 
  private:
   uint64_t symbol_id_;
-  Symbol<cfg::ParallelDistribution> nd_sbp_;
-  std::shared_ptr<FlatParallelDistribution> flat_nd_sbp_;
+  Symbol<cfg::NdSbp> nd_sbp_;
+  std::shared_ptr<FlatNdSbp> flat_nd_sbp_;
 };
 
 }  // namespace
 
 namespace {}
 
-Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id,
-                                           Symbol<cfg::ParallelDistribution> symbol) {
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id,
+                                           Symbol<cfg::NdSbp> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDistribution));
-  FlatParallelDistributionAsyncRpcCtx ctx(rpc_token, symbol_id, symbol);
+      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolNdSbp));
+  FlatNdSbpAsyncRpcCtx ctx(rpc_token, symbol_id, symbol);
   JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &ctx));
   JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
