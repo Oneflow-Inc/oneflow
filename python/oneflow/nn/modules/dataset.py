@@ -22,6 +22,7 @@ import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
+import oneflow._oneflow_internal
 
 
 def mirrored_gen_random_seed(seed=None):
@@ -47,19 +48,21 @@ class OfrecordReader(Module):
         random_seed: int = -1,
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+        sbp: Union[
+            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
+        ] = None,
         name: Optional[str] = None,
     ):
         super().__init__()
 
         parallel_distribution = []
 
+        self.placement = placement
         if placement is None:
             if device is None:
                 self.device = flow.device("cpu")
         else:
             assert device is None
-            self.placement = placement
 
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
@@ -89,12 +92,13 @@ class OfrecordReader(Module):
             .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
+        self.attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
         if self.placement is not None:
-            res = self._op(self.placement)[0]
+            res = self._op.apply(self.placement, self.attrs)[0]
         else:
-            res = self._op(self.device)[0]
+            res = self._op.apply(self.device, self.attrs)[0]
         return res
 
 
@@ -169,7 +173,7 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
-        self._op = (
+        self._op_uint8_mirror = (
             flow.builtin_op("crop_mirror_normalize_from_uint8")
             .Input("in")
             .Input("mirror")
@@ -185,7 +189,39 @@ class CropMirrorNormalize(Module):
             .Attr("output_dtype", output_dtype)
             .Build()
         )
-        self._val_op = (
+        self._op_uint8_no_mirror = (
+            flow.builtin_op("crop_mirror_normalize_from_uint8")
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("output_layout", output_layout)
+            .Attr("mean", mean)
+            .Attr("std", std)
+            .Attr("crop_h", crop_h)
+            .Attr("crop_w", crop_w)
+            .Attr("crop_pos_y", crop_pos_y)
+            .Attr("crop_pos_x", crop_pos_x)
+            .Attr("output_dtype", output_dtype)
+            .Build()
+        )
+        self._op_buffer_mirror = (
+            flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
+            .Input("in")
+            .Input("mirror")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("output_layout", output_layout)
+            .Attr("mean", mean)
+            .Attr("std", std)
+            .Attr("crop_h", crop_h)
+            .Attr("crop_w", crop_w)
+            .Attr("crop_pos_y", crop_pos_y)
+            .Attr("crop_pos_x", crop_pos_x)
+            .Attr("output_dtype", output_dtype)
+            .Build()
+        )
+
+        self._op_buffer_no_mirror = (
             flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
             .Input("in")
             .Output("out")
@@ -203,9 +239,15 @@ class CropMirrorNormalize(Module):
 
     def forward(self, input, mirror=None):
         if mirror != None:
-            res = self._op(input, mirror)[0]
+            if input.dtype is flow.uint8:
+                res = self._op_uint8_mirror(input, mirror)[0]
+            elif input.dtype is flow.tensor_buffer:
+                ret = self._op_buffer_mirror(input, mirror)[0]
         else:
-            res = self._val_op(input)[0]
+            if input.dtype is flow.uint8:
+                res = self._op_uint8_no_mirror(input)[0]
+            elif input.dtype is flow.tensor_buffer:
+                ret = self._op_buffer_no_mirror(input)[0]
         return res
 
 

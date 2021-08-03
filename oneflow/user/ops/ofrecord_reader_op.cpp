@@ -48,6 +48,10 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       *out_tensor->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
     })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
