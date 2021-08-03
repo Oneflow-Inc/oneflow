@@ -31,6 +31,22 @@ namespace oneflow {
 
 namespace {
 
+Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistributionBySbpTuple(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
+  static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                               Symbol<cfg::ParallelDistribution>>
+      map;
+  auto iter = map.find(sbp_tuple);
+  if (iter == map.end()) {
+    cfg::ParallelDistribution parallel_distribution;
+    for (const auto& sbp_parallel : sbp_tuple) {
+      *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+    }
+    iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+  }
+  return iter->second;
+}
+
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
                                   const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
@@ -47,6 +63,27 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   return JUST(Interpret(op, input_list, attrs));
+}
+
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
+  JUST(one::OpInterpUtil::Dispatch(op, {}, outputs.get(),
+                                   one::OpExprInterpContext(attrs, placement)));
+  return outputs;
+}
+
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& device,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
+  JUST(one::OpInterpUtil::Dispatch(op, {}, outputs.get(), one::OpExprInterpContext(attrs, device)));
+  return outputs;
 }
 
 template<typename OpT, typename ConfT,
@@ -79,9 +116,19 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
               const MutableCfgAttrMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
-      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+      .def("apply",
+           [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+           })
+      .def("apply",
+           [](const one::OpExpr& op_expr, const Symbol<ParallelDesc>& placement,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, placement, attrs).GetPtrOrThrow();
+           })
+      .def("apply", [](const one::OpExpr& op_expr, const Symbol<Device>& device,
                        const MutableCfgAttrMap& attrs) {
-        return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+        return Interpret(op_expr, device, attrs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,

@@ -45,9 +45,34 @@ class OfrecordReader(Module):
         shuffle_buffer_size: int = 1024,
         shuffle_after_epoch: bool = False,
         random_seed: int = -1,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         name: Optional[str] = None,
     ):
         super().__init__()
+
+        parallel_distribution = []
+
+        if placement is None:
+            if device is None:
+                self.device = flow.device("cpu")
+        else:
+            assert device is None
+            self.placement = placement
+
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp.__str__())
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+                    parallel_distribution.append(elem.__str__())
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
+
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("OFRecordReader", name)
@@ -61,11 +86,15 @@ class OfrecordReader(Module):
             .Attr("shuffle_after_epoch", shuffle_after_epoch)
             .Attr("part_name_suffix_length", part_name_suffix_length)
             .Attr("seed", seed)
+            .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
 
     def forward(self):
-        res = self._op()[0]
+        if self.placement is not None:
+            res = self._op(self.placement)[0]
+        else:
+            res = self._op(self.device)[0]
         return res
 
 
@@ -456,13 +485,13 @@ class ImageFlip(Module):
         The result image.
 
     For example:
-    
+
     .. code-block:: python
-        
+
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> arr = np.array([
         ...    [[[1, 2, 3], [3, 2, 1]],
         ...     [[2, 3, 4], [4, 3, 2]]],
@@ -606,9 +635,9 @@ class OFRecordBytesDecoder(Module):
         The result Tensor encoded with bytes.
 
     For example:
-    
+
     .. code-block:: python
-        
+
         >>> import numpy as np
         >>> import oneflow as flow
 
@@ -629,8 +658,8 @@ class OFRecordBytesDecoder(Module):
         ...      return image_bytes
         ... example()  # doctest: +SKIP
         array([255 216 255 ...  79 255 217], dtype=uint8)
-        
-        
+
+
 
     """
 
