@@ -134,16 +134,6 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
     OF_NCCL_CHECK(ncclReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                              GetNcclDataType(in->data_type()), ncclSum, root, kernel_state->comm(),
                              ctx->device_ctx()->cuda_stream()));
-    int64_t cur_machine_id = -1;
-    int64_t cur_device_id = -1;
-    Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&cur_machine_id, &cur_machine_id);
-    int64_t cur_parallel_id =
-        CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(cur_machine_id, cur_machine_id));
-    if (cur_parallel_id != root) {
-      Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
-                               out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
-    }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
