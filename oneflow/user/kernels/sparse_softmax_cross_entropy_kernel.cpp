@@ -91,10 +91,8 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SparseSoftmaxCrossEntropyKernelUtil<                                              \
-            device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                                         \
-            OF_PP_PAIR_FIRST(ltype_pair)>::GetComputeTempStorageSizeInBytes(num_instances,       \
-                                                                            num_classes);        \
+        return SparseSoftmaxCrossEntropyTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair)>(           \
+            num_instances, num_classes);                                                         \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

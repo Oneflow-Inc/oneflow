@@ -13,11 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.cuh"
+// #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
 
 namespace oneflow {
@@ -25,45 +24,6 @@ namespace user_op {
 
 namespace {
 
-template<typename T, typename K>
-__global__ void ComputeResultGpu(const int64_t n, const int64_t w, const int64_t depth,
-                                 const int64_t lower_bound, const K* labels, T* tmp, T* new_tmp,
-                                 T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    assert(labels[i] >= 0);
-    assert(labels[i] < depth);
-    K label = labels[i] - lower_bound;
-    if (label >= 0 && label < w) { y[i] = SafeLog(tmp[i]) - new_tmp[i * w + label]; }
-  }
-}
-
-template<typename K>
-__global__ void ComputeResultGpuHalf(const int64_t n, const int64_t w, const int64_t depth,
-                                     const int64_t lower_bound, const K* labels, half* tmp,
-                                     half* new_tmp, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    assert(labels[i] >= 0);
-    assert(labels[i] < depth);
-    K label = labels[i] - lower_bound;
-    if (label >= 0 && label < w) {
-      y[i] = __float2half(SafeLog(__half2float(tmp[i])) - __half2float(new_tmp[i * w + label]));
-    }
-  }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
-
-template<typename T>
-size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * w * sizeof(T));
-}
-template<typename T>
-size_t GetProbStorageSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
-}
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob,
                  T* sub_result, T* sum_result) {
@@ -112,8 +72,9 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
 
     void* temp_storage = tmp_buffer->mut_dptr();
     const size_t reduce_temp_storage_bytes =
-        GetReduceTempStorageSize<T>(num_instances, num_classes);
-    const size_t temp_storage_bytes_offset = GetProbStorageSize<T>(num_instances, num_classes);
+        SparseSoftmaxCrossEntropyReduceOperationSize<T>(num_instances, num_classes);
+    const size_t temp_storage_bytes_offset =
+        SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
     T* sum_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
                                          + reduce_temp_storage_bytes);
     T* sub_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
@@ -124,9 +85,10 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     ComputeProb<T>(ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(),
                    prob->mut_dptr<T>(), sub_result, sum_result);
 
-    ComputeResultGpu<T, K><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(
-        num_instances, num_classes, depth, lower_bound, labels, sum_result, sub_result, y);
+    ComputeSparseSoftmaxCrossEntropyResultGpu<T, K>
+        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
+           ctx->device_ctx()->cuda_stream()>>>(num_instances, num_classes, depth, lower_bound,
+                                               labels, sum_result, sub_result, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -153,9 +115,9 @@ class SparseSoftmaxCrossEntropyKernel<float16, K> final : public user_op::OpKern
 
     void* temp_storage = tmp_buffer->mut_dptr();
     const size_t reduce_temp_storage_bytes =
-        GetReduceTempStorageSize<float16>(num_instances, num_classes);
+        SparseSoftmaxCrossEntropyReduceOperationSize<float16>(num_instances, num_classes);
     const size_t temp_storage_bytes_offset =
-        GetProbStorageSize<float16>(num_instances, num_classes);
+        SparseSoftmaxCrossEntropySumResultSize<float16>(num_instances);
     float16* sum_result = reinterpret_cast<float16*>(reinterpret_cast<unsigned char*>(temp_storage)
                                                      + reduce_temp_storage_bytes);
     float16* sub_result =
@@ -166,10 +128,12 @@ class SparseSoftmaxCrossEntropyKernel<float16, K> final : public user_op::OpKern
     float16* y = out->mut_dptr<float16>();
     ComputeProb<float16>(ctx->device_ctx(), num_instances, num_classes, prediction->dptr<float16>(),
                          prob->mut_dptr<float16>(), sub_result, sum_result);
-    ComputeResultGpuHalf<K><<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                              ctx->device_ctx()->cuda_stream()>>>(
-        num_instances, num_classes, depth, lower_bound, labels, reinterpret_cast<half*>(sum_result),
-        reinterpret_cast<half*>(sub_result), reinterpret_cast<half*>(y));
+    ComputeSparseSoftmaxCrossEntropyResultGpuHalf<K>
+        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
+           ctx->device_ctx()->cuda_stream()>>>(num_instances, num_classes, depth, lower_bound,
+                                               labels, reinterpret_cast<half*>(sum_result),
+                                               reinterpret_cast<half*>(sub_result),
+                                               reinterpret_cast<half*>(y));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -185,10 +149,8 @@ class SparseSoftmaxCrossEntropyKernel<float16, K> final : public user_op::OpKern
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SparseSoftmaxCrossEntropyKernelUtil<                                              \
-            DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair),                                      \
-            OF_PP_PAIR_FIRST(ltype_pair)>::GetComputeTempStorageSizeInBytes(num_instances,       \
-                                                                            num_classes);        \
+        return SparseSoftmaxCrossEntropyTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair)>(           \
+            num_instances, num_classes);                                                         \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

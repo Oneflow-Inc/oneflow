@@ -20,9 +20,30 @@ limitations under the License.
 
 namespace oneflow {
 namespace user_op {
+
+template<typename T>
+size_t SparseSoftmaxCrossEntropySubResultSize(int64_t num_instances, int64_t num_classes) {
+  return GetCudaAlignedSize(num_instances * num_classes * sizeof(T));
+}
+
+template<typename T>
+size_t SparseSoftmaxCrossEntropySumResultSize(int64_t num_instances) {
+  return GetCudaAlignedSize(num_instances * sizeof(T));
+}
+
+template<typename T>
+size_t SparseSoftmaxCrossEntropyReduceOperationSize(int64_t num_instances, int64_t num_classes) {
+  return GetCudaAlignedSize(num_instances * num_classes * sizeof(T));
+}
+
+template<typename T>
+size_t SparseSoftmaxCrossEntropyTempStorageSize(int64_t num_instances, int64_t num_classes) {
+  return SparseSoftmaxCrossEntropyReduceOperationSize<T>(num_instances, num_classes)
+         + SparseSoftmaxCrossEntropySubResultSize<T>(num_instances, num_classes)
+         + SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
+}
 template<DeviceType device_type, typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil {
-  static size_t GetComputeTempStorageSizeInBytes(int64_t n, int64_t w);
   static void Compute(DeviceCtx* ctx, const int64_t n, const int64_t w, const int64_t depth,
                       const int64_t lower_bound, const T* in, T* prob, const K* labels, T* y,
                       void* temp_storage, const size_t temp_storage_bytes,
