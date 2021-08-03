@@ -334,7 +334,6 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
 from oneflow.ops.constant_op import constant, constant_like, constant_scalar
