@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace data {
@@ -51,6 +52,16 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
 
     parallel_id_ = ctx->parallel_ctx().parallel_id();
     parallel_num_ = ctx->parallel_ctx().parallel_num();
+    int64_t rank = GlobalProcessCtx::Rank();
+    size_t world_size = GlobalProcessCtx::WorldSize();
+    // NOTE(zwx): parallel_id == 0 and parallel_num == 1 indicate this dataset is local,
+    //     but world_size > 1 indicate data parallel size > 1,
+    //     so dataset in each rank need use rank and world_size
+    //     to infer the part of the files which will be read
+    if (parallel_id_ == 0 && parallel_num_ == 1 && world_size > 1) {
+      parallel_id_ = rank;
+      parallel_num_ = world_size;
+    }
     CHECK_LE(parallel_num_, data_part_num_);
     BalancedSplitter bs(data_part_num_, parallel_num_);
     range_ = bs.At(parallel_id_);

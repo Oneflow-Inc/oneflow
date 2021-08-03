@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/data/gpt_dataset.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -68,14 +69,28 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
-    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    const cfg::ParallelDistribution& paral_dist =
-        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-    CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
-    num_shards_ = GetNumShards(hierarchy, paral_dist);
-    CHECK_EQ(num_samples % num_shards_, 0);
-    shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
+    int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    int64_t rank = GlobalProcessCtx::Rank();
+    size_t world_size = GlobalProcessCtx::WorldSize();
+    // NOTE(zwx): parallel_id == 0 and parallel_num == 1 indicate this dataset is local,
+    //     but world_size > 1 indicate data parallel size > 1,
+    //     so dataset in each rank need use rank and world_size
+    //     to infer the part of the files which will be read
+    if (parallel_id == 0 && parallel_num == 1 && world_size > 1) {
+      num_shards_ = world_size;
+      shard_index_ = rank;
+    } else {
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      const cfg::ParallelDistribution& paral_dist =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
+      num_shards_ = GetNumShards(hierarchy, paral_dist);
+      CHECK_EQ(num_samples % num_shards_, 0);
+      shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
+    }
     CHECK_LT(shard_index_, num_shards_);
+
     size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
     size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
     CHECK_EQ(logical_batch_size % num_shards_, 0);
