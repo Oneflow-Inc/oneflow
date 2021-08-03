@@ -115,22 +115,6 @@ def variance_op(input, dim=None, keepdim=False):
     return Variance(dim, keepdim)(input)
 
 
-class ScalarSubByTensor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.sub_scalar_by_tensor(x, y)
-
-
-class BroadcastSub(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_sub(x, y)
-
-
 @register_tensor_op("sub")
 def _sub(input, other):
     """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
@@ -168,16 +152,7 @@ def _sub(input, other):
         (2, 3)
 
     """
-    if isinstance(input, (int, float)):
-        return flow.F.add(ScalarMul(-1)(other), input)
-    elif isinstance(other, (int, float)):
-        return flow.F.add(input, -1 * other)
-    elif input.shape == other.shape:
-        return BroadcastSub()(input, other)
-    elif other.shape == (1,):
-        return ScalarSubByTensor()(input, other)
-    else:
-        return BroadcastSub()(input, other)
+    return flow.F.sub(input, other)
 
 
 @register_tensor_op("div")
@@ -692,18 +667,7 @@ class Subtract(Module):
         super().__init__()
 
     def forward(self, x, y):
-        if isinstance(x, (int, float)):
-            return flow.F.add(-1 * y, x)
-        elif isinstance(y, (int, float)):
-            return flow.F.add(x, -1 * y)
-        elif x.shape == y.shape:
-            return BroadcastSub()(x, y)
-        elif x.shape == (1,):
-            return ScalarSubByTensor()(y, x)
-        elif y.shape == (1,):
-            return ScalarSubByTensor()(x, y)
-        else:
-            return BroadcastSub()(x, y)
+        return flow.F.sub(x, y)
 
 
 class Sqrt(Module):

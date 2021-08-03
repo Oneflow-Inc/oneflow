@@ -30,8 +30,8 @@ namespace one {
 namespace functional {
 
 py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
-  // "Add(Tensor input, Scalar other, *, Scalar alpha, bool inplace=False)"
   // "Add(Tensor input, Tensor other, *, Scalar alpha, bool inplace=False)"
+  // "Add(Tensor input, Scalar other, *, Scalar alpha, bool inplace=False)"
   // "Add(Scalar input, Tensor other, *, Scalar alpha, bool inplace=False)"
   PyObject* args = py_args.ptr();
   PyObject* kwargs = py_kwargs.ptr();
@@ -58,15 +58,15 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
     auto a = JUST(PyUnpackTensor(input));
 
     if (PyScalarCheck(other)) {
-      auto b = JUST(PyUnpackScalar(other));
+      auto b = *JUST(PyUnpackScalar(other));
       if (alpha) {
         if (!input_is_tensor) {
           a = JUST(functional::ScalarMul(a, *JUST(alpha.value())));
         } else {
-          *b *= *JUST(alpha.value());
+          b *= *JUST(alpha.value());
         }
       }
-      return functional::ScalarAdd(a, *b, inplace);
+      return functional::ScalarAdd(a, b, inplace);
     } else {
       CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
       auto b = JUST(PyUnpackTensor(other));
@@ -91,6 +91,57 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
         }
         return functional::BroadcastAdd(a, b);
       }
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PySub(py::args py_args, py::kwargs py_kwargs) {
+  // "Sub(Tensor input, Tensor other, *, Scalar alpha, bool inplace=False)"
+  // "Sub(Tensor input, Scalar other, *, Scalar alpha, bool inplace=False)"
+  // "Sub(Scalar input, Tensor other, *, Scalar alpha)"
+  PyObject* args = py_args.ptr();
+  PyObject* kwargs = py_kwargs.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  bool inplace = false;
+  if (auto* obj = PyDict_GetItemString(kwargs, "inplace")) {
+    CHECK_OR_THROW(PyBool_Check(obj)) << "The keyword inplace's value should be boolean.";
+    inplace = (obj == Py_True);
+  }
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    Optional<Scalar> alpha;
+    if (auto* obj = PyDict_GetItemString(kwargs, "alpha")) { alpha = *JUST(PyUnpackScalar(obj)); }
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor) << "Inputs must have one tensor at least.";
+    if (input_is_tensor && other_is_tensor) {
+      // "Sub(Tensor input, Tensor other, *, Scalar alpha, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      auto b = JUST(PyUnpackTensor(other));
+      if (alpha) { b = JUST(functional::ScalarMul(a, *JUST(alpha.value()))); }
+      CHECK_OR_RETURN(!inplace) << "Can not apply inplace for broadcasting sub.";
+      return functional::BroadcastSub(a, b);
+    } else if (input_is_tensor && !other_is_tensor) {
+      // "Sub(Tensor input, Scalar other, *, Scalar alpha, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = *JUST(PyUnpackScalar(other));
+      b *= -1;
+      if (alpha) { b *= *JUST(alpha.value()); }
+      return functional::ScalarAdd(a, b, inplace);
+    } else {
+      // "Sub(Scalar input, Tensor other, *, Scalar alpha)"
+      CHECK_OR_RETURN(!inplace) << "Can not apply inplace on scalar input.";
+      CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar or tensor.";
+      Scalar a = *JUST(PyUnpackScalar(input));
+      auto b = JUST(PyUnpackTensor(other));
+      Scalar multiplier = -1;
+      if (alpha) { multiplier *= *JUST(alpha.value()); }
+      b = JUST(functional::ScalarMul(b, multiplier));
+      return functional::ScalarAdd(b, a, /*inplace=*/false);
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -191,6 +242,7 @@ namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &functional::PyAdd);
+  m.def("sub", &functional::PySub);
   m.def("mul", &functional::PyMul);
   m.def("div", &functional::PyDiv);
 }
