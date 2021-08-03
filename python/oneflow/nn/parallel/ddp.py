@@ -20,7 +20,7 @@ from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module):
+def allreduce_fn(ddp_state_for_reversed_params, param):
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
         ret = None
@@ -30,9 +30,9 @@ def allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module):
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
                 if cur_param == param:
-                    ret = allreduce_module(grad)[0]
+                    ret = flow.F.all_reduce(grad)[0]
                 else:
-                    cur_param.grad = allreduce_module(cur_param.grad)[0]
+                    cur_param.grad = flow.F.all_reduce(cur_param.grad)[0]
             else:
                 break
         return ret
@@ -42,16 +42,14 @@ def allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module):
 
 def DistributedDataParallel(module: "flow.nn.Module"):
     world_size = flow.framework.distribute.get_world_size()
-    # assert single node
-    assert flow.framework.distribute.get_local_rank() == flow.framework.distribute.get_rank()
-    allreduce_module = flow.nn.AllReduce(f'device_tag: "gpu", device_name: "0:0-{world_size-1}"')
+    # TODO(jianhao): broadcast parameters and buffers
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters()])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
         param.register_hook(lambda grad: grad / world_size)
-        param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param, allreduce_module))
+        param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param))
 
     def hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

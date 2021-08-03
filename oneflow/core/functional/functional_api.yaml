@@ -841,6 +841,10 @@
   signature: "Tensor ConsistentToLocal(Tensor x)"
   bind_python: True
 
+- name: "all_reduce"
+  signature: "Tensor AllReduce(Tensor x)"
+  bind_python: True
+
 - name: "select_first"
   signature: "Tensor SelectFirst(TensorTuple inputs)"
   bind_python: True
