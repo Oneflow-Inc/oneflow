@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -198,7 +199,7 @@ struct PlacementSymbolExportUtil {
     static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
     std::shared_ptr<cfg::ParallelConf> parallel_conf =
         std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-    parallel_conf->set_device_tag(type2device_tag.at(device_type));
+    parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
     std::shared_ptr<ParallelDesc> out_parallel_desc;
     JUST(LogicalRun(
         [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
