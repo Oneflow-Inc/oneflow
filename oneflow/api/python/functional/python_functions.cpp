@@ -147,6 +147,42 @@ py::object PySub(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
+  // "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+  // "Tensor DimScatter(Tensor input, Tensor index, *, Float src, Int32 dim)"
+  PyObject* args = py_args.ptr();
+  PyObject* kwargs = py_kwargs.ptr();
+  size_t nargs = PyTuple_Size(args);
+
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    Optional<Scalar> dim;
+    if (auto* obj = PyDict_GetItemString(kwargs, "dim")) { dim = *JUST(PyUnpackScalar(obj)); }
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* index = PyTuple_GetItem(args, 1);
+    const auto& in = JUST(PyUnpackTensor(input));
+    const auto& idx = JUST(PyUnpackTensor(index));
+
+    if (nargs == 3) {
+      PyObject* src = PyTuple_GetItem(args, 2);
+      const auto& src_tensor = JUST(PyUnpackTensor(src));
+
+      return functional::DimScatter(in, idx, src_tensor, dim);
+    } else if (nargs == 2) {
+      Optional<Scalar> src_value;
+      if (auto* obj = PyDict_GetItemString(kwargs, "src")) {
+        src_value = *JUST(PyUnpackScalar(obj));
+      }
+      return functional::DimScatterUpdateScalar(in, idx, src_value, dim);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
+                                     "(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
+                                     "(Tensor input, Tensor index, *, Float src, Int32 dim)";
+      return functional::OnesLike(in);  // TODO(yaochi): remove OnesLike
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -155,6 +191,7 @@ namespace functional = one::functional;
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &functional::PyAdd);
   m.def("sub", &functional::PySub);
+  m.def("scatter", &functional::PyScatter);
 }
 
 }  // namespace oneflow
