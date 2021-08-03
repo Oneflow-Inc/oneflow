@@ -31,6 +31,10 @@ void SpaceStrip(std::string& str) {
   str.erase(str.find_last_not_of(" ") + 1);
 }
 
+bool IsLetterNumberOrUnderline(char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+}
+
 void ErrorMsgEraseMaybe(std::string& str) {
   if (str.size() == 0) { return; }
   SpaceStrip(str);
@@ -54,19 +58,18 @@ void ErrorMsgEraseMaybe(std::string& str) {
 void ErrorMsgShortenMaybe(std::string& str) {
   std::unordered_map<int, int> delim_index2length;
   SpaceStrip(str);
+  if (str.size() == 0) { return; }
+  delim_index2length.insert(std::make_pair(0, 0));
   int word_num = 0;
-  for (int i = 0; i < str.size(); i++) {
-    if (str.at(i) == ' ' || str.at(i) == '.') {
-      delim_index2length.insert(std::make_pair(word_num, i));
+  for (int i = 1; i < str.size(); i++) {
+    if (IsLetterNumberOrUnderline(str.at(i)) && !IsLetterNumberOrUnderline(str.at(i - 1))) {
       word_num++;
-    } else if (str.at(i) == '-' && str.at(i + 1) == '>') {
       delim_index2length.insert(std::make_pair(word_num, i));
-      word_num++;
     }
   }
   if (word_num > 10) {
-    str = str.substr(0, delim_index2length.at(4)) + " ... "
-          + str.substr(delim_index2length.at(word_num - 4) + 1);
+    str = str.substr(0, delim_index2length.at(3)) + " ... "
+          + str.substr(delim_index2length.at(word_num - 3));
   }
 }
 
