@@ -29,7 +29,6 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-// static PyObject* Add(PyObject* self, PyObject* args, PyObject* kwargs) {
 py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
   // "Add(Tensor input, Scalar other, *, bool inplace=False)"
   // "Add(Tensor input, Tensor other, *, Scalar alpha, bool inplace=False)"
@@ -38,27 +37,44 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
   size_t nargs = PyTuple_Size(args);
   CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
   bool inplace = false;
-  PyObject* obj = PyDict_GetItemString(kwargs, "inplace");
-  if (obj) {
+  if (auto* obj = PyDict_GetItemString(kwargs, "inplace")) {
     CHECK_OR_THROW(PyBool_Check(obj)) << "The keyword inplace's value should be boolean.";
     inplace = (obj == Py_True);
   }
   const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    Optional<Scalar> alpha;
+    if (auto* obj = PyDict_GetItemString(kwargs, "alpha")) { alpha = *JUST(PyUnpackScalar(obj)); }
     PyObject* input = PyTuple_GetItem(args, 0);
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "The first input is not a tensor.";
-    const auto& a = JUST(PyUnpackTensor(input));
-
     PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    if (!input_is_tensor) {
+      CHECK_OR_RETURN(!inplace) << "Can't apply inplace on scalar input.";
+      input = other;
+      other = PyTuple_GetItem(args, 0);
+    }
+    auto a = JUST(PyUnpackTensor(input));
+
     if (PyScalarCheck(other)) {
-      const auto& b = JUST(PyUnpackScalar(other));
+      auto b = JUST(PyUnpackScalar(other));
+      if (alpha) {
+        if (!input_is_tensor) {
+          a = JUST(functional::ScalarMul(a, *JUST(alpha.value())));
+        } else {
+          *b *= *JUST(alpha.value());
+        }
+      }
       return functional::ScalarAdd(a, *b, inplace);
     } else {
       CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
       auto b = JUST(PyUnpackTensor(other));
-      PyObject* obj = PyDict_GetItemString(kwargs, "alpha");
-      if (obj) {
-        const auto& alpha = JUST(PyUnpackScalar(obj));
-        b = JUST(functional::ScalarMul(b, *alpha));
+      if (alpha) {
+        if (!input_is_tensor) {
+          a = JUST(functional::ScalarMul(a, *JUST(alpha.value())));
+        } else {
+          b = JUST(functional::ScalarMul(b, *JUST(alpha.value())));
+        }
       }
       if (a->shape()->NumAxes() == 0) {
         return functional::ScalarAddByTensor(b, a, inplace);
