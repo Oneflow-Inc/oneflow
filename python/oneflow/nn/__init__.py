@@ -106,9 +106,6 @@ from oneflow.nn.modules.upsampling import (
 )
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
 from oneflow.nn.parameter import Parameter
-from oneflow.ops.domain_ops import (
-    api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,
-)
 from oneflow.nn import utils
 
 from . import functional
