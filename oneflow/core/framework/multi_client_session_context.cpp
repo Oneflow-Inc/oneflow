@@ -21,6 +21,12 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #ifdef WITH_CUDA
@@ -47,6 +53,13 @@ MultiClientSessionContext::~MultiClientSessionContext() {
   if (is_inited_) {
     {
       // NOTE(chengcheng): delete runtime global objects
+      Global<summary::EventsWriter>::Delete();
+      Global<RuntimeJobDescs>::Delete();
+      Global<ThreadMgr>::Delete();
+      Global<ActorMsgBus>::Delete();
+      Global<RegstMgr>::Delete();
+      Global<MemoryAllocator>::Delete();
+      Global<RuntimeCtx>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     }
 
@@ -87,6 +100,10 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       } else {
         resource.set_cpu_device_num(gpu_device_num);
       }
+
+      // TODO(chengcheng, guoran): handle CollectiveBoxingExecutor for multi-runtime in
+      // Multi-Client.
+      resource.clear_collective_boxing_conf();
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
@@ -108,6 +125,13 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     {
       // NOTE(chengcheng): init runtime global objects
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Global<RuntimeCtx>::New();
+      Global<MemoryAllocator>::New();
+      Global<RegstMgr>::New();
+      Global<ActorMsgBus>::New();
+      Global<ThreadMgr>::New();
+      Global<RuntimeJobDescs>::New();
+      Global<summary::EventsWriter>::New();
     }
 
     is_inited_ = true;

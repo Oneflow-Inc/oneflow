@@ -177,7 +177,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
     shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
   }
   MutableAttrMap attrs;
-  attrs.SetAttr<Shape>("shape", *shape_ptr);
+  JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
   return output;
