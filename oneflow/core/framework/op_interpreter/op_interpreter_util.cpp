@@ -147,7 +147,7 @@ template<>
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     const auto& tensor = JUST(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
+        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
     const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
@@ -155,7 +155,7 @@ template<>
     const auto& tensor = JUST(
         ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*parallel_distribution),
                                      SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
-                                     /*requires_grad=*/false, /*is_leaf=*/false));
+                                     /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
@@ -171,8 +171,7 @@ template<>
   const auto& dtype = DataType(blob_attr->get_dtype());
   CHECK_EQ_OR_RETURN(tensor->dtype(), dtype);
   CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
-  // TODO(xuxiaoyu): inplece tensor's valid leaf attr value
-  // CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
+  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
   if (is_local) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));

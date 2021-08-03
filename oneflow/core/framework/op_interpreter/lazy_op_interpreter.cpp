@@ -134,6 +134,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -191,6 +194,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -248,6 +254,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -339,10 +348,13 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf->DebugString() << std::endl;
-
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
@@ -362,8 +374,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       std::shared_ptr<Tensor> inplace_out = outputs->at(i);
       JUST(OpInterpUtil::CheckTensorMatchAttr(inplace_out, blob_attr, parallel_attr,
                                               /* is_lazy= */ true, is_local,
-                                              /* requires_gra */ false,
-                                              /* is_leaf */ false));
+                                              /* requires_grad */ false,
+                                              /* is_leaf */ true));
     }
     TensorNameScope::Global()->Record(outputs->at(i), GenLogicalBlobName(new_op_name, obn));
   }
