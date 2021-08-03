@@ -551,6 +551,8 @@ def slice(
                     raise ValueError("element of size is invalid")
                 if b + s < dim_size:
                     stop = b + s
+        if stop is None:
+            stop = dim_size
         slice_tup_list.append((start, stop, step))
     return slice_v2(x, slice_tup_list, name=name)
 

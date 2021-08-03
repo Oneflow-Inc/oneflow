@@ -648,7 +648,6 @@ class OFRecordBytesDecoder(Module):
         return self._op(input)[0]
 
 
-
 if __name__ == "__main__":
     import doctest
 

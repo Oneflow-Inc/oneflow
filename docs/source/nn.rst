@@ -14,6 +14,7 @@ Operators for neural networks
         BCEWithLogitsLoss,
         BatchNorm1d,
         BatchNorm2d,
+        BatchNorm3d,
         COCOReader,
         CTCLoss,
         CoinFlip,
@@ -79,4 +80,3 @@ Operators for neural networks
         UpsamplingBilinear2d,
         UpsamplingNearest2d,
         ZeroPad2d,
-        ctc_greedy_decoder

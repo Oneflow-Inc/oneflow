@@ -41,7 +41,7 @@ from oneflow.nn.modules.adaptive_pool import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
 )
-from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d
+from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -49,7 +49,7 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d
+from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
 from oneflow.nn.modules.dataset import (
     COCOReader,
     CoinFlip,
@@ -109,7 +109,6 @@ from oneflow.nn.parameter import Parameter
 from oneflow.ops.domain_ops import (
     api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,
 )
-from oneflow.ops.loss_ops import ctc_greedy_decoder
 from oneflow.nn import utils
 
 from . import functional

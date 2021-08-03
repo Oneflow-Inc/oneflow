@@ -17,9 +17,9 @@ import math
 
 import oneflow as flow
 from oneflow.nn import init
-from oneflow.nn.common_types import _size_1_t, _size_2_t
+from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _pair, _single
+from oneflow.nn.modules.utils import _single, _pair, _triple
 
 
 def slice(x, begin, size):
@@ -458,6 +458,210 @@ class Conv2d(Module):
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv2d(
+                x,
+                self.weight,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
+        return res
+
+    def extra_repr(self):
+        s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
+        if self.padding != (0,) * len(self.padding):
+            s += ", padding={padding}"
+        if self.dilation != (1,) * len(self.dilation):
+            s += ", dilation={dilation}"
+        if self.groups != 1:
+            s += ", groups={groups}"
+        if self.bias is None:
+            s += ", bias=False"
+        if self.padding_mode != "zeros":
+            s += ", padding_mode={padding_mode}"
+        return s.format(**self.__dict__)
+
+
+class Conv3d(Module):
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv3d.html#conv3d
+    
+    Applies a 3D convolution over an input signal composed of several input
+    planes.
+    In the simplest case, the output value of the layer with input size :math:`(N, C_{in}, D, H, W)`
+    and output :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` can be precisely described as:
+    .. math::
+        out(N_i, C_{out_j}) = bias(C_{out_j}) +
+                                \sum_{k = 0}^{C_{in} - 1} weight(C_{out_j}, k) \star input(N_i, k)
+    where :math:`\star` is the valid 3D `cross-correlation`_ operator
+    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+    * :attr:`stride` controls the stride for the cross-correlation.
+    * :attr:`padding` controls the amount of implicit zero-paddings on both
+      sides for :attr:`padding` number of points for each dimension.
+    * :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
+      It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    * :attr:`groups` controls the connections between inputs and outputs.
+      :attr:`in_channels` and :attr:`out_channels` must both be divisible by
+      :attr:`groups`. For example,
+        * At groups=1, all inputs are convolved to all outputs.
+        * At groups=2, the operation becomes equivalent to having two conv
+          layers side by side, each seeing half the input channels,
+          and producing half the output channels, and both subsequently
+          concatenated.
+        * At groups= :attr:`in_channels`, each input channel is convolved with
+          its own set of filters, of size
+          :math:`\left\lfloor\frac{out\_channels}{in\_channels}\right\rfloor`.
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+        - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
+        - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
+          the second `int` for the height dimension and the third `int` for the width dimension
+    Note:
+         Depending of the size of your kernel, several (of the last)
+         columns of the input might be lost, because it is a valid `cross-correlation`_,
+         and not a full `cross-correlation`_.
+         It is up to the user to add proper padding.
+    Note:
+        When `groups == in_channels` and `out_channels == K * in_channels`,
+        where `K` is a positive integer, this operation is also termed in
+        literature as depthwise convolution.
+        In other words, for an input of size :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`,
+        a depthwise convolution with a depthwise multiplier `K`, can be constructed by arguments
+        :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
+    Note:
+        In some circumstances when using the CUDA backend with CuDNN, this operator
+        may select a nondeterministic algorithm to increase performance. If this is
+        undesirable, you can try to make the operation deterministic (potentially at
+        a performance cost) by setting ``torch.backends.cudnn.deterministic =
+        True``.
+        Please see the notes on :doc:`/notes/randomness` for background.
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution. Default: 1
+        padding (int or tuple, optional): Zero-padding added to all three sides of the input. Default: 0
+        padding_mode (string, optional): ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+        dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
+        groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
+        bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
+    Shape:
+        - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`
+        - Output: :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` where
+          .. math::
+              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{dilation}[0]
+                    \times (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{dilation}[1]
+                    \times (\text{kernel\_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{dilation}[2]
+                    \times (\text{kernel\_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+                         :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
+                         :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
+                         The values of these weights are sampled from
+                         :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                         :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
+                         then the values of these weights are
+                         sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                         :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+    For example: 
+    .. code-block:: python
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> arr = np.random.randn(1, 2, 5, 5, 5)
+        >>> input = flow.Tensor(arr)
+        >>> m = nn.Conv3d(2, 4, kernel_size=3, stride=1)
+        >>> output = m(input)
+        
+    .. _cross-correlation:
+        https://en.wikipedia.org/wiki/Cross-correlation
+    .. _link:
+        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_3_t,
+        stride: _size_3_t = 1,
+        padding: _size_3_t = 0,
+        dilation: _size_3_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",  # TODO: refine this type
+    ):
+        super().__init__()
+
+        assert padding_mode == "zeros"
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride)
+        self.padding = _triple(padding)
+        self.dilation = _triple(dilation)
+        self.groups = groups
+        assert in_channels % groups == 0, "in_channels must be divisible by groups"
+        assert out_channels % groups == 0, "out_channels must be divisible by groups"
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
+        self.out_channel_groups = out_channels // groups
+        self.bias = None
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x):
+        if x.shape[1] != self.in_channels:
+            raise ValueError("The input channels should be equal to self.in_channels")
+        if x.device.type == "cpu" and self.groups > 1:
+            in_channel_axis = 1
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
+            out_list = []
+            for i in range(len(in_split_list)):
+                out_list.append(
+                    flow.F.conv3d(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation,
+                        groups=1,
+                    )
+                )
+            res = flow.cat(out_list, dim=in_channel_axis)
+        else:
+            res = flow.F.conv3d(
                 x,
                 self.weight,
                 self.bias,
