@@ -107,6 +107,14 @@ class Conv2dFunctor : public ConvBaseFunctor {
   }
 };
 
+class Conv3dFunctor : public ConvBaseFunctor {
+ public:
+  Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
 class MatMulBaseFunctor {
  public:
   MatMulBaseFunctor() = default;
@@ -553,6 +561,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv1dFunctor>("Conv1d");
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
+  m.add_functor<impl::Conv3dFunctor>("Conv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
