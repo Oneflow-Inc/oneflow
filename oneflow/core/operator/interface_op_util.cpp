@@ -73,7 +73,7 @@ Maybe<void> InterfaceOpUtil::InferLogicalOutBlobDesc(const InterfaceBlobConf& bl
   CHECK_OR_RETURN(blob_conf.has_shape());
   out_blob_desc->mut_shape() = Shape(blob_conf.shape());
   CheckShape(out_blob_desc->shape());
-  CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
+  if (out_blob_desc->mut_shape().NumAxes() > 0) { CHECK_GT(out_blob_desc->mut_shape().At(0), 0); }
   CHECK_OR_RETURN(blob_conf.has_data_type());
   out_blob_desc->set_data_type(blob_conf.data_type());
   CHECK_OR_RETURN(blob_conf.has_is_dynamic());

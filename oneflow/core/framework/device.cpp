@@ -61,24 +61,25 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  Device device(type, device_id);
-  JUST(device.Init());
-  return SymbolOf(device);
+  return ThreadLocalGetOrNew(type, device_id);
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
                                                                int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
-  static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
-  auto* vec = &type2device_id2device[type];
-  if (vec->size() <= device_id) { vec->resize(device_id + 1); }
-  auto* pptr = &vec->at(device_id);
-  if (!*pptr) { *pptr = JUST(New(type, device_id)); }
-  return *pptr;
+  static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
+  auto* device_id2symbol = &map[type];
+  auto iter = device_id2symbol->find(device_id);
+  if (iter == device_id2symbol->end()) {
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = device_id2symbol->emplace(device_id, SymbolOf(device)).first;
+  }
+  return iter->second;
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+  return New(type, GlobalProcessCtx::LocalRank());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
