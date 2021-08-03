@@ -154,7 +154,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
         GetMLIRCInterfaceArgs(ctx);
     llvm::SmallVector<void*> packed_args{};
-    for (auto& arg /* arg argsmust be a reference*/ : args) { packed_args.push_back(&arg); }
+    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
     auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
