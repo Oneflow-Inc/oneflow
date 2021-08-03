@@ -45,9 +45,7 @@ class Tensor {
 
   // Getters
   int64_t dim(int64_t index) const { return shape()->At(index); }
-
   int64_t nelement() const { return shape()->elem_cnt(); }
-
   int64_t ndim() const { return shape()->NumAxes(); }
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;

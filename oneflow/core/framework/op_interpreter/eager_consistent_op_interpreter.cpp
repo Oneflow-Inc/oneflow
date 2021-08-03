@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -75,14 +76,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
-  int64_t parallel_id = -1;
+  Optional<int64_t> parallel_id;
   const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-  using TensorImpl = EagerConsistentTensorImpl;
-  TensorImpl::NewMethod New =
-      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl =
-        JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
+                                                                  parallel_id, false, false));
     const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
     JUST(tensor_impl->set_rpc_token(rpc_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
@@ -123,6 +121,25 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  const auto& input_tensor = inputs.at(0);
+  const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
+  bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
+  mirrored_tensor->set_requires_grad(requires_grad);
+  mirrored_tensor->set_is_leaf(!requires_grad);
+  outputs->at(0) = mirrored_tensor;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
