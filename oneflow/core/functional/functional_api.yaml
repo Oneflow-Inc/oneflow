@@ -841,6 +841,14 @@
   signature: "Tensor Stack(TensorTuple inputs, *, Int64 dim=0)"
   bind_python: True
 
+- name: "to_consistent"
+  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None)"
+  bind_python: True
+
+- name: "to_local"
+  signature: "Tensor ConsistentToLocal(Tensor x)"
+  bind_python: True
+
 - name: "cast_like"
   signature: "Tensor CastLike(Tensor x, Tensor like)"
   bind_python: False
