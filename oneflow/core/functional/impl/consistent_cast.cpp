@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
