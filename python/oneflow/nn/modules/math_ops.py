@@ -177,12 +177,6 @@ class BroadcastSub(Module):
         return flow.F.broadcast_sub(x, y)
 
 
-def scalar_add_inplaceable(x, alpha, inplace: bool = False):
-    if inplace:
-        _check_inplace_valid(x)
-    return flow.F.add_scalar(x, alpha, inplace)
-
-
 @register_tensor_op("sub")
 def _sub(input, other):
     """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
@@ -221,9 +215,9 @@ def _sub(input, other):
 
     """
     if isinstance(input, (int, float)):
-        return flow.F.add_scalar(ScalarMul(-1)(other), input)
+        return flow.F.add(ScalarMul(-1)(other), input)
     elif isinstance(other, (int, float)):
-        return flow.F.add_scalar(input, -1 * other)
+        return flow.F.add(input, -1 * other)
     elif input.shape == other.shape:
         return BroadcastSub()(input, other)
     elif other.shape == (1,):
@@ -334,18 +328,6 @@ def _reciprocal(x):
     return Reciprocal()(x)
 
 
-def scalar_add_by_tensor_inplaceable(x, y, inplace: bool = False):
-    if inplace:
-        _check_inplace_valid(x)
-    return flow.F.add_scalar_by_tensor(x, y, inplace)
-
-
-def elementwise_add_inplaceable(x, y, inplace: bool = False):
-    if inplace:
-        _check_inplace_valid(x)
-    return flow.F.add(x, y, inplace)
-
-
 @register_tensor_op("add")
 def _add(x, y):
     """Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
@@ -383,18 +365,7 @@ def _add(x, y):
         (2, 3)
 
     """
-    if isinstance(x, (int, float)):
-        return flow.F.add_scalar(y, x, False)
-    elif isinstance(y, (int, float)):
-        return flow.F.add_scalar(x, y, False)
-    elif x.shape == y.shape:
-        return flow.F.add(x, y, False)
-    elif x.shape == (1,):
-        return flow.F.add_scalar_by_tensor(y, x, False)
-    elif y.shape == (1,):
-        return flow.F.add_scalar_by_tensor(x, y, False)
-    else:
-        return flow.F.broadcast_add(x, y)
+    return flow.F.add(x, y)
 
 
 @register_tensor_op("add_")
@@ -402,19 +373,7 @@ def _add_inplace(x, y):
     """
     In-place version of :func:`oneflow.Tensor.add`.
     """
-    if isinstance(y, (int, float)):
-        return scalar_add_inplaceable(x, y, inplace=True)
-    elif x.shape == y.shape:
-        return elementwise_add_inplaceable(x, y, inplace=True)
-    elif x.shape == (1,):
-        raise RuntimeError(
-            f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
-        )
-    elif y.shape == (1,):
-        return scalar_add_by_tensor_inplaceable(x, y, inplace=True)
-    else:
-        y = flow.broadcast_like(y, x)
-        return elementwise_add_inplaceable(x, y, inplace=True)
+    return flow.F.add(x, y, inplace=True)
 
 
 class Asin(Module):
@@ -811,9 +770,9 @@ class Subtract(Module):
 
     def forward(self, x, y):
         if isinstance(x, (int, float)):
-            return flow.F.add_scalar(-1 * y, x)
+            return flow.F.add(-1 * y, x)
         elif isinstance(y, (int, float)):
-            return flow.F.add_scalar(x, -1 * y)
+            return flow.F.add(x, -1 * y)
         elif x.shape == y.shape:
             return BroadcastSub()(x, y)
         elif x.shape == (1,):
