@@ -148,7 +148,7 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult Lower(mlir::MLIRContext* context, ModuleOp module) {
+LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                    // cse

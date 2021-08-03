@@ -126,7 +126,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     CHECK(!!module);
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
-    CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
+    CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     auto jit_or_error = mlir::ExecutionEngine::create(*module);
