@@ -50,27 +50,27 @@
 
 - name: "mul"
   signature: "Tensor Multiply(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar"
   signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar_by_tensor"
   signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_mul"
   signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "div_scalar_by_tensor"
   signature: "Tensor ScalarDivByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div"
   signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div_grad"
   signature: "Tensor BroadcastDivGrad(Tensor y, Tensor z, Tensor dz)"

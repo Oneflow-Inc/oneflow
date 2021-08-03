@@ -19,46 +19,11 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_axis, _check_inplace_valid
+from oneflow.nn.modules.utils import _check_axis
 from oneflow.ops.transpose_util import (
     get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )
-
-
-class ScalarMul(Module):
-    def __init__(self, alpha) -> None:
-        super().__init__()
-        if not isinstance(alpha, (int, float)):
-            raise ValueError("alpha type can only be int or float")
-        self.alpha = alpha
-
-    def forward(self, x):
-        return flow.F.mul_scalar(x, self.alpha)
-
-
-class ScalarMulByTensor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.mul_scalar_by_tensor(x, y)
-
-
-class ElementwiseMul(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.mul(x, y)
-
-
-class BroadcastMul(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_mul(x, y)
 
 
 @register_tensor_op("mul")
@@ -99,18 +64,7 @@ def _mul(input, other):
         (2, 3)
 
     """
-    if isinstance(input, (int, float)):
-        return ScalarMul(input)(other)
-    elif isinstance(other, (int, float)):
-        return ScalarMul(other)(input)
-    elif input.shape == other.shape:
-        return ElementwiseMul()(input, other)
-    elif input.shape == (1,):
-        return ScalarMulByTensor()(other, input)
-    elif other.shape == (1,):
-        return ScalarMulByTensor()(input, other)
-    else:
-        return BroadcastMul()(input, other)
+    return flow.F.mul(input, other)
 
 
 class Variance(Module):
@@ -226,22 +180,6 @@ def _sub(input, other):
         return BroadcastSub()(input, other)
 
 
-class BroadcastDiv(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_div(x, y)
-
-
-class ScalarDivByTensor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, scalar):
-        return flow.F.div_scalar_by_tensor(x, scalar)
-
-
 @register_tensor_op("div")
 def _div(input, other):
     """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
@@ -283,20 +221,7 @@ def _div(input, other):
         (2, 3)
 
     """
-    if isinstance(input, (int, float)):
-        return ScalarMul(input)(flow.reciprocal(other))
-    elif isinstance(other, (int, float)):
-        if other == 0 or other == 0.0:
-            other = 0.0
-        else:
-            other = 1.0 / float(other)
-        return ScalarMul(other)(input)
-    elif input.shape == other.shape:
-        return BroadcastDiv()(input, other)
-    elif other.shape == (1,):
-        return ScalarDivByTensor()(input, other)
-    else:
-        return BroadcastDiv()(input, other)
+    return flow.F.div(input, other)
 
 
 class Reciprocal(Module):
@@ -518,8 +443,6 @@ class Sin(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow.F.sin(x, self.inplace)
 
 
