@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/user/kernels/softmax_kernel_log_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
@@ -76,10 +77,8 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, out),
                                                 reduce_storage_var);
     // log | out[i][j] = log(out[i][j])
-    FOR_RANGE(int64_t, i, 0, n) {
-        FOR_RANGE(int64_t, j, 0, w) {
-             out[i * w + j] = SafeLog(out[i * w + j]);
-        }
+    FOR_RANGE(int64_t, i, 0, n*w){
+       out[i] = SafeLog(out[i]);
     }
     // tmp | tmp[i] = log(tmp[i])
     FOR_RANGE(int64_t, i, 0, n){
@@ -95,7 +94,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
     const size_t min_temp_storage_bytes =
-        SoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+        LogSoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
     const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);

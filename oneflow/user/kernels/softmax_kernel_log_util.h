@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_LOG_UTIL_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/softmax_kernel_util.h"
+
 
 namespace oneflow {
 
