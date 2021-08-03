@@ -108,14 +108,12 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
     user_op::KernelComputeContext* ctx) {
   llvm::SmallVector<OpaqueMemRefDescriptor> args{};
   for (auto& pair : ctx->inputs()) {
-    LOG(ERROR) << "pair.first: " << pair.first;
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
         SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   for (auto& pair : ctx->outputs()) {
-    LOG(ERROR) << "pair.first: " << pair.first;
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMutMemRefDescriptor(
         SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
@@ -156,7 +154,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
         GetMLIRCInterfaceArgs(ctx);
     llvm::SmallVector<void*> packed_args{};
-    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+    for (auto& arg /* arg argsmust be a reference*/ : args) { packed_args.push_back(&arg); }
     auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
