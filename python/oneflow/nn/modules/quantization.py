@@ -50,7 +50,7 @@ def quantization_op(
 ):
     """
     
-    Simulate the quantize and dequantize operations in training time.
+    Simulate the quantize operation in inference time.
 
     The output will be computed as:
 
@@ -83,7 +83,7 @@ def quantization_op(
         quantization_formula (str): Support "google" or "cambricon".
 
     Returns:
-        oneflow.Tensor: Input tensor after quantize and dequantize operations.
+        oneflow.Tensor: Input tensor after quantize operation.
 
     For example:
 

@@ -21,3 +21,4 @@ from oneflow.nn.modules.moving_average_min_max_observer import (
 from oneflow.nn.modules.fake_quantization import (
     fake_quantization_op as fake_quantization,
 )
+from oneflow.nn.modules.quantization import quantization_op as quantization

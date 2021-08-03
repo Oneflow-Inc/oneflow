@@ -61,9 +61,7 @@ def quant_per_layer_symmetric(input, quantization_bit, scale):
 def quant_per_layer_affine(input, quantization_bit, scale, zero_point):
     upper_bound = 2.0 ** quantization_bit - 1
     lower_bound = 0
-    return (
-        np.clip(np.rint(input / scale + zero_point), lower_bound, upper_bound)
-    )
+    return np.clip(np.rint(input / scale + zero_point), lower_bound, upper_bound)
 
 
 def quant_per_layer_cambricon(input, quantization_bit, shift):
@@ -76,7 +74,6 @@ def quant_per_layer_cambricon(input, quantization_bit, shift):
 def _check_quantize(
     test_case,
     input,
-    input_diff_of,
     out_of,
     quantization_bit,
     quantization_scheme,
@@ -122,12 +119,9 @@ def _check_quantize(
         (scale_np[0], zero_point_np[0]) = gen_quant_scale_for_min_max_cambricon(
             input_flatten, quantization_bit
         )
-        out_np = quant_per_layer_cambricon(
-            input_flatten, quantization_bit, scale_np[0]
-        )
+        out_np = quant_per_layer_cambricon(input_flatten, quantization_bit, scale_np[0])
     rmse = np.sqrt(np.mean((out_of - out_np) ** 2))
     assert rmse <= 1.0, "quantization op has bug!"
-    test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=0.001))
 
 
 def _run_test_quantize(
@@ -141,9 +135,7 @@ def _run_test_quantize(
     per_layer_quantization,
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    input_tensor = flow.Tensor(
-        input, requires_grad=True, device=flow.device(device_type)
-    )
+    input_tensor = flow.Tensor(input, device=flow.device(device_type))
     (scale, zero_point) = flow.quantization.min_max_observer(
         input_tensor,
         quantization_bit,
@@ -159,15 +151,11 @@ def _run_test_quantize(
         quantization_bit=quantization_bit,
         quantization_scheme=quantization_scheme,
     )
-    y = output_tensor.mean()
-    y = y.backward()
 
     out = output_tensor.numpy()
-    input_diff = input_tensor.grad.numpy()
     _check_quantize(
         test_case,
         input,
-        input_diff.flatten(),
         out.flatten(),
         quantization_bit,
         quantization_scheme,

@@ -146,7 +146,7 @@ class GpuQuantizationKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_QUANTIZATION_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("fake_quantization")                          \
+  REGISTER_USER_KERNEL("quantization")                               \
       .SetCreateFn<GpuQuantizationKernel<dtype>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
