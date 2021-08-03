@@ -77,11 +77,12 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
           b = JUST(functional::ScalarMul(b, *JUST(alpha.value())));
         }
       }
-      if (a->shape()->NumAxes() == 0) {
+      /* if (a->shape()->NumAxes() == 0) {
         return functional::ScalarAddByTensor(b, a, inplace);
       } else if (b->shape()->NumAxes() == 0) {
         return functional::ScalarAddByTensor(a, b, inplace);
-      } else if (*a->shape() == *b->shape()) {
+      } else */
+      if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
         if (inplace) {
