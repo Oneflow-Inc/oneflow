@@ -104,6 +104,10 @@ DEFINE_STATIC_SWITCH_FUNC(OpaqueMemRefDescriptor, CreateMutMemRefDescriptor,
                           MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
 #undef MAKE_STRIDED_MEM_REF_SWITCH_ENTRY
 
+std::string GetMLIRCInterface(const std::string& func_name) {
+  return std::string("_mlir_ciface_") + func_name;
+}
+
 template<DeviceType device_type, typename T>
 class MlirJitKernel final : public user_op::OpKernel {
  public:
@@ -143,7 +147,11 @@ class MlirJitKernel final : public user_op::OpKernel {
     auto ref_out_0 = SwitchCreateMutMemRefDescriptor(
         SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke(ctx->op_name(), ref_in_0, ref_in_1, ref_out_0);
+    llvm::SmallVector<void*> argsArray{};
+    argsArray.push_back(&ref_in_0);
+    argsArray.push_back(&ref_in_1);
+    argsArray.push_back(&ref_out_0);
+    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), argsArray);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
