@@ -228,6 +228,14 @@ value_aliases = {
     "False": "false",
 }
 
+symbol_dtype_aliases = {
+    "kInt": "DType::Int32()",
+    "kInt32": "DType::Int32()",
+    "kInt64": "DType::Int64()",
+    "kFloat": "DType::Float()",
+    "kDouble": "DType::Double()",
+    "kBool": "DType::Bool()",
+}
 
 def _escape_quote(fmt):
     return re.sub(r"\"|\'", '\\"', fmt)
@@ -303,6 +311,8 @@ class Argument:
             if self._default_value == "None":
                 optional = True
                 self._default_cpp_value = ""
+            elif self._default_value in symbol_dtype_aliases:
+                self._default_cpp_value = symbol_dtype_aliases[self._default_value]
             elif self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
             else:
