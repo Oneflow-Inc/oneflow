@@ -117,6 +117,8 @@ def _test_linear_train_graph(test_case, device):
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
 class TestLinearTrainGraph(oneflow.unittest.TestCase):
     def test_linear_train_graph_gpu(test_case):
         _test_linear_train_graph(test_case, flow.device("cuda"))
