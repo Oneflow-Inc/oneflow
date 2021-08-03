@@ -81,22 +81,31 @@ std::string LocationFormat(std::string location) {
 
 std::string FunctionFormat(std::string function) { return " in " + function; }
 
-std::string ErrorMsgFormat(std::string error_msg) {
+std::string ErrorMsgFormat(std::string error_msg, bool has_error_hint) {
   ErrorMsgEraseMaybe(error_msg);
-  ErrorMsgShortenMaybe(error_msg);
+  if (!has_error_hint) { ErrorMsgShortenMaybe(error_msg); }
   return "\n    " + error_msg;
+}
+
+std::string ErrorTypeFormat(std::string error_type) {
+  if (error_type.size() == 0) { return ""; }
+  error_type.erase(error_type.find_first_of(" "));
+  return error_type;
 }
 
 }  // namespace
 
 void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::string error_global = "";
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
     std::string error_file = LocationFormat(*stack_frame->mutable_location());
     std::string error_function = FunctionFormat(*stack_frame->mutable_function());
-    std::string error_msg = ErrorMsgFormat(*stack_frame->mutable_error_msg());
-    ErrorStrGet() += (error_file + error_function + error_msg);
+    std::string error_msg = ErrorMsgFormat(*stack_frame->mutable_error_msg(),
+                                           stack_frame == error->mutable_stack_frame()->rend() - 1);
+    error_global += (error_file + error_function + error_msg);
   }
+  ErrorStrGet() += (error_global + "\n" + ErrorTypeFormat(*error->mutable_msg()));
 }
 
 }  // namespace oneflow
