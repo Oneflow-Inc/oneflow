@@ -26,7 +26,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestGraphOptimizer(flow.unittest.TestCase):
-    def test_optimizer(test_case):
+    def test_sgd_optimizer(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -58,6 +58,54 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 super().__init__()
                 self.m = m
                 self.add_optimizer("sgd0", sgd0)
+
+            def build(self, x):
+                out = self.m(x)
+                out.backward()
+                return out
+
+        g = CustomGraph0()
+        x = flow.Tensor(4, 10)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        z = g._compile(x)
+        print("repr(g): \n", repr(g))
+        print("g.config.proto: \n", g.config.proto)
+        print("graph proto: \n", g._graph_proto)
+
+    def test_adam_optimizer(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
+
+            def forward(self, x):
+                x = flow.F.matmul(x, self.para0)
+                return x
+
+        m = CustomModule()
+        learning_rate = 0.1
+        betas = [0.9, 0.999]
+        scale = 0.3
+        weight_decay = 0.7
+        eps = 1e-8
+        adam0 = flow.optim.Adam(
+            [
+                {
+                    "params": [m.para0],
+                    "lr": learning_rate,
+                    "betas": betas,
+                    "eps": eps,
+                    "weight_decay": weight_decay,
+                    "scale": scale,
+                }
+            ]
+        )
+
+        class CustomGraph0(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = m
+                self.add_optimizer("adam0", adam0)
 
             def build(self, x):
                 out = self.m(x)
