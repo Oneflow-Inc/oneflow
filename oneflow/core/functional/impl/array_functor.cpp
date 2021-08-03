@@ -47,7 +47,7 @@ class ConsistentConstantFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
@@ -90,7 +90,7 @@ class ConstantFunctor {
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
@@ -171,7 +171,7 @@ class ArgWhereFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Symbol<DType>>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
