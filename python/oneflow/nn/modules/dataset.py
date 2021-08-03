@@ -173,7 +173,7 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
-        self._op_uint8_mirror = (
+        self._op_uint8_with_mirror = (
             flow.builtin_op("crop_mirror_normalize_from_uint8")
             .Input("in")
             .Input("mirror")
@@ -204,7 +204,7 @@ class CropMirrorNormalize(Module):
             .Attr("output_dtype", output_dtype)
             .Build()
         )
-        self._op_buffer_mirror = (
+        self._op_buffer_with_mirror = (
             flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
             .Input("in")
             .Input("mirror")
@@ -240,9 +240,9 @@ class CropMirrorNormalize(Module):
     def forward(self, input, mirror=None):
         if mirror != None:
             if input.dtype is flow.uint8:
-                res = self._op_uint8_mirror(input, mirror)[0]
+                res = self._op_uint8_with_mirror(input, mirror)[0]
             elif input.dtype is flow.tensor_buffer:
-                ret = self._op_buffer_mirror(input, mirror)[0]
+                ret = self._op_buffer_with_mirror(input, mirror)[0]
         else:
             if input.dtype is flow.uint8:
                 res = self._op_uint8_no_mirror(input)[0]
