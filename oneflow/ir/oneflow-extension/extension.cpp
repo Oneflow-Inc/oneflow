@@ -148,6 +148,7 @@ class MlirJitKernel final : public user_op::OpKernel {
         SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
     llvm::SmallVector<void*> args{};
+    // TODO: find a way to make sure user op's input output order
     args.push_back(&ref_in_0);
     args.push_back(&ref_in_1);
     args.push_back(&ref_out_0);
