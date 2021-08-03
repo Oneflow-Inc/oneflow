@@ -63,6 +63,8 @@ class TensorMeta : public user_op::TensorDesc {
 
 class MirroredTensorMeta : public TensorMeta {
  public:
+  // uninitialized MirroredTensorMeta.
+  MirroredTensorMeta();
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device);
   virtual ~MirroredTensorMeta() = default;
