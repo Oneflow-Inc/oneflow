@@ -128,6 +128,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     llvm::InitializeNativeTargetAsmPrinter();
     CHECK(mlir::succeeded(mlir::oneflow::Lower(&mlir_ctx, *module)))
         << "fail to lower OneFlow to LLVM";
+    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     auto jit_or_error = mlir::ExecutionEngine::create(*module);
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
@@ -142,7 +143,7 @@ class MlirJitKernel final : public user_op::OpKernel {
     auto ref_out_0 = SwitchCreateMutMemRefDescriptor(
         SwitchCase(out_0->shape().NumAxes(), out_0->data_type()), out_0);
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke(ctx->op_name(), ref_in_0.get(), ref_in_1.get(), ref_out_0.get());
+    auto error = jit->invoke(ctx->op_name(), ref_in_0, ref_in_1, ref_out_0);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
