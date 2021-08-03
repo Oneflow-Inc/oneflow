@@ -220,7 +220,7 @@ py::object PyDiv(py::args py_args, py::kwargs py_kwargs) {
       // "Div(Tensor input, Scalar other, *, bool inplace=False)"
       const auto& a = JUST(PyUnpackTensor(input));
       CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar or tensor.";
-      Scalar b = 1;
+      Scalar b = 1.0;
       b /= *JUST(PyUnpackScalar(other));
       return functional::ScalarMul(a, b);
     } else {
