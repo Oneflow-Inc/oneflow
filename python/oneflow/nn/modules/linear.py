@@ -110,13 +110,7 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        assert len(x.shape) >= 2, "Tensor x's dim should >=2"
-        if len(x.shape) == 2:
-            res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-        else:
-            res = flow.F.broadcast_matmul(
-                x, self.weight, transpose_a=False, transpose_b=True
-            )
+        res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.use_bias:
             res += self.bias
         return res
