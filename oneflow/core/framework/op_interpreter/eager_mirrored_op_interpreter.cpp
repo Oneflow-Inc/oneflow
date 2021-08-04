@@ -220,8 +220,6 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   const auto& broadcast_parallel_desc =
       JUST(GetBroadcastSubParallelDesc(parallel_desc, parallel_distribution));
   if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  CHECK_EQ_OR_RETURN(broadcast_parallel_desc->device_tag(), "gpu")
-      << Error::Todo() << "supported cuda only now.";
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
   return JUST(OpInterpUtil::Dispatch<one::Tensor>(

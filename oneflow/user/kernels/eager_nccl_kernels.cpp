@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ccl/cll.h"
+#include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -61,9 +61,9 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     int64_t root = ctx->Attr<int64_t>("root");
-    CHECK_JUST(ccl::Broadcast(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                              in->data_type(), root, kernel_state->parallel_desc(),
-                              ctx->device_ctx()->cuda_stream()));
+    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                                in->data_type(), root,
+                                                kernel_state->parallel_desc(), ctx->device_ctx()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

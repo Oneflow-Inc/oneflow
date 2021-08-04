@@ -19,9 +19,16 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
-      ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  return Device::New("nccl");
+  const auto& input_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = input_device;
+  if (input_device->type() == "cuda" || input_device->type() == "gpu") {
+    static thread_local const auto& nccl_device = Device::New("nccl");
+    return nccl_device;
+  } else if (input_device->type() == "cpu") {
+    return input_device;
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
 }
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
@@ -34,11 +41,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     })
     .SetDeviceInferFn(DeviceInferFn)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
+      UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
@@ -54,20 +57,9 @@ REGISTER_USER_OP("eager_nccl_broadcast")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), 0)
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
+      UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
@@ -83,7 +75,10 @@ REGISTER_USER_OP("eager_nccl_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
+    .SetDeviceInferFn(DeviceInferFn)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
+    })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
