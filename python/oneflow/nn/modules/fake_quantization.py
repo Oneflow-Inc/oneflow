@@ -18,36 +18,6 @@ from oneflow.nn.module import Module
 
 
 class FakeQuantization(Module):
-    def __init__(
-        self,
-        quantization_formula: str = "google",
-        quantization_bit: int = 8,
-        quantization_scheme: str = "symmetric",
-    ) -> None:
-        super().__init__()
-        self.quantization_formula = quantization_formula
-        self.quantization_bit = quantization_bit
-        self.quantization_scheme = quantization_scheme
-
-    def forward(self, input, scale, zero_point):
-        return flow.F.fake_quantization(
-            input,
-            scale,
-            zero_point,
-            self.quantization_formula,
-            self.quantization_bit,
-            self.quantization_scheme,
-        )
-
-
-def fake_quantization_op(
-    input,
-    scale,
-    zero_point,
-    quantization_formula: str = "google",
-    quantization_bit: int = 8,
-    quantization_scheme: str = "symmetric",
-):
     """
     
     Simulate the quantize and dequantize operations in training time.
@@ -103,24 +73,53 @@ def fake_quantization_op(
         >>> quantization_formula = "google"
         >>> per_layer_quantization = True
 
-        >>> scale, zero_point = flow.quantization.min_max_observer(
+        >>> min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit,
+        ... quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
+        >>> fake_quantization = flow.nn.FakeQuantization(quantization_formula=quantization_formula, quantization_bit=quantization_bit, 
+        ... quantization_scheme=quantization_scheme)
+
+        >>> scale, zero_point = min_max_observer(
         ...    input_tensor,
-        ...    quantization_bit,
-        ...    quantization_scheme,
-        ...    quantization_formula,
-        ...    per_layer_quantization,
         ... )
 
-        >>> output_tensor = flow.quantization.fake_quantization(
+        >>> output_tensor = fake_quantization(
         ...    input_tensor,
         ...    scale,
         ...    zero_point,
-        ...    quantization_formula=quantization_formula,
-        ...    quantization_bit=quantization_bit,
-        ...    quantization_scheme=quantization_scheme,
         ... )
 
     """
+    def __init__(
+        self,
+        quantization_formula: str = "google",
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+    ) -> None:
+        super().__init__()
+        self.quantization_formula = quantization_formula
+        self.quantization_bit = quantization_bit
+        self.quantization_scheme = quantization_scheme
+
+    def forward(self, input, scale, zero_point):
+        return flow.F.fake_quantization(
+            input,
+            scale,
+            zero_point,
+            self.quantization_formula,
+            self.quantization_bit,
+            self.quantization_scheme,
+        )
+
+
+def fake_quantization_op(
+    input,
+    scale,
+    zero_point,
+    quantization_formula: str = "google",
+    quantization_bit: int = 8,
+    quantization_scheme: str = "symmetric",
+):
+    
     return FakeQuantization(
         quantization_formula=quantization_formula,
         quantization_bit=quantization_bit,

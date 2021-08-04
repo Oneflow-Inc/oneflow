@@ -19,36 +19,6 @@ from oneflow.nn.module import Module
 
 
 class MinMaxObserver(Module):
-    def __init__(
-        self,
-        quantization_formula: str = "google",
-        quantization_bit: int = 8,
-        quantization_scheme: str = "symmetric",
-        per_layer_quantization: bool = True,
-    ) -> None:
-        super().__init__()
-        self.quantization_formula = quantization_formula
-        self.quantization_bit = quantization_bit
-        self.quantization_scheme = quantization_scheme
-        self.per_layer_quantization = per_layer_quantization
-
-    def forward(self, input):
-        return flow.F.min_max_observer(
-            input,
-            self.quantization_formula,
-            self.quantization_bit,
-            self.quantization_scheme,
-            self.per_layer_quantization,
-        )
-
-
-def min_max_observer_op(
-    input,
-    quantization_bit: int = 8,
-    quantization_scheme: str = "symmetric",
-    quantization_formula: str = "google",
-    per_layer_quantization: bool = True,
-):
     """
     
     Compute the quantization parameters of the input tensor.
@@ -113,21 +83,35 @@ def min_max_observer_op(
         >>> quantization_formula = "google"
         >>> per_layer_quantization = True
 
-        >>> scale, zero_point = flow.quantization.min_max_observer(
-        ...    input_tensor,
-        ...    quantization_bit,
-        ...    quantization_scheme,
-        ...    quantization_formula,
-        ...    per_layer_quantization,
-        ... )
+        >>> min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit,
+        ... quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
+
+        >>> scale, zero_point = min_max_observer(
+        ...    input_tensor, )
 
     """
-    return MinMaxObserver(
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-        per_layer_quantization=per_layer_quantization,
-    )(input)
+    def __init__(
+        self,
+        quantization_formula: str = "google",
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+        per_layer_quantization: bool = True,
+    ) -> None:
+        super().__init__()
+        self.quantization_formula = quantization_formula
+        self.quantization_bit = quantization_bit
+        self.quantization_scheme = quantization_scheme
+        self.per_layer_quantization = per_layer_quantization
+
+    def forward(self, input):
+        return flow.F.min_max_observer(
+            input,
+            self.quantization_formula,
+            self.quantization_bit,
+            self.quantization_scheme,
+            self.per_layer_quantization,
+        )
+
 
 
 if __name__ == "__main__":

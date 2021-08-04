@@ -136,21 +136,11 @@ def _run_test_quantize(
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
     input_tensor = flow.Tensor(input, device=flow.device(device_type))
-    (scale, zero_point) = flow.quantization.min_max_observer(
-        input_tensor,
-        quantization_bit,
-        quantization_scheme,
-        quantization_formula,
-        per_layer_quantization,
-    )
-    output_tensor = flow.quantization.quantization(
-        input_tensor,
-        scale,
-        zero_point,
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-    )
+    min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit, 
+                                            quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
+    (scale, zero_point) = min_max_observer(input_tensor)
+    quantization = flow.nn.Quantization(quantization_formula=quantization_formula, quantization_bit=quantization_bit, quantization_scheme=quantization_scheme)
+    output_tensor = quantization(input_tensor, scale, zero_point)
 
     out = output_tensor.numpy()
     _check_quantize(

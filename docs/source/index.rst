@@ -19,7 +19,6 @@ OneFlow API Reference
     linalg
     image
     optim
-    quantization
 
 
 Indices and tables

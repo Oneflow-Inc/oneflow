@@ -20,62 +20,6 @@ from oneflow.nn.module import Module
 
 
 class MovingAverageMinMaxObserver(Module):
-    def __init__(
-        self,
-        training: bool = False,
-        quantization_formula: str = "google",
-        stop_update_after_iters: int = 0,
-        quantization_bit: int = 8,
-        quantization_scheme: str = "symmetric",
-        momentum: float = 0,
-    ) -> None:
-        super().__init__()
-        self.training = training
-        self.quantization_formula = quantization_formula
-        self.stop_update_after_iters = stop_update_after_iters
-        self.quantization_bit = quantization_bit
-        self.quantization_scheme = quantization_scheme
-        self.momentum = momentum
-        if training == True:
-            self.register_buffer("moving_max", flow.Tensor(1))
-            self.register_buffer("moving_min", flow.Tensor(1))
-        else:
-            self.register_parameter("moving_max", None)
-            self.register_parameter("moving_min", None)
-        self.reset_running_stats()
-
-    def reset_running_stats(self) -> None:
-        if self.training:
-            self.moving_max.fill_(0)
-            self.moving_min.fill_(0)
-
-    def forward(self, input, current_train_step):
-        self.moving_max = self.moving_max.to(input.device.type)
-        self.moving_min = self.moving_min.to(input.device.type)
-        return flow.F.moving_average_min_max_observer(
-            input,
-            current_train_step,
-            self.moving_max,
-            self.moving_min,
-            self.training,
-            self.quantization_formula,
-            self.stop_update_after_iters,
-            self.quantization_bit,
-            self.quantization_scheme,
-            self.momentum,
-        )
-
-
-def moving_average_min_max_observer_op(
-    input,
-    current_train_step,
-    training: bool = False,
-    quantization_formula: str = "google",
-    stop_update_after_iters: int = 0,
-    quantization_bit: int = 8,
-    quantization_scheme: str = "symmetric",
-    momentum: float = 0,
-):
     """
     
     Compute the quantization parameters based on the moving average of the input tensor's min and max values.
@@ -158,26 +102,60 @@ def moving_average_min_max_observer_op(
         >>> quantization_scheme = "symmetric"
         >>> quantization_formula = "google"
 
-        >>> (scale, zero_point) = flow.quantization.moving_average_min_max_observer(
+        >>> moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=True, quantization_formula=quantization_formula, 
+        ...                                                                       stop_update_after_iters=1, quantization_bit=quantization_bit,
+        ...                                                                       quantization_scheme=quantization_scheme, momentum=momentum,
+        ...                                                                       )
+
+        >>> (scale, zero_point) = moving_average_min_max_observer(
         ...    input_tensor,
         ...    current_train_step_tensor,
-        ...    True,
-        ...    quantization_formula=quantization_formula,
-        ...    stop_update_after_iters=1,
-        ...    quantization_bit=quantization_bit,
-        ...    quantization_scheme=quantization_scheme,
-        ...    momentum=momentum,
         ... )
 
     """
-    return MovingAverageMinMaxObserver(
-        training=training,
-        quantization_formula=quantization_formula,
-        stop_update_after_iters=stop_update_after_iters,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-        momentum=momentum,
-    )(input, current_train_step)
+    def __init__(
+        self,
+        training: bool = False,
+        quantization_formula: str = "google",
+        stop_update_after_iters: int = 0,
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+        momentum: float = 0,
+    ) -> None:
+        super().__init__()
+        self.training = training
+        self.quantization_formula = quantization_formula
+        self.stop_update_after_iters = stop_update_after_iters
+        self.quantization_bit = quantization_bit
+        self.quantization_scheme = quantization_scheme
+        self.momentum = momentum
+        if training == True:
+            self.register_buffer("moving_max", flow.Tensor(1))
+            self.register_buffer("moving_min", flow.Tensor(1))
+        else:
+            self.register_parameter("moving_max", None)
+            self.register_parameter("moving_min", None)
+        self.reset_running_stats()
+
+    def reset_running_stats(self) -> None:
+        if self.training:
+            self.moving_max.fill_(0)
+            self.moving_min.fill_(0)
+
+    def forward(self, input, current_train_step):
+        return flow.F.moving_average_min_max_observer(
+            input,
+            current_train_step,
+            self.moving_max,
+            self.moving_min,
+            self.training,
+            self.quantization_formula,
+            self.stop_update_after_iters,
+            self.quantization_bit,
+            self.quantization_scheme,
+            self.momentum,
+        )
+
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from collections import OrderedDict
 import math
 import numpy as np
 from automated_test_util import *
+from oneflow.nn.modules import min_max_observer
 from test_util import GenArgList
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -107,13 +108,9 @@ def _run_test_min_max_observer(
     tensor_weight = flow.Tensor(
         weight, device=flow.device(device_type), dtype=flow.float32
     )
-    scale, zero_point = flow.quantization.min_max_observer(
-        tensor_weight,
-        quantization_bit,
-        quantization_scheme,
-        quantization_formula,
-        per_layer_quantization,
-    )
+    min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit, 
+                                            quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
+    scale, zero_point = min_max_observer(tensor_weight)
     _check_min_max_observer(
         test_case,
         weight,

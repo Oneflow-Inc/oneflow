@@ -50,6 +50,12 @@ from oneflow.nn.modules.container import (
     Sequential,
 )
 from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
+
+from oneflow.nn.modules.min_max_observer import MinMaxObserver
+from oneflow.nn.modules.moving_average_min_max_observer import MovingAverageMinMaxObserver
+from oneflow.nn.modules.fake_quantization import FakeQuantization
+from oneflow.nn.modules.quantization import Quantization
+
 from oneflow.nn.modules.dataset import (
     COCOReader,
     CoinFlip,
