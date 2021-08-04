@@ -25,13 +25,10 @@ namespace oneflow {
 struct EagerBoxingInterpreterUtil {
   static bool IsPlacementEqual(Symbol<ParallelDesc> src, Symbol<ParallelDesc> dst);
   static bool IsDeviceTypeGPU(Symbol<ParallelDesc> parallel_desc);
-  static bool IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingP2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingB2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
 };
