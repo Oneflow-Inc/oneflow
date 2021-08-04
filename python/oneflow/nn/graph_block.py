@@ -253,6 +253,8 @@ class Block(object):
                         return b_block
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
+            if hasattr(self._origin, name):
+                return getattr(self._origin, name)
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )

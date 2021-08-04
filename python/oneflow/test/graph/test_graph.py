@@ -274,6 +274,37 @@ class TestGraph(flow.unittest.TestCase):
         y = flow.tensor(y, dtype=flow.float32)
         g._compile(x, y)
 
+    def test_module_has_custom_func(test_case):
+        class CustomModuleHasFunc(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+            
+            def forward(self, x):
+                return self._custom_func(x)
+            
+            def _custom_func(self, x):
+                print("_custom_func called")
+                return x
+
+        class CustomGraphHasFunc(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModuleHasFunc()
+
+            def build(self, x):
+                return self.m(x)
+
+        g = CustomGraphHasFunc()
+        x = np.ones((1, 1, 10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        print("has func out", out.numpy())
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
+        
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
