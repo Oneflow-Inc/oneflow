@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/vm_util.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -48,32 +49,6 @@ int32_t GetGpuDeviceNum() {
 }
 
 }  // namespace
-
-MultiClientSessionContext::~MultiClientSessionContext() {
-  if (is_inited_) {
-    {
-      // NOTE(chengcheng): delete runtime global objects
-      Global<summary::EventsWriter>::Delete();
-      Global<RuntimeJobDescs>::Delete();
-      Global<ThreadMgr>::Delete();
-      Global<ActorMsgBus>::Delete();
-      Global<RegstMgr>::Delete();
-      Global<MemoryAllocator>::Delete();
-      Global<RuntimeCtx>::Delete();
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-    }
-
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<IDMgr>::Delete();
-    Global<const ProfilerConf>::Delete();
-
-    // TODO(chengcheng): remove template ForEnv and ForSession
-    Global<ResourceDesc, ForSession>::Delete();
-    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
-    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
-  }
-}
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
@@ -135,6 +110,36 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
 
     is_inited_ = true;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientSessionContext::TryClose() {
+  if (is_inited_) {
+    VLOG(2) << "Try to delete multi client session." << std::endl;
+    JUST(vm::MultiClientSync());
+    VLOG(2) << "Start to delete multi client session." << std::endl;
+    {
+      // NOTE(chengcheng): delete runtime global objects
+      Global<summary::EventsWriter>::Delete();
+      Global<RuntimeJobDescs>::Delete();
+      Global<ThreadMgr>::Delete();
+      Global<ActorMsgBus>::Delete();
+      Global<RegstMgr>::Delete();
+      Global<MemoryAllocator>::Delete();
+      Global<RuntimeCtx>::Delete();
+      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+    }
+
+    Global<LazyJobBuildAndInferCtxMgr>::Delete();
+    Global<IDMgr>::Delete();
+    Global<const ProfilerConf>::Delete();
+
+    // TODO(chengcheng): remove template ForEnv and ForSession
+    Global<ResourceDesc, ForSession>::Delete();
+    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
+    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
+                                          GlobalProcessCtx::NumOfProcessPerNode());
   }
   return Maybe<void>::Ok();
 }
