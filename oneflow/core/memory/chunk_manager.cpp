@@ -53,6 +53,12 @@ char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
   if (it == chunk_id2chunk_.end()) {
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     it = chunk_id2chunk_.emplace(chunk.chunk_id(), ChunkWithPtr(chunk_ptr, chunk)).first;
+  } else {
+    const ChunkProto& store_proto = it->second.chunk_proto;
+    CHECK_EQ(chunk.chunk_id(), store_proto.chunk_id());
+    CHECK_EQ(chunk.machine_id(), store_proto.machine_id());
+    CHECK(chunk.mem_case() == store_proto.mem_case());
+    CHECK_EQ(chunk.mem_size(), store_proto.mem_size());
   }
   return it->second.ptr;
 }

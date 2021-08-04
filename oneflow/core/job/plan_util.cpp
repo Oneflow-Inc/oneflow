@@ -15,11 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -67,11 +69,125 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
   PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names);
 }
 
-void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
-    Plan* plan, const HashSet<std::string>& variable_op_names) {
-  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+namespace {
+
+void GenChunkInSingleClient(
+    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
+  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
+    int64_t mzuid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
+      ChunkProto chunk;
+      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      chunk.add_job_id(mem_block->job_id(0));
+      chunk.set_machine_id(mem_block->machine_id());
+      *(chunk.mutable_mem_case()) = mem_block->mem_case();
+      chunk.set_mem_size(mem_block->mem_size());
+      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
+      mem_block->set_chunk_id(chunk.chunk_id());
+      mem_block->set_chunk_offset(0);
+    } else {
+      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
+      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
+      mem_block->set_chunk_id(chunk->chunk_id());
+      mem_block->set_chunk_offset(chunk->mem_size());
+      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+    }
+  };
+
+  for (auto& pair : *mem_block_id2mem_block) {
+    MemBlockProto* mem_block = pair.second.get();
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  }
+
+  for (const auto& pair : mzuid2chunk) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+  }
+}
+
+void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
+    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
+  HashMap<int64_t, HashSet<MemBlockProto*>> mzuid2mem_blocks;
+
+  for (auto& pair : *mem_block_id2mem_block) {
+    MemBlockProto* mem_block = pair.second.get();
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    // NOTE(chengcheng): ONLY variable regst has NO chunk id in Multi-Client.
+    if (mem_block->has_variable_op_name()) { continue; }
+    int64_t mem_zone_uid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    auto it = mzuid2mem_blocks.find(mem_zone_uid);
+    if (it == mzuid2mem_blocks.end()) {
+      it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
+    }
+    CHECK(it->second.insert(mem_block).second);
+  }
+
+  std::vector<ChunkProto> all_chunks;
+
+  for (auto& pair : mzuid2mem_blocks) {
+    int64_t mem_zone_uid = pair.first;
+    std::vector<const ChunkProto*> exist_chunks;
+    Global<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
+    auto chunk_it = exist_chunks.begin();
+    auto& mem_blocks = pair.second;
+    int64_t current_chunk_offset = 0;
+    HashSet<MemBlockProto*> remain_blocks;
+    for (auto mem_block_it = mem_blocks.begin(); mem_block_it != mem_blocks.end(); ++mem_block_it) {
+      if (chunk_it == exist_chunks.end()) {
+        // NOTE(chengcheng): it means that exist chunk has run out.
+        CHECK(remain_blocks.insert(*mem_block_it).second);
+      } else {
+        // NOTE(chengcheng): find chunk which has enough space left.
+        while (chunk_it != exist_chunks.end()
+               && (current_chunk_offset + (*mem_block_it)->mem_size() > (*chunk_it)->mem_size())) {
+          // NOTE(chengcheng): current chunk has no space left, so we move to next chunk.
+          ++chunk_it;
+          current_chunk_offset = 0;
+        }
+        if (chunk_it != exist_chunks.end()) {
+          // NOTE(chengcheng): lucky, we find a appropriate chunk.
+          MemBlockProto* mem_block = *mem_block_it;
+          const ChunkProto* chunk = *chunk_it;
+          CHECK_EQ(mem_block->machine_id(), chunk->machine_id());
+          CHECK(mem_block->mem_case() == chunk->mem_case());
+          CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
+          CHECK_GT(current_chunk_offset, 0);
+          CHECK_GT(mem_block->mem_size(), 0);
+          CHECK_GT(chunk->mem_size(), 0);
+          mem_block->set_chunk_id(chunk->chunk_id());
+          mem_block->set_chunk_offset(current_chunk_offset);
+          current_chunk_offset += mem_block->mem_size();
+          std::cout << "cclog: Yeah! reused MemBlock :[" << mem_block->DebugString()
+                    << "] to Chunk :[" << chunk->DebugString() << "]\n\n";
+        } else {
+          // NOTE(chengcheng): sad, no chunk can used, so this mem block need to insert in remain.
+          CHECK(remain_blocks.insert(*mem_block_it).second);
+        }
+      }
+    }
+
+    if (!remain_blocks.empty()) {
+      ChunkProto new_chunk;
+      // TODO(chengcheng);
+    }
+  }
+
+  for (const ChunkProto& chunk : all_chunks) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = chunk;
+  }
+}
+
+}  // namespace
+
+void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
+    Plan* plan, const HashSet<std::string>& variable_op_names) {
+  HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
 
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
     if (variable_op_names.empty()) { return false; }
@@ -128,9 +244,11 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
         mem_block.set_variable_op_name(var_name);
         mem_block.set_is_separated_header(false);
       }
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+      CHECK(mem_block_id2mem_block
+                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                .second);
     } else {
-      MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
+      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
       CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
@@ -155,29 +273,9 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
         mem_block.set_variable_op_name(var_name);
         mem_block.set_is_separated_header(true);
       }
-      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
-    }
-  };
-
-  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
-    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
-      ChunkProto chunk;
-      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
-      chunk.add_job_id(mem_block->job_id(0));
-      chunk.set_machine_id(mem_block->machine_id());
-      *(chunk.mutable_mem_case()) = mem_block->mem_case();
-      chunk.set_mem_size(mem_block->mem_size());
-      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
-      mem_block->set_chunk_id(chunk.chunk_id());
-      mem_block->set_chunk_offset(0);
-    } else {
-      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
-      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
-      mem_block->set_chunk_id(chunk->chunk_id());
-      mem_block->set_chunk_offset(chunk->mem_size());
-      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+      CHECK(mem_block_id2mem_block
+                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                .second);
     }
   };
 
@@ -188,19 +286,15 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  for (auto& pair : mem_block_id2mem_block) {
-    MemBlockProto* mem_block = &pair.second;
-    CHECK(mem_block->has_chunk_id() == false);
-    CHECK(mem_block->has_chunk_offset() == false);
-    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
+  } else {
+    CHECK(variable_op_names.empty());
+    GenChunkInSingleClient(plan, &mem_block_id2mem_block);
   }
 
   for (const auto& pair : mem_block_id2mem_block) {
-    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
-  }
-
-  for (const auto& pair : mzuid2chunk) {
-    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = *(pair.second);
   }
 }
 
