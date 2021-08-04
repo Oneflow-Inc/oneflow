@@ -1088,7 +1088,7 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-def clamp_op(tensor, min=None, max=None):
+def clamp_op(input, min=None, max=None):
     """
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
@@ -1135,7 +1135,7 @@ def clamp_op(tensor, min=None, max=None):
         tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
 
     """
-    return Clamp(min, max)(tensor)
+    return flow.F.clamp(input, min, max)
 
 
 @register_tensor_op("clamp")

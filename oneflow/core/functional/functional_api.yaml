@@ -700,7 +700,7 @@
   
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_grad"
   signature: "Tensor ClipByScalarGrad(Tensor dy, Tensor x, *, Scalar min, Scalar max)"
@@ -708,7 +708,7 @@
 
 - name: "clip_by_scalar_min"
   signature: "Tensor ClipByScalarMin(Tensor x, *, Scalar min)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_min_grad"
   signature: "Tensor ClipByScalarMinGrad(Tensor dy, Tensor x, *, Scalar min)"
@@ -716,7 +716,7 @@
 
 - name: "clip_by_scalar_max"
   signature: "Tensor ClipByScalarMax(Tensor x, *, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_max_grad"
   signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"

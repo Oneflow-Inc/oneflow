@@ -193,6 +193,51 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
+
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* min = PyTuple_GetItem(args, 1);
+    PyObject* max = PyTuple_GetItem(args, 2);
+
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
+    const auto& in = JUST(PyUnpackTensor(input));
+
+    bool has_min_bound = PyScalarCheck(min);
+    bool has_max_bound = PyScalarCheck(max);
+    LOG(INFO) << "yaochi: min bound:" << has_min_bound;
+    LOG(INFO) << "yaochi: max bound:" << has_max_bound;
+
+    Optional<Scalar> min_scalar;
+    Optional<Scalar> max_scalar;
+
+    if (has_min_bound && has_max_bound) {
+      min_scalar = *JUST(PyUnpackScalar(min));
+      Scalar& min_value = *JUST(min_scalar.value());
+      max_scalar = *JUST(PyUnpackScalar(max));
+      Scalar& max_value = *JUST(max_scalar.value());
+
+      return functional::ClipByScalar(in, min_value, max_value);
+    } else if (has_min_bound && !has_max_bound) {
+      min_scalar = *JUST(PyUnpackScalar(min));
+      Scalar& min_value = *JUST(min_scalar.value());
+
+      return functional::ClipByScalarMin(in, min_value);
+    } else if (!has_min_bound && has_max_bound) {
+      max_scalar = *JUST(PyUnpackScalar(max));
+      Scalar& max_value = *JUST(max_scalar.value());
+
+      return functional::ClipByScalarMax(in, max_value);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "min and max cannot be none at the same time";
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -202,6 +247,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &functional::PyAdd);
   m.def("sub", &functional::PySub);
   m.def("scatter", &functional::PyScatter);
+  m.def("clamp", &functional::PyClamp);
 }
 
 }  // namespace oneflow
