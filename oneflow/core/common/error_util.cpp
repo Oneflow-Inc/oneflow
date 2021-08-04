@@ -44,7 +44,6 @@ void ErrorMsgErase(std::string& str) {
 
 void ErrorMsgShorten(std::string& str) {
   const int num_displayed_char = 150;
-  std::unordered_map<int, int> delim_index2length;
   if (str.size() == 0) { return; }
   SpaceStrip(str);
   if (str.size() < num_displayed_char) { return; }
