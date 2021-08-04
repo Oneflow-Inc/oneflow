@@ -24,12 +24,16 @@ Maybe<int> Inc(int x) { return x + 1; }
 Maybe<int> IncByConstRef(const int& x) { return x + 1; }
 
 TEST(ThreadLocal, scalar) {
-  int x = CHECK_JUST(ThreadLocal<Inc>(0));
+  auto* CachedInc = THREAD_LOCAL_CACHED(&Inc);
+
+  int x = CHECK_JUST(CachedInc(0));
   ASSERT_EQ(x, 1);
 }
 
 TEST(ThreadLocal, const_ref) {
-  int x = CHECK_JUST(ThreadLocal<IncByConstRef>(0));
+  auto* CachedIncByConstRef = THREAD_LOCAL_CACHED(&IncByConstRef);
+
+  int x = CHECK_JUST(CachedIncByConstRef(0));
   ASSERT_EQ(x, 1);
 }
 
@@ -44,8 +48,9 @@ struct Foo {
 }  // namespace
 
 TEST(ThreadLocal, _class) {
-  const auto& foo = ThreadLocal<Foo::New>(10);
-  const auto& bar = ThreadLocal<Foo::New>(10);
+  auto* CachedFooNew = THREAD_LOCAL_CACHED(&Foo::New);
+  const auto& foo = CHECK_JUST(CachedFooNew(10));
+  const auto& bar = CHECK_JUST(CachedFooNew(10));
   ASSERT_EQ(foo->x, 10);
   ASSERT_TRUE(foo == bar);
 }
