@@ -163,6 +163,11 @@ def rand_op(
                 [0.1863, 0.5853, 0.4277]], dtype=oneflow.float32)
         >>> x.is_consistent
         False
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> sbp = flow.sbp.broadcast
+        >>> x = flow.rand(3, 3, placement=placement, sbp=sbp)
+        >>> x.is_consistent
+        True
 
     """
     assert out is None, "out not supported yet"
