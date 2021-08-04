@@ -19,6 +19,8 @@ oneflow
             gather, 
             gather_nd, 
             in_top_k, 
+            logical_and,
+            logical_or,
             load, 
             masked_fill, 
             matmul, 
