@@ -58,7 +58,7 @@ def _parse_args():
     parser.add_argument("--val_batch_size", type=int, default=4, help="val batch size")
     parser.add_argument("--device", type=str, default="cuda", help="device")
 
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
 def _test_alexnet_graph(test_case, args):
@@ -133,12 +133,12 @@ def _test_alexnet_graph(test_case, args):
 @flow.unittest.skip_unless_1n1d()
 class TestAlexnetGraph(oneflow.unittest.TestCase):
     def test_alexnet_graph_gpu(test_case):
-        args = _parse_args()
+        args, unknown_args = _parse_args()
         args.device = "cuda"
         _test_alexnet_graph(test_case, args)
 
     def test_alexnet_graph_cpu(test_case):
-        args = _parse_args()
+        args, unknown_args = _parse_args()
         args.device = "cpu"
         _test_alexnet_graph(test_case, args)
 
