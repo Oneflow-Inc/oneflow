@@ -48,7 +48,7 @@ class Testrandperm(flow.unittest.TestCase):
             _test_randperm_with_generator,
             _test_randperm_backward,
         ]
-        arg_dict["N"] = [i for i in range(2, 2, 100)]
+        arg_dict["N"] = [i for i in range(2, 100, 7)]
         arg_dict["device"] = ["cpu", "cuda"]
         # @TODO:GPU version test needs context support from backend
         for arg in GenArgList(arg_dict):
