@@ -50,17 +50,18 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    parallel_id_ = ctx->parallel_ctx().parallel_id();
-    parallel_num_ = ctx->parallel_ctx().parallel_num();
-    int64_t rank = GlobalProcessCtx::Rank();
-    size_t world_size = GlobalProcessCtx::WorldSize();
-    // NOTE(zwx): parallel_id == 0 and parallel_num == 1 indicate this dataset is local,
-    //     but world_size > 1 indicate data parallel size > 1,
-    //     so dataset in each rank need use rank and world_size
-    //     to infer the part of the files which will be read
-    if (parallel_id_ == 0 && parallel_num_ == 1 && world_size > 1) {
-      parallel_id_ = rank;
-      parallel_num_ = world_size;
+    // NOTE(zwx): dataset infer the part of the files needed to be read by
+    //     1) ddp, when parallel_id == 0 and parallel_num == 1 and world_size > 1,
+    //        according to rank and world size.
+    //     2) consistent, when parallel_num > 1 or 
+    //                         parallel_id == 0 and parallel_num == 1 and world_size == 1,
+    //        according to parallel_ctx.parallel_id and parallel_ctx.parallel_num.
+    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+      parallel_id_ = GlobalProcessCtx::Rank();
+      parallel_num_ = GlobalProcessCtx::WorldSize();
+    } else {
+      parallel_id_ = ctx->parallel_ctx().parallel_id();
+      parallel_num_ = ctx->parallel_ctx().parallel_num();
     }
     CHECK_LE(parallel_num_, data_part_num_);
     BalancedSplitter bs(data_part_num_, parallel_num_);

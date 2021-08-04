@@ -69,17 +69,12 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
-    int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    int64_t rank = GlobalProcessCtx::Rank();
-    size_t world_size = GlobalProcessCtx::WorldSize();
-    // NOTE(zwx): parallel_id == 0 and parallel_num == 1 indicate this dataset is local,
-    //     but world_size > 1 indicate data parallel size > 1,
-    //     so dataset in each rank need use rank and world_size
-    //     to infer the part of the files which will be read
-    if (parallel_id == 0 && parallel_num == 1 && world_size > 1) {
-      num_shards_ = world_size;
-      shard_index_ = rank;
+    // NOTE(zwx): If GPTDataLoader works by DDP, we use world size and rank
+    //     as num_shards and shard_index, otherwise use parallel_hierarchy
+    //     and parallel_distribution to infer num_shards and shard_index.
+    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+      num_shards_ = GlobalProcessCtx::WorldSize();
+      shard_index_ = GlobalProcessCtx::Rank();
     } else {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const cfg::ParallelDistribution& paral_dist =

@@ -31,17 +31,16 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
       ctx->Attr<std::string>("image_dir"), ctx->Attr<bool>("remove_images_without_annotations")));
   std::unique_ptr<RandomAccessDataset<COCOImage>> coco_dataset_ptr(new COCODataset(ctx, meta));
 
-  int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-  int64_t rank = GlobalProcessCtx::Rank();
-  size_t world_size = GlobalProcessCtx::WorldSize();
-  // NOTE(zwx): parallel_id == 0 and parallel_num == 1 indicate this dataset is local,
-  //     but world_size > 1 indicate data parallel size > 1,
-  //     so dataset in each rank need use rank and world_size
-  //     to infer the part of the files which will be read
-  if (parallel_id == 0 && parallel_num == 1 && world_size > 1) {
-    parallel_id = rank;
-    parallel_num = world_size;
+  int64_t parallel_id = 0;
+  int64_t parallel_num = 0;
+  // NOTE(zwx): IsMirroredParallelContext return true indicate that COCODataReader works by DDP,
+  //     use rank and world size to init DistributedTrainingDataset
+  if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+    parallel_id = GlobalProcessCtx::Rank();
+    parallel_num = GlobalProcessCtx::WorldSize();
+  } else {
+    parallel_id = ctx->parallel_ctx().parallel_id();
+    parallel_num = ctx->parallel_ctx().parallel_num();
   }
   loader_.reset(new DistributedTrainingDataset<COCOImage>(
       parallel_num, parallel_id, ctx->Attr<bool>("stride_partition"),
